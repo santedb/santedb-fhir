@@ -31,10 +31,10 @@ namespace SanteDB.Messaging.FHIR.Rest
     /// This contract provides a wrapper for HL7 Fast Health Interoperability Resources (FHIR) STU3 resources.
     /// </remarks>
     [ServiceContract(Name = "FHIR")]
-    [ServiceProduces("application/fhir+json")]
-    [ServiceProduces("application/fhir+xml")]
     [ServiceConsumes("application/fhir+json")]
     [ServiceConsumes("application/fhir+xml")]
+    [ServiceProduces("application/fhir+json")]
+    [ServiceProduces("application/fhir+xml")]
     public interface IFhirServiceContract
     {
 

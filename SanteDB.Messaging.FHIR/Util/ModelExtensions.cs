@@ -1,4 +1,5 @@
 ﻿using Hl7.Fhir.Model;
+using SanteDB.Core.Interop.Description;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,5 +18,13 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Get primary code
         /// </summary>
         public static Coding GetCoding(this CodeableConcept me) => me.Coding.FirstOrDefault();
+
+        /// <summary>
+        /// Create a description
+        /// </summary>
+        public static ResourceDescription CreateDescription(this ResourceType me)
+        {
+            return new ResourceDescription(me.ToString(), $"FHIR Resource {me}");
+        }
     }
 }

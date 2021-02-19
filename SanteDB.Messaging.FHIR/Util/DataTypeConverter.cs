@@ -143,7 +143,7 @@ namespace SanteDB.Messaging.FHIR.Util
             if (resource is ITaggable taggable)
             {
 
-                retVal.Meta.Tag = taggable.Tags.Where(tag => !tag.TagKey.StartsWith("$")).Select(tag => new Coding("http://santedb.org/fhir/tags", $"{tag.TagKey}:{tag.Value}")).ToList();
+                retVal.Meta.Tag = taggable.Tags.Select(tag => new Coding("http://santedb.org/fhir/tags", $"{tag.TagKey}:{tag.Value}")).ToList();
                 foreach (var tag in taggable.Tags)
                 {
                     retVal.AddAnnotation(tag);
@@ -454,7 +454,7 @@ namespace SanteDB.Messaging.FHIR.Util
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR coding");
 
             // Lookup
-            return conceptService.FindConceptsByReferenceTerm(code, system).FirstOrDefault();
+            return conceptService.GetConceptByReferenceTerm(code, system);
         }
 
         /// <summary>
@@ -780,13 +780,15 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// To FHIR enumeration
         /// </summary>
-        public static TEnum? ToFhirEnumeration<TEnum>(Concept concept, string codeSystem) where TEnum : struct
+        public static TEnum? ToFhirEnumeration<TEnum>(Concept concept, string codeSystem, bool throwIfNotFound = false) where TEnum : struct
         {
             var coding = DataTypeConverter.ToFhirCodeableConcept(concept, codeSystem, true);
             if (coding != null)
                 return Hl7.Fhir.Utility.EnumUtility.ParseLiteral<TEnum>(coding.Coding.First().Code, true);
-            else
+            else if (throwIfNotFound)
                 throw new ConstraintException($"Cannot find FHIR mapping for Concept {concept}");
+            else
+                return null;
         }
 
         /// <summary>

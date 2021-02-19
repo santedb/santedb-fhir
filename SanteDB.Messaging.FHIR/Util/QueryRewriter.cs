@@ -72,6 +72,22 @@ namespace SanteDB.Messaging.FHIR.Util
         private static QueryParameterType s_default;
 
         /// <summary>
+        /// Default parameters
+        /// </summary>
+        private static List<SearchParamComponent> s_defaultParameters = new List<SearchParamComponent>()
+            {
+                new SearchParamComponent() { Name = "_count", Type = SearchParamType.Number },
+                new SearchParamComponent() { Name = "_lastUpdated", Type = SearchParamType.Date },
+                new SearchParamComponent() { Name = "_format", Type = SearchParamType.Token },
+                new SearchParamComponent() { Name = "_offset", Type = SearchParamType.Number },
+                new SearchParamComponent() { Name = "_page", Type = SearchParamType.Number },
+                new SearchParamComponent() { Name = "_stateid", Type = SearchParamType.Token },
+                new SearchParamComponent() { Name = "_id", Type = SearchParamType.Token },
+                new SearchParamComponent() { Name = "_pretty", Type = SearchParamType.Token },
+                new SearchParamComponent() { Name = "_summary", Type = SearchParamType.Token }
+            };
+
+        /// <summary>
         /// Static CTOR
         /// </summary>
         static QueryRewriter()
@@ -109,7 +125,8 @@ namespace SanteDB.Messaging.FHIR.Util
         public static IEnumerable<SearchParamComponent> GetSearchParams<TFhirResource, TModelType>()
         {
             var map = s_map.Map.FirstOrDefault(o => o.SourceType == typeof(TFhirResource));
-            if (map == null) return null;
+            
+            if (map == null) return s_defaultParameters;
             else
                 return map.Map.Select(o => new SearchParamComponent()
                 {
@@ -117,7 +134,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     Type = MapFhirParameterType<TModelType>(o.FhirType, o.ModelName),
                     Documentation = new Markdown(o.Description),
                     Definition = $"/Profile/SanteDB#search-{map.SourceType.Name}.{o.FhirName}"
-                });
+                }).Union(s_defaultParameters);
 
         }
 

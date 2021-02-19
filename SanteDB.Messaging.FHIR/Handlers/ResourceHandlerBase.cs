@@ -60,7 +60,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// Gets the name of the resource.
 		/// </summary>
 		/// <value>The name of the resource.</value>
-		public string ResourceName => typeof(TFhirResource).GetCustomAttribute<XmlRootAttribute>().ElementName;
+		public string ResourceName => typeof(TFhirResource).GetCustomAttribute<FhirTypeAttribute>().Name;
 
 		/// <summary>
 		/// Create the specified resource.

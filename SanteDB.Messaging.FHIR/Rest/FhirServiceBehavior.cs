@@ -23,6 +23,8 @@ using SanteDB.Core;
 using SanteDB.Core.Auditing;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
+using SanteDB.Core.Interop;
+using SanteDB.Core.Interop.Description;
 using SanteDB.Core.Security;
 using SanteDB.Core.Security.Audit;
 using SanteDB.Core.Services;
@@ -49,10 +51,9 @@ namespace SanteDB.Messaging.FHIR.Rest
     /// </summary>
     /// <remarks>SanteSB Server implementation of the HL7 FHIR R3 Contract</remarks>
     [ServiceBehavior(Name = "FHIR", InstanceMode = ServiceInstanceMode.PerCall)]
-    public class FhirServiceBehavior : IFhirServiceContract
+    public class FhirServiceBehavior : IFhirServiceContract, IServiceBehaviorMetadataProvider
     {
 
-        
         private Tracer m_tracer = new Tracer(FhirConstants.TraceSourceName);
 
         #region IFhirServiceContract Members
@@ -177,7 +178,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                     throw new FileNotFoundException(); // endpoint not found!
 
                 var result = handler.Update(id, target, TransactionMode.Commit);
-               
+
                 AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Update, AuditableObjectLifecycle.Amendment, EventIdentifierType.Import, OutcomeIndicator.Success, id, result);
 
                 String baseUri = MessageUtil.GetBaseUri();
@@ -336,7 +337,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // TODO: Appropriately format response
                 // Process incoming request
                 result = resourceProcessor.Query(RestOperationContext.Current.IncomingRequest.QueryString);
-                
+
                 AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, RestOperationContext.Current.IncomingRequest.Url.Query, result.Results.ToArray());
                 // Create the Atom feed
                 return MessageUtil.CreateBundle(result);
@@ -345,7 +346,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error searching FHIR resource {0}: {1}", resourceType, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query,  result.Results.ToArray());
+                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query, result.Results.ToArray());
                 throw;
             }
 
@@ -460,14 +461,14 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Create the result
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated.Value.DateTime);
                 RestOperationContext.Current.OutgoingResponse.SetETag($"W/\"{result.VersionId}\"");
-                
+
                 return result;
 
             }
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error reading FHIR resource {0}({1},{2}): {3}", resourceType, id, vid, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, $"_id={id}&_versionId={vid}",  null);
+                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, $"_id={id}&_versionId={vid}", null);
                 throw;
             }
         }
@@ -516,6 +517,106 @@ namespace SanteDB.Messaging.FHIR.Rest
             if (!ApplicationServiceContext.Current.IsRunning)
                 throw new DomainStateException();
 
+        }
+
+
+        /// <summary>
+        /// Get the description of the service
+        /// </summary>
+        public ServiceDescription Description
+        {
+            get
+            {
+                ServiceDescription retVal = new ServiceDescription();
+                String[] acceptProduces = new string[] { "application/fhir+json", "application/fhir+xml" };
+
+                foreach (var def in FhirResourceHandlerUtil.GetRestDefinition())
+                {
+                    foreach (var op in def.Interaction)
+                    {
+
+                        ServiceOperationDescription operationDescription = null;
+                        switch (op.Code.Value)
+                        {
+                            case CapabilityStatement.TypeRestfulInteraction.Create:
+                                operationDescription = new ServiceOperationDescription("POST", $"/{def.Type.Value}", acceptProduces, true);
+                                operationDescription.Responses.Add(HttpStatusCode.Created, def.Type.Value.CreateDescription());
+                                operationDescription.Parameters.Add(new OperationParameterDescription("body", def.Type.Value.CreateDescription(), OperationParameterLocation.Body));
+                                break;
+                            case CapabilityStatement.TypeRestfulInteraction.Delete:
+                                operationDescription = new ServiceOperationDescription("DELETE", $"/{def.Type.Value}/{{id}}", acceptProduces, true);
+                                operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
+                                operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
+                                break;
+                            case CapabilityStatement.TypeRestfulInteraction.HistoryInstance:
+                                operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}/{{id}}/_history", acceptProduces, true);
+                                operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
+                                operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
+                                operationDescription.Parameters.Add(new OperationParameterDescription("_pretty", typeof(bool), OperationParameterLocation.Query));
+                                operationDescription.Parameters.Add(new OperationParameterDescription("_summary", typeof(String), OperationParameterLocation.Query));
+                                break;
+                            case CapabilityStatement.TypeRestfulInteraction.HistoryType:
+                                operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}/_history", acceptProduces, true);
+                                operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
+                                operationDescription.Parameters.Add(new OperationParameterDescription("_pretty", typeof(bool), OperationParameterLocation.Query));
+                                operationDescription.Parameters.Add(new OperationParameterDescription("_summary", typeof(String), OperationParameterLocation.Query));
+                                break;
+                            case CapabilityStatement.TypeRestfulInteraction.Read:
+                                operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}/{{id}}", acceptProduces, true);
+                                operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
+                                operationDescription.Parameters.Add(new OperationParameterDescription("_pretty", typeof(bool), OperationParameterLocation.Query));
+                                operationDescription.Parameters.Add(new OperationParameterDescription("_summary", typeof(String), OperationParameterLocation.Query));
+                                operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
+                                break;
+                            case CapabilityStatement.TypeRestfulInteraction.SearchType:
+                                operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}", acceptProduces, true);
+                                operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
+                                foreach (var itm in def.SearchParam)
+                                {
+                                    var parmType = typeof(Object);
+                                    switch (itm.Type.Value)
+                                    {
+
+                                        case SearchParamType.Date:
+                                            parmType = typeof(DateTime);
+                                            break;
+                                        case SearchParamType.Number:
+                                        case SearchParamType.Quantity:
+                                            parmType = typeof(Int32);
+                                            break;
+                                        case SearchParamType.Reference:
+                                        case SearchParamType.String:
+                                        case SearchParamType.Composite:
+                                        case SearchParamType.Token:
+                                        case SearchParamType.Uri:
+                                            parmType = typeof(String);
+                                            break;
+                                    }
+                                    operationDescription.Parameters.Add(new OperationParameterDescription(itm.Name, parmType, OperationParameterLocation.Query));
+                                }
+                                break;
+                            case CapabilityStatement.TypeRestfulInteraction.Update:
+                                operationDescription = new ServiceOperationDescription("PUT", $"/{def.Type.Value}/{{id}}", acceptProduces, true);
+                                operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
+                                operationDescription.Parameters.Add(new OperationParameterDescription("body", def.Type.Value.CreateDescription(), OperationParameterLocation.Body));
+                                operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
+                                break;
+                            case CapabilityStatement.TypeRestfulInteraction.Vread:
+                                operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}/{{id}}/_history/{{versionId}}", acceptProduces, true);
+                                operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
+                                operationDescription.Parameters.Add(new OperationParameterDescription("versionId", typeof(String), OperationParameterLocation.Path));
+                                operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
+                                break;
+                        }
+
+                        operationDescription.Tags.Add(def.Type.ToString());
+                        operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
+                        retVal.Operations.Add(operationDescription);
+                    }
+                }
+
+                return retVal;
+            }
         }
     }
 

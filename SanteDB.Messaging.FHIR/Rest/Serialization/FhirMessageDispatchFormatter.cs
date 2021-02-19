@@ -124,25 +124,43 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                     contentType = httpRequest.Headers["Content-Type"],
                     formatParm = httpRequest.QueryString["_format"];
 
-                var summaryType = SummaryType.False;
-                if (!RestOperationContext.Current.Data.TryGetValue("summaryType", out object sumaryTypeData))
-                    summaryType = (SummaryType)sumaryTypeData;
+                bool isOutputPretty = httpRequest.QueryString["_pretty"] == "true";
 
+                SummaryType? summaryType = SummaryType.False;
+                if (httpRequest.QueryString["_summary"] != null)
+                    summaryType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<SummaryType>(httpRequest.QueryString["_summary"], true);
+
+                contentType = accepts ?? contentType ?? formatParm;
                 if (result is Base baseObject)
                 {
+                    var ms = new MemoryStream();
                     // The request was in JSON or the accept is JSON
-                    switch (accepts ?? contentType ?? formatParm)
+                    switch (contentType)
                     {
                         case "application/fhir+xml":
-                            using (var xw = XmlWriter.Create(responseMessage.Body))
-                                new FhirXmlSerializer().Serialize(baseObject, xw, summaryType);
+                            using (var xw = XmlWriter.Create(ms, new XmlWriterSettings() { 
+                                Encoding = System.Text.Encoding.UTF8,
+                                Indent = isOutputPretty
+                            }))
+                                new FhirXmlSerializer().Serialize(baseObject, xw, summaryType.Value);
                             break;
                         case "application/fhir+json":
-                            using (var sw = new StreamWriter(responseMessage.Body))
-                            using (var jw = new JsonTextWriter(sw))
-                                new FhirJsonSerializer().Serialize(baseObject, jw);
+                            using (var sw = new StreamWriter(ms, System.Text.Encoding.UTF8, 1024, true))
+                            using (var jw = new JsonTextWriter(sw)
+                            {
+                                Formatting = isOutputPretty ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None,
+                                DateFormatHandling = DateFormatHandling.IsoDateFormat
+                            })
+                                new FhirJsonSerializer(new SerializerSettings()
+                                {
+                                    Pretty = isOutputPretty
+                                }).Serialize(baseObject, jw);
                             break;
+                        default:
+                            throw new InvalidOperationException($"Can't handle this content/type");
                     }
+                    ms.Seek(0, SeekOrigin.Begin);
+                    responseMessage.Body = ms;
                 }
                 else if (result == null)
                     responseMessage.StatusCode = 204; // no content
