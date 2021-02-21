@@ -25,12 +25,12 @@ using System.Runtime.InteropServices;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("SanteDB FHIR DSTU2 Messaging")]
+[assembly: AssemblyTitle("SanteDB FHIR R4 Messaging")]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Mohawk College of Applied Arts and Technology")]
 [assembly: AssemblyProduct("SanteDB (http://SanteDB.org)")]
-[assembly: AssemblyCopyright("Copyright (C) 2015-2018, Mohawk College of Applied Arts and Technology")]
+[assembly: AssemblyCopyright("Copyright (C) 2015-2021, The SanteSuite Contributors (see NOTICES)")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

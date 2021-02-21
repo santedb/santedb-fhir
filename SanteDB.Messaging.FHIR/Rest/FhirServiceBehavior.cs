@@ -47,9 +47,9 @@ using System.Xml.Serialization;
 namespace SanteDB.Messaging.FHIR.Rest
 {
     /// <summary>
-    /// HL7 Fast Health Interoperability Resources (FHIR) R3
+    /// HL7 Fast Health Interoperability Resources (FHIR) R4
     /// </summary>
-    /// <remarks>SanteSB Server implementation of the HL7 FHIR R3 Contract</remarks>
+    /// <remarks>SanteSB Server implementation of the HL7 FHIR R4 Contract</remarks>
     [ServiceBehavior(Name = "FHIR", InstanceMode = ServiceInstanceMode.PerCall)]
     public class FhirServiceBehavior : IFhirServiceContract, IServiceBehaviorMetadataProvider
     {
@@ -338,7 +338,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Process incoming request
                 result = resourceProcessor.Query(RestOperationContext.Current.IncomingRequest.QueryString);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, RestOperationContext.Current.IncomingRequest.Url.Query, result.Results.ToArray());
+                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, RestOperationContext.Current.IncomingRequest.Url.Query, result.Results?.ToArray());
                 // Create the Atom feed
                 return MessageUtil.CreateBundle(result);
 
@@ -346,7 +346,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error searching FHIR resource {0}: {1}", resourceType, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query, result.Results.ToArray());
+                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query, result?.Results?.ToArray());
                 throw;
             }
 
@@ -615,6 +615,8 @@ namespace SanteDB.Messaging.FHIR.Rest
                     }
                 }
 
+                retVal.Operations.Add(new ServiceOperationDescription("GET", "/CapabilityStatement", acceptProduces, true));
+                retVal.Operations.Add(new ServiceOperationDescription("OPTIONS", "/", acceptProduces, false));
                 return retVal;
             }
         }

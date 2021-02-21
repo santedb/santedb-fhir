@@ -38,12 +38,12 @@ namespace SanteDB.Messaging.FHIR.Rest
     public interface IFhirServiceContract
     {
 
-     
         /// <summary>
-        /// Get the schema
+        /// Options for this service
         /// </summary>
-        [Get("/?xsd={schemaId}")]
-        XmlSchema GetSchema(int schemaId);
+        [RestInvoke(UriTemplate = "/", Method = "OPTIONS")]
+        [Get("/CapabilityStatement")]
+        CapabilityStatement GetOptions();
 
         /// <summary>
         /// Gets the current time on the service
@@ -113,13 +113,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// </summary>
         [Get("/{resourceType}/_search")]
         Bundle SearchResourceAlt(string resourceType);
-
-        /// <summary>
-        /// Options for this service
-        /// </summary>
-        [RestInvoke(UriTemplate = "/", Method = "OPTIONS")]
-        CapabilityStatement GetOptions();
-
 
         /// <summary>
         /// Post a transaction

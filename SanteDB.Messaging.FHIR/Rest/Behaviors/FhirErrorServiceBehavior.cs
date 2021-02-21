@@ -80,43 +80,46 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
 
             // Formulate appropriate response
             if (error is DomainStateException)
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)System.Net.HttpStatusCode.ServiceUnavailable;
+                response.StatusCode = (int)System.Net.HttpStatusCode.ServiceUnavailable;
             else if (error is PolicyViolationException)
             {
                 var pve = error as PolicyViolationException;
                 if (pve.PolicyDecision == PolicyGrantType.Elevate)
                 {
                     // Ask the user to elevate themselves
-                    RestOperationContext.Current.OutgoingResponse.StatusCode = 401;
+                    response.StatusCode = 401;
                     var authHeader = $"{(RestOperationContext.Current.AppliedPolicies.Any(o=>o.GetType().Name.Contains("Basic")) ? "Basic" : "Bearer")} realm=\"{RestOperationContext.Current.IncomingRequest.Url.Host}\" error=\"insufficient_scope\" scope=\"{pve.PolicyId}\"  error_description=\"{error.Message}\"";
-                    RestOperationContext.Current.OutgoingResponse.AddHeader("WWW-Authenticate", authHeader);
+                    response.Headers.Add("WWW-Authenticate", authHeader);
                 }
                 else
                 {
-                    RestOperationContext.Current.OutgoingResponse.StatusCode = 403;
+                    response.StatusCode = 403;
                 }
             }
             else if (error is SecurityException || error is UnauthorizedAccessException)
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
             else if (error is SecurityTokenException )
             {
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
-                RestOperationContext.Current.OutgoingResponse.AddHeader("WWW-Authenticate", $"Bearer");
+                response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
+                response.Headers.Add("WWW-Authenticate", $"Bearer");
             }
             else if (error is FaultException)
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)(error as FaultException).StatusCode;
+                response.StatusCode = (int)(error as FaultException).StatusCode;
             else if (error is Newtonsoft.Json.JsonException ||
                 error is System.Xml.XmlException)
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
+                response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
             else if (error is FileNotFoundException)
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
+                response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
             else if (error is DbException || error is ConstraintException)
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)(System.Net.HttpStatusCode)422;
+                response.StatusCode = (int)(System.Net.HttpStatusCode)422;
             else if (error is PatchException)
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)System.Net.HttpStatusCode.Conflict;
-
+                response.StatusCode = (int)System.Net.HttpStatusCode.Conflict;
+            else if (error is NotImplementedException)
+                response.StatusCode = (int)System.Net.HttpStatusCode.NotImplemented;
+            else if (error is NotSupportedException)
+                response.StatusCode = (int)System.Net.HttpStatusCode.MethodNotAllowed;
             else
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
+                response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
 
             // Construct an error result
             var errorResult = new OperationOutcome()
