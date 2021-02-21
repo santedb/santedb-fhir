@@ -43,6 +43,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         // IDs of family members
         private List<Guid> m_contacts;
+        private List<Guid> m_relatedPersons;
 
         /// <summary>
         /// Resource handler subscription
@@ -52,10 +53,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             ApplicationServiceContext.Current.Started += (o, e) =>
             {
-                this.m_contacts = ApplicationServiceContext.Current.GetService<IRepositoryService<Concept>>().Find(x => x.ConceptSets.Any(c => c.Mnemonic == "FamilyMember")).Select(c => c.Key.Value).ToList();
+                this.m_relatedPersons = ApplicationServiceContext.Current.GetService<IRepositoryService<Concept>>().Find(x => x.ConceptSets.Any(c => c.Mnemonic == "FamilyMember")).Select(c => c.Key.Value).ToList();
+                this.m_contacts = new List<Guid>();
                 this.m_contacts.Add(EntityRelationshipTypeKeys.Employee);
                 this.m_contacts.Add(EntityRelationshipTypeKeys.EmergencyContact);
                 this.m_contacts.Add(EntityRelationshipTypeKeys.CoverageSponsor);
+                this.m_contacts.Add(EntityRelationshipTypeKeys.NextOfKin);
             };
         }
         /// <summary>
@@ -124,7 +127,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
 			{
                 // Contact => Person
-                if (this.m_contacts.Contains(rel.RelationshipTypeKey.Value))
+                if(this.m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
+                {
+                    // Create the relative object
+                    var relative = DataTypeConverter.CreateResource<RelatedPerson>(rel.LoadProperty<Core.Model.Entities.Person>(nameof(EntityRelationship.TargetEntity)), restOperationContext);
+                    relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty<Concept>(nameof(EntityRelationship.RelationshipType))) };
+                    relative.Address = rel.TargetEntity.Addresses.Select(o=>DataTypeConverter.ToFhirAddress(o)).ToList();
+                    //relative.Gender = DataTypeConverter.ToFhirCodeableConcept((rel.TargetEntity as Core.Model.Roles.Patient)?.LoadProperty<Concept>(nameof(Core.Model.Roles.Patient.GenderConcept)));
+                    relative.Identifier = rel.TargetEntity.LoadCollection<EntityIdentifier>(nameof(Entity.Identifiers)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
+                    relative.Name = rel.TargetEntity.LoadCollection<EntityName>(nameof(Entity.Names)).Select(o=>DataTypeConverter.ToFhirHumanName(o)).ToList();
+                    relative.Patient = DataTypeConverter.CreateInternalReference<Patient>(model, restOperationContext);
+                    relative.Telecom = rel.TargetEntity.LoadCollection<EntityTelecomAddress>(nameof(Entity.Telecoms)).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+                    retVal.Contained.Add(relative);
+                }
+                else if (this.m_contacts.Contains(rel.RelationshipTypeKey.Value))
                 {
                     var person = rel.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity));
 
@@ -148,7 +164,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     //});
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper)
-                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.TargetEntityKey, restOperationContext);
+                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)), restOperationContext);
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
                     retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)), restOperationContext));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)

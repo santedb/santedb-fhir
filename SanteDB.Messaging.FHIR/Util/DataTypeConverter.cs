@@ -76,7 +76,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the resource.</typeparam>
         /// <param name="targetEntity">The target entity.</param>
         /// <returns>Returns a reference instance.</returns>
-        public static ResourceReference CreateNonVersionedReference<TResource>(IIdentifiedEntity targetEntity, RestOperationContext context) where TResource : DomainResource, new()
+        public static ResourceReference CreateNonVersionedReference<TResource>(IdentifiedData targetEntity, RestOperationContext context) where TResource : DomainResource, new()
         {
             if (targetEntity == null)
                 throw new ArgumentNullException(nameof(targetEntity));
@@ -85,8 +85,28 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
-            var refer = new ResourceReference($"/{fhirType}/{targetEntity.Key}");
-            refer.Display = targetEntity.ToString();
+            var refer = new ResourceReference($"{fhirType}/{targetEntity.Key}");
+            refer.Display = targetEntity.ToDisplay();
+            return refer;
+
+        }
+
+        /// <summary>
+        /// Creates a FHIR reference.
+        /// </summary>
+        /// <typeparam name="TResource">The type of the resource.</typeparam>
+        /// <param name="targetEntity">The target entity.</param>
+        /// <returns>Returns a reference instance.</returns>
+        public static ResourceReference CreateInternalReference<TResource>(IdentifiedData targetEntity, RestOperationContext context) where TResource : DomainResource, new()
+        {
+            if (targetEntity == null)
+                throw new ArgumentNullException(nameof(targetEntity));
+            else if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
+            var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
+            var refer = new ResourceReference(targetEntity.Key.ToString());
+            refer.Display = targetEntity.ToDisplay();
             return refer;
 
         }
