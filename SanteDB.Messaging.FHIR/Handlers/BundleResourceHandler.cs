@@ -81,7 +81,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType.GetCustomAttribute<XmlRootAttribute>().ElementName) as IBundleResourceHandler;
                 if (handler == null)
                 {
-                    this.traceSource.TraceWarning("Can't find bundle handler for {0}...", entryType.Name);
+                    this.m_traceSource.TraceWarning("Can't find bundle handler for {0}...", entryType.Name);
                     continue;
                 }
                 retVal.Add(handler.MapToModel(entry.Resource, webOperationContext, resource));

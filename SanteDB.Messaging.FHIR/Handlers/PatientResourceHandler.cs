@@ -147,6 +147,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     //    Type = Patient.LinkType.Seealso
                     //});
                 }
+                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper)
+                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.TargetEntityKey, restOperationContext);
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
                     retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)), restOperationContext));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
@@ -155,7 +157,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso, restOperationContext));
                 else if (rel.RelationshipTypeKey?.ToString() == "97730a52-7e30-4dcd-94cd-fd532d111578") // MDM Master Record
                 {
-                    if(rel.SourceEntityKey.HasValue &&  rel.SourceEntityKey != model.Key)
+                    if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
                         retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso, restOperationContext));
                     else // Is a local
                         retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer, restOperationContext));
@@ -196,7 +198,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList(),
 				CreationTime = DateTimeOffset.Now,
 				DateOfBirthXml = resource.BirthDate,
-                GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", resource.Gender?.ToString()))?.Key,
+                GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key,
 				Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
 				LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList(),
 				Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList(),
@@ -214,7 +216,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     if(id.LoadProperty<AssigningAuthority>(nameof(EntityIdentifier.Authority)).IsUnique)
                     {
                         var match = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>().Find(o => o.Identifiers.Any(i => i.Authority.DomainName == id.Authority.DomainName && i.Value == id.Value), 0, 1, out int tr);
-                        key = match.FirstOrDefault()?.Key ?? Guid.NewGuid();
+                        if (tr == 1)
+                            key = match.FirstOrDefault()?.Key ?? Guid.NewGuid();
+                        else if (tr > 1)
+                            this.m_traceSource.TraceWarning($"The identifier {id} resulted in ambiguous results ({tr} matches) - the FHIR layer will treat this as an INSERT rather than UPDATE");
                     }   
                 }
             }
@@ -240,6 +245,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			{
 				patient.MultipleBirthOrder = intBirth.Value;
 			}
+
+            if(resource.ManagingOrganization != null)
+            {
+                var referenceKey = DataTypeConverter.ResolveEntityKey(resource.ManagingOrganization);
+                if (referenceKey == null)
+                    throw new KeyNotFoundException("Can't locate a registered managing organization");
+                else
+                {
+                    patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Scoper, referenceKey));
+                }
+            }
 
 			return patient;
 		}

@@ -54,7 +54,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <summary>
 		/// The trace source instance.
 		/// </summary>
-		protected Tracer traceSource = new Tracer(FhirConstants.TraceSourceName);
+		protected Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
 		/// <summary>
 		/// Gets the name of the resource.
@@ -73,7 +73,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.Data.SyntaxErrorException"></exception>
 		public virtual Resource Create(Resource target, TransactionMode mode)
 		{
-			this.traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceName, target);
+			this.m_traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceName, target);
 
 			if (target == null)
 				throw new ArgumentNullException(nameof(target));
@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (String.IsNullOrEmpty(id))
                 throw new ArgumentNullException(nameof(id));
 
-            this.traceSource.TraceInfo("Deleting resource {0}/{1}", this.ResourceName, id);
+            this.m_traceSource.TraceInfo("Deleting resource {0}/{1}", this.ResourceName, id);
 
             // Delete
             var guidId = Guid.Empty;
@@ -237,7 +237,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.Collections.Generic.KeyNotFoundException"></exception>
 		public Resource Update(string id, Resource target, TransactionMode mode)
 		{
-			this.traceSource.TraceInfo("Updating resource {0}/{1} ({2})", this.ResourceName, id, target);
+			this.m_traceSource.TraceInfo("Updating resource {0}/{1} ({2})", this.ResourceName, id, target);
 
 			if (target == null)
 				throw new ArgumentNullException(nameof(target));

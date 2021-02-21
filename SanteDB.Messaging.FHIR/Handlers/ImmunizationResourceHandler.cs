@@ -173,7 +173,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var concept = DataTypeConverter.ToConcept(resource.VaccineCode);
                 if (concept == null)
                 {
-                    this.traceSource.TraceWarning("Ignoring administration {0} don't have concept mapped", resource.VaccineCode);
+                    this.m_traceSource.TraceWarning("Ignoring administration {0} don't have concept mapped", resource.VaccineCode);
                     return null;
                 }
                 // Get the material 
@@ -181,7 +181,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var material = ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>().Find(m => m.TypeConceptKey == concept.Key, 0, 1, out t).FirstOrDefault();
                 if (material == null)
                 {
-                    this.traceSource.TraceWarning("Ignoring administration {0} don't have material registered for {1}", resource.VaccineCode, concept?.Mnemonic);
+                    this.m_traceSource.TraceWarning("Ignoring administration {0} don't have material registered for {1}", resource.VaccineCode, concept?.Mnemonic);
                     return null;
                 }
                 else

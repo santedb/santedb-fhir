@@ -34,6 +34,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -349,7 +350,7 @@ namespace SanteDB.Messaging.FHIR.Util
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping assigning authority");
 
             var oidRegistrar = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
-            var oid = oidRegistrar.Get(fhirSystem);
+            var oid = oidRegistrar.Get(new Uri(fhirSystem));
 
             if (oid == null)
                 throw new KeyNotFoundException($"Could not find identity domain {fhirSystem}");
@@ -499,9 +500,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR address");
 
+            var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirAddress.Use) ?? "home";
             var address = new EntityAddress
             {
-                AddressUseKey = ToConcept(fhirAddress.Use?.ToString().ToLower() ?? "home", "http://hl7.org/fhir/address-use")?.Key
+                AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key
             };
 
             if (!String.IsNullOrEmpty(fhirAddress.City))
@@ -583,9 +585,11 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR human name");
 
+            var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirHumanName.Use) ?? "official";
+
             var name = new EntityName
             {
-                NameUseKey = ToConcept(fhirHumanName.Use?.ToString()?.ToLower() ?? "official", "http://hl7.org/fhir/name-use")?.Key
+                NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key
             };
 
             if (fhirHumanName.Family != null)
@@ -601,25 +605,76 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Resolve the specified entity
+        /// </summary>
+        public static Guid? ResolveEntityKey(ResourceReference resourceRef)
+        {
+            var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<Entity>>();
+            if (resourceRef.Identifier != null)
+            {
+                var identifier = DataTypeConverter.ToEntityIdentifier(resourceRef.Identifier);
+                var ent = repo.Find(o => o.Identifiers.Any(a => a.AuthorityKey == identifier.AuthorityKey && a.Value == identifier.Value), 0, 1, out int tr).FirstOrDefault();
+                if (tr > 1)
+                    throw new InvalidOperationException($"Reference to {identifier} is ambiguous ({tr} records have this identity)");
+                return ent?.Key;
+            }
+            else if (!String.IsNullOrEmpty(resourceRef.Reference))
+            {
+                // Attempt to resolve the reference 
+                var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
+                var match = refRegex.Match(resourceRef.Reference);
+                if (!match.Success)
+                    throw new InvalidOperationException($"{resourceRef.Reference} was not in the expected format. Expecting urn:uuid:UUID or Type/UUID");
+
+                if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value, out Guid relUuid)) // rel reference
+                    return repo.Get(relUuid)?.Key; // Allow any triggers to fire
+                else if (Guid.TryParse(match.Groups[1].Value, out Guid absRef))
+                    return repo.Get(absRef)?.Key;
+                    
+                return null;
+            }
+            else
+                throw new ArgumentException("Could not understand resource reference");
+        }
+
+        /// <summary>
         /// Converts a <see cref="PatientContact"/> instance to an <see cref="EntityRelationship"/> instance.
         /// </summary>
         /// <param name="patientContact">The patient contact.</param>
         /// <returns>Returns the mapped entity relationship instance..</returns>
         public static EntityRelationship ToEntityRelationship(Patient.ContactComponent patientContact)
         {
-
             var retVal = new EntityRelationship();
-            retVal.TargetEntity = new Core.Model.Entities.Person()
-            {
-                Addresses = new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(patientContact.Address) },
-                CreationTime = DateTimeOffset.Now,
-                // TODO: Gender (after refactor)
-                Names = new List<EntityName>() { DataTypeConverter.ToEntityName(patientContact.Name) },
-                Telecoms = patientContact.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
-            };
-            retVal.TargetEntity.Extensions = patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>().ToList();
             retVal.RelationshipType = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault());
+
+            // Is there an organization assigned?
+            if (patientContact.Organization != null && patientContact.Name == null &&
+                patientContact.Address == null)
+            {
+                var refObjectKey = DataTypeConverter.ResolveEntityKey(patientContact.Organization);
+                if (refObjectKey != null)
+                    retVal.TargetEntityKey = refObjectKey;
+                else  // TODO: Implement
+                    throw new KeyNotFoundException($"Could not resolve reference to patientContext.Organization");
+            }
+            else
+            {
+                retVal.TargetEntity = new Core.Model.Entities.Person()
+                {
+                    Addresses = patientContact.Address != null ? new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(patientContact.Address) } : null,
+                    CreationTime = DateTimeOffset.Now,
+                    // TODO: Gender (after refactor)
+                    Names = patientContact.Name != null ? new List<EntityName>() { DataTypeConverter.ToEntityName(patientContact.Name) } : null,
+                    Telecoms = patientContact.Telecom?.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
+                };
+
+                retVal.TargetEntity.Extensions = patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>().ToList();
+                if (patientContact.Organization != null)
+                    throw new NotSupportedException("Organization links on contacts with person information are not yet supported");
+            }
+
             return retVal;
+
         }
 
         /// <summary>
@@ -631,12 +686,14 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR telecom");
 
-            if (fhirTelecom.Value != null)
+            if (!String.IsNullOrEmpty(fhirTelecom.Value)) {
+                var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.Use) ?? "temp";
                 return new EntityTelecomAddress
                 {
                     Value = fhirTelecom.Value,
-                    AddressUseKey = ToConcept(fhirTelecom.Use?.ToString()?.ToLower() ?? "temp", "http://hl7.org/fhir/contact-point-use")?.Key
+                    AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/contact-point-use")?.Key
                 };
+            }
             return null;
         }
 
