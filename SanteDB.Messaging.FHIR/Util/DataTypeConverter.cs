@@ -520,7 +520,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR address");
 
-            var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirAddress.Use) ?? "home";
+            var mnemonic = "home";
+            if (fhirAddress.Use.HasValue)
+                mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirAddress.Use);
+
             var address = new EntityAddress
             {
                 AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key
@@ -605,7 +608,9 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR human name");
 
-            var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirHumanName.Use) ?? "official";
+            var mnemonic = "official";
+            if(fhirHumanName.Use.HasValue)
+                mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirHumanName.Use);
 
             var name = new EntityName
             {
@@ -707,7 +712,10 @@ namespace SanteDB.Messaging.FHIR.Util
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR telecom");
 
             if (!String.IsNullOrEmpty(fhirTelecom.Value)) {
-                var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.Use) ?? "temp";
+                var mnemonic = "temp";
+                if(fhirTelecom.Use.HasValue)
+                    mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.Use);
+
                 return new EntityTelecomAddress
                 {
                     Value = fhirTelecom.Value,
