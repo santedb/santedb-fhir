@@ -22,7 +22,7 @@ namespace SanteDB.Messaging.FHIR.Extensions
         Uri Uri { get; }
         
         /// <summary>
-        /// Gets the resource type that this applies to
+        /// Gets the resource type that this applies to (or null if it applies to all types)
         /// </summary>
         ResourceType? AppliesTo { get; }
 

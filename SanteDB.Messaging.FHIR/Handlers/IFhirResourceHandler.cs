@@ -33,7 +33,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Gets the type of resource this handler can perform operations on
         /// </summary>
-        string ResourceName { get; }
+        ResourceType ResourceType { get; }
 
         /// <summary>
         /// Read a specific version of a resource

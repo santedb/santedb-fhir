@@ -34,13 +34,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Gets the resource name
         /// </summary>
-        public string ResourceName
-        {
-            get
-            {
-                return "StructureDefinition";
-            }
-        }
+        public ResourceType ResourceType => ResourceType.StructureDefinition;
 
         /// <summary>
         /// Create the specified definition
@@ -83,7 +77,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         Code = TypeRestfulInteraction.SearchType
                     }
                 },
-                Type = ResourceType.StructureDefinition,
+                Type = Hl7.Fhir.Model.ResourceType.StructureDefinition,
                 ReadHistory = true,
                 UpdateCreate = false,
                 Versioning = ResourceVersionPolicy.Versioned

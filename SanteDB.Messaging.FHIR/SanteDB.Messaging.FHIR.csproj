@@ -77,7 +77,8 @@
     <Compile Include="Handlers\ResourceHandlerBase.cs" />
     <Compile Include="Handlers\StructureDefinitionHandler.cs" />
     <Compile Include="Handlers\SubstanceResourceHandler.cs" />
-    <Compile Include="Profiles\IFhirProfileHandler.cs" />
+    <Compile Include="Extensions\IFhirProfileHandler.cs" />
+    <Compile Include="Extensions\IFhirOperationHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rest\Behaviors\FhirMessageDispatchFormatterEndpointBehavior.cs" />
     <Compile Include="Util\ConformanceUtil.cs" />
@@ -85,7 +86,7 @@
     <Compile Include="Util\IBundleResourceHandler.cs" />
     <Compile Include="Util\MessageUtil.cs" />
     <Compile Include="Util\ModelExtensions.cs" />
-    <Compile Include="Util\ProfileUtil.cs" />
+    <Compile Include="Util\ExtensionUtil.cs" />
     <Compile Include="Util\QueryRewriter.cs" />
     <Compile Include="Util\QueryParameterMap.cs" />
     <Compile Include="Util\StructureDefinitionUtil.cs" />
