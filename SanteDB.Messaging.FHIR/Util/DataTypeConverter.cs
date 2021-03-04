@@ -93,6 +93,21 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Convert to issue
+        /// </summary>
+        internal static OperationOutcome.IssueComponent ToIssue(Core.BusinessRules.DetectedIssue issue)
+        {
+            return new OperationOutcome.IssueComponent()
+            {
+                Severity = issue.Priority == Core.BusinessRules.DetectedIssuePriorityType.Error ? OperationOutcome.IssueSeverity.Error :
+                           issue.Priority == Core.BusinessRules.DetectedIssuePriorityType.Warning ? OperationOutcome.IssueSeverity.Warning :
+                           OperationOutcome.IssueSeverity.Information,
+                Code = OperationOutcome.IssueType.NoStore,
+                Diagnostics = issue.Text
+            };
+        }
+
+        /// <summary>
         /// Creates a FHIR reference.
         /// </summary>
         /// <typeparam name="TResource">The type of the resource.</typeparam>

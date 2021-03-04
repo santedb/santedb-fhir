@@ -47,6 +47,16 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Operation Handlers
+        /// </summary>
+        public static IEnumerable<IFhirOperationHandler> OperationHandlers => s_operationHandlers;
+
+        /// <summary>
+        /// Profile handlers
+        /// </summary>
+        public static IEnumerable<IFhirProfileHandler> ProfileHandlers => s_profileHandlers;
+
+        /// <summary>
         /// Runs all registered extensions on the object
         /// </summary>
         /// <param name="appliedExtensions">The extensions that were applied to the object</param>

@@ -79,6 +79,7 @@
     <Compile Include="Handlers\SubstanceResourceHandler.cs" />
     <Compile Include="Extensions\IFhirProfileHandler.cs" />
     <Compile Include="Extensions\IFhirOperationHandler.cs" />
+    <Compile Include="Operations\FhirValidateResourceOperation.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Rest\Behaviors\FhirMessageDispatchFormatterEndpointBehavior.cs" />
     <Compile Include="Util\ConformanceUtil.cs" />

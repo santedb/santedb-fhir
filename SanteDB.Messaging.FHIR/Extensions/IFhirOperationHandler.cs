@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Extensions
 {
@@ -17,6 +18,11 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// Gets the name of the operation
         /// </summary>
         String Name { get; }
+
+        /// <summary>
+        /// Get URL of the operation
+        /// </summary>
+        Uri Uri { get; }
 
         /// <summary>
         /// The type that this operation handler applies to (or null if it applies to all)

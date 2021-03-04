@@ -36,5 +36,6 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// <returns>The list of detected issues</returns>
         List<Core.BusinessRules.DetectedIssue> Validate(Resource resource);
 
+       
     }
 }
