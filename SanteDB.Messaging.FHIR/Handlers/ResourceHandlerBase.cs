@@ -18,6 +18,7 @@
  */
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
@@ -57,10 +58,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		protected Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
 		/// <summary>
+		/// Creates the resource handler
+		/// </summary>
+        public ResourceHandlerBase()
+        {
+			// Get the string name of the resource
+			var typeAttribute = typeof(TFhirResource).GetCustomAttribute<FhirTypeAttribute>();
+			if (typeAttribute == null || !typeAttribute.IsResource || !Enum.TryParse<ResourceType>(typeAttribute.Name, out ResourceType resourceType))
+				throw new InvalidOperationException($"Type of {typeof(TFhirResource)} is not a resource");
+			this.ResourceType = resourceType;
+        }
+
+		/// <summary>
 		/// Gets the name of the resource.
 		/// </summary>
 		/// <value>The name of the resource.</value>
-		public string ResourceName => typeof(TFhirResource).GetCustomAttribute<FhirTypeAttribute>().Name;
+		public ResourceType ResourceType { get; }
 
 		/// <summary>
 		/// Create the specified resource.
@@ -73,7 +86,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.Data.SyntaxErrorException"></exception>
 		public virtual Resource Create(Resource target, TransactionMode mode)
 		{
-			this.m_traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceName, target);
+			this.m_traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceType, target);
 
 			if (target == null)
 				throw new ArgumentNullException(nameof(target));
@@ -104,7 +117,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (String.IsNullOrEmpty(id))
                 throw new ArgumentNullException(nameof(id));
 
-            this.m_traceSource.TraceInfo("Deleting resource {0}/{1}", this.ResourceName, id);
+            this.m_traceSource.TraceInfo("Deleting resource {0}/{1}", this.ResourceType, id);
 
             // Delete
             var guidId = Guid.Empty;
@@ -237,7 +250,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.Collections.Generic.KeyNotFoundException"></exception>
 		public Resource Update(string id, Resource target, TransactionMode mode)
 		{
-			this.m_traceSource.TraceInfo("Updating resource {0}/{1} ({2})", this.ResourceName, id, target);
+			this.m_traceSource.TraceInfo("Updating resource {0}/{1} ({2})", this.ResourceType, id, target);
 
 			if (target == null)
 				throw new ArgumentNullException(nameof(target));

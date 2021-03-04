@@ -28,6 +28,7 @@ using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -89,6 +90,21 @@ namespace SanteDB.Messaging.FHIR.Util
             refer.Display = targetEntity.ToDisplay();
             return refer;
 
+        }
+
+        /// <summary>
+        /// Convert to issue
+        /// </summary>
+        internal static OperationOutcome.IssueComponent ToIssue(Core.BusinessRules.DetectedIssue issue)
+        {
+            return new OperationOutcome.IssueComponent()
+            {
+                Severity = issue.Priority == Core.BusinessRules.DetectedIssuePriorityType.Error ? OperationOutcome.IssueSeverity.Error :
+                           issue.Priority == Core.BusinessRules.DetectedIssuePriorityType.Warning ? OperationOutcome.IssueSeverity.Warning :
+                           OperationOutcome.IssueSeverity.Information,
+                Code = OperationOutcome.IssueType.NoStore,
+                Diagnostics = issue.Text
+            };
         }
 
         /// <summary>
@@ -187,7 +203,8 @@ namespace SanteDB.Messaging.FHIR.Util
                     fhirExtendable.Extension = extendableModel?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(o => DataTypeConverter.ToExtension(o, context)).ToList();
                 }
 
-                fhirExtendable.Extension = fhirExtendable.Extension.Union(ProfileUtil.CreateExtensions(resource, retVal.ResourceType)).ToList();
+                fhirExtendable.Extension = fhirExtendable.Extension.Union(ExtensionUtil.CreateExtensions(resource, retVal.ResourceType, out IEnumerable<IFhirExtensionHandler> appliedExtensions)).ToList();
+                retVal.Meta.Profile = appliedExtensions.Select(o => o.Uri.ToString());
             }
 
             return retVal;

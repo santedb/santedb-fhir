@@ -519,6 +519,45 @@ namespace SanteDB.Messaging.FHIR.Rest
 
         }
 
+        /// <summary>
+        /// Executes the specified operation name on the specified resource type
+        /// </summary>
+        /// <param name="resourceType">The type of resource this operation </param>
+        /// <param name="operationName">The name of the operation</param>
+        /// <param name="parameters">The parameters for the operation</param>
+        /// <returns>The result of executing the operation</returns>
+        public Resource Execute(string resourceType, string operationName, Parameters parameters)
+        {
+            this.ThrowIfNotReady();
+
+            try
+            {
+
+                // Get the operation handler
+                var handler = ExtensionUtil.GetOperation(resourceType, operationName);
+
+                // No handler?
+                if (handler == null)
+                    throw new FileNotFoundException(); // endpoint not found!
+
+                var result = handler.Invoke(parameters);
+
+                String baseUri = MessageUtil.GetBaseUri();
+                RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated.Value.DateTime);
+                RestOperationContext.Current.OutgoingResponse.SetETag($"W/\"{result.VersionId}\"");
+
+                return result;
+
+            }
+            catch (Exception e)
+            {
+                this.m_tracer.TraceError("Error executing FHIR operation {0}/{1}: {2}", resourceType, operationName, e);
+                AuditUtil.AuditNetworkRequestFailure(e, RestOperationContext.Current.IncomingRequest.Url, RestOperationContext.Current.IncomingRequest.Headers, RestOperationContext.Current.OutgoingResponse.Headers);
+                throw;
+            }
+
+        }
+
 
         /// <summary>
         /// Get the description of the service
