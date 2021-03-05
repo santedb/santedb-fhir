@@ -74,69 +74,76 @@ namespace SanteDB.Messaging.FHIR.Util
 
             Bundle retVal = new Bundle();
             FhirQueryResult queryResult = result as FhirQueryResult;
-
-            int pageNo = queryResult == null || queryResult.Query.Quantity == 0 ? 0 : queryResult.Query.Start / queryResult.Query.Quantity,
-                nPages = queryResult == null || queryResult.Query.Quantity == 0 ? 1 : (queryResult.TotalResults / queryResult.Query.Quantity);
-
-            retVal.Type = Bundle.BundleType.Searchset;
-
             retVal.Id = String.Format("urn:uuid:{0}", Guid.NewGuid());
 
             // Make the Self uri
-            String baseUri = MessageUtil.GetBaseUri();
+            String baseUri = $"{result.ResourceType}";
 
-            var queryUri = baseUri + "?";
-
-            // Self uri
-            if (queryResult != null)
+            if (queryResult.Query != null)
             {
-                for (int i = 0; i < queryResult.Query.ActualParameters.Count; i++)
-                    foreach (var itm in queryResult.Query.ActualParameters.GetValues(i))
-                        switch(queryResult.Query.ActualParameters.GetKey(i))
-                        {
-                            case "_stateid":
-                            case "_page":
-                            case "_count":
-                                break;
-                            default:
-                                queryUri += string.Format("{0}={1}&", queryResult.Query.ActualParameters.GetKey(i), itm);
-                                break;
-                        }
+                int pageNo = queryResult == null || queryResult.Query.Quantity == 0 ? 0 : queryResult.Query.Start / queryResult.Query.Quantity,
+                    nPages = queryResult == null || queryResult.Query.Quantity == 0 ? 1 : (queryResult.TotalResults / queryResult.Query.Quantity);
+                retVal.Type = Bundle.BundleType.Searchset;
+                var queryUri = baseUri + "?";
 
-                if(!baseUri.Contains("_stateid=") && queryResult.Query.QueryId != Guid.Empty)
-                    queryUri += String.Format("_stateid={0}&", queryResult.Query.QueryId);
+                // Self uri
+                if (queryResult != null)
+                {
+                    for (int i = 0; i < queryResult.Query.ActualParameters.Count; i++)
+                        foreach (var itm in queryResult.Query.ActualParameters.GetValues(i))
+                            switch (queryResult.Query.ActualParameters.GetKey(i))
+                            {
+                                case "_stateid":
+                                case "_page":
+                                case "_count":
+                                    break;
+                                default:
+                                    queryUri += string.Format("{0}={1}&", queryResult.Query.ActualParameters.GetKey(i), itm);
+                                    break;
+                            }
+
+                    if (!baseUri.Contains("_stateid=") && queryResult.Query.QueryId != Guid.Empty)
+                        queryUri += String.Format("_stateid={0}&", queryResult.Query.QueryId);
+                }
+
+                // Format
+                string format = RestOperationContext.Current.IncomingRequest.QueryString["_format"];
+                if (String.IsNullOrEmpty(format))
+                    format = "xml";
+                else if (format == "application/fhir+xml")
+                    format = "xml";
+                else if (format == "application/fhir+json")
+                    format = "json";
+
+                if (!queryUri.Contains("_format"))
+                    queryUri += String.Format("_format={0}&", format);
+
+                // Self URI
+                if (queryResult != null && queryResult.TotalResults > queryResult.Results.Count)
+                {
+                    retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page={pageNo}&_count={queryResult?.Query.Quantity ?? 100}", Relation = "self" });
+                    if (pageNo > 0)
+                    {
+                        retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page=0&_count={queryResult?.Query.Quantity ?? 100}", Relation = "first" });
+                        retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page={pageNo - 1}&_count={queryResult?.Query.Quantity ?? 100}", Relation = "previous" });
+                    }
+                    if (pageNo <= nPages)
+                    {
+                        retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page={pageNo + 1}&_count={queryResult?.Query.Quantity ?? 100}", Relation = "next" });
+                        retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page={nPages}&_count={queryResult?.Query.Quantity ?? 100}", Relation = "last" });
+                    }
+                }
+                else
+                    retVal.Link.Add(new Bundle.LinkComponent() { Url = queryUri, Relation = "self" });
             }
-
-            // Format
-            string format = RestOperationContext.Current.IncomingRequest.QueryString["_format"];
-            if (String.IsNullOrEmpty(format))
-                format = "xml";
-            else if (format == "application/fhir+xml")
-                format = "xml";
-            else if (format == "application/fhir+json")
-                format = "json";
-
-            if (!queryUri.Contains("_format"))
-                queryUri += String.Format("_format={0}&", format);
-
-            // Self URI
-            if (queryResult != null && queryResult.TotalResults > queryResult.Results.Count)
+            else //History 
             {
-                retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page={pageNo}&_count={queryResult?.Query.Quantity ?? 100}", Relation = "self" });
-                if (pageNo > 0)
-                {
-                    retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page=0&_count={queryResult?.Query.Quantity ?? 100}", Relation = "first" });
-                    retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page={pageNo - 1}&_count={queryResult?.Query.Quantity ?? 100}", Relation = "previous" });
-                }
-                if (pageNo <= nPages)
-                {
-                    retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page={pageNo + 1}&_count={queryResult?.Query.Quantity ?? 100}", Relation = "next" });
-                    retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{queryUri}_page={nPages}&_count={queryResult?.Query.Quantity ?? 100}", Relation = "last" });
-                }
-            }
-            else
-                retVal.Link.Add(new Bundle.LinkComponent() { Url = queryUri, Relation = "self" });
+                // History type
+                retVal.Type = Bundle.BundleType.History;
+                // Self URI
+                retVal.Link.Add(new Bundle.LinkComponent() { Url = $"{baseUri}/_history", Relation = "self" });
 
+            }
             // Updated
             retVal.Timestamp = DateTime.Now;
             //retVal.Generator = "MARC-HI Service Core Framework";
@@ -151,9 +158,8 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 retVal.Entry = result.Results.Select(itm =>
                 {
-                    Uri resourceUrl = new Uri(String.Format("{0}/{1}?_format={2}", baseUri, String.Format("{0}/{1}/_history/{2}", itm.GetType().Name, itm.Id, itm.VersionId), format));
                     var feedResult = new Bundle.EntryComponent(); //new Bundleentry(String.Format("{0} id {1} version {2}", itm.GetType().Name, itm.Id, itm.VersionId), null ,resourceUrl);
-                    feedResult.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = $"/{itm.ResourceType}/{itm.Id}/_history/{itm.VersionId}" } };
+                    feedResult.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = $"{itm.ResourceType}/{itm.Id}/_history/{itm.VersionId}" } };
                     feedResult.FullUrl = $"urn:uuid:{itm.Id}";
 
                     // TODO: Generate the text with a util

@@ -38,26 +38,6 @@ namespace SanteDB.Messaging.FHIR.Util
 {
 
     /// <summary>
-    /// SanteDB FHIR query
-    /// </summary>
-    public class SanteDBFhirQuery<TModel> : FhirQuery
-    {
-
-        /// <summary>
-        /// Query expression
-        /// </summary>
-        public LambdaExpression QueryExpression { get; set; }
-
-        /// <summary>
-        /// Gets or sets the composed query
-        /// </summary>
-        public Expression<Func<TModel, bool>> ToPredicate()
-        {
-            return System.Linq.Expressions.Expression.Lambda<Func<TModel, bool>>(this.QueryExpression.Body, this.QueryExpression.Parameters);
-        }
-    }
-
-    /// <summary>
     /// A class which is responsible for translating a series of Query Parmaeters to a LINQ expression
     /// to be passed to the persistence layer
     /// </summary>
