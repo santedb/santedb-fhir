@@ -541,11 +541,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                     throw new FileNotFoundException(); // endpoint not found!
 
                 var result = handler.Invoke(parameters);
-
-                String baseUri = MessageUtil.GetBaseUri();
-                RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated.Value.DateTime);
-                RestOperationContext.Current.OutgoingResponse.SetETag($"W/\"{result.VersionId}\"");
-
                 return result;
 
             }
@@ -648,6 +643,17 @@ namespace SanteDB.Messaging.FHIR.Rest
                                 break;
                         }
 
+                        operationDescription.Tags.Add(def.Type.ToString());
+                        operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
+                        retVal.Operations.Add(operationDescription);
+                    }
+
+                    // Add operation handlers
+                    foreach(var op in ExtensionUtil.OperationHandlers.Where(o=>o.AppliesTo == null || o.AppliesTo == def.Type))
+                    {
+                        var operationDescription = new ServiceOperationDescription("POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
+                        operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
+                        operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                         operationDescription.Tags.Add(def.Type.ToString());
                         operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
                         retVal.Operations.Add(operationDescription);

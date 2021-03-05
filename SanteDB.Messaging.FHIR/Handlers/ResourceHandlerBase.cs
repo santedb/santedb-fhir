@@ -47,7 +47,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <typeparam name="TFhirResource">The type of the t FHIR resource.</typeparam>
     /// <typeparam name="TModel">The type of the t model.</typeparam>
     /// <seealso cref="SanteDB.Messaging.FHIR.Handlers.IFhirResourceHandler" />
-    public abstract class ResourceHandlerBase<TFhirResource, TModel> : IFhirResourceHandler
+    public abstract class ResourceHandlerBase<TFhirResource, TModel> : IFhirResourceHandler, IFhirResourceMapper
 		where TFhirResource : Resource, new()
 		where TModel : IdentifiedData, new()
 
@@ -76,15 +76,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		public ResourceType ResourceType { get; }
 
 		/// <summary>
-		/// Create the specified resource.
+		/// Gets the canonical type
 		/// </summary>
-		/// <param name="target">The target.</param>
-		/// <param name="mode">The mode.</param>
-		/// <returns>FhirOperationResult.</returns>
-		/// <exception cref="System.ArgumentNullException">target</exception>
-		/// <exception cref="System.IO.InvalidDataException"></exception>
-		/// <exception cref="System.Data.SyntaxErrorException"></exception>
-		public virtual Resource Create(Resource target, TransactionMode mode)
+		public Type CanonicalType => typeof(TModel);
+
+        /// <summary>
+        /// Create the specified resource.
+        /// </summary>
+        /// <param name="target">The target.</param>
+        /// <param name="mode">The mode.</param>
+        /// <returns>FhirOperationResult.</returns>
+        /// <exception cref="System.ArgumentNullException">target</exception>
+        /// <exception cref="System.IO.InvalidDataException"></exception>
+        /// <exception cref="System.Data.SyntaxErrorException"></exception>
+        public virtual Resource Create(Resource target, TransactionMode mode)
 		{
 			this.m_traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceType, target);
 
@@ -188,7 +193,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var auth = AuthenticationContext.Current;
 			// Return FHIR query result
-			return new FhirQueryResult()
+			return new FhirQueryResult(typeof(TFhirResource).Name)
 			{
 				Results = hdsiResults.AsParallel().Select(o => {
                     try
@@ -366,10 +371,26 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // FHIR Operation result
-            return new FhirQueryResult()
+            return new FhirQueryResult(typeof(TFhirResource).Name)
             {
                 Results = results.Select(o => this.MapToFhir(o, RestOperationContext.Current)).OfType<Resource>().ToList()
             };
+        }
+
+		/// <summary>
+		/// Map to FHIR
+		/// </summary>
+        public Resource MapToFhir(IdentifiedData modelInstance)
+        {
+			return this.MapToFhir((TModel)modelInstance, RestOperationContext.Current);
+        }
+
+		/// <summary>
+		/// Map the object to model
+		/// </summary>
+        public IdentifiedData MapToModel(Resource resourceInstance)
+        {
+			return this.MapToModel((TFhirResource)resourceInstance, RestOperationContext.Current);
         }
     }
 }

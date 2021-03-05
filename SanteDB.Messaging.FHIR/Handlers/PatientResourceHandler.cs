@@ -38,7 +38,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// Represents a resource handler which can handle patients.
     /// </summary>
     public class PatientResourceHandler : RepositoryResourceHandlerBase<Patient, Core.Model.Roles.Patient>, IBundleResourceHandler
-	{
+    {
 
 
         // IDs of family members
@@ -68,12 +68,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="restOperationContext">The current REST operation context</param>
         /// <returns>Returns the mapped FHIR resource.</returns>
         protected override Patient MapToFhir(Core.Model.Roles.Patient model, RestOperationContext restOperationContext)
-		{
-			var retVal = DataTypeConverter.CreateResource<Patient>(model, restOperationContext);
-			retVal.Active = model.StatusConceptKey == StatusKeys.Active || model.StatusConceptKey == StatusKeys.New;
-			retVal.Address = model.GetAddresses().Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
-            if(model.DateOfBirth.HasValue)
-                switch(model.DateOfBirthPrecision.GetValueOrDefault())
+        {
+            var retVal = DataTypeConverter.CreateResource<Patient>(model, restOperationContext);
+            retVal.Active = model.StatusConceptKey == StatusKeys.Active || model.StatusConceptKey == StatusKeys.New;
+            retVal.Address = model.GetAddresses().Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
+            if (model.DateOfBirth.HasValue)
+                switch (model.DateOfBirthPrecision.GetValueOrDefault())
                 {
                     case DatePrecision.Day:
                         retVal.BirthDate = model.DateOfBirth.Value.ToString("yyyy-MM-dd");
@@ -87,7 +87,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
 
             // Deceased precision
-            if(model.DeceasedDate.HasValue)
+            if (model.DeceasedDate.HasValue)
             {
                 if (model.DeceasedDate == DateTime.MinValue)
                 {
@@ -120,22 +120,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Identifier = model.Identifiers?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
             retVal.MultipleBirth = model.MultipleBirthOrder == 0 ? (Element)new FhirBoolean(true) : model.MultipleBirthOrder.HasValue ? new Integer(model.MultipleBirthOrder.Value) : null;
-			retVal.Name = model.GetNames().Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
-			retVal.Telecom = model.GetTelecoms().Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+            retVal.Name = model.GetNames().Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
+            retVal.Telecom = model.GetTelecoms().Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
             retVal.Communication = model.GetPersonLanguages().Select(o => DataTypeConverter.ToFhirCommunicationComponent(o)).ToList();
-			// TODO: Relationships
-			foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
-			{
+            // TODO: Relationships
+            foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
+            {
                 // Contact => Person
-                if(this.m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
+                if (this.m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
                 {
                     // Create the relative object
                     var relative = DataTypeConverter.CreateResource<RelatedPerson>(rel.LoadProperty<Core.Model.Entities.Person>(nameof(EntityRelationship.TargetEntity)), restOperationContext);
                     relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty<Concept>(nameof(EntityRelationship.RelationshipType))) };
-                    relative.Address = rel.TargetEntity.Addresses.Select(o=>DataTypeConverter.ToFhirAddress(o)).ToList();
+                    relative.Address = rel.TargetEntity.Addresses.Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
                     //relative.Gender = DataTypeConverter.ToFhirCodeableConcept((rel.TargetEntity as Core.Model.Roles.Patient)?.LoadProperty<Concept>(nameof(Core.Model.Roles.Patient.GenderConcept)));
                     relative.Identifier = rel.TargetEntity.LoadCollection<EntityIdentifier>(nameof(Entity.Identifiers)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
-                    relative.Name = rel.TargetEntity.LoadCollection<EntityName>(nameof(Entity.Names)).Select(o=>DataTypeConverter.ToFhirHumanName(o)).ToList();
+                    relative.Name = rel.TargetEntity.LoadCollection<EntityName>(nameof(Entity.Names)).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
                     relative.Patient = DataTypeConverter.CreateInternalReference<Patient>(model, restOperationContext);
                     relative.Telecom = rel.TargetEntity.LoadCollection<EntityTelecomAddress>(nameof(Entity.Telecoms)).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
                     retVal.Contained.Add(relative);
@@ -180,23 +180,23 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
-			var photo = model.LoadCollection<EntityExtension>("Extensions").FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
-			if (photo != null)
-				retVal.Photo = new List<Attachment>() {
-					new Attachment()
-					{
-						ContentType = "image/jpg",
-						Data = photo.ExtensionValueXml
-					}
-				};
+            var photo = model.LoadCollection<EntityExtension>("Extensions").FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+            if (photo != null)
+                retVal.Photo = new List<Attachment>() {
+                    new Attachment()
+                    {
+                        ContentType = "image/jpg",
+                        Data = photo.ExtensionValueXml
+                    }
+                };
 
-			return retVal;
-		}
+            return retVal;
+        }
 
         /// <summary>
         /// Create patient link
         /// </summary>
-        private Patient.LinkComponent CreateLink<TLink>(Guid targetEntityKey, Patient.LinkType type, RestOperationContext restOperationContext) where TLink : DomainResource, new() => new Patient.LinkComponent() 
+        private Patient.LinkComponent CreateLink<TLink>(Guid targetEntityKey, Patient.LinkType type, RestOperationContext restOperationContext) where TLink : DomainResource, new() => new Patient.LinkComponent()
         {
             Type = type,
             Other = DataTypeConverter.CreateNonVersionedReference<TLink>(targetEntityKey, restOperationContext)
@@ -208,61 +208,64 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="resource">The resource.</param>
         /// <returns>Returns the mapped model.</returns>
         protected override Core.Model.Roles.Patient MapToModel(Patient resource, RestOperationContext restOperationContext)
-		{
-			var patient = new Core.Model.Roles.Patient
-			{
-				Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList(),
-				CreationTime = DateTimeOffset.Now,
-				DateOfBirthXml = resource.BirthDate,
+        {
+            var patient = new Core.Model.Roles.Patient
+            {
+                Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList(),
+                CreationTime = DateTimeOffset.Now,
+                DateOfBirthXml = resource.BirthDate,
                 GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key,
-				Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
-				LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList(),
-				Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList(),
-				Relationships = resource.Contact.Select(DataTypeConverter.ToEntityRelationship).ToList(),
-				StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete,
-				Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
-			};
+                Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
+                LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList(),
+                Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList(),
+                Relationships = resource.Contact.Select(DataTypeConverter.ToEntityRelationship).ToList(),
+                StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete,
+                Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
+            };
 
             patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).ToList();
-			Guid key;
-			if (!Guid.TryParse(resource.Id, out key))
+            Guid key;
+            if (!Guid.TryParse(resource.Id, out key))
             {
-                foreach(var id in patient.Identifiers) // try to lookup based on reliable id for the record to update
+                foreach (var id in patient.Identifiers) // try to lookup based on reliable id for the record to update
                 {
-                    if(id.LoadProperty<AssigningAuthority>(nameof(EntityIdentifier.Authority)).IsUnique)
+                    if (id.LoadProperty<AssigningAuthority>(nameof(EntityIdentifier.Authority)).IsUnique)
                     {
-                        var match = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>().Find(o => o.Identifiers.Any(i => i.Authority.DomainName == id.Authority.DomainName && i.Value == id.Value), 0, 1, out int tr);
-                        if (tr == 1)
-                            key = match.FirstOrDefault()?.Key ?? Guid.NewGuid();
-                        else if (tr > 1)
-                            this.m_traceSource.TraceWarning($"The identifier {id} resulted in ambiguous results ({tr} matches) - the FHIR layer will treat this as an INSERT rather than UPDATE");
-                    }   
+                        using (AuthenticationContext.EnterSystemContext())
+                        {
+                            var match = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>().Find(o => o.Identifiers.Any(i => i.Authority.DomainName == id.Authority.DomainName && i.Value == id.Value), 0, 1, out int tr);
+                            if (tr == 1)
+                                key = match.FirstOrDefault()?.Key ?? Guid.NewGuid();
+                            else if (tr > 1)
+                                this.m_traceSource.TraceWarning($"The identifier {id} resulted in ambiguous results ({tr} matches) - the FHIR layer will treat this as an INSERT rather than UPDATE");
+                        }
+                    }
                 }
             }
-			patient.Key = key;
+            patient.Key = key;
 
-			if (resource.Deceased is FhirDateTime dtValue && !String.IsNullOrEmpty(dtValue.Value))
-			{
-				patient.DeceasedDate = dtValue.ToDateTime();
-			}
-			else if (resource.Deceased is FhirBoolean boolValue && boolValue.Value.GetValueOrDefault() == true)
-			{
-				// we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
-				// should find a better way to do this
-				patient.DeceasedDate = DateTime.MinValue;
-				patient.DeceasedDatePrecision = DatePrecision.Year;
-			}
+            if (resource.Deceased is FhirDateTime dtValue && !String.IsNullOrEmpty(dtValue.Value))
+            {
+                patient.DeceasedDate = dtValue.ToDateTime();
+            }
+            else if (resource.Deceased is FhirBoolean boolValue && boolValue.Value.GetValueOrDefault() == true)
+            {
+                // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
+                // should find a better way to do this
+                patient.DeceasedDate = DateTime.MinValue;
+                patient.DeceasedDatePrecision = DatePrecision.Year;
+            }
 
             if (resource.MultipleBirth is FhirBoolean boolBirth && boolBirth.Value.GetValueOrDefault() == true)
             {
-				patient.MultipleBirthOrder = 0;
-			}
-			else if (resource.MultipleBirth is Integer intBirth)
-			{
-				patient.MultipleBirthOrder = intBirth.Value;
-			}
+                patient.MultipleBirthOrder = 0;
+            }
+            else if (resource.MultipleBirth is Integer intBirth)
+            {
+                patient.MultipleBirthOrder = intBirth.Value;
+            }
 
-            if(resource.ManagingOrganization != null)
+            if (resource.ManagingOrganization != null)
             {
                 var referenceKey = DataTypeConverter.ResolveEntityKey(resource.ManagingOrganization);
                 if (referenceKey == null)
@@ -273,8 +276,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
-			return patient;
-		}
+            return patient;
+        }
 
         /// <summary>
         /// Map model to the resource
