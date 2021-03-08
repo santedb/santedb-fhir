@@ -519,6 +519,40 @@ namespace SanteDB.Messaging.FHIR.Rest
 
         }
 
+        /// <summary>
+        /// Executes the specified operation name on the specified resource type
+        /// </summary>
+        /// <param name="resourceType">The type of resource this operation </param>
+        /// <param name="operationName">The name of the operation</param>
+        /// <param name="parameters">The parameters for the operation</param>
+        /// <returns>The result of executing the operation</returns>
+        public Resource Execute(string resourceType, string operationName, Parameters parameters)
+        {
+            this.ThrowIfNotReady();
+
+            try
+            {
+
+                // Get the operation handler
+                var handler = ExtensionUtil.GetOperation(resourceType, operationName);
+
+                // No handler?
+                if (handler == null)
+                    throw new FileNotFoundException(); // endpoint not found!
+
+                var result = handler.Invoke(parameters);
+                return result;
+
+            }
+            catch (Exception e)
+            {
+                this.m_tracer.TraceError("Error executing FHIR operation {0}/{1}: {2}", resourceType, operationName, e);
+                AuditUtil.AuditNetworkRequestFailure(e, RestOperationContext.Current.IncomingRequest.Url, RestOperationContext.Current.IncomingRequest.Headers, RestOperationContext.Current.OutgoingResponse.Headers);
+                throw;
+            }
+
+        }
+
 
         /// <summary>
         /// Get the description of the service
@@ -609,6 +643,17 @@ namespace SanteDB.Messaging.FHIR.Rest
                                 break;
                         }
 
+                        operationDescription.Tags.Add(def.Type.ToString());
+                        operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
+                        retVal.Operations.Add(operationDescription);
+                    }
+
+                    // Add operation handlers
+                    foreach(var op in ExtensionUtil.OperationHandlers.Where(o=>o.AppliesTo == null || o.AppliesTo == def.Type))
+                    {
+                        var operationDescription = new ServiceOperationDescription("POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
+                        operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
+                        operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                         operationDescription.Tags.Add(def.Type.ToString());
                         operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
                         retVal.Operations.Add(operationDescription);

@@ -20,9 +20,14 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// Gets the URI of the extension
         /// </summary>
         Uri Uri { get; }
+
+        /// <summary>
+        /// Gets the URI of the profile that this extension is defined in
+        /// </summary>
+        Uri ProfileUri { get; }
         
         /// <summary>
-        /// Gets the resource type that this applies to
+        /// Gets the resource type that this applies to (or null if it applies to all types)
         /// </summary>
         ResourceType? AppliesTo { get; }
 

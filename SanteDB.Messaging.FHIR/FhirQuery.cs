@@ -80,5 +80,9 @@ namespace SanteDB.Messaging.FHIR
         /// </summary>
         public int Quantity { get; set; }
 
+        /// <summary>
+        /// The resource type
+        /// </summary>
+        public String ResouceType { get; }
     }
 }

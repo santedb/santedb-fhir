@@ -18,7 +18,9 @@
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
+using SanteDB.Core.Diagnostics;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -32,16 +34,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
       
         // Message processors
-        private static List<IFhirResourceHandler> s_messageProcessors = new List<IFhirResourceHandler>();
+        private static IDictionary<ResourceType, IFhirResourceHandler> s_messageProcessors = new ConcurrentDictionary<ResourceType, IFhirResourceHandler>();
+
+        // Resource handler
+        private static Tracer s_tracer = Tracer.GetTracer(typeof(FhirResourceHandlerUtil));
 
         /// <summary>
         /// FHIR message processing utility
         /// </summary>
         static FhirResourceHandlerUtil()
         {
-
-            s_messageProcessors.Add(new StructureDefinitionHandler());
-
+            s_messageProcessors.Add(ResourceType.StructureDefinition, new StructureDefinitionHandler());
         }
 
         /// <summary>
@@ -49,7 +52,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public static void RegisterResourceHandler(IFhirResourceHandler handler)
         {
-            s_messageProcessors.Add(handler);
+            s_messageProcessors.Add(handler.ResourceType, handler);
         }
 
         /// <summary>
@@ -57,15 +60,35 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public static void UnRegisterResourceHandler(IFhirResourceHandler handler)
         {
-            s_messageProcessors.Remove(handler);
+            s_messageProcessors.Remove(handler.ResourceType);
         }
-      
+
         /// <summary>
         /// Get the message processor type based on resource name
         /// </summary>
-        public static IFhirResourceHandler GetResourceHandler(String resourceName)
+        public static IFhirResourceHandler GetResourceHandler(string resourceType)
         {
-            return s_messageProcessors.Find(o => o.ResourceName.ToLower() == resourceName.ToLower());
+            var rtEnum = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(resourceType);
+            if (rtEnum.HasValue)
+            {
+                return GetResourceHandler(rtEnum.Value);
+            }
+            else
+            {
+                throw new KeyNotFoundException($"Resource type {resourceType} is invalid");
+            }
+        }
+
+        /// <summary>
+        /// Get the specified resource handler
+        /// </summary>
+        public static IFhirResourceHandler GetResourceHandler(ResourceType resourceType) {
+
+            if (!s_messageProcessors.TryGetValue(resourceType, out IFhirResourceHandler retVal))
+            {
+                throw new NotSupportedException($"No handler registered for {resourceType}");
+            }
+            return retVal;
         }
         
         /// <summary>
@@ -73,7 +96,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public static IEnumerable<CapabilityStatement.ResourceComponent> GetRestDefinition()
         {
-            return s_messageProcessors.Select(o => {
+            return s_messageProcessors.Values.Select(o => {
                 var resourceDef = o.GetResourceDefinition();
                 var structureDef = o.GetStructureDefinition();
                 return resourceDef;
@@ -87,7 +110,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             get
             {
-                return s_messageProcessors;
+                return s_messageProcessors.Values;
             }
         }
     }

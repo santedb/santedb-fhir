@@ -17,45 +17,35 @@
  * Date: 2019-11-27
  */
 using Hl7.Fhir.Model;
-using System.Collections.Generic;
+using SanteDB.Core.Model;
+using System;
 
-namespace SanteDB.Messaging.FHIR
+namespace SanteDB.Messaging.FHIR.Handlers
 {
     /// <summary>
-    /// Query result form a FHIR query
+    /// Represents a resource handler than can map objects
     /// </summary>
-    public class FhirQueryResult
+    public interface IFhirResourceMapper : IFhirResourceHandler
     {
 
         /// <summary>
-        /// Create a new fhir query result
+        /// Gets the canonical type
         /// </summary>
-        /// <param name="resourceType"></param>
-        public FhirQueryResult(string resourceType)
-        {
-            this.ResourceType = resourceType;
-            this.Results = new List<Resource>();
-        }
+        Type CanonicalType { get; }
 
         /// <summary>
-        /// Gets or sets the results
+        /// Map <paramref name="modelInstance"/> to FHIR
         /// </summary>
-        public List<Resource> Results { get; set; }
+        /// <param name="modelInstance">The object to map to fhir</param>
+        /// <returns>The mapped FHIR instance</returns>
+        Resource MapToFhir(IdentifiedData modelInstance);
 
         /// <summary>
-        /// Gets or sets the query that initiated the action
+        /// Map the specified <paramref name="resourceInstance"/> to model
         /// </summary>
-        public FhirQuery Query { get; set; }
-
-        /// <summary>
-        /// Gets the total results
-        /// </summary>
-        public int TotalResults { get; set; }
-
-        /// <summary>
-        /// Resource type
-        /// </summary>
-        public string ResourceType { get; }
+        /// <param name="resourceInstance">The resource to map</param>
+        /// <returns>The model instance</returns>
+        IdentifiedData MapToModel(Resource resourceInstance);
 
     }
 }

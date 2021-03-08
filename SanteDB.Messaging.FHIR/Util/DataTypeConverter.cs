@@ -28,6 +28,7 @@ using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -89,6 +90,21 @@ namespace SanteDB.Messaging.FHIR.Util
             refer.Display = targetEntity.ToDisplay();
             return refer;
 
+        }
+
+        /// <summary>
+        /// Convert to issue
+        /// </summary>
+        internal static OperationOutcome.IssueComponent ToIssue(Core.BusinessRules.DetectedIssue issue)
+        {
+            return new OperationOutcome.IssueComponent()
+            {
+                Severity = issue.Priority == Core.BusinessRules.DetectedIssuePriorityType.Error ? OperationOutcome.IssueSeverity.Error :
+                           issue.Priority == Core.BusinessRules.DetectedIssuePriorityType.Warning ? OperationOutcome.IssueSeverity.Warning :
+                           OperationOutcome.IssueSeverity.Information,
+                Code = OperationOutcome.IssueType.NoStore,
+                Diagnostics = issue.Text
+            };
         }
 
         /// <summary>
@@ -179,18 +195,26 @@ namespace SanteDB.Messaging.FHIR.Util
 
             }
 
-            if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable)
+            if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
             {
-                if (resource is Core.Model.Interfaces.IExtendable extendableModel)
-                {
-                    // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
-                    fhirExtendable.Extension = extendableModel?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(o => DataTypeConverter.ToExtension(o, context)).ToList();
-                }
-
-                fhirExtendable.Extension = fhirExtendable.Extension.Union(ProfileUtil.CreateExtensions(resource, retVal.ResourceType)).ToList();
+                retVal.Meta.Profile = DataTypeConverter.AddExtensions(extendableObject, fhirExtendable, context);
             }
 
             return retVal;
+        }
+
+        /// <summary>
+        /// Add extensions from <paramref name="extendable"/> to <paramref name="fhirExtension"/>
+        /// </summary>
+        /// <returns>The extensions that were applied</returns>
+        public static IEnumerable<String> AddExtensions(Core.Model.Interfaces.IExtendable extendable, Hl7.Fhir.Model.IExtendable fhirExtension, RestOperationContext context)
+        {
+            var resource = fhirExtension as Resource;
+            // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
+            fhirExtension.Extension = extendable?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(o => DataTypeConverter.ToExtension(o, context)).ToList();
+
+            fhirExtension.Extension = fhirExtension.Extension.Union(ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, resource.ResourceType, out IEnumerable<IFhirExtensionHandler> appliedExtensions)).ToList();
+            return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
         }
 
         /// <summary>
@@ -520,7 +544,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR address");
 
-            var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirAddress.Use) ?? "home";
+            var mnemonic = "home";
+            if (fhirAddress.Use.HasValue)
+                mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirAddress.Use);
+
             var address = new EntityAddress
             {
                 AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key
@@ -605,7 +632,9 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR human name");
 
-            var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirHumanName.Use) ?? "official";
+            var mnemonic = "official";
+            if(fhirHumanName.Use.HasValue)
+                mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirHumanName.Use);
 
             var name = new EntityName
             {
@@ -707,7 +736,10 @@ namespace SanteDB.Messaging.FHIR.Util
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR telecom");
 
             if (!String.IsNullOrEmpty(fhirTelecom.Value)) {
-                var mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.Use) ?? "temp";
+                var mnemonic = "temp";
+                if(fhirTelecom.Use.HasValue)
+                    mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.Use);
+
                 return new EntityTelecomAddress
                 {
                     Value = fhirTelecom.Value,

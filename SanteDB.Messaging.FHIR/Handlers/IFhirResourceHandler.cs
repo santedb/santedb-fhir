@@ -18,6 +18,7 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Services;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 
@@ -33,7 +34,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Gets the type of resource this handler can perform operations on
         /// </summary>
-        string ResourceName { get; }
+        ResourceType ResourceType { get; }
 
         /// <summary>
         /// Read a specific version of a resource

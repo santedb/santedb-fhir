@@ -173,7 +173,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var restOperationContext = RestOperationContext.Current;
 
             // Return FHIR query result
-            return new FhirQueryResult()
+            return new FhirQueryResult("Observation")
             {
                 Results = hdsiResults.Select(o => this.MapToFhir(o, restOperationContext)).OfType<Resource>().ToList(),
                 Query = query,

@@ -90,6 +90,16 @@ namespace SanteDB.Messaging.FHIR.Rest
         Resource CreateResource(string resourceType, Resource target);
 
         /// <summary>
+        /// Execute the specified operation name
+        /// </summary>
+        /// <param name="resourceType">The type of resource the operation is on</param>
+        /// <param name="operationName">The name of the operation</param>
+        /// <returns>The result of the operation</returns>
+        /// <param name="parameters">The body to pass as a parameter to the operation</param>
+        [Post("/{resourceType}/\\${operationName}")]
+        Resource Execute(string resourceType, string operationName, Parameters parameters);
+
+        /// <summary>
         /// Create a resource
         /// </summary>
         [RestInvoke(UriTemplate = "/{resourceType}/{id}", Method = "POST")]

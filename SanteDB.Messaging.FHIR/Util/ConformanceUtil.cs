@@ -110,7 +110,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
             catch (Exception e)
             {
-                s_traceSource.TraceEvent(EventLevel.Error,  "Error building conformance statement: {0}", e.Message);
+                s_traceSource.TraceEvent(EventLevel.Error, "Error building conformance statement: {0}", e.Message);
                 throw;
             }
         }
@@ -138,8 +138,23 @@ namespace SanteDB.Messaging.FHIR.Util
                     Cors = true,
                     Service = security == null ? null : new List<CodeableConcept>() { new CodeableConcept("http://hl7.org/fhir/restful-security-service", security) }
                 },
-                Resource = FhirResourceHandlerUtil.GetRestDefinition().ToList()
+                Resource = FhirResourceHandlerUtil.GetRestDefinition().ToList(),
+                Operation = ExtensionUtil.OperationHandlers.Where(o => o.AppliesTo == null).Select(o=> new OperationComponent()
+                {
+                    Name = o.Name,
+                    Definition = o.Uri.ToString()
+                }).ToList()
             };
+
+            foreach (var itm in retVal.Resource)
+            {
+                itm.Operation = ExtensionUtil.OperationHandlers.Where(o => o.AppliesTo == itm.Type).Select(o => new OperationComponent()
+                {
+                    Name = o.Name,
+                    Definition = o.Uri.ToString()
+                }).ToList();
+                itm.SupportedProfile = ExtensionUtil.ProfileHandlers.Where(o => o.AppliesTo == null || o.AppliesTo.Contains(itm.Type.Value)).Select(o => o.ProfileUri.ToString()).ToList();
+            }
             return retVal;
 
 
