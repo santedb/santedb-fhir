@@ -133,6 +133,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     var relative = DataTypeConverter.CreateResource<RelatedPerson>(rel.LoadProperty<Core.Model.Entities.Person>(nameof(EntityRelationship.TargetEntity)), restOperationContext);
                     relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty<Concept>(nameof(EntityRelationship.RelationshipType))) };
                     relative.Address = rel.TargetEntity.Addresses.Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
+                    // TODO: Refactor this (see DSM-42 issue ticket)
                     //relative.Gender = DataTypeConverter.ToFhirCodeableConcept((rel.TargetEntity as Core.Model.Roles.Patient)?.LoadProperty<Concept>(nameof(Core.Model.Roles.Patient.GenderConcept)));
                     relative.Identifier = rel.TargetEntity.LoadCollection<EntityIdentifier>(nameof(Entity.Identifiers)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
                     relative.Name = rel.TargetEntity.LoadCollection<EntityName>(nameof(Entity.Names)).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
@@ -151,8 +152,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty<Concept>(nameof(EntityRelationship.RelationshipType)), "http://terminology.hl7.org/CodeSystem/v2-0131") },
                         Name = DataTypeConverter.ToFhirHumanName(person.GetNames().FirstOrDefault()),
                         // TODO: Gender
-                        Telecom = person.GetTelecoms().Select(t => DataTypeConverter.ToFhirTelecom(t)).ToList()
+                        Telecom = person.GetTelecoms().Select(t => DataTypeConverter.ToFhirTelecom(t)).ToList(),
                     };
+
+                    DataTypeConverter.AddExtensions(person, contact, restOperationContext);
 
                     retVal.Contact.Add(contact);
 

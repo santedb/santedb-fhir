@@ -153,7 +153,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     Name = o.Name,
                     Definition = o.Uri.ToString()
                 }).ToList();
-                itm.SupportedProfile = ExtensionUtil.ProfileHandlers.Where(o => o.AppliesTo == itm.Type).Select(o => o.ProfileUri.ToString()).ToList();
+                itm.SupportedProfile = ExtensionUtil.ProfileHandlers.Where(o => o.AppliesTo == null || o.AppliesTo.Contains(itm.Type.Value)).Select(o => o.ProfileUri.ToString()).ToList();
             }
             return retVal;
 

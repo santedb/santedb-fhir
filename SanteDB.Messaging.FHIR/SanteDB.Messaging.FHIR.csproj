@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="Configuration\FhirServiceConfigurationSection.cs" />
     <Compile Include="Extensions\IFhirExtensionHandler.cs" />
+    <Compile Include="Extensions\IFhirRestBehavior.cs" />
     <Compile Include="FhirConstants.cs" />
     <Compile Include="FhirMessageHandler.cs" />
     <Compile Include="FhirQuery.cs" />
@@ -121,10 +122,10 @@
     </When>
     <Otherwise>
       <ItemGroup>
-        <PackageReference Include="RestSrvr" Version="2.1.1.0" />
-        <PackageReference Include="SanteDB.Core.Api" Version="2.1.1.0" />
-        <PackageReference Include="SanteDB.Core.Model" Version="2.1.1.0" />
-        <PackageReference Include="SanteDB.Rest.Common" Version="2.1.1.0" />
+        <PackageReference Include="RestSrvr" Version="2.1.2.0" />
+        <PackageReference Include="SanteDB.Core.Api" Version="2.1.2.0" />
+        <PackageReference Include="SanteDB.Core.Model" Version="2.1.2.0" />
+        <PackageReference Include="SanteDB.Rest.Common" Version="2.1.2.0" />
       </ItemGroup>
     </Otherwise>
   </Choose>

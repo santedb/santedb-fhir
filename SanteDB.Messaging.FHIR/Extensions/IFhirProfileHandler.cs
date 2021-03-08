@@ -1,5 +1,6 @@
 ﻿using Hl7.Fhir.Model;
 using SanteDB.Core.BusinessRules;
+using SanteDB.Core.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,12 +23,12 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// <summary>
         /// Gets the type this applies to (or null if it applies to all)
         /// </summary>
-        ResourceType? AppliesTo { get; }
+        IEnumerable<ResourceType> AppliesTo { get; }
 
         /// <summary>
         /// Gets the structure definition
         /// </summary>
-        List<ElementDefinition> Differential { get; }
+        StructureDefinition Definition { get; }
 
         /// <summary>
         /// Validate the resource and emit detected issues
@@ -36,6 +37,6 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// <returns>The list of detected issues</returns>
         List<Core.BusinessRules.DetectedIssue> Validate(Resource resource);
 
-       
+
     }
 }

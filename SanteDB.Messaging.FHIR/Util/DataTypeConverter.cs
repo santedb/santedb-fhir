@@ -195,19 +195,26 @@ namespace SanteDB.Messaging.FHIR.Util
 
             }
 
-            if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable)
+            if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
             {
-                if (resource is Core.Model.Interfaces.IExtendable extendableModel)
-                {
-                    // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
-                    fhirExtendable.Extension = extendableModel?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(o => DataTypeConverter.ToExtension(o, context)).ToList();
-                }
-
-                fhirExtendable.Extension = fhirExtendable.Extension.Union(ExtensionUtil.CreateExtensions(resource, retVal.ResourceType, out IEnumerable<IFhirExtensionHandler> appliedExtensions)).ToList();
-                retVal.Meta.Profile = appliedExtensions.Select(o => o.Uri.ToString());
+                retVal.Meta.Profile = DataTypeConverter.AddExtensions(extendableObject, fhirExtendable, context);
             }
 
             return retVal;
+        }
+
+        /// <summary>
+        /// Add extensions from <paramref name="extendable"/> to <paramref name="fhirExtension"/>
+        /// </summary>
+        /// <returns>The extensions that were applied</returns>
+        public static IEnumerable<String> AddExtensions(Core.Model.Interfaces.IExtendable extendable, Hl7.Fhir.Model.IExtendable fhirExtension, RestOperationContext context)
+        {
+            var resource = fhirExtension as Resource;
+            // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
+            fhirExtension.Extension = extendable?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(o => DataTypeConverter.ToExtension(o, context)).ToList();
+
+            fhirExtension.Extension = fhirExtension.Extension.Union(ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, resource.ResourceType, out IEnumerable<IFhirExtensionHandler> appliedExtensions)).ToList();
+            return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
         }
 
         /// <summary>
