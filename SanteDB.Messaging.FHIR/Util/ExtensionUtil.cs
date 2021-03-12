@@ -1,5 +1,6 @@
 ﻿using Hl7.Fhir.Model;
 using SanteDB.Core;
+using SanteDB.Core.Configuration;
 using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
@@ -10,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -20,13 +22,16 @@ namespace SanteDB.Messaging.FHIR.Util
     {
 
         // Handlers
-        private static IEnumerable<IFhirExtensionHandler> s_extensionHandlers;
+        private static ICollection<IFhirExtensionHandler> s_extensionHandlers;
 
         // Operations handlers
-        private static IEnumerable<IFhirOperationHandler> s_operationHandlers;
+        private static ICollection<IFhirOperationHandler> s_operationHandlers;
 
         // Profile handlers
-        private static IEnumerable<IFhirProfileHandler> s_profileHandlers;
+        private static ICollection<IFhirProfileValidationHandler> s_profileHandlers;
+
+        // Behavior modifiers
+        private static ICollection<IFhirRestBehaviorModifier> s_behaviorModifiers;
 
         /// <summary>
         /// Creates a profile utility
@@ -36,15 +41,45 @@ namespace SanteDB.Messaging.FHIR.Util
             var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             s_extensionHandlers = svcManager
                 .CreateInjectedOfAll<IFhirExtensionHandler>()
-                .AsEnumerable();
+                .ToList();
             s_operationHandlers = svcManager
                 .CreateInjectedOfAll<IFhirOperationHandler>()
-                .AsEnumerable();
+                .ToList();
             s_profileHandlers = svcManager
-                .CreateInjectedOfAll<IFhirProfileHandler>()
-                .AsEnumerable();
-
+                .CreateInjectedOfAll<IFhirProfileValidationHandler>()
+                .ToList();
+            s_behaviorModifiers = svcManager
+                .CreateInjectedOfAll<IFhirRestBehaviorModifier>()
+                .ToList();
         }
+
+        /// <summary>
+        /// Intialize handlers from the configuration file
+        /// </summary>
+        internal static void InitializeHandlers(IEnumerable<TypeReferenceConfiguration> extensions)
+        {
+            var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
+            foreach (var ext in extensions.Where(o=>o.Type != null))
+            {
+                if (typeof(IFhirExtensionHandler).IsAssignableFrom(ext.Type))
+                {
+                    s_extensionHandlers.Add(svcManager.CreateInjected(ext.Type) as IFhirExtensionHandler);
+                }
+                if (typeof(IFhirProfileValidationHandler).IsAssignableFrom(ext.Type))
+                {
+                    s_profileHandlers.Add(svcManager.CreateInjected(ext.Type) as IFhirProfileValidationHandler);
+                }
+                if (typeof(IFhirRestBehaviorModifier).IsAssignableFrom(ext.Type))
+                {
+                    s_behaviorModifiers.Add(svcManager.CreateInjected(ext.Type) as IFhirRestBehaviorModifier);
+                }
+                if (typeof(IFhirOperationHandler).IsAssignableFrom(ext.Type))
+                {
+                    s_operationHandlers.Add(svcManager.CreateInjected(ext.Type) as IFhirOperationHandler);
+                }
+            }
+        }
+
 
         /// <summary>
         /// Operation Handlers
@@ -54,7 +89,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Profile handlers
         /// </summary>
-        public static IEnumerable<IFhirProfileHandler> ProfileHandlers => s_profileHandlers;
+        public static IEnumerable<IFhirProfileValidationHandler> ProfileHandlers => s_profileHandlers;
 
         /// <summary>
         /// Runs all registered extensions on the object
@@ -87,6 +122,34 @@ namespace SanteDB.Messaging.FHIR.Util
             if (!Enum.TryParse<ResourceType>(resourceType, out ResourceType rtEnum))
                 throw new KeyNotFoundException($"Resource {resourceType} is not valid");
             return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo == rtEnum || o.AppliesTo == null) && o.Name == operationName);
+        }
+
+        /// <summary>
+        /// Execute the BeforeSendResponse function allowing the behavior pipeline to inspect the message
+        /// </summary>
+        /// <param name="interaction">The interaction being called</param>
+        /// <param name="resource">The resource being actioned</param>
+        /// <returns>The updated resource</returns>
+        /// <exception cref="SanteDB.Core.Exceptions.DetectedIssueException">If there is a detected/validation issue</exception>
+        public static Resource ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction interaction, ResourceType resourceType, Resource resource)
+        {
+            foreach (var behavior in s_behaviorModifiers.Where(o => o.CanApply(interaction, resource)))
+                resource = behavior.BeforeSendResponse(interaction, resourceType, resource);
+            return resource;
+        }
+
+        /// <summary>
+        /// Execute the AfterReceive function allowing the behavior pipeline to inspect the message
+        /// </summary>
+        /// <param name="interaction">The interaction being called</param>
+        /// <param name="resource">The resource being actioned</param>
+        /// <returns>The updated resource</returns>
+        /// <exception cref="SanteDB.Core.Exceptions.DetectedIssueException">If there is a detected/validation issue</exception>
+        public static Resource ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction interaction, ResourceType resourceType, Resource resource)
+        {
+            foreach (var behavior in s_behaviorModifiers.Where(o => o.CanApply(interaction, resource)))
+                resource = behavior.AfterReceiveRequest(interaction, resourceType, resource);
+            return resource;
         }
     }
 }

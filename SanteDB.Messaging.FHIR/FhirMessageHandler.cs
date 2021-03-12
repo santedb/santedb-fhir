@@ -31,6 +31,7 @@ using System.Linq;
 using System.Reflection;
 using SanteDB.Core.Diagnostics;
 using System.Diagnostics.Tracing;
+using SanteDB.Core.Interfaces;
 
 namespace SanteDB.Messaging.FHIR
 {
@@ -61,6 +62,9 @@ namespace SanteDB.Messaging.FHIR
         // Web host
         private RestService m_webHost;
 
+        // Service manager
+        private IServiceManager m_serviceManager;
+
         /// <summary>
         /// Fired when the FHIR message handler is starting
         /// </summary>
@@ -81,8 +85,9 @@ namespace SanteDB.Messaging.FHIR
         /// <summary>
         /// Constructor, load configuration
         /// </summary>
-        public FhirMessageHandler()
+        public FhirMessageHandler(IServiceManager serviceManager)
         {
+            this.m_serviceManager = serviceManager;
             this.m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
         }
 
@@ -107,13 +112,8 @@ namespace SanteDB.Messaging.FHIR
                 // Configuration 
                 foreach (Type t in this.m_configuration.ResourceHandlers.Select(o=>o.Type))
                 {
-                    ConstructorInfo ci = t.GetConstructor(Type.EmptyTypes);
-                    if (ci == null || t.IsAbstract)
-                    {
-                        this.m_traceSource.TraceEvent(EventLevel.Warning, "Type {0} has no default constructor", t.FullName);
-                        continue;
-                    }
-                    FhirResourceHandlerUtil.RegisterResourceHandler(ci.Invoke(null) as IFhirResourceHandler);
+                    
+                    FhirResourceHandlerUtil.RegisterResourceHandler(this.m_serviceManager.CreateInjected(t) as IFhirResourceHandler);
                 }
 
                 // Start the web host

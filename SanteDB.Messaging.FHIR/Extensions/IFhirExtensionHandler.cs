@@ -13,6 +13,11 @@ namespace SanteDB.Messaging.FHIR.Extensions
     /// <summary>
     /// FHIR Extension Handler 
     /// </summary>
+    /// <remarks>
+    /// This interface is used when processing resources to/from FHIR and allow
+    /// custom FHIR extensions to map data from extensions into the underlying 
+    /// objects in the CDR schema.
+    /// </remarks>
     public interface IFhirExtensionHandler
     {
 

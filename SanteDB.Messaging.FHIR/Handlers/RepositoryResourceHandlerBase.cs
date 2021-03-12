@@ -17,6 +17,7 @@
  * Date: 2019-11-27
  */
 using Hl7.Fhir.Model;
+using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
