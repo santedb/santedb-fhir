@@ -90,7 +90,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             return retVal;
         }
-        
+      
+        /// <summary>
+        /// Gets the mapper for <paramref name="resourceOrModelType"/>
+        /// </summary>
+        /// <param name="resourceOrModelType">The FHIR type or CDR type</param>
+        /// <returns>The mapper (if present)</returns>
+        public static IFhirResourceMapper GetMapperFor(Type resourceOrModelType)
+        {
+            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().FirstOrDefault(o => o.CanonicalType == resourceOrModelType || o.ResourceClrType == resourceOrModelType);
+        }
+
         /// <summary>
         /// Get REST definition
         /// </summary>

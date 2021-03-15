@@ -34,6 +34,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         Type CanonicalType { get; }
 
         /// <summary>
+        /// Gets the Resource CLR type
+        /// </summary>
+        Type ResourceClrType { get; }
+
+        /// <summary>
         /// Map <paramref name="modelInstance"/> to FHIR
         /// </summary>
         /// <param name="modelInstance">The object to map to fhir</param>

@@ -26,6 +26,7 @@ using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Model.Security;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Rest.Serialization;
 using System;
@@ -98,17 +99,32 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
             }
             else if (error is SecurityException || error is UnauthorizedAccessException)
                 response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-            else if (error is SecurityTokenException )
+            else if (error is SecurityTokenException)
             {
                 response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
                 response.Headers.Add("WWW-Authenticate", $"Bearer");
+            }
+            else if(error is SecuritySessionException ses)
+            {
+                switch(ses.Type)
+                {
+                    case SessionExceptionType.Expired:
+                    case SessionExceptionType.NotYetValid:
+                    case SessionExceptionType.NotEstablished:
+                        response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
+                        response.Headers.Add("WWW-Authenticate", $"Bearer");
+                        break;
+                    default:
+                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                        break;
+                }
             }
             else if (error is FaultException)
                 response.StatusCode = (int)(error as FaultException).StatusCode;
             else if (error is Newtonsoft.Json.JsonException ||
                 error is System.Xml.XmlException)
                 response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
-            else if (error is FileNotFoundException)
+            else if (error is FileNotFoundException || error is KeyNotFoundException)
                 response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
             else if (error is DbException || error is ConstraintException)
                 response.StatusCode = (int)(System.Net.HttpStatusCode)422;

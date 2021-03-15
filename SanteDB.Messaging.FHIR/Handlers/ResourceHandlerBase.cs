@@ -80,6 +80,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
 		public Type CanonicalType => typeof(TModel);
 
+		/// <summary>
+		/// Gets the CLR type
+		/// </summary>
+		public Type ResourceClrType => typeof(TFhirResource);
+
         /// <summary>
         /// Create the specified resource.
         /// </summary>
@@ -183,7 +188,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				throw new ArgumentNullException(nameof(parameters));
 
 			Core.Model.Query.NameValueCollection hdsiQuery = null;
-			FhirQuery query = QueryRewriter.RewriteFhirQuery<TFhirResource, TModel>(parameters, out hdsiQuery);
+			FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(TFhirResource), typeof(TModel), parameters, out hdsiQuery);
 
 			// Do the query
 			int totalResults = 0;

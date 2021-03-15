@@ -117,7 +117,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Read a reasource
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.ReadClinicalData)]
         public Resource ReadResource(string resourceType, string id)
         {
             this.ThrowIfNotReady();
@@ -141,7 +140,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Read resource with version
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.ReadClinicalData)]
         public Resource VReadResource(string resourceType, string id, string vid)
         {
             this.ThrowIfNotReady();
@@ -162,7 +160,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Update a resource
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.WriteClinicalData)]
         public Resource UpdateResource(string resourceType, string id, Resource target)
         {
             this.ThrowIfNotReady();
@@ -200,7 +197,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Delete a resource
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.DeleteClinicalData)]
         public Resource DeleteResource(string resourceType, string id)
         {
             this.ThrowIfNotReady();
@@ -233,7 +229,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Create a resource
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.WriteClinicalData)]
         public Resource CreateResource(string resourceType, Resource target)
         {
             this.ThrowIfNotReady();
@@ -273,7 +268,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Validate a resource (really an update with debugging / non comit)
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.LoginAsService)]
         public OperationOutcome ValidateResource(string resourceType, string id, Resource target)
         {
             this.ThrowIfNotReady();
@@ -313,7 +307,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Searches a resource from the client registry datastore 
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.QueryClinicalData)]
         public Bundle SearchResource(string resourceType)
         {
             this.ThrowIfNotReady();
@@ -367,7 +360,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Posting transaction is not supported
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.WriteClinicalData)]
         public Bundle PostTransaction(Bundle feed)
         {
             throw new NotImplementedException();
@@ -376,7 +368,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Get a resource's history
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.ReadClinicalData)]
         public Bundle GetResourceInstanceHistory(string resourceType, string id)
         {
             this.ThrowIfNotReady();
@@ -412,7 +403,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Not implemented result
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.QueryClinicalData)]
         public Bundle GetResourceHistory(string resourceType)
         {
             this.ThrowIfNotReady();
@@ -424,7 +414,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Not implemented
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.QueryClinicalData)]
         public Bundle GetHistory(string mimeType)
         {
             this.ThrowIfNotReady();
@@ -494,7 +483,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Create or update
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.WriteClinicalData)]
         public Resource CreateUpdateResource(string resourceType, string id, Resource target)
         {
             return this.UpdateResource(resourceType, id, target);
@@ -503,7 +491,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <summary>
         /// Alternate search
         /// </summary>
-        [Demand(PermissionPolicyIdentifiers.QueryClinicalData)]
         public Bundle SearchResourceAlt(string resourceType)
         {
             return this.SearchResource(resourceType);
