@@ -54,8 +54,17 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// <summary>
         /// XML for resource handlers
         /// </summary>
-        [XmlArray("resourceHandlers"), XmlArrayItem("add"), JsonProperty("resourceHandlers")]
+        [XmlArray("resourceHandlers"), XmlArrayItem("add"), JsonProperty("resourceHandlers"), Obsolete("Use Resources property instead")]
         public List<TypeReferenceConfiguration> ResourceHandlers
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
+        [XmlArray("resources"), XmlArrayItem("add"), JsonProperty("resources")]
+        public List<String> Resources
         {
             get; set;
         }

@@ -110,10 +110,23 @@ namespace SanteDB.Messaging.FHIR
                 }
 
                 // Configuration 
-                foreach (Type t in this.m_configuration.ResourceHandlers.Select(o=>o.Type))
+                if (this.m_configuration.Resources?.Any() == true)
                 {
-                    
-                    FhirResourceHandlerUtil.RegisterResourceHandler(this.m_serviceManager.CreateInjected(t) as IFhirResourceHandler);
+                    foreach(var t in this.m_serviceManager.CreateInjectedOfAll<IFhirResourceHandler>())
+                    {
+                        if (this.m_configuration.Resources.Any(r => r == t.ResourceType.ToString()))
+                            FhirResourceHandlerUtil.RegisterResourceHandler(t);
+                        else if (t is IDisposable disp)
+                            disp.Dispose();
+                    }
+                }
+                else
+                { 
+                    // Old configuration
+                    foreach (Type t in this.m_configuration.ResourceHandlers.Select(o => o.Type))
+                    {
+                        FhirResourceHandlerUtil.RegisterResourceHandler(this.m_serviceManager.CreateInjected(t) as IFhirResourceHandler);
+                    }
                 }
 
                 // Start the web host
