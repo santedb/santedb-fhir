@@ -42,7 +42,7 @@ namespace SanteDB.Messaging.FHIR.Docker
         public const string AuthenticationSetting = "AUTH";
         private readonly IDictionary<String, Type> authSettings = new Dictionary<String, Type>()
         {
-            { "TOKEN", Type.GetType("SanteDB.Server.Core.Rest.Security.TokenAuthorizationAccessBehavior, SanteDB.Server.Core") },
+            { "TOKEN", typeof(TokenAuthorizationAccessBehavior) },
             { "BASIC", typeof(BasicAuthorizationAccessBehavior) },
             { "NONE", null }
         };
