@@ -14,7 +14,7 @@ namespace SanteDB.Messaging.FHIR.Extensions
     /// the core FHIR service. This is useful if you wish to follow certain 
     /// specification rules which specify known return codes, etc.
     /// </summary>
-    public interface IFhirRestBehavior
+    public interface IFhirRestBehaviorModifier
     {
 
         /// <summary>
@@ -29,18 +29,20 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// Called when any FHIR operation is being invoked
         /// </summary>
         /// <param name="requestResource">The resource that is being created</param>
+        /// <param name="resourceType">The resource that is being operated</param>
         /// <param name="interaction">The interaction that is being executed</param>
         /// <returns>A modified resource</returns>
         /// <exception cref="SanteDB.Core.Exceptions.DetectedIssueException">If the processing is to be stopped (with reasons why processing was halted)</exception>
-        Resource AfterReceiveRequest(TypeRestfulInteraction interaction, Resource requestResource);
+        Resource AfterReceiveRequest(TypeRestfulInteraction interaction, ResourceType resourceType, Resource requestResource);
 
         /// <summary>
         /// Called before any FHIR operation returns
         /// </summary>
         /// <param name="interaction">The interaction that was executed</param>
+        /// <param name="resourceType">The resource that is being operated</param>
         /// <param name="responseResource">The response resource</param>
         /// <returns>The modified/updated resource</returns>
-        Resource BeforeSendResponse(TypeRestfulInteraction interaction, Resource responseResource);
+        Resource BeforeSendResponse(TypeRestfulInteraction interaction, ResourceType resourceType, Resource responseResource);
 
     }
 }

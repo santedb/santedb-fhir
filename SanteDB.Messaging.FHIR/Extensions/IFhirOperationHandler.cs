@@ -11,6 +11,10 @@ namespace SanteDB.Messaging.FHIR.Extensions
     /// <summary>
     /// Represents an extension point 
     /// </summary>
+    /// <remarks>
+    /// This interface is used to extend the FHIR interface for FHIR operations (like $validate, $match, etc.)
+    /// and allows plugins to add behaviors to the API layer.
+    /// </remarks>
     public interface IFhirOperationHandler
     {
 

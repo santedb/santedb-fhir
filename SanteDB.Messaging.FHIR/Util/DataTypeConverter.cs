@@ -164,17 +164,26 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>TResource.</returns>
         public static TResource CreateResource<TResource>(IVersionedEntity resource, RestOperationContext context) where TResource : Resource, new()
         {
+            var retVal = CreateResource<TResource>((IIdentifiedEntity)resource, context);
+            retVal.VersionId = resource.VersionKey.ToString();
+            retVal.Meta.VersionId = resource.VersionKey?.ToString();
+            return retVal;
+        }
+
+        /// <summary>
+        /// Create non versioned resource
+        /// </summary>
+        public static TResource CreateResource<TResource>(IIdentifiedEntity resource, RestOperationContext context) where TResource : Resource, new()
+        { 
             var retVal = new TResource();
 
             // Add annotations 
             retVal.Id = resource.Key.ToString();
-            retVal.VersionId = resource.VersionKey.ToString();
 
             // metadata
             retVal.Meta = new Meta()
             {
                 LastUpdated = (resource as IdentifiedData).ModifiedOn.DateTime,
-                VersionId = resource.VersionKey?.ToString(),
             };
 
             if (resource is ITaggable taggable)

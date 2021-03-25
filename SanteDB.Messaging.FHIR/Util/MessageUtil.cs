@@ -159,7 +159,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal.Entry = result.Results.Select(itm =>
                 {
                     var feedResult = new Bundle.EntryComponent(); //new Bundleentry(String.Format("{0} id {1} version {2}", itm.GetType().Name, itm.Id, itm.VersionId), null ,resourceUrl);
-                    feedResult.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = $"{itm.ResourceType}/{itm.Id}/_history/{itm.VersionId}" } };
+                    feedResult.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = itm.HasVersionId ? $"{itm.ResourceType}/{itm.Id}/_history/{itm.VersionId}" : $"{itm.ResourceType}/{itm.Id}"  } };
                     feedResult.FullUrl = $"urn:uuid:{itm.Id}";
 
                     // TODO: Generate the text with a util

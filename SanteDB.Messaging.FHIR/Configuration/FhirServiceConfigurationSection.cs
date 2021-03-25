@@ -57,7 +57,25 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [XmlArray("resourceHandlers"), XmlArrayItem("add"), JsonProperty("resourceHandlers")]
         public List<TypeReferenceConfiguration> ResourceHandlers
         {
-            get;set;
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
+        [XmlArray("resources"), XmlArrayItem("add"), JsonProperty("resources")]
+        public List<String> Resources
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// Allows configuration of extensions which are active
+        /// </summary>
+        [XmlArray("extensions"), XmlArrayItem("add"), JsonProperty("extensions")]
+        public List<TypeReferenceConfiguration> Extensions
+        {
+            get; set;
         }
 
         /// <summary>
@@ -66,5 +84,5 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [XmlElement("base"), JsonProperty("base")]
         public String ResourceBaseUri { get; set; }
     }
-    
+
 }

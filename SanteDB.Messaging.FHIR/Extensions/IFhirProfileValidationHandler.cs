@@ -10,9 +10,14 @@ using System.Threading.Tasks;
 namespace SanteDB.Messaging.FHIR.Extensions
 {
     /// <summary>
-    /// Represents a simple profile handler which allows third party operations
+    /// Represents a profile handler that can validate whether a resource conforms to 
+    /// a profile.
     /// </summary>
-    public interface IFhirProfileHandler
+    /// <remarks>
+    /// This interface, in combination with one or more IFhirOperationHandler and IFhirExtensionHandler
+    /// interfaces is used to implement/override custom domain specific profiles in FHIR
+    /// </remarks>
+    public interface IFhirProfileValidationHandler
     {
 
         /// <summary>

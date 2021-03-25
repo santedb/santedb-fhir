@@ -198,7 +198,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Re-writes the FHIR query parameter to HDSI query parameter format
         /// </summary>
         /// <returns></returns>
-        public static FhirQuery RewriteFhirQuery<TFhirResource, TModelType>(System.Collections.Specialized.NameValueCollection fhirQuery, out NameValueCollection hdsiQuery)
+        public static FhirQuery RewriteFhirQuery(Type resourceType, Type modelType, System.Collections.Specialized.NameValueCollection fhirQuery, out NameValueCollection hdsiQuery)
         {
             // Try parse
             if (fhirQuery == null) throw new ArgumentNullException(nameof(fhirQuery));
@@ -232,7 +232,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             hdsiQuery = new NameValueCollection();
 
-            var map = s_map.Map.FirstOrDefault(o => o.SourceType == typeof(TFhirResource));
+            var map = s_map.Map.FirstOrDefault(o => o.SourceType == resourceType);
 
             foreach (var kv in fhirQuery.AllKeys)
             {
