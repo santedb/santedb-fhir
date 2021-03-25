@@ -44,7 +44,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         static FhirResourceHandlerUtil()
         {
-            s_messageProcessors.Add(ResourceType.StructureDefinition, new StructureDefinitionHandler());
         }
 
         /// <summary>

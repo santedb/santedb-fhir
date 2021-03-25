@@ -2,6 +2,7 @@
 using SanteDB.Core.Exceptions;
 using SanteDB.Docker.Core;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Rest;
 using SanteDB.Rest.Common.Behavior;
 using SanteDB.Rest.Common.Configuration;
@@ -18,7 +19,7 @@ namespace SanteDB.Messaging.FHIR.Docker
     /// <summary>
     /// Exposes the FHIR service to the Docker container
     /// </summary>
-    public class FhirFeature : IDockerFeature
+    public class FhirDockerFeature : IDockerFeature
     {
         /// <summary>
         /// Setting ID for resources
@@ -58,6 +59,22 @@ namespace SanteDB.Messaging.FHIR.Docker
         public IEnumerable<string> Settings => new String[] { AuthenticationSetting, ResourceSetting, BaseUriSetting, CorsSetting, ListenUriSetting, AuthenticationSetting };
 
         /// <summary>
+        /// Create an endpoint config
+        /// </summary>
+        private RestEndpointConfiguration CreateEndpoint(String endpointUrl) => new RestEndpointConfiguration()
+        {
+            Address = endpointUrl,
+            Contract = typeof(IFhirServiceContract),
+            Behaviors = new List<RestEndpointBehaviorConfiguration>()
+                            {
+                                new RestEndpointBehaviorConfiguration(typeof(MessageLoggingEndpointBehavior)),
+                                new RestEndpointBehaviorConfiguration(typeof(MessageCompressionEndpointBehavior)),
+                                new RestEndpointBehaviorConfiguration(typeof(MessageDispatchFormatterBehavior)),
+                                new RestEndpointBehaviorConfiguration(typeof(AcceptLanguageEndpointBehavior))
+                            }
+        };
+
+        /// <summary>
         /// Configure the service
         /// </summary>
         public void Configure(SanteDBConfiguration configuration, IDictionary<string, string> settings)
@@ -71,14 +88,31 @@ namespace SanteDB.Messaging.FHIR.Docker
             var fhirRestConfiguration = restConfiguration.Services.FirstOrDefault(o => o.ServiceType == typeof(IFhirServiceContract));
             if(fhirRestConfiguration == null) // add fhir rest config
             {
-                fhirRestConfiguration = RestServiceConfiguration.Load(typeof(IFhirServiceContract).Assembly.GetManifestResourceStream("SanteDB.Messaging.FHIR.Configuration.Default.xml"));
+                fhirRestConfiguration = new RestServiceConfiguration()
+                {
+                    Behaviors = new List<RestServiceBehaviorConfiguration>()
+                    {
+                        new RestServiceBehaviorConfiguration(typeof(TokenAuthorizationAccessBehavior))
+                    },
+                    Name = "FHIR",
+                    Endpoints = new List<RestEndpointConfiguration>()
+                    {
+                        this.CreateEndpoint("http://0.0.0.0:8080/fhir")
+                    }
+                };
+
+                RestServiceConfiguration.Load(typeof(IFhirServiceContract).Assembly.GetManifestResourceStream("SanteDB.Messaging.FHIR.Configuration.Default.xml"));
                 restConfiguration.Services.Add(fhirRestConfiguration);
             }
 
             var fhirConfiguration = configuration.GetSection<FhirServiceConfigurationSection>();
             if(fhirConfiguration == null)
             {
-                fhirConfiguration = DockerFeatureUtils.LoadConfigurationResource<FhirServiceConfigurationSection>("SanteDB.Messaging.FHIR.Docker.FhirFeature.xml");
+                fhirConfiguration = new FhirServiceConfigurationSection()
+                {
+                    ResourceBaseUri = "http://127.0.0.1:8080/fhir",
+                    ResourceHandlers = typeof(FhirDockerFeature).Assembly.ExportedTypes.Where(o => typeof(IFhirResourceHandler).IsAssignableFrom(o) && !o.IsAbstract && o.IsClass).Select(o => new TypeReferenceConfiguration(o)).ToList()
+                };
                 configuration.AddSection(fhirConfiguration);
             }
 
@@ -157,7 +191,7 @@ namespace SanteDB.Messaging.FHIR.Docker
             if(settings.TryGetValue(ResourceSetting, out string resource))
             {
                 fhirConfiguration.Resources = new List<string>();
-                foreach(var res in resource.Split(','))
+                foreach(var res in resource.Split(';'))
                 {
                     if(!Enum.TryParse<ResourceType>(res, out ResourceType rt))
                     {

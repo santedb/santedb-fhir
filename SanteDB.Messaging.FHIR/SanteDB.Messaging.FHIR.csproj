@@ -52,7 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\FhirServiceConfigurationSection.cs" />
-    <Compile Include="Docker\FhirFeature.cs" />
+    <Compile Include="Docker\FhirDockerFeature.cs" />
     <Compile Include="Extensions\IFhirExtensionHandler.cs" />
     <Compile Include="Extensions\IFhirRestBehaviorModifier.cs" />
     <Compile Include="FhirConstants.cs" />
@@ -122,7 +122,10 @@
           <Project>{786bd0ee-1806-4158-ba45-80249ac6dfe7}</Project>
           <Name>SanteDB.Rest.Common</Name>
         </ProjectReference>
-        <ProjectReference Include="..\..\santedb-docker\SanteDB.Docker.Core\SanteDB.Docker.Core.csproj" />
+        <ProjectReference Include="..\..\santedb-docker\SanteDB.Docker.Core\SanteDB.Docker.Core.csproj">
+          <Project>{284CE885-78E0-48EA-A2E4-6957AD66EAB5}</Project>
+          <Name>SanteDB.Docker.Core</Name>
+        </ProjectReference>
       </ItemGroup>
     </When>
     <Otherwise>
@@ -146,22 +149,22 @@
       <Link>SanteDB.licenseheader</Link>
     </None>
     <None Include="app.config" />
-    <None Include="Data\004-FHIR-AddressUseCodes.dataset">
+    <None Include="data\004-FHIR-AddressUseCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Data\004-FHIR-AdministrativeGenderCodes.dataset">
+    <None Include="data\004-FHIR-AdministrativeGenderCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Data\004-FHIR-ContactPointSystemCodes.dataset">
+    <None Include="data\004-FHIR-ContactPointSystemCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Data\004-FHIR-ContactRelationshipCodes.dataset">
+    <None Include="data\004-FHIR-ContactRelationshipCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Data\004-FHIR-ContactPointUseCodes.dataset">
+    <None Include="data\004-FHIR-ContactPointUseCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="Data\004-FHIR-NameUseCodes.dataset">
+    <None Include="data\004-FHIR-NameUseCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="SanteDB.Messaging.FHIR.nuspec">

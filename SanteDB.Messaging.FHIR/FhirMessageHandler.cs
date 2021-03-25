@@ -125,12 +125,16 @@ namespace SanteDB.Messaging.FHIR
                     // Old configuration
                     foreach (Type t in this.m_configuration.ResourceHandlers.Select(o => o.Type))
                     {
-                        FhirResourceHandlerUtil.RegisterResourceHandler(this.m_serviceManager.CreateInjected(t) as IFhirResourceHandler);
+                        if(t !=null)
+                            FhirResourceHandlerUtil.RegisterResourceHandler(this.m_serviceManager.CreateInjected(t) as IFhirResourceHandler);
                     }
                 }
 
                 // Start the web host
                 this.m_webHost.Start();
+
+                this.m_traceSource.TraceInfo("FHIR On: {0}", this.m_webHost.Endpoints.First().Description.ListenUri);
+
                 this.Started?.Invoke(this, EventArgs.Empty);
 
                 return true;
