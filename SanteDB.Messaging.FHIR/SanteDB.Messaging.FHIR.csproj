@@ -1,10 +1,10 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(VersionNumber)' == ''">
     <VersionNumber>2.1.0-debug</VersionNumber>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup>
     <PackageId>SanteDB.Messaging.FHIR</PackageId>
@@ -34,7 +34,6 @@
     <RootNamespace>SanteDB.Messaging.FHIR</RootNamespace>
     <AssemblyName>SanteDB.Messaging.FHIR</AssemblyName>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -59,8 +58,9 @@
     <PackageReference Include="Hl7.Fhir.R4">
       <Version>1.4.0</Version>
     </PackageReference>
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="6.9.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <Reference Include="System" />
+   <!-- <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
     <Reference Include="System.IdentityModel" />
@@ -71,7 +71,7 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml" />-->
   </ItemGroup>
  <!-- <ItemGroup>
     <Compile Include="Configuration\FhirServiceConfigurationSection.cs" />
@@ -200,7 +200,6 @@
     <None Include="applet\views\config\fhir\content.html" />
     <EmbeddedResource Include="Configuration\Default.xml" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

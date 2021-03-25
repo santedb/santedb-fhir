@@ -17,6 +17,7 @@
  * Date: 2019-11-27
  */
 using Hl7.Fhir.Model;
+using Microsoft.IdentityModel.Tokens;
 using RestSrvr;
 using RestSrvr.Exceptions;
 using RestSrvr.Message;
@@ -35,7 +36,6 @@ using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
-using System.IdentityModel.Tokens;
 using System.IO;
 using System.Linq;
 using System.Security;

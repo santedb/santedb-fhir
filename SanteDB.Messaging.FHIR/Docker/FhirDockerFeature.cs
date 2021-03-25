@@ -193,7 +193,7 @@ namespace SanteDB.Messaging.FHIR.Docker
                 fhirConfiguration.Resources = new List<string>();
                 foreach(var res in resource.Split(';'))
                 {
-                    if(!Enum.TryParse<ResourceType>(res, out ResourceType rt))
+                    if(!Enum.TryParse<Hl7.Fhir.Model.ResourceType>(res, out Hl7.Fhir.Model.ResourceType rt))
                     {
                         throw new ArgumentOutOfRangeException($"{res} is not a valid FHIR resource");
                     }
