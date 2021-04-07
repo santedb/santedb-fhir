@@ -108,7 +108,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case Hl7.Fhir.Model.Bundle.BundleType.Message:
                     {
 
-                        var processMessageHandler = ExtensionUtil.GetOperation("Bundle", "process-message");
+                        var processMessageHandler = ExtensionUtil.GetOperation(null, "process-message");
                         return processMessageHandler.Invoke(new Parameters()
                         {
                             Parameter = new List<Parameters.ParameterComponent>()
