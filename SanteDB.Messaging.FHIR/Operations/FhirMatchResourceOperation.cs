@@ -46,7 +46,12 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// <summary>
         /// Applies to which resources (all of them)
         /// </summary>
-        public ResourceType? AppliesTo => null;
+        public ResourceType[] AppliesTo => new ResourceType[]
+        {
+            ResourceType.Patient,
+            ResourceType.Organization,
+            ResourceType.Location
+        };
 
         /// <summary>
         /// Invoke the specified operation
@@ -95,6 +100,10 @@ namespace SanteDB.Messaging.FHIR.Operations
 
                     results = configBase.MatchConfiguration.SelectMany(o => matchService.Match(modelInstance, o)).ToArray();
                 }
+
+                // Only certain matches
+                if (onlyCertainMatches?.Value == true)
+                    results = results.Where(o => o.Classification == RecordMatchClassification.Match);
 
                 // Next we want to convert to FHIR
                 var retVal = new Bundle()

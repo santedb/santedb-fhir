@@ -148,7 +148,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             foreach (var itm in retVal.Resource)
             {
-                itm.Operation = ExtensionUtil.OperationHandlers.Where(o => o.AppliesTo == itm.Type).Select(o => new OperationComponent()
+                itm.Operation = ExtensionUtil.OperationHandlers.Where(o => o.AppliesTo?.Contains(itm.Type.Value) == true).Select(o => new OperationComponent()
                 {
                     Name = o.Name,
                     Definition = o.Uri.ToString()

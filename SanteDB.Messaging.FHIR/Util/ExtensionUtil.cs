@@ -33,6 +33,9 @@ namespace SanteDB.Messaging.FHIR.Util
         // Behavior modifiers
         private static ICollection<IFhirRestBehaviorModifier> s_behaviorModifiers;
 
+        // Message operations
+        private static IDictionary<Uri, IFhirMessageOperation> s_messageOperations;
+
         /// <summary>
         /// Creates a profile utility
         /// </summary>
@@ -51,6 +54,9 @@ namespace SanteDB.Messaging.FHIR.Util
             s_behaviorModifiers = svcManager
                 .CreateInjectedOfAll<IFhirRestBehaviorModifier>()
                 .ToList();
+            s_messageOperations = svcManager
+                .CreateInjectedOfAll<IFhirMessageOperation>()
+                .ToDictionary(o=>o.EventUri, o=>o);
         }
 
         /// <summary>
@@ -92,6 +98,15 @@ namespace SanteDB.Messaging.FHIR.Util
         public static IEnumerable<IFhirProfileValidationHandler> ProfileHandlers => s_profileHandlers;
 
         /// <summary>
+        /// Get the specified message operation handler for the specified event uri
+        /// </summary>
+        public static IFhirMessageOperation GetMessageOperationHandler(Uri eventUri)
+        {
+            s_messageOperations.TryGetValue(eventUri, out IFhirMessageOperation retVal);
+            return retVal;
+        }
+
+        /// <summary>
         /// Runs all registered extensions on the object
         /// </summary>
         /// <param name="appliedExtensions">The extensions that were applied to the object</param>
@@ -119,9 +134,14 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>The operation handler</returns>
         public static IFhirOperationHandler GetOperation(string resourceType, string operationName)
         {
-            if (!Enum.TryParse<ResourceType>(resourceType, out ResourceType rtEnum))
-                throw new KeyNotFoundException($"Resource {resourceType} is not valid");
-            return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo == rtEnum || o.AppliesTo == null) && o.Name == operationName);
+            if (resourceType == null)
+                return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo == null || o.AppliesTo == null) && o.Name == operationName);
+            else
+            {
+                if (!Enum.TryParse<ResourceType>(resourceType, out ResourceType rtEnum))
+                    throw new KeyNotFoundException($"Resource {resourceType} is not valid");
+                return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo?.Contains(rtEnum) == true) && o.Name == operationName);
+            }
         }
 
         /// <summary>

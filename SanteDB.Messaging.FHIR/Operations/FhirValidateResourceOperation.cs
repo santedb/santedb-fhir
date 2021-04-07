@@ -24,7 +24,7 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// <summary>
         /// Applies to all resources
         /// </summary>
-        public ResourceType? AppliesTo => null;
+        public ResourceType[] AppliesTo => FhirResourceHandlerUtil.ResourceHandlers.Select(o => o.ResourceType).Distinct().ToArray();
 
         /// <summary>
         /// Gets the URI to the definition

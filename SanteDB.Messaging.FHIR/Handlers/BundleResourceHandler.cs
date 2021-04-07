@@ -31,63 +31,178 @@ using System.Reflection;
 using SanteDB.Core.Diagnostics;
 using RestSrvr;
 using static Hl7.Fhir.Model.CapabilityStatement;
+using SanteDB.Core.Services;
+using System.Linq.Expressions;
+using Hl7.Fhir.Model;
+using System.Collections.Specialized;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
     /// <summary>
     /// Represents a FHIR resource handler for bundles
     /// </summary>
-    public class BundleResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Bundle, SanteDB.Core.Model.Collection.Bundle>
+    public class BundleResourceHandler : IFhirResourceHandler
     {
-        
 
-        /// Gets the interaction that this resource handler provider
+        // Tracer
+        private Tracer m_tracer = Tracer.GetTracer(typeof(BundleResourceHandler));
+
+        // Bundle repository
+        private IRepositoryService<Core.Model.Collection.Bundle> m_bundleRepository;
+
+        /// <summary>
+        /// Creates a new bundle resource handler
+        /// </summary>
+        public BundleResourceHandler(IRepositoryService<Core.Model.Collection.Bundle> bundleRepository)
+        {
+            this.m_bundleRepository = bundleRepository;
+        }
+
+        /// <summary>
+        /// The type that this resource handler operates on
+        /// </summary>
+        public ResourceType ResourceType => ResourceType.Bundle;
+
+        /// <summary>
+        /// Create the specified object
+        /// </summary>
+        public Resource Create(Resource target, TransactionMode mode)
+        {
+            if (!(target is Hl7.Fhir.Model.Bundle fhirBundle))
+                throw new ArgumentOutOfRangeException("Expected a FHIR bundle");
+
+            switch(fhirBundle.Type.GetValueOrDefault())
+            {
+                case Hl7.Fhir.Model.Bundle.BundleType.Batch:
+                    {
+                        var sdbBundle = new Core.Model.Collection.Bundle();
+                        foreach (var entry in fhirBundle.Entry)
+                        {
+                            var entryType = entry.Resource.ResourceType;
+                            var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IBundleResourceHandler;
+                            if (handler == null)
+                            {
+                                throw new NotSupportedException($"This repository cannot properly work with {entryType}");
+                            }
+                            sdbBundle.Add(handler.MapToModel(entry.Resource, RestOperationContext.Current, fhirBundle));
+                        }
+                        sdbBundle.Item.RemoveAll(o => o == null);
+
+                        var sdbResult = this.m_bundleRepository.Insert(sdbBundle);
+                        var retVal = new Hl7.Fhir.Model.Bundle()
+                        {
+                            Type = Hl7.Fhir.Model.Bundle.BundleType.BatchResponse
+                        };
+                        // Parse return value
+                        foreach(var entry in sdbResult.Item)
+                        {
+                            var handler = FhirResourceHandlerUtil.GetMapperFor(entry.GetType());
+                            if (handler == null) continue; // TODO: Warn
+                            retVal.Entry.Add(new Hl7.Fhir.Model.Bundle.EntryComponent()
+                            {
+                                Resource = handler.MapToFhir(entry)
+                            });
+                        }
+                        return retVal;
+                    };
+                case Hl7.Fhir.Model.Bundle.BundleType.Message:
+                    {
+
+                        var processMessageHandler = ExtensionUtil.GetOperation("Bundle", "process-message");
+                        return processMessageHandler.Invoke(new Parameters()
+                        {
+                            Parameter = new List<Parameters.ParameterComponent>()
+                            {
+                                new Parameters.ParameterComponent()
+                                {
+                                    Name = "content",
+                                    Resource = fhirBundle
+                                },
+                                new Parameters.ParameterComponent()
+                                {
+                                    Name = "async",
+                                    Value = new FhirBoolean(false)
+                                }
+                            }
+                        });
+                    }
+                default:
+                    throw new NotSupportedException($"Processing of bundles with type {fhirBundle.Type} is not supported");
+            }
+        }
+
+        /// <summary>
+        /// Delete the specified object
+        /// </summary>
+        /// <remarks>Not supported on this interface</remarks>
+        public Resource Delete(string id, TransactionMode mode)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Get the resource definition
         /// </summary>
         /// <returns></returns>
-        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
+        public ResourceComponent GetResourceDefinition()
         {
-            return new ResourceInteractionComponent[]
+            return new ResourceComponent()
             {
-                new ResourceInteractionComponent() { Code = TypeRestfulInteraction.Create },
-                new ResourceInteractionComponent() { Code = TypeRestfulInteraction.Update }
-            };
-        }
-
-
-        /// <summary>
-        /// Maps a OpenIZ bundle as FHIR
-        /// </summary>
-        protected override Hl7.Fhir.Model.Bundle MapToFhir(Core.Model.Collection.Bundle model, RestOperationContext webOperationContext)
-        {
-            return new Hl7.Fhir.Model.Bundle()
-            {
-                Type = Hl7.Fhir.Model.Bundle.BundleType.Collection,
-                // TODO: Actually construct a response bundle 
-            };
-            
-        }
-
-        /// <summary>
-        /// Map FHIR resource to our bundle
-        /// </summary>
-        protected override Core.Model.Collection.Bundle MapToModel(Hl7.Fhir.Model.Bundle resource, RestOperationContext webOperationContext)
-        {
-            var retVal = new Core.Model.Collection.Bundle();
-            foreach(var entry in resource.Entry)
-            {
-                var entryType = entry.Resource.GetType();
-                if (entryType == null)
-                    continue;
-                var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType.GetCustomAttribute<XmlRootAttribute>().ElementName) as IBundleResourceHandler;
-                if (handler == null)
+                ConditionalCreate = false,
+                ConditionalDelete = ConditionalDeleteStatus.NotSupported,
+                ConditionalRead = ConditionalReadStatus.NotSupported,
+                ConditionalUpdate = false,
+                Type = ResourceType.Bundle,
+                Interaction = new List<ResourceInteractionComponent>()
                 {
-                    this.m_traceSource.TraceWarning("Can't find bundle handler for {0}...", entryType.Name);
-                    continue;
-                }
-                retVal.Add(handler.MapToModel(entry.Resource, webOperationContext, resource));
-            }
-            retVal.Item.RemoveAll(o => o == null);
-            return retVal;
+                    new ResourceInteractionComponent()
+                    {
+                        Code = TypeRestfulInteraction.Create
+                    }
+                },
+                UpdateCreate = false
+            };
+        }
+
+        /// <summary>
+        /// Get the structure definition
+        /// </summary>
+        /// <returns></returns>
+        public StructureDefinition GetStructureDefinition()
+        {
+            return StructureDefinitionUtil.GetStructureDefinition(typeof(Hl7.Fhir.Model.Bundle), false);
+        }
+
+        /// <summary>
+        /// History read
+        /// </summary>
+        public FhirQueryResult History(string id)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Query 
+        /// </summary>
+        public FhirQueryResult Query(NameValueCollection parameters)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Read operation
+        /// </summary>
+        public Resource Read(string id, string versionId)
+        {
+            throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Update 
+        /// </summary>
+        public Resource Update(string id, Resource target, TransactionMode mode)
+        {
+            throw new NotSupportedException();
         }
     }
 }
