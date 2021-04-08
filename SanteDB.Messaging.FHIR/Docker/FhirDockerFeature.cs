@@ -26,6 +26,19 @@ namespace SanteDB.Messaging.FHIR.Docker
         /// </summary>
         public const string ResourceSetting = "RESOURCE";
         /// <summary>
+        /// Message settings
+        /// </summary>
+        public const string MessageSetting = "MESSAGE";
+        /// <summary>
+        /// Operation settings
+        /// </summary>
+        public const string OperationSetting = "OPERATION";
+        /// <summary>
+        /// Profile settings
+        /// </summary>
+        public const string ProfileSetting = "PROFILE";
+
+        /// <summary>
         /// Set id for base URI
         /// </summary>
         public const string BaseUriSetting = "BASE";

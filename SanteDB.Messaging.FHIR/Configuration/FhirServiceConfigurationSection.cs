@@ -63,8 +63,71 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// <summary>
         /// XML for resource handlers
         /// </summary>
+        [XmlArray("operationHandlers"), XmlArrayItem("add"), JsonProperty("operationHandlers")]
+        public List<TypeReferenceConfiguration> OperationHandlers
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
+        [XmlArray("messageHandlers"), XmlArrayItem("add"), JsonProperty("messageHandlers")]
+        public List<TypeReferenceConfiguration> MessageHandlers
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
+        [XmlArray("extensionHandlers"), XmlArrayItem("add"), JsonProperty("extensionHandlers")]
+        public List<TypeReferenceConfiguration> ExtensionHandlers
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
+        [XmlArray("profileHandlers"), XmlArrayItem("add"), JsonProperty("profileHandlers")]
+        public List<TypeReferenceConfiguration> ProfileHandlers
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
         [XmlArray("resources"), XmlArrayItem("add"), JsonProperty("resources")]
         public List<String> Resources
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
+        [XmlArray("profiles"), XmlArrayItem("add"), JsonProperty("profiles")]
+        public List<String> Profiles
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
+        [XmlArray("messages"), XmlArrayItem("add"), JsonProperty("messages")]
+        public List<String> Messages
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// XML for resource handlers
+        /// </summary>
+        [XmlArray("operations"), XmlArrayItem("add"), JsonProperty("operations")]
+        public List<String> Operations
         {
             get; set;
         }
@@ -73,7 +136,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// Allows configuration of extensions which are active
         /// </summary>
         [XmlArray("extensions"), XmlArrayItem("add"), JsonProperty("extensions")]
-        public List<TypeReferenceConfiguration> Extensions
+        public List<String> Extensions
         {
             get; set;
         }

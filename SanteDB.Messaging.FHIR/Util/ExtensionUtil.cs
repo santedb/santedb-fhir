@@ -4,6 +4,7 @@ using SanteDB.Core.Configuration;
 using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions;
 using System;
@@ -39,24 +40,69 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Creates a profile utility
         /// </summary>
-        static ExtensionUtil ()
+        public static void Initialize(FhirServiceConfigurationSection configuration)
         {
             var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-            s_extensionHandlers = svcManager
-                .CreateInjectedOfAll<IFhirExtensionHandler>()
-                .ToList();
-            s_operationHandlers = svcManager
-                .CreateInjectedOfAll<IFhirOperationHandler>()
-                .ToList();
-            s_profileHandlers = svcManager
-                .CreateInjectedOfAll<IFhirProfileValidationHandler>()
-                .ToList();
+
+            if (configuration.ExtensionHandlers?.Any() == true)
+                s_extensionHandlers = configuration.ExtensionHandlers.Select(t => svcManager.CreateInjected(t.Type))
+                    .OfType<IFhirExtensionHandler>()
+                    .ToList();
+            else if (configuration.Extensions?.Any() == true)
+                s_extensionHandlers = svcManager.CreateInjectedOfAll<IFhirExtensionHandler>()
+                    .Where(o => configuration.Extensions.Contains(o.Uri.ToString()))
+                    .ToList();
+            else 
+                s_extensionHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirExtensionHandler>()
+                    .ToList();
+
+            if (configuration.OperationHandlers?.Any() == true)
+                s_operationHandlers = configuration.ExtensionHandlers.Select(t => svcManager.CreateInjected(t.Type))
+                    .OfType<IFhirOperationHandler>()
+                    .ToList();
+            else if (configuration.Operations?.Any() == true)
+                s_operationHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirOperationHandler>()
+                    .Where(o=>configuration.Operations.Contains(o.Uri.ToString()))
+                    .ToList();
+            else
+                s_operationHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirOperationHandler>()
+                    .ToList();
+
+            if (configuration.ProfileHandlers?.Any() == true)
+                s_profileHandlers = configuration.ProfileHandlers.Select(t=>svcManager.CreateInjected(t.Type))
+                    .OfType<IFhirProfileValidationHandler>()
+                    .ToList();
+            else if (configuration.Profiles?.Any() == true)
+                s_profileHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirProfileValidationHandler>()
+                    .Where(o=>configuration.Profiles.Contains(o.ProfileUri.ToString()))
+                    .ToList();
+            else
+                s_profileHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirProfileValidationHandler>()
+                    .ToList();
+
             s_behaviorModifiers = svcManager
                 .CreateInjectedOfAll<IFhirRestBehaviorModifier>()
                 .ToList();
-            s_messageOperations = svcManager
-                .CreateInjectedOfAll<IFhirMessageOperation>()
-                .ToDictionary(o=>o.EventUri, o=>o);
+
+            // Message operations
+            if (configuration.MessageHandlers?.Any() == true)
+                s_messageOperations = configuration.MessageHandlers.Select(t => svcManager.CreateInjected(t.Type))
+                    .OfType<IFhirMessageOperation>()
+                    .ToDictionary(o => o.EventUri, o => o);
+            else if (configuration.Messages?.Any() == true)
+                s_messageOperations = svcManager
+                    .CreateInjectedOfAll<IFhirMessageOperation>()
+                    .Where(o => configuration.Messages.Contains(o.EventUri.ToString()))
+                    .ToDictionary(o => o.EventUri, o => o);
+            else
+                s_messageOperations = svcManager
+                    .CreateInjectedOfAll<IFhirMessageOperation>()
+                    .ToDictionary(o => o.EventUri, o => o);
         }
 
         /// <summary>
