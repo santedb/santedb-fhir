@@ -65,7 +65,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
-            var refer = new ResourceReference($"/{fhirType}/{targetEntity.Key}/_history/{targetEntity.VersionKey}");
+            var refer = new ResourceReference($"{fhirType}/{targetEntity.Key}/_history/{targetEntity.VersionKey}");
 
             refer.Display = targetEntity.ToString();
             return refer;
@@ -151,7 +151,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
-            var refer = new ResourceReference($"/{fhirType}/{targetKey}");
+            var refer = new ResourceReference($"{fhirType}/{targetKey}");
             return refer;
 
         }
@@ -222,8 +222,13 @@ namespace SanteDB.Messaging.FHIR.Util
             // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
             fhirExtension.Extension = extendable?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(o => DataTypeConverter.ToExtension(o, context)).ToList();
 
-            fhirExtension.Extension = fhirExtension.Extension.Union(ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, resource.ResourceType, out IEnumerable<IFhirExtensionHandler> appliedExtensions)).ToList();
-            return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
+            if (resource != null)
+            {
+                fhirExtension.Extension = fhirExtension.Extension.Union(ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, resource.ResourceType, out IEnumerable<IFhirExtensionHandler> appliedExtensions)).ToList();
+                return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
+            }
+            else
+                return new List<String>();
         }
 
         /// <summary>
@@ -318,7 +323,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 else if (extension.ExtensionType.ExtensionHandler == typeof(DateExtensionHandler))
                     extension.ExtensionValue = (fhirExtension.Value as FhirDateTime).Value;
                 // TODO: Implement binary incoming extensions
-                else if (extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler))
+                else if (extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler) ||
+                    extension.ExtensionType.ExtensionHandler == typeof(DictionaryExtensionHandler))
                     extension.ExtensionValueXml = (fhirExtension.Value as Base64Binary).Value;
                 else
                     throw new NotImplementedException($"Extension type is not understood");
@@ -333,6 +339,14 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Convert to language of communication
         /// </summary>
         public static PersonLanguageCommunication ToLanguageCommunication(Patient.CommunicationComponent lang)
+        {
+            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault());
+        }
+
+        /// <summary>
+        /// Convert to language of communication
+        /// </summary>
+        public static PersonLanguageCommunication ToLanguageCommunication(RelatedPerson.CommunicationComponent lang)
         {
             return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault());
         }
@@ -508,7 +522,10 @@ namespace SanteDB.Messaging.FHIR.Util
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR coding");
 
             // Lookup
-            return conceptService.GetConceptByReferenceTerm(code, system);
+            var retVal = conceptService.GetConceptByReferenceTerm(code, system);
+            if (retVal == null)
+                throw new KeyNotFoundException($"Could not map concept {system}#{code} to a concept");
+            return retVal;
         }
 
         /// <summary>
@@ -665,34 +682,52 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Resolve the specified entity
         /// </summary>
-        public static Guid? ResolveEntityKey(ResourceReference resourceRef)
+        public static IdentifiedData ResolveEntity(ResourceReference resourceRef, Resource containedWithin)
         {
             var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<Entity>>();
+
+            // First is there a bundle in the contained within
+            var sdbBundle = containedWithin.Annotations(typeof(Core.Model.Collection.Bundle)).FirstOrDefault() as Core.Model.Collection.Bundle;
+            IdentifiedData retVal = null;
+
             if (resourceRef.Identifier != null)
             {
+                // Already exists in SDB bundle?
                 var identifier = DataTypeConverter.ToEntityIdentifier(resourceRef.Identifier);
-                var ent = repo.Find(o => o.Identifiers.Any(a => a.AuthorityKey == identifier.AuthorityKey && a.Value == identifier.Value), 0, 1, out int tr).FirstOrDefault();
-                if (tr > 1)
-                    throw new InvalidOperationException($"Reference to {identifier} is ambiguous ({tr} records have this identity)");
-                return ent?.Key;
+                retVal = sdbBundle?.Item.OfType<IHasIdentifiers>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.AuthorityKey && i.Value == identifier.Value)) as IdentifiedData;
+                if (retVal == null) // Not been processed in bundle
+                {
+                    retVal = repo.Find(o => o.Identifiers.Any(a => a.AuthorityKey == identifier.AuthorityKey && a.Value == identifier.Value), 0, 1, out int tr).FirstOrDefault();
+                    if (tr > 1)
+                        throw new InvalidOperationException($"Reference to {identifier} is ambiguous ({tr} records have this identity)");
+                }
+
             }
             else if (!String.IsNullOrEmpty(resourceRef.Reference))
             {
-                // Attempt to resolve the reference 
-                var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
-                var match = refRegex.Match(resourceRef.Reference);
-                if (!match.Success)
-                    throw new InvalidOperationException($"{resourceRef.Reference} was not in the expected format. Expecting urn:uuid:UUID or Type/UUID");
+                retVal = sdbBundle?.Item.OfType<ITaggable>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference) as IdentifiedData;
+                if (retVal == null)
+                {
+                    // Attempt to resolve the reference 
+                    var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
+                    var match = refRegex.Match(resourceRef.Reference);
+                    if (!match.Success)
+                        throw new InvalidOperationException($"{resourceRef.Reference} was not in the expected format. Expecting urn:uuid:UUID or Type/UUID");
 
-                if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value, out Guid relUuid)) // rel reference
-                    return repo.Get(relUuid)?.Key; // Allow any triggers to fire
-                else if (Guid.TryParse(match.Groups[1].Value, out Guid absRef))
-                    return repo.Get(absRef)?.Key;
-                    
-                return null;
+                    if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value, out Guid relUuid)) // rel reference
+                        retVal = repo.Get(relUuid); // Allow any triggers to fire
+                    else if (Guid.TryParse(match.Groups[1].Value, out Guid absRef))
+                        retVal = repo.Get(absRef);
+                        
+                }
             }
             else
                 throw new ArgumentException("Could not understand resource reference");
+
+            // TODO: Weak references
+            if (retVal == null)
+                throw new NotSupportedException($"Weak references (to other servers) are not currently supported (ref: {resourceRef.Reference})");
+            return retVal;
         }
 
         /// <summary>
@@ -700,7 +735,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         /// <param name="patientContact">The patient contact.</param>
         /// <returns>Returns the mapped entity relationship instance..</returns>
-        public static EntityRelationship ToEntityRelationship(Patient.ContactComponent patientContact)
+        public static EntityRelationship ToEntityRelationship(Patient.ContactComponent patientContact, Patient patient)
         {
             var retVal = new EntityRelationship();
             retVal.RelationshipType = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault());
@@ -709,9 +744,9 @@ namespace SanteDB.Messaging.FHIR.Util
             if (patientContact.Organization != null && patientContact.Name == null &&
                 patientContact.Address == null)
             {
-                var refObjectKey = DataTypeConverter.ResolveEntityKey(patientContact.Organization);
+                var refObjectKey = DataTypeConverter.ResolveEntity(patientContact.Organization, patient);
                 if (refObjectKey != null)
-                    retVal.TargetEntityKey = refObjectKey;
+                    retVal.TargetEntityKey = refObjectKey?.Key;
                 else  // TODO: Implement
                     throw new KeyNotFoundException($"Could not resolve reference to patientContext.Organization");
             }
@@ -805,13 +840,21 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Converts a reference term to the codeable concept
+        /// </summary>
+        public static CodeableConcept ToFhirCodeableConcept(Concept concept, String preferredCodeSystem = null, bool nullIfNoPreferred = false)
+        {
+            return ToFhirCodeableConcept(concept, new string[] { preferredCodeSystem }, nullIfNoPreferred);
+        }
+
+        /// <summary>
         /// Converts a <see cref="Concept"/> instance to an <see cref="FhirCodeableConcept"/> instance.
         /// </summary>
         /// <param name="concept">The concept to be converted to a <see cref="FhirCodeableConcept"/></param>
-        /// <param name="preferredCodeSystem">The preferred code system for the codeable concept</param>
+        /// <param name="preferredCodeSystems">The preferred code system for the codeable concept</param>
         /// <param name="nullIfNoPreferred">When true, instructs the system to return only code in preferred code system or nothing</param>
         /// <returns>Returns a FHIR codeable concept.</returns>
-        public static CodeableConcept ToFhirCodeableConcept(Concept concept, String preferredCodeSystem = null, bool nullIfNoPreferred = false)
+        public static CodeableConcept ToFhirCodeableConcept(Concept concept, String[] preferredCodeSystems, bool nullIfNoPreferred)
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping concept");
 
@@ -820,7 +863,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 return null;
             }
 
-            if (String.IsNullOrEmpty(preferredCodeSystem))
+            if (preferredCodeSystems == null)
             {
                 var refTerms = concept.LoadCollection<ConceptReferenceTerm>(nameof(Concept.ReferenceTerms));
                 if (refTerms.Any())
@@ -838,10 +881,10 @@ namespace SanteDB.Messaging.FHIR.Util
             else
             {
                 var codeSystemService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
-                var refTerm = codeSystemService.GetConceptReferenceTerm(concept.Key.Value, preferredCodeSystem);
-                if (refTerm == null && nullIfNoPreferred)
+                var refTerms = preferredCodeSystems.Select(cs => codeSystemService.GetConceptReferenceTerm(concept.Key.Value, cs));
+                if (!refTerms.Any() && nullIfNoPreferred)
                     return null; // No code in the preferred system, ergo, we will instead use our own
-                else if (refTerm == null)
+                else if (!refTerms.Any())
                     return new CodeableConcept
                     {
                         Coding = concept.LoadCollection<ConceptReferenceTerm>(nameof(Concept.ReferenceTerms)).Select(o => DataTypeConverter.ToCoding(o.LoadProperty<ReferenceTerm>(nameof(ConceptReferenceTerm.ReferenceTerm)))).ToList(),
@@ -850,7 +893,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 else
                     return new CodeableConcept
                     {
-                        Coding = new List<Coding>() { ToCoding(refTerm) },
+                        Coding = refTerms.Select(o=>ToCoding(o)).ToList(),
                         Text = concept.LoadCollection<ConceptName>(nameof(Concept.ConceptNames)).FirstOrDefault()?.Name
                     };
             }

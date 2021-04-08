@@ -36,7 +36,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Resource handler for immunization classes.
     /// </summary>
-    public class ImmunizationResourceHandler : RepositoryResourceHandlerBase<Immunization, SubstanceAdministration>, IBundleResourceHandler
+    public class ImmunizationResourceHandler : RepositoryResourceHandlerBase<Immunization, SubstanceAdministration>
 	{
 		/// <summary>
 		/// Maps the substance administration to FHIR.
@@ -255,12 +255,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
-        /// <summary>
-        /// Map to model
-        /// </summary>
-        public IdentifiedData MapToModel(Resource bundleResource, RestOperationContext context, Bundle bundle)
-        {
-            return this.MapToModel(bundleResource as Immunization, context);
-        }
+       
     }
 }

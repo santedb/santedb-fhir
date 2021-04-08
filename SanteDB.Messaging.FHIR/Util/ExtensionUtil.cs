@@ -169,7 +169,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static bool TryApplyExtension(this Extension me, IdentifiedData applyTo)
         {
-            return s_extensionHandlers.Where(o => o.Uri.ToString() == me.Url).Select(r => r.Parse(me, applyTo)).All(o=>o);
+            return s_extensionHandlers.Where(o => o.Uri.ToString() == me.Url).Select(r => r.Parse(me, applyTo)).Any(o=>o);
         }
 
         /// <summary>

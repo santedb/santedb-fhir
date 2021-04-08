@@ -40,5 +40,15 @@ namespace SanteDB.Messaging.FHIR
         /// Trace source name
         /// </summary>
         public const string TraceSourceName = "SanteDB.Messaging.FHIR";
+
+        /// <summary>
+        /// Original URL
+        /// </summary>
+        public const string OriginalUrlTag = "$fhir.originalUrl";
+
+        /// <summary>
+        /// Origina ID
+        /// </summary>
+        public const string OriginalIdTag = "$fhir.originalId";
     }
 }

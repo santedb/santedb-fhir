@@ -37,13 +37,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Represents a resource handler which can handle patients.
     /// </summary>
-    public class PatientResourceHandler : RepositoryResourceHandlerBase<Patient, Core.Model.Roles.Patient>, IBundleResourceHandler
+    public class PatientResourceHandler : RepositoryResourceHandlerBase<Patient, Core.Model.Roles.Patient>
     {
 
 
         // IDs of family members
         private List<Guid> m_contacts;
         private List<Guid> m_relatedPersons;
+        private readonly Guid MDM_MASTER_LINK = Guid.Parse("97730a52-7e30-4dcd-94cd-fd532d111578");
 
         /// <summary>
         /// Resource handler subscription
@@ -129,16 +130,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Contact => Person
                 if (this.m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
                 {
-                    // Create the relative object
-                    var relative = DataTypeConverter.CreateResource<RelatedPerson>(rel.LoadProperty<Core.Model.Entities.Person>(nameof(EntityRelationship.TargetEntity)), restOperationContext);
-                    relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty<Concept>(nameof(EntityRelationship.RelationshipType))) };
-                    relative.Address = rel.TargetEntity.Addresses.Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
-                    // TODO: Refactor this (see DSM-42 issue ticket)
-                    //relative.Gender = DataTypeConverter.ToFhirCodeableConcept((rel.TargetEntity as Core.Model.Roles.Patient)?.LoadProperty<Concept>(nameof(Core.Model.Roles.Patient.GenderConcept)));
-                    relative.Identifier = rel.TargetEntity.LoadCollection<EntityIdentifier>(nameof(Entity.Identifiers)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
-                    relative.Name = rel.TargetEntity.LoadCollection<EntityName>(nameof(Entity.Names)).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
-                    relative.Patient = DataTypeConverter.CreateInternalReference<Patient>(model, restOperationContext);
-                    relative.Telecom = rel.TargetEntity.LoadCollection<EntityTelecomAddress>(nameof(Entity.Telecoms)).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+                    var relative = FhirResourceHandlerUtil.GetMapperFor(typeof(RelatedPerson)).MapToFhir(rel.LoadProperty(r => r.TargetEntity));
                     retVal.Contained.Add(relative);
                 }
                 else if (this.m_contacts.Contains(rel.RelationshipTypeKey.Value))
@@ -147,7 +139,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                     var contact = new Patient.ContactComponent()
                     {
-                        ElementId = $"urn:uuid:{person.Key}",
+                        ElementId = $"{person.Key}",
                         Address = DataTypeConverter.ToFhirAddress(person.GetAddresses().FirstOrDefault()),
                         Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty<Concept>(nameof(EntityRelationship.RelationshipType)), "http://terminology.hl7.org/CodeSystem/v2-0131") },
                         Name = DataTypeConverter.ToFhirHumanName(person.GetNames().FirstOrDefault()),
@@ -174,7 +166,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.Link.Add(this.CreateLink<Practitioner>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces, restOperationContext));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso, restOperationContext));
-                else if (rel.RelationshipTypeKey?.ToString() == "97730a52-7e30-4dcd-94cd-fd532d111578") // MDM Master Record
+                else if(rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Reference)
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer, restOperationContext));
+                else if (rel.RelationshipTypeKey == MDM_MASTER_LINK) // HACK: MDM Master Record
                 {
                     if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
                         retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso, restOperationContext));
@@ -221,11 +215,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
                 LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList(),
                 Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList(),
-                Relationships = resource.Contact.Select(DataTypeConverter.ToEntityRelationship).ToList(),
                 StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete,
                 Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
             };
-
+            patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
             patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).ToList();
             Guid key;
             if (!Guid.TryParse(resource.Id, out key))
@@ -244,9 +237,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         }
                     }
                 }
-            }
-            patient.Key = key;
 
+                // Generate a new UUID
+                if (key == Guid.Empty)
+                    key = Guid.NewGuid();
+            }
+            
+            patient.Key = key;
+            
             if (resource.Deceased is FhirDateTime dtValue && !String.IsNullOrEmpty(dtValue.Value))
             {
                 patient.DeceasedDate = dtValue.ToDateTime();
@@ -270,7 +268,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (resource.ManagingOrganization != null)
             {
-                var referenceKey = DataTypeConverter.ResolveEntityKey(resource.ManagingOrganization);
+                var referenceKey = DataTypeConverter.ResolveEntity(resource.ManagingOrganization, resource) as Entity;
                 if (referenceKey == null)
                     throw new KeyNotFoundException("Can't locate a registered managing organization");
                 else
@@ -279,19 +277,58 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
-            return patient;
-        }
+            // Links
+            foreach(var lnk in resource.Link)
+            {
+                switch(lnk.Type.Value)
+                {
+                    case Patient.LinkType.Replaces:
+                        {
+                            // Find the victim
+                            var replacee = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Core.Model.Roles.Patient;
+                            if (replacee == null)
+                                throw new KeyNotFoundException($"Cannot locate patient referenced by {lnk.Type} relationship");
+                            replacee.StatusConceptKey = StatusKeys.Obsolete;
+                            patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, replacee));
+                            break;
+                        }
+                    case Patient.LinkType.ReplacedBy:
+                        {
+                            // Find the new
+                            var replacer = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Core.Model.Roles.Patient;
+                            if (replacer == null)
+                                throw new KeyNotFoundException($"Cannot locate patient referenced by {lnk.Type} relationship");
+                            patient.StatusConceptKey = StatusKeys.Obsolete;
+                            replacer.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, patient));
+                            break;
+                        }
+                    case Patient.LinkType.Seealso:
+                        {
+                            var referee = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Entity;
+                            if (referee.LoadCollection(o=>o.Relationships).Any(r=>r.RelationshipTypeKey == MDM_MASTER_LINK)) // HACK: This is a master and someone is attempting to point another record at it
+                                patient.Relationships.Add(new EntityRelationship()
+                                {
+                                    RelationshipTypeKey = MDM_MASTER_LINK,
+                                    SourceEntityKey = referee.Key,
+                                    TargetEntityKey = patient.Key
+                                });
+                            else
+                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Reference, referee));
 
-        /// <summary>
-        /// Map model to the resource
-        /// </summary>
-        /// <param name="bundleResource">The entry to be converted</param>
-        /// <param name="context">The web context</param>
-        /// <param name="bundle">The context for the bundle</param>
-        public IdentifiedData MapToModel(Resource bundleResource, RestOperationContext context, Bundle bundle)
-        {
-            var patient = this.MapToModel(bundleResource as Patient, context);
-            // TODO: Re-map UUIDs from the bundle uuids to the internal reference uuids.
+                            break;
+                        }
+                    case Patient.LinkType.Refer: // This points to a more detailed view of the patient
+                        {
+                            var referee = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Entity;
+                            if (referee.GetTag("$mdm.type") == "M") // HACK: MDM User is attempting to point this at another Master (note: THE MDM LAYER WON'T LIKE THIS)
+                                patient.Relationships.Add(new EntityRelationship(MDM_MASTER_LINK, referee));
+                            else
+                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Reference, referee));
+
+                            break; // TODO: These are special cases of references
+                        }
+                }
+            }
             return patient;
         }
 

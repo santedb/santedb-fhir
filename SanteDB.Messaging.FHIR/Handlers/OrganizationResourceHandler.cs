@@ -35,16 +35,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Organization resource provider
     /// </summary>
-    public class OrganizationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Organization, SanteDB.Core.Model.Entities.Organization>, IBundleResourceHandler
+    public class OrganizationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Organization, SanteDB.Core.Model.Entities.Organization>
     {
-
-        /// <summary>
-        /// Map to model
-        /// </summary>
-        public IdentifiedData MapToModel(Resource bundleResource, RestOperationContext context, Bundle bundle)
-        {
-            return this.MapToModel(bundleResource as Hl7.Fhir.Model.Organization, context);
-        }
 
         /// <summary>
         /// Get the interactions 
@@ -84,6 +76,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete,
                 Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
             };
+
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
 
             if (!Guid.TryParse(resource.Id, out Guid key))

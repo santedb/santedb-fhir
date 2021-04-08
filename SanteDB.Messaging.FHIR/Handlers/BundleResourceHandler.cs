@@ -35,6 +35,7 @@ using SanteDB.Core.Services;
 using System.Linq.Expressions;
 using Hl7.Fhir.Model;
 using System.Collections.Specialized;
+using SanteDB.Core.Model.Interfaces;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -73,25 +74,40 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             switch(fhirBundle.Type.GetValueOrDefault())
             {
-                case Hl7.Fhir.Model.Bundle.BundleType.Batch:
+                case Hl7.Fhir.Model.Bundle.BundleType.Transaction:
                     {
                         var sdbBundle = new Core.Model.Collection.Bundle();
                         foreach (var entry in fhirBundle.Entry)
                         {
                             var entryType = entry.Resource.ResourceType;
-                            var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IBundleResourceHandler;
-                            if (handler == null)
+                            var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
+
+                            // Allow this entry to know its context in the bundle
+                            entry.Resource.AddAnnotation(fhirBundle);
+                            entry.Resource.AddAnnotation(sdbBundle);
+                            
+                            // Map and add to bundle
+                            var itm = handler.MapToModel(entry.Resource);
+                            sdbBundle.Add(itm);
+
+                            // Add original URLs so that subsequent bundle entries (which might reference this entry) can resolve
+                            if (itm is ITaggable taggable)
                             {
-                                throw new NotSupportedException($"This repository cannot properly work with {entryType}");
+                                taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
+                                taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
                             }
-                            sdbBundle.Add(handler.MapToModel(entry.Resource, RestOperationContext.Current, fhirBundle));
+
                         }
                         sdbBundle.Item.RemoveAll(o => o == null);
 
                         var sdbResult = this.m_bundleRepository.Insert(sdbBundle);
                         var retVal = new Hl7.Fhir.Model.Bundle()
                         {
-                            Type = Hl7.Fhir.Model.Bundle.BundleType.BatchResponse
+                            Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse,
+                            Meta = new Meta()
+                            {
+                                LastUpdated = DateTimeOffset.Now
+                            }
                         };
                         // Parse return value
                         foreach(var entry in sdbResult.Item)
