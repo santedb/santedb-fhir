@@ -61,7 +61,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 {
                     throw new NotSupportedException($"There is no message handler for event {eventUri}");
                 }
-                return handler.Invoke(messageHeader, contentParameter.Entry.Where(o => o.Resource != messageHeader).ToArray());
+                return handler.Invoke(messageHeader, contentParameter.Entry.Where(o => messageHeader.Focus.Any(f=>f.Reference == o.FullUrl)).ToArray());
             }
             else
             {
