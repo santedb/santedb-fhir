@@ -42,7 +42,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
 
         // IDs of family members
-        private List<Guid> m_contacts;
         private List<Guid> m_relatedPersons;
         private readonly Guid MDM_MASTER_LINK = Guid.Parse("97730a52-7e30-4dcd-94cd-fd532d111578");
 
@@ -55,11 +54,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             ApplicationServiceContext.Current.Started += (o, e) =>
             {
                 this.m_relatedPersons = ApplicationServiceContext.Current.GetService<IRepositoryService<Concept>>().Find(x => x.ConceptSets.Any(c => c.Mnemonic == "FamilyMember")).Select(c => c.Key.Value).ToList();
-                this.m_contacts = new List<Guid>();
-                this.m_contacts.Add(EntityRelationshipTypeKeys.Employee);
-                this.m_contacts.Add(EntityRelationshipTypeKeys.EmergencyContact);
-                this.m_contacts.Add(EntityRelationshipTypeKeys.CoverageSponsor);
-                this.m_contacts.Add(EntityRelationshipTypeKeys.NextOfKin);
             };
         }
         /// <summary>
@@ -116,7 +110,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (model.GenderConceptKey.HasValue)
             {
-                retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.LoadProperty<Concept>("GenderConcept"), "http://hl7.org/fhir/administrative-gender", true);
+                retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
             }
 
             retVal.Identifier = model.Identifiers?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
@@ -128,20 +122,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
             {
                 // Contact => Person
-                if (this.m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
+                if (this.m_relatedPersons.Contains(rel.RelationshipTypeKey.Value) && rel.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)
                 {
                     var relative = FhirResourceHandlerUtil.GetMapperFor(typeof(RelatedPerson)).MapToFhir(rel.LoadProperty(r => r.TargetEntity));
+                    relative.Meta.Security = null;
                     retVal.Contained.Add(relative);
                 }
-                else if (this.m_contacts.Contains(rel.RelationshipTypeKey.Value))
+                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
                 {
-                    var person = rel.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity));
+                    var person = rel.LoadProperty(o => o.TargetEntity);
+                    var contactRoleExtension = person.LoadCollection(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.ContactRolesExtension)?.ExtensionValue as Concept;
 
                     var contact = new Patient.ContactComponent()
                     {
                         ElementId = $"{person.Key}",
                         Address = DataTypeConverter.ToFhirAddress(person.GetAddresses().FirstOrDefault()),
-                        Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty<Concept>(nameof(EntityRelationship.RelationshipType)), "http://terminology.hl7.org/CodeSystem/v2-0131") },
+                        Relationship = new List<CodeableConcept>() { 
+                            DataTypeConverter.ToFhirCodeableConcept(contactRoleExtension, "http://terminology.hl7.org/CodeSystem/v2-0131", true),
+                            DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o => o.RelationshipType), "http://terminology.hl7.org/CodeSystem/v2-0131", true) 
+                        }.OfType<CodeableConcept>().ToList(),
                         Name = DataTypeConverter.ToFhirHumanName(person.GetNames().FirstOrDefault()),
                         // TODO: Gender
                         Telecom = person.GetTelecoms().Select(t => DataTypeConverter.ToFhirTelecom(t)).ToList(),
@@ -159,15 +158,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     //});
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper)
-                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)), restOperationContext);
+                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.LoadProperty(o=>o.TargetEntity), restOperationContext);
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
-                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)), restOperationContext));
+                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty(o=>o.TargetEntity), restOperationContext));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
                     retVal.Link.Add(this.CreateLink<Practitioner>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces, restOperationContext));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso, restOperationContext));
-                else if(rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Reference)
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer, restOperationContext));
                 else if (rel.RelationshipTypeKey == MDM_MASTER_LINK) // HACK: MDM Master Record
                 {
                     if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
@@ -175,9 +172,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     else // Is a local
                         retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer, restOperationContext));
                 }
+                else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer, restOperationContext));
             }
 
-            var photo = model.LoadCollection<EntityExtension>("Extensions").FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+            var photo = model.LoadCollection(o=>o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
             if (photo != null)
                 retVal.Photo = new List<Attachment>() {
                     new Attachment()
@@ -225,7 +224,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var id in patient.Identifiers) // try to lookup based on reliable id for the record to update
                 {
-                    if (id.LoadProperty<AssigningAuthority>(nameof(EntityIdentifier.Authority)).IsUnique)
+                    if (id.LoadProperty(o => o.Authority).IsUnique)
                     {
                         using (AuthenticationContext.EnterSystemContext())
                         {
@@ -277,6 +276,26 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
+            // Process contained related persons
+            foreach(var itm in resource.Contained.OfType<RelatedPerson>())
+            {
+                var relatedPerson = FhirResourceHandlerUtil.GetMapperFor(typeof(RelatedPerson)).MapToModel(itm) as Core.Model.Entities.Person;
+
+                // Relationship bindings
+                var existingRelationship = relatedPerson.Relationships.Where(o => o.TargetEntityKey == relatedPerson.Key && this.m_relatedPersons.Contains(o.RelationshipTypeKey.Value)).ToArray();
+                foreach(var er in existingRelationship)
+                {
+                    er.ClassificationKey = RelationshipClassKeys.ContainedObjectLink;
+                    er.SourceEntityKey = patient.Key;
+                    patient.Relationships.RemoveAll(o => o.RelationshipTypeKey == er.RelationshipTypeKey); // HACK: This will limit family members to only one family member per
+                    relatedPerson.Relationships.Remove(er);
+                }
+
+                // Now add rels to me
+                patient.Relationships.AddRange(existingRelationship);
+
+            }
+
             // Links
             foreach(var lnk in resource.Link)
             {
@@ -313,7 +332,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     TargetEntityKey = patient.Key
                                 });
                             else
-                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Reference, referee));
+                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.EquivalentEntity, referee));
 
                             break;
                         }
@@ -323,7 +342,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             if (referee.GetTag("$mdm.type") == "M") // HACK: MDM User is attempting to point this at another Master (note: THE MDM LAYER WON'T LIKE THIS)
                                 patient.Relationships.Add(new EntityRelationship(MDM_MASTER_LINK, referee));
                             else
-                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Reference, referee));
+                                throw new NotSupportedException($"Setting refer relationships to source of truth is not supported");
 
                             break; // TODO: These are special cases of references
                         }

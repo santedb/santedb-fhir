@@ -181,9 +181,6 @@
     <None Include="data\004-FHIR-ContactPointSystemCodes.dataset">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="data\004-FHIR-ContactRelationshipCodes.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Include="data\004-FHIR-ContactPointUseCodes.dataset">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

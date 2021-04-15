@@ -50,5 +50,6 @@ namespace SanteDB.Messaging.FHIR
         /// Origina ID
         /// </summary>
         public const string OriginalIdTag = "$fhir.originalId";
+
     }
 }

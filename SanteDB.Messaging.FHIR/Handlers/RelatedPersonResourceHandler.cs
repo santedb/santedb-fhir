@@ -67,9 +67,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (patientRels.Count() > 1)
                 throw new InvalidOperationException($"FHIR only allows a RelatedPerson to be related to ONE Patient. This person is related to {patientRels.Count()} patients");
             relative.Relationship = patientRels.First().Select(rel=>DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o=>o.RelationshipType), new string[] { "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" }, false)).ToList();
-            relative.Address = model.Addresses.Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
+            relative.Address = model.LoadCollection(o=>o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             // TODO: Refactor this (see DSM-42 issue ticket)
-            //relative.Gender = DataTypeConverter.ToFhirCodeableConcept((rel.TargetEntity as Core.Model.Roles.Patient)?.LoadProperty<Concept>(nameof(Core.Model.Roles.Patient.GenderConcept)));
+            relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
             relative.Identifier = model.LoadCollection(o=>o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
             relative.Name = model.LoadCollection(o => o.Names).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
             relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(patientRels.First().Key, restOperationContext);
@@ -90,7 +90,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 CreationTime = DateTimeOffset.Now,
                 DateOfBirthXml = resource.BirthDate,
                 // TODO: See DSM-42 Correction
-                // GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key,
+                GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key,
                 Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
                 LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList(),
                 Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList(),
@@ -105,7 +105,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var id in person.Identifiers) // try to lookup based on reliable id for the record to update
                 {
-                    if (id.LoadProperty<AssigningAuthority>(nameof(EntityIdentifier.Authority)).IsUnique)
+                    if (id.LoadProperty(o=>o.Authority).IsUnique)
                     {
                         using (AuthenticationContext.EnterSystemContext())
                         {
@@ -136,7 +136,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 TargetEntityKey = person.Key,
                 SourceEntityKey = DataTypeConverter.ResolveEntity(resource.Patient, resource)?.Key,
-                RelationshipTypeKey = rel.Key
+                RelationshipTypeKey = rel.Key,
+                ClassificationKey = RelationshipClassKeys.ReferencedObjectLink
             }));
 
             return person;

@@ -738,7 +738,25 @@ namespace SanteDB.Messaging.FHIR.Util
         public static EntityRelationship ToEntityRelationship(Patient.ContactComponent patientContact, Patient patient)
         {
             var retVal = new EntityRelationship();
-            retVal.RelationshipType = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault());
+
+            // Relationship is a contact
+            retVal.RelationshipTypeKey = EntityRelationshipTypeKeys.Contact;
+            retVal.ClassificationKey = RelationshipClassKeys.ContainedObjectLink;
+            retVal.TargetEntity = new Core.Model.Entities.Person()
+            {
+                Addresses = patientContact.Address != null ? new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(patientContact.Address) } : null,
+                CreationTime = DateTimeOffset.Now,
+                // TODO: Gender (after refactor)
+                Names = patientContact.Name != null ? new List<EntityName>() { DataTypeConverter.ToEntityName(patientContact.Name) } : null,
+                Telecoms = patientContact.Telecom?.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList(),
+                Extensions = new List<EntityExtension>()
+                {
+                    new EntityExtension(ExtensionTypeKeys.ContactRolesExtension, typeof(ReferenceExtensionHandler), DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault()))
+                }
+            };
+
+            retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());
+            if (patientContact.Organization != null)
 
             // Is there an organization assigned?
             if (patientContact.Organization != null && patientContact.Name == null &&
@@ -746,24 +764,9 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 var refObjectKey = DataTypeConverter.ResolveEntity(patientContact.Organization, patient);
                 if (refObjectKey != null)
-                    retVal.TargetEntityKey = refObjectKey?.Key;
+                    retVal.TargetEntity.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Scoper, refObjectKey.Key));
                 else  // TODO: Implement
                     throw new KeyNotFoundException($"Could not resolve reference to patientContext.Organization");
-            }
-            else
-            {
-                retVal.TargetEntity = new Core.Model.Entities.Person()
-                {
-                    Addresses = patientContact.Address != null ? new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(patientContact.Address) } : null,
-                    CreationTime = DateTimeOffset.Now,
-                    // TODO: Gender (after refactor)
-                    Names = patientContact.Name != null ? new List<EntityName>() { DataTypeConverter.ToEntityName(patientContact.Name) } : null,
-                    Telecoms = patientContact.Telecom?.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
-                };
-
-                retVal.TargetEntity.Extensions = patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>().ToList();
-                if (patientContact.Organization != null)
-                    throw new NotSupportedException("Organization links on contacts with person information are not yet supported");
             }
 
             return retVal;
@@ -881,10 +884,10 @@ namespace SanteDB.Messaging.FHIR.Util
             else
             {
                 var codeSystemService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
-                var refTerms = preferredCodeSystems.Select(cs => codeSystemService.GetConceptReferenceTerm(concept.Key.Value, cs));
-                if (!refTerms.Any() && nullIfNoPreferred)
+                var refTerms = preferredCodeSystems.Select(cs => codeSystemService.GetConceptReferenceTerm(concept.Key.Value, cs)).ToArray();
+                if (!refTerms.Any(o=>o != null) && nullIfNoPreferred)
                     return null; // No code in the preferred system, ergo, we will instead use our own
-                else if (!refTerms.Any())
+                else if (!refTerms.Any(o => o != null))
                     return new CodeableConcept
                     {
                         Coding = concept.LoadCollection<ConceptReferenceTerm>(nameof(Concept.ReferenceTerms)).Select(o => DataTypeConverter.ToCoding(o.LoadProperty<ReferenceTerm>(nameof(ConceptReferenceTerm.ReferenceTerm)))).ToList(),
@@ -946,7 +949,7 @@ namespace SanteDB.Messaging.FHIR.Util
             var coding = DataTypeConverter.ToFhirCodeableConcept(concept, codeSystem, true);
             if (coding != null)
                 return Hl7.Fhir.Utility.EnumUtility.ParseLiteral<TEnum>(coding.Coding.First().Code, true);
-            else if (throwIfNotFound)
+            else if (throwIfNotFound && concept != null)
                 throw new ConstraintException($"Cannot find FHIR mapping for Concept {concept}");
             else
                 return null;
