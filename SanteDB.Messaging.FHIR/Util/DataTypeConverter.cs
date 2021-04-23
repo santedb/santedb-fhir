@@ -742,17 +742,14 @@ namespace SanteDB.Messaging.FHIR.Util
             // Relationship is a contact
             retVal.RelationshipTypeKey = EntityRelationshipTypeKeys.Contact;
             retVal.ClassificationKey = RelationshipClassKeys.ContainedObjectLink;
+            retVal.RelationshipRole = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault());
             retVal.TargetEntity = new Core.Model.Entities.Person()
             {
                 Addresses = patientContact.Address != null ? new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(patientContact.Address) } : null,
                 CreationTime = DateTimeOffset.Now,
                 // TODO: Gender (after refactor)
                 Names = patientContact.Name != null ? new List<EntityName>() { DataTypeConverter.ToEntityName(patientContact.Name) } : null,
-                Telecoms = patientContact.Telecom?.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList(),
-                Extensions = new List<EntityExtension>()
-                {
-                    new EntityExtension(ExtensionTypeKeys.ContactRolesExtension, typeof(ReferenceExtensionHandler), DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault()))
-                }
+                Telecoms = patientContact.Telecom?.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
             };
 
             retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());

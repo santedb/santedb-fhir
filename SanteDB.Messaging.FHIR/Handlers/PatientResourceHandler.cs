@@ -131,14 +131,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
                 {
                     var person = rel.LoadProperty(o => o.TargetEntity);
-                    var contactRoleExtension = person.LoadCollection(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.ContactRolesExtension)?.ExtensionValue as Concept;
+
 
                     var contact = new Patient.ContactComponent()
                     {
                         ElementId = $"{person.Key}",
                         Address = DataTypeConverter.ToFhirAddress(person.GetAddresses().FirstOrDefault()),
                         Relationship = new List<CodeableConcept>() { 
-                            DataTypeConverter.ToFhirCodeableConcept(contactRoleExtension, "http://terminology.hl7.org/CodeSystem/v2-0131", true),
+                            DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o=>o.RelationshipRole), "http://terminology.hl7.org/CodeSystem/v2-0131", true),
                             DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o => o.RelationshipType), "http://terminology.hl7.org/CodeSystem/v2-0131", true) 
                         }.OfType<CodeableConcept>().ToList(),
                         Name = DataTypeConverter.ToFhirHumanName(person.GetNames().FirstOrDefault()),
@@ -162,7 +162,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
                     retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty(o=>o.TargetEntity), restOperationContext));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
-                    retVal.Link.Add(this.CreateLink<Practitioner>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces, restOperationContext));
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces, restOperationContext));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso, restOperationContext));
                 else if (rel.RelationshipTypeKey == MDM_MASTER_LINK) // HACK: MDM Master Record
