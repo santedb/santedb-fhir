@@ -31,7 +31,7 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// <summary>
         /// The type that this operation handler applies to (or null if it applies to all)
         /// </summary>
-        ResourceType? AppliesTo { get; }
+        ResourceType[] AppliesTo { get; }
 
         /// <summary>
         /// Invoke the specified operation

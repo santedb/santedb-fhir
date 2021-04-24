@@ -4,6 +4,7 @@ using SanteDB.Core.Configuration;
 using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions;
 using System;
@@ -33,24 +34,75 @@ namespace SanteDB.Messaging.FHIR.Util
         // Behavior modifiers
         private static ICollection<IFhirRestBehaviorModifier> s_behaviorModifiers;
 
+        // Message operations
+        private static IDictionary<Uri, IFhirMessageOperation> s_messageOperations;
+
         /// <summary>
         /// Creates a profile utility
         /// </summary>
-        static ExtensionUtil ()
+        public static void Initialize(FhirServiceConfigurationSection configuration)
         {
             var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-            s_extensionHandlers = svcManager
-                .CreateInjectedOfAll<IFhirExtensionHandler>()
-                .ToList();
-            s_operationHandlers = svcManager
-                .CreateInjectedOfAll<IFhirOperationHandler>()
-                .ToList();
-            s_profileHandlers = svcManager
-                .CreateInjectedOfAll<IFhirProfileValidationHandler>()
-                .ToList();
+
+            if (configuration.ExtensionHandlers?.Any() == true)
+                s_extensionHandlers = configuration.ExtensionHandlers.Select(t => svcManager.CreateInjected(t.Type))
+                    .OfType<IFhirExtensionHandler>()
+                    .ToList();
+            else if (configuration.Extensions?.Any() == true)
+                s_extensionHandlers = svcManager.CreateInjectedOfAll<IFhirExtensionHandler>()
+                    .Where(o => configuration.Extensions.Contains(o.Uri.ToString()))
+                    .ToList();
+            else 
+                s_extensionHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirExtensionHandler>()
+                    .ToList();
+
+            if (configuration.OperationHandlers?.Any() == true)
+                s_operationHandlers = configuration.ExtensionHandlers.Select(t => svcManager.CreateInjected(t.Type))
+                    .OfType<IFhirOperationHandler>()
+                    .ToList();
+            else if (configuration.Operations?.Any() == true)
+                s_operationHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirOperationHandler>()
+                    .Where(o=>configuration.Operations.Contains(o.Uri.ToString()))
+                    .ToList();
+            else
+                s_operationHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirOperationHandler>()
+                    .ToList();
+
+            if (configuration.ProfileHandlers?.Any() == true)
+                s_profileHandlers = configuration.ProfileHandlers.Select(t=>svcManager.CreateInjected(t.Type))
+                    .OfType<IFhirProfileValidationHandler>()
+                    .ToList();
+            else if (configuration.Profiles?.Any() == true)
+                s_profileHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirProfileValidationHandler>()
+                    .Where(o=>configuration.Profiles.Contains(o.ProfileUri.ToString()))
+                    .ToList();
+            else
+                s_profileHandlers = svcManager
+                    .CreateInjectedOfAll<IFhirProfileValidationHandler>()
+                    .ToList();
+
             s_behaviorModifiers = svcManager
                 .CreateInjectedOfAll<IFhirRestBehaviorModifier>()
                 .ToList();
+
+            // Message operations
+            if (configuration.MessageHandlers?.Any() == true)
+                s_messageOperations = configuration.MessageHandlers.Select(t => svcManager.CreateInjected(t.Type))
+                    .OfType<IFhirMessageOperation>()
+                    .ToDictionary(o => o.EventUri, o => o);
+            else if (configuration.Messages?.Any() == true)
+                s_messageOperations = svcManager
+                    .CreateInjectedOfAll<IFhirMessageOperation>()
+                    .Where(o => configuration.Messages.Contains(o.EventUri.ToString()))
+                    .ToDictionary(o => o.EventUri, o => o);
+            else
+                s_messageOperations = svcManager
+                    .CreateInjectedOfAll<IFhirMessageOperation>()
+                    .ToDictionary(o => o.EventUri, o => o);
         }
 
         /// <summary>
@@ -92,6 +144,15 @@ namespace SanteDB.Messaging.FHIR.Util
         public static IEnumerable<IFhirProfileValidationHandler> ProfileHandlers => s_profileHandlers;
 
         /// <summary>
+        /// Get the specified message operation handler for the specified event uri
+        /// </summary>
+        public static IFhirMessageOperation GetMessageOperationHandler(Uri eventUri)
+        {
+            s_messageOperations.TryGetValue(eventUri, out IFhirMessageOperation retVal);
+            return retVal;
+        }
+
+        /// <summary>
         /// Runs all registered extensions on the object
         /// </summary>
         /// <param name="appliedExtensions">The extensions that were applied to the object</param>
@@ -108,7 +169,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static bool TryApplyExtension(this Extension me, IdentifiedData applyTo)
         {
-            return s_extensionHandlers.Where(o => o.Uri.ToString() == me.Url).Select(r => r.Parse(me, applyTo)).All(o=>o);
+            return s_extensionHandlers.Where(o => o.Uri.ToString() == me.Url).Select(r => r.Parse(me, applyTo)).Any(o=>o);
         }
 
         /// <summary>
@@ -119,9 +180,14 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>The operation handler</returns>
         public static IFhirOperationHandler GetOperation(string resourceType, string operationName)
         {
-            if (!Enum.TryParse<ResourceType>(resourceType, out ResourceType rtEnum))
-                throw new KeyNotFoundException($"Resource {resourceType} is not valid");
-            return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo == rtEnum || o.AppliesTo == null) && o.Name == operationName);
+            if (resourceType == null)
+                return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo == null || o.AppliesTo == null) && o.Name == operationName);
+            else
+            {
+                if (!Enum.TryParse<ResourceType>(resourceType, out ResourceType rtEnum))
+                    throw new KeyNotFoundException($"Resource {resourceType} is not valid");
+                return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo?.Contains(rtEnum) == true) && o.Name == operationName);
+            }
         }
 
         /// <summary>

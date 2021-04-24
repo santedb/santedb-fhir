@@ -26,6 +26,19 @@ namespace SanteDB.Messaging.FHIR.Docker
         /// </summary>
         public const string ResourceSetting = "RESOURCE";
         /// <summary>
+        /// Message settings
+        /// </summary>
+        public const string MessageSetting = "MESSAGE";
+        /// <summary>
+        /// Operation settings
+        /// </summary>
+        public const string OperationSetting = "OPERATION";
+        /// <summary>
+        /// Profile settings
+        /// </summary>
+        public const string ProfileSetting = "PROFILE";
+
+        /// <summary>
         /// Set id for base URI
         /// </summary>
         public const string BaseUriSetting = "BASE";
@@ -200,6 +213,34 @@ namespace SanteDB.Messaging.FHIR.Docker
 
                     // Add resource setting
                     fhirConfiguration.Resources.Add(res);
+                }
+            }
+
+            // Custom operation list?
+            if (settings.TryGetValue(OperationSetting, out string operations))
+            {
+                fhirConfiguration.Operations = new List<string>();
+                foreach (var res in operations.Split(';'))
+                {
+                    fhirConfiguration.Operations.Add(res);
+                }
+            }
+            // Custom profile list?
+            if (settings.TryGetValue(ProfileSetting, out string profiles))
+            {
+                fhirConfiguration.Profiles = new List<string>();
+                foreach (var res in profiles.Split(';'))
+                {
+                    fhirConfiguration.Profiles.Add(res);
+                }
+            }
+            // Custom message list?
+            if (settings.TryGetValue(MessageSetting, out string messages))
+            {
+                fhirConfiguration.Messages = new List<string>();
+                foreach (var res in messages.Split(';'))
+                {
+                    fhirConfiguration.Messages.Add(res);
                 }
             }
 

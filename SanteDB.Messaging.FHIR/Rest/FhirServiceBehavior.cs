@@ -25,18 +25,14 @@ using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Interop;
 using SanteDB.Core.Interop.Description;
-using SanteDB.Core.Security;
 using SanteDB.Core.Security.Audit;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using SanteDB.Rest.Common;
-using SanteDB.Rest.Common.Attributes;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -540,6 +536,14 @@ namespace SanteDB.Messaging.FHIR.Rest
 
         }
 
+        /// <summary>
+        /// Execute operation on the global (no resource) context
+        /// </summary>
+        public Resource Execute(string operationName, Parameters parameters)
+        {
+            return this.Execute(null, operationName, parameters);
+        }
+
 
         /// <summary>
         /// Get the description of the service
@@ -636,7 +640,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                     }
 
                     // Add operation handlers
-                    foreach(var op in ExtensionUtil.OperationHandlers.Where(o=>o.AppliesTo == null || o.AppliesTo == def.Type))
+                    foreach(var op in ExtensionUtil.OperationHandlers.Where(o=> o.AppliesTo?.Contains(def.Type.Value) == true))
                     {
                         var operationDescription = new ServiceOperationDescription("POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
                         operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
@@ -649,6 +653,16 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 retVal.Operations.Add(new ServiceOperationDescription("GET", "/CapabilityStatement", acceptProduces, true));
                 retVal.Operations.Add(new ServiceOperationDescription("OPTIONS", "/", acceptProduces, false));
+
+                // Add operation handlers
+                foreach (var op in ExtensionUtil.OperationHandlers.Where(o => o.AppliesTo == null))
+                {
+                    var operationDescription = new ServiceOperationDescription("POST", $"/${op.Name}", acceptProduces, true);
+                    operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
+                    operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
+                    operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
+                    retVal.Operations.Add(operationDescription);
+                }
                 return retVal;
             }
         }

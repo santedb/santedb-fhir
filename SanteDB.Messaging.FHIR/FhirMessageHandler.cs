@@ -32,6 +32,7 @@ using System.Reflection;
 using SanteDB.Core.Diagnostics;
 using System.Diagnostics.Tracing;
 using SanteDB.Core.Interfaces;
+using SanteDB.Messaging.FHIR.Util;
 
 namespace SanteDB.Messaging.FHIR
 {
@@ -129,6 +130,7 @@ namespace SanteDB.Messaging.FHIR
                             FhirResourceHandlerUtil.RegisterResourceHandler(this.m_serviceManager.CreateInjected(t) as IFhirResourceHandler);
                     }
                 }
+                ExtensionUtil.Initialize(this.m_configuration);
 
                 // Start the web host
                 this.m_webHost.Start();

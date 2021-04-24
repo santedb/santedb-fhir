@@ -173,22 +173,19 @@
     </None>
     <None Include="app.config" />
     <None Include="data\004-FHIR-AddressUseCodes.dataset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="data\004-FHIR-AdministrativeGenderCodes.dataset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="data\004-FHIR-ContactPointSystemCodes.dataset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="data\004-FHIR-ContactRelationshipCodes.dataset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="data\004-FHIR-ContactPointUseCodes.dataset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="data\004-FHIR-NameUseCodes.dataset">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
@@ -199,6 +196,11 @@
     <None Include="applet\manifest.xml" />
     <None Include="applet\views\config\fhir\content.html" />
     <EmbeddedResource Include="Configuration\Default.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Update="data\004-FHIR-RoleCode.dataset">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

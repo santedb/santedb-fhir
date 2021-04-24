@@ -46,6 +46,15 @@ namespace SanteDB.Messaging.FHIR.Rest
         CapabilityStatement GetOptions();
 
         /// <summary>
+        /// Execute the specified operation name
+        /// </summary>
+        /// <param name="operationName">The name of the operation</param>
+        /// <returns>The result of the operation</returns>
+        /// <param name="parameters">The body to pass as a parameter to the operation</param>
+        [Post("/\\${operationName}")]
+        Resource Execute(string operationName, Parameters parameters);
+
+        /// <summary>
         /// Gets the current time on the service
         /// </summary>
         /// <returns></returns>

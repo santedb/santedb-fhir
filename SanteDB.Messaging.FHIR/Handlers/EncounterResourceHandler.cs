@@ -35,7 +35,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Encounter resource handler for loading and disclosing of patient encounters
     /// </summary>
-    public class EncounterResourceHandler : RepositoryResourceHandlerBase<Encounter, PatientEncounter>, IBundleResourceHandler
+    public class EncounterResourceHandler : RepositoryResourceHandlerBase<Encounter, PatientEncounter>
     {
 
         /// <summary>
@@ -160,7 +160,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 MoodConceptKey = status == Encounter.EncounterStatus.Planned ? ActMoodKeys.Intent : ActMoodKeys.Eventoccurrence,
                 ReasonConcept = DataTypeConverter.ToConcept(resource.ReasonCode.FirstOrDefault())
             };
-
             // Parse key
             Guid key;
             if (!Guid.TryParse(resource.Id, out key))
