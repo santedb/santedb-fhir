@@ -61,7 +61,57 @@ namespace SanteDB.Messaging.FHIR.Operations
                 {
                     throw new NotSupportedException($"There is no message handler for event {eventUri}");
                 }
-                return handler.Invoke(messageHeader, contentParameter.Entry.Where(o => messageHeader.Focus.Any(f=>f.Reference == o.FullUrl)).ToArray());
+
+                var retVal = new Bundle(); // Return for operation
+                var uuid = Guid.NewGuid();
+                try
+                {
+                    var opReturn = handler.Invoke(messageHeader, contentParameter.Entry.Where(o => messageHeader.Focus.Any(f => f.Reference == o.FullUrl)).ToArray());
+                    retVal.Entry.Add(new Bundle.EntryComponent()
+                    {
+                        FullUrl = $"MessageHeader/{uuid}",
+                        Resource = new MessageHeader()
+                        {
+                            Response = new MessageHeader.ResponseComponent()
+                            {
+                                Code = MessageHeader.ResponseType.Ok,
+                                Details = new ResourceReference($"{opReturn.ResourceType}/{opReturn.Id}")
+                            }
+                        }
+                    });
+                    retVal.Entry.Add(new Bundle.EntryComponent()
+                    {
+                        FullUrl = $"{opReturn.ResourceType}/{opReturn.Id}",
+                        Resource = opReturn
+                    });
+                }
+                catch(Exception e)
+                {
+                    retVal.Entry.Add(new Bundle.EntryComponent()
+                    {
+                        FullUrl = $"MessageHeader/{uuid}",
+                        Resource = new MessageHeader()
+                        {
+                            Response = new MessageHeader.ResponseComponent()
+                            {
+                                Code = MessageHeader.ResponseType.FatalError,
+                                Details = new ResourceReference($"OperationOutcome/{uuid}")
+                            }
+                        }
+                    });
+                    var outcome = DataTypeConverter.CreateOperationOutcome(e);
+                    outcome.Id = uuid.ToString();
+                    retVal.Entry.Add(new Bundle.EntryComponent()
+                    {
+                        FullUrl = $"OperationOutcome/{uuid}",
+                        Resource = outcome
+                    });
+                }
+                finally
+                {
+                    retVal.Timestamp = DateTime.Now;
+                    retVal.Type = Bundle.BundleType.Message;
+                }
             }
             else
             {
