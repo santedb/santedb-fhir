@@ -19,7 +19,9 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.Exceptions;
 using SanteDB.Core.Extensions;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
@@ -36,6 +38,7 @@ using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using static Hl7.Fhir.Model.OperationOutcome;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -137,6 +140,32 @@ namespace SanteDB.Messaging.FHIR.Util
                 Value = quantity,
                 Unit = DataTypeConverter.ToFhirCodeableConcept(unitConcept, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code
             };
+        }
+
+        /// <summary>
+        /// Create an operation outcome from the error
+        /// </summary>
+        public static OperationOutcome CreateOperationOutcome(Exception error)
+        {
+            // Construct an error result
+            var errorResult = new OperationOutcome()
+            {
+                Issue = new List<OperationOutcome.IssueComponent>()
+            {
+                new OperationOutcome.IssueComponent() { Diagnostics  = error.Message, Severity = IssueSeverity.Error, Code = IssueType.Exception }
+            }
+            };
+
+            if (error is DetectedIssueException dte)
+                foreach (var iss in dte.Issues)
+                    errorResult.Issue.Add(new OperationOutcome.IssueComponent()
+                    {
+                        Diagnostics = iss.Text,
+                        Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
+                        iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
+                        IssueSeverity.Information
+                    });
+            return errorResult;
         }
 
         /// <summary>
