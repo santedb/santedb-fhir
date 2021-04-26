@@ -42,7 +42,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Represents a FHIR resource handler for bundles
     /// </summary>
-    public class BundleResourceHandler : IFhirResourceHandler
+    public class BundleResourceHandler : IFhirResourceHandler, IFhirResourceMapper
     {
 
         // Tracer
@@ -64,6 +64,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public ResourceType ResourceType => ResourceType.Bundle;
 
+        public Type CanonicalType => throw new NotImplementedException();
+
+        public Type ResourceClrType => throw new NotImplementedException();
+
         /// <summary>
         /// Create the specified object
         /// </summary>
@@ -76,49 +80,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 case Hl7.Fhir.Model.Bundle.BundleType.Transaction:
                     {
-                        var sdbBundle = new Core.Model.Collection.Bundle();
-                        foreach (var entry in fhirBundle.Entry)
-                        {
-                            var entryType = entry.Resource.ResourceType;
-                            var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
+                        
 
-                            // Allow this entry to know its context in the bundle
-                            entry.Resource.AddAnnotation(fhirBundle);
-                            entry.Resource.AddAnnotation(sdbBundle);
-                            
-                            // Map and add to bundle
-                            var itm = handler.MapToModel(entry.Resource);
-                            sdbBundle.Add(itm);
+                        var sdbResult = this.m_bundleRepository.Insert(this.MapToModel(target) as Core.Model.Collection.Bundle);
+                        var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
+                        retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;
 
-                            // Add original URLs so that subsequent bundle entries (which might reference this entry) can resolve
-                            if (itm is ITaggable taggable)
-                            {
-                                taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
-                                taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
-                            }
-
-                        }
-                        sdbBundle.Item.RemoveAll(o => o == null);
-
-                        var sdbResult = this.m_bundleRepository.Insert(sdbBundle);
-                        var retVal = new Hl7.Fhir.Model.Bundle()
-                        {
-                            Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse,
-                            Meta = new Meta()
-                            {
-                                LastUpdated = DateTimeOffset.Now
-                            }
-                        };
-                        // Parse return value
-                        foreach(var entry in sdbResult.Item)
-                        {
-                            var handler = FhirResourceHandlerUtil.GetMapperFor(entry.GetType());
-                            if (handler == null) continue; // TODO: Warn
-                            retVal.Entry.Add(new Hl7.Fhir.Model.Bundle.EntryComponent()
-                            {
-                                Resource = handler.MapToFhir(entry)
-                            });
-                        }
                         return retVal;
                     };
                 case Hl7.Fhir.Model.Bundle.BundleType.Message:
@@ -195,6 +162,74 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public FhirQueryResult History(string id)
         {
             throw new NotSupportedException();
+        }
+
+        /// <summary>
+        /// Map the specified <paramref name="modelInstance"/> to a bundle
+        /// </summary>
+        public Resource MapToFhir(IdentifiedData modelInstance)
+        {
+            if(!(modelInstance is Core.Model.Collection.Bundle sdbBundle))
+            {
+                throw new ArgumentException(nameof(modelInstance), "Argument must be a bundle");
+            }
+
+            var retVal = new Hl7.Fhir.Model.Bundle()
+            {
+                Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse,
+                Meta = new Meta()
+                {
+                    LastUpdated = DateTimeOffset.Now
+                }
+            };
+            // Parse return value
+            foreach (var entry in sdbBundle.Item)
+            {
+                var handler = FhirResourceHandlerUtil.GetMapperFor(entry.GetType());
+                if (handler == null) continue; // TODO: Warn
+                retVal.Entry.Add(new Hl7.Fhir.Model.Bundle.EntryComponent()
+                {
+                    Resource = handler.MapToFhir(entry)
+                });
+            }
+            return retVal;
+        }
+
+        /// <summary>
+        /// Map the bundle to a model transaction
+        /// </summary>
+        public IdentifiedData MapToModel(Resource resourceInstance)
+        {
+            // Resource instance validation and convert
+            if(!(resourceInstance is Hl7.Fhir.Model.Bundle fhirBundle))
+            {
+                throw new ArgumentException(nameof(resourceInstance), "Instance must be a bundle");
+            }
+
+            var sdbBundle = new Core.Model.Collection.Bundle();
+            foreach (var entry in fhirBundle.Entry)
+            {
+                var entryType = entry.Resource.ResourceType;
+                var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
+
+                // Allow this entry to know its context in the bundle
+                entry.Resource.AddAnnotation(fhirBundle);
+                entry.Resource.AddAnnotation(sdbBundle);
+
+                // Map and add to bundle
+                var itm = handler.MapToModel(entry.Resource);
+                sdbBundle.Add(itm);
+
+                // Add original URLs so that subsequent bundle entries (which might reference this entry) can resolve
+                if (itm is ITaggable taggable)
+                {
+                    taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
+                    taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
+                }
+
+            }
+            sdbBundle.Item.RemoveAll(o => o == null);
+            return sdbBundle;
         }
 
         /// <summary>
