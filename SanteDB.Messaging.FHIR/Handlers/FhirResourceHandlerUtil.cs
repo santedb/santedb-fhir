@@ -19,6 +19,8 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.Interfaces;
+using SanteDB.Messaging.FHIR.Configuration;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -110,6 +112,33 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var structureDef = o.GetStructureDefinition();
                 return resourceDef;
             });
+        }
+
+        /// <summary>
+        /// Initialize based on configuration
+        /// </summary>
+        public static void Initialize(FhirServiceConfigurationSection m_configuration , IServiceManager serviceManager)
+        {
+            // Configuration 
+            if (m_configuration.Resources?.Any() == true)
+            {
+                foreach (var t in serviceManager.CreateInjectedOfAll<IFhirResourceHandler>())
+                {
+                    if (m_configuration.Resources.Any(r => r == t.ResourceType.ToString()))
+                        FhirResourceHandlerUtil.RegisterResourceHandler(t);
+                    else if (t is IDisposable disp)
+                        disp.Dispose();
+                }
+            }
+            else
+            {
+                // Old configuration
+                foreach (Type t in m_configuration.ResourceHandlers.Select(o => o.Type))
+                {
+                    if (t != null)
+                        FhirResourceHandlerUtil.RegisterResourceHandler(serviceManager.CreateInjected(t) as IFhirResourceHandler);
+                }
+            }
         }
 
         /// <summary>

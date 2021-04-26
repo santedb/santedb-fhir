@@ -110,26 +110,7 @@ namespace SanteDB.Messaging.FHIR
                     this.m_traceSource.TraceInfo("Starting FHIR on {0}...", endpoint.Description.ListenUri);
                 }
 
-                // Configuration 
-                if (this.m_configuration.Resources?.Any() == true)
-                {
-                    foreach(var t in this.m_serviceManager.CreateInjectedOfAll<IFhirResourceHandler>())
-                    {
-                        if (this.m_configuration.Resources.Any(r => r == t.ResourceType.ToString()))
-                            FhirResourceHandlerUtil.RegisterResourceHandler(t);
-                        else if (t is IDisposable disp)
-                            disp.Dispose();
-                    }
-                }
-                else
-                { 
-                    // Old configuration
-                    foreach (Type t in this.m_configuration.ResourceHandlers.Select(o => o.Type))
-                    {
-                        if(t !=null)
-                            FhirResourceHandlerUtil.RegisterResourceHandler(this.m_serviceManager.CreateInjected(t) as IFhirResourceHandler);
-                    }
-                }
+                FhirResourceHandlerUtil.Initialize(this.m_configuration, this.m_serviceManager);
                 ExtensionUtil.Initialize(this.m_configuration);
 
                 // Start the web host
