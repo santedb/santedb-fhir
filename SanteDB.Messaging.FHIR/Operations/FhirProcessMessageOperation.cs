@@ -72,6 +72,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         FullUrl = $"MessageHeader/{uuid}",
                         Resource = new MessageHeader()
                         {
+			    Id = uuid.ToString(),
                             Response = new MessageHeader.ResponseComponent()
                             {
                                 Code = MessageHeader.ResponseType.Ok,
@@ -92,6 +93,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         FullUrl = $"MessageHeader/{uuid}",
                         Resource = new MessageHeader()
                         {
+			    Id = uuid.ToString(),
                             Response = new MessageHeader.ResponseComponent()
                             {
                                 Code = MessageHeader.ResponseType.FatalError,
@@ -112,6 +114,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                     retVal.Timestamp = DateTime.Now;
                     retVal.Type = Bundle.BundleType.Message;
                 }
+		return retVal;
             }
             else
             {
