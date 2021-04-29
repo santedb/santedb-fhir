@@ -42,7 +42,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
 
         // IDs of family members
-        private List<Guid> m_relatedPersons;
         private readonly Guid MDM_MASTER_LINK = Guid.Parse("97730a52-7e30-4dcd-94cd-fd532d111578");
 
         /// <summary>
@@ -50,12 +49,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public PatientResourceHandler()
         {
-
-            ApplicationServiceContext.Current.Started += (o, e) =>
-            {
-                this.m_relatedPersons = ApplicationServiceContext.Current.GetService<IRepositoryService<Concept>>().Find(x => x.ConceptSets.Any(c => c.Mnemonic == "FamilyMember")).Select(c => c.Key.Value).ToList();
-            };
         }
+
         /// <summary>
         /// Map a patient object to FHIR.
         /// </summary>
@@ -122,7 +117,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
             {
                 // Contact => Person
-                if (this.m_relatedPersons.Contains(rel.RelationshipTypeKey.Value) && rel.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)
+                if (rel.LoadProperty(o=>o.TargetEntity) is SanteDB.Core.Model.Roles.Patient && rel.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)
                 {
                     var relative = FhirResourceHandlerUtil.GetMapperFor(typeof(RelatedPerson)).MapToFhir(rel.LoadProperty(r => r.TargetEntity));
                     relative.Meta.Security = null;
@@ -210,7 +205,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList(),
                 CreationTime = DateTimeOffset.Now,
                 DateOfBirthXml = resource.BirthDate,
-                GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key,
+                GenderConceptKey = resource.Gender == null ? NullReasonKeys.Unknown : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key,
                 Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
                 LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList(),
                 Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList(),
@@ -282,7 +277,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var relatedPerson = FhirResourceHandlerUtil.GetMapperFor(typeof(RelatedPerson)).MapToModel(itm) as Core.Model.Entities.Person;
 
                 // Relationship bindings
-                var existingRelationship = relatedPerson.Relationships.Where(o => o.TargetEntityKey == relatedPerson.Key && this.m_relatedPersons.Contains(o.RelationshipTypeKey.Value)).ToArray();
+                var existingRelationship = relatedPerson.Relationships.Where(o => o.TargetEntityKey == relatedPerson.Key).ToArray();
                 foreach(var er in existingRelationship)
                 {
                     er.ClassificationKey = RelationshipClassKeys.ContainedObjectLink;

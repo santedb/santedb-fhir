@@ -147,6 +147,11 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static OperationOutcome CreateOperationOutcome(Exception error)
         {
+            while(error.InnerException != null)
+            {
+                error = error.InnerException;
+            }
+
             // Construct an error result
             var errorResult = new OperationOutcome()
             {
@@ -157,14 +162,15 @@ namespace SanteDB.Messaging.FHIR.Util
             };
 
             if (error is DetectedIssueException dte)
-                foreach (var iss in dte.Issues)
-                    errorResult.Issue.Add(new OperationOutcome.IssueComponent()
-                    {
-                        Diagnostics = iss.Text,
-                        Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
+            {
+                errorResult.Issue = dte.Issues.Select(iss => new OperationOutcome.IssueComponent()
+                {
+                    Diagnostics = iss.Text,
+                    Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
                         iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
                         IssueSeverity.Information
-                    });
+                }).ToList();
+            }
             return errorResult;
         }
 
@@ -175,8 +181,6 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns a reference instance.</returns>
         public static ResourceReference CreateNonVersionedReference<TResource>(Guid? targetKey, RestOperationContext context) where TResource : DomainResource, new()
         {
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
