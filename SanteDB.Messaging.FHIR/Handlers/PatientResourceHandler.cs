@@ -57,9 +57,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="model">The patient to map to FHIR</param>
         /// <param name="restOperationContext">The current REST operation context</param>
         /// <returns>Returns the mapped FHIR resource.</returns>
-        protected override Patient MapToFhir(Core.Model.Roles.Patient model, RestOperationContext restOperationContext)
+        protected override Patient MapToFhir(Core.Model.Roles.Patient model)
         {
-            var retVal = DataTypeConverter.CreateResource<Patient>(model, restOperationContext);
+            var retVal = DataTypeConverter.CreateResource<Patient>(model);
             retVal.Active = model.StatusConceptKey == StatusKeys.Active || model.StatusConceptKey == StatusKeys.New;
             retVal.Address = model.GetAddresses().Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             if (model.DateOfBirth.HasValue)
@@ -141,34 +141,34 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         Telecom = person.GetTelecoms().Select(t => DataTypeConverter.ToFhirTelecom(t)).ToList(),
                     };
 
-                    DataTypeConverter.AddExtensions(person, contact, restOperationContext);
+                    DataTypeConverter.AddExtensions(person, contact);
 
                     retVal.Contact.Add(contact);
 
                     // TODO: 
                     //retVal.Link.Add(new Patient.LinkComponent()
                     //{
-                    //    Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rel.TargetEntityKey, restOperationContext),
+                    //    Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rel.TargetEntityKey),
                     //    Type = Patient.LinkType.Seealso
                     //});
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper)
-                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.LoadProperty(o=>o.TargetEntity), restOperationContext);
+                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.LoadProperty(o=>o.TargetEntity));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
-                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty(o=>o.TargetEntity), restOperationContext));
+                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty(o=>o.TargetEntity)));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces, restOperationContext));
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso, restOperationContext));
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso));
                 else if (rel.RelationshipTypeKey == MDM_MASTER_LINK) // HACK: MDM Master Record
                 {
                     if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
-                        retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso, restOperationContext));
+                        retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso));
                     else // Is a local
-                        retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer, restOperationContext));
+                        retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
                 }
                 else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer, restOperationContext));
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
             }
 
             var photo = model.LoadCollection(o=>o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
@@ -187,10 +187,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Create patient link
         /// </summary>
-        private Patient.LinkComponent CreateLink<TLink>(Guid targetEntityKey, Patient.LinkType type, RestOperationContext restOperationContext) where TLink : DomainResource, new() => new Patient.LinkComponent()
+        private Patient.LinkComponent CreateLink<TLink>(Guid targetEntityKey, Patient.LinkType type) where TLink : DomainResource, new() => new Patient.LinkComponent()
         {
             Type = type,
-            Other = DataTypeConverter.CreateNonVersionedReference<TLink>(targetEntityKey, restOperationContext)
+            Other = DataTypeConverter.CreateNonVersionedReference<TLink>(targetEntityKey)
         };
 
         /// <summary>
@@ -198,7 +198,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         /// <param name="resource">The resource.</param>
         /// <returns>Returns the mapped model.</returns>
-        protected override Core.Model.Roles.Patient MapToModel(Patient resource, RestOperationContext restOperationContext)
+        protected override Core.Model.Roles.Patient MapToModel(Patient resource)
         {
             var patient = new Core.Model.Roles.Patient
             {
@@ -361,6 +361,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Create,
                 TypeRestfulInteraction.Update
             }.Select(o => new ResourceInteractionComponent() { Code = o });
+        }
+
+        /// <summary>
+        /// Get included objects
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(Core.Model.Roles.Patient resource, IEnumerable<string> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get included objects
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Roles.Patient resource, IEnumerable<string> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
         }
     }
 }

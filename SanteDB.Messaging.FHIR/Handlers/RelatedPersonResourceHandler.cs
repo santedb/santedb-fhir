@@ -36,6 +36,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(Core.Model.Entities.Person resource, IEnumerable<string> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// 
         /// </summary>
         /// <returns></returns>
@@ -50,6 +58,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 CapabilityStatement.TypeRestfulInteraction.Vread
             }.Select(o => new CapabilityStatement.ResourceInteractionComponent() { Code = o });
 
+        /// <summary>
+        /// Get reverse includes
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Entities.Person resource, IEnumerable<string> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Map the object to FHIR
@@ -57,10 +72,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="model"></param>
         /// <param name="restOperationContext"></param>
         /// <returns></returns>
-        protected override RelatedPerson MapToFhir(Core.Model.Entities.Person model, RestOperationContext restOperationContext)
+        protected override RelatedPerson MapToFhir(Core.Model.Entities.Person model)
         {
             // Create the relative object
-            var relative = DataTypeConverter.CreateResource<RelatedPerson>(model, restOperationContext);
+            var relative = DataTypeConverter.CreateResource<RelatedPerson>(model);
 
             // Attempt to find a relationship to a patient (note: this person can only be related to one other person or else the FHIR model breaks
             var patientRels = this.m_relatedRepository.Find(r => r.TargetEntityKey == model.Key && r.ObsoleteVersionSequenceId == null && r.SourceEntity.ClassConceptKey == EntityClassKeys.Patient).GroupBy(o=>o.SourceEntityKey);
@@ -72,7 +87,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
             relative.Identifier = model.LoadCollection(o=>o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
             relative.Name = model.LoadCollection(o => o.Names).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
-            relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(patientRels.First().Key, restOperationContext);
+            relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(patientRels.First().Key);
             relative.Telecom = model.LoadCollection(o=>o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
 
             // TODO: Add other relationship extensions
@@ -82,7 +97,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map the related person to model
         /// </summary>
-        protected override Core.Model.Entities.Person MapToModel(RelatedPerson resource, RestOperationContext restOperationContext)
+        protected override Core.Model.Entities.Person MapToModel(RelatedPerson resource)
         {
             var person = new Core.Model.Entities.Person
             {

@@ -37,14 +37,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class EncounterResourceHandler : RepositoryResourceHandlerBase<Encounter, PatientEncounter>
     {
-
         /// <summary>
-        /// Map to model
+        /// Get includes 
         /// </summary>
-        public IdentifiedData MapToModel(Resource bundleResource, RestOperationContext context, Bundle bundle)
+        protected override IEnumerable<Resource> GetIncludes(PatientEncounter resource, IEnumerable<string> includePaths)
         {
-            return this.MapToModel(bundleResource as Encounter, context);
+            throw new NotImplementedException();
         }
+
 
         /// <summary>
         /// Get the interactions supported
@@ -62,11 +62,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
+        /// Get the reverse includes
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(PatientEncounter resource, IEnumerable<string> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Map the specified patient encounter to a FHIR based encounter
         /// </summary>
-        protected override Encounter MapToFhir(PatientEncounter model, RestOperationContext restOperationContext)
+        protected override Encounter MapToFhir(PatientEncounter model)
         {
-            var retVal = DataTypeConverter.CreateResource<Encounter>(model, restOperationContext);
+            var retVal = DataTypeConverter.CreateResource<Encounter>(model);
 
             // Map the identifier
             retVal.Identifier = model.LoadCollection<ActIdentifier>("Identifiers").Select(o => DataTypeConverter.ToFhirIdentifier<Act>(o)).ToList();
@@ -112,25 +120,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var associated = model.LoadCollection<ActParticipation>("Participations");
 
             // Subject of encounter
-            retVal.Subject = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Patient>(associated.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget)?.LoadProperty<Entity>("PlayerEntity"), restOperationContext);
+            retVal.Subject = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Patient>(associated.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget)?.LoadProperty<Entity>("PlayerEntity"));
 
             // Locations
             retVal.Location = associated.Where(o => o.LoadProperty<Entity>("PlayerEntity") is Place).Select(o => new Encounter.LocationComponent()
             {
                 Period = DataTypeConverter.ToPeriod(model.CreationTime, null),
-                Location = DataTypeConverter.CreateVersionedReference<Location>(o.PlayerEntity, restOperationContext)
+                Location = DataTypeConverter.CreateVersionedReference<Location>(o.PlayerEntity)
             }).ToList();
 
             // Service provider
             var cst = associated.FirstOrDefault(o => o.LoadProperty<Entity>("PlayerEntity") is Core.Model.Entities.Organization && o.ParticipationRoleKey == ActParticipationKey.Custodian);
             if (cst != null)
-                retVal.ServiceProvider = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Organization>(cst.PlayerEntity, restOperationContext);
+                retVal.ServiceProvider = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Organization>(cst.PlayerEntity);
 
             // Participants
             retVal.Participant = associated.Where(o => o.LoadProperty<Entity>("PlayerEntity") is Provider || o.LoadProperty<Entity>("PlayerEntity") is UserEntity).Select(o => new Encounter.ParticipantComponent()
             {
                 Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<Concept>("ParticipationRole")) },
-                Individual = DataTypeConverter.CreateVersionedReference<Practitioner>(o.PlayerEntity, restOperationContext)
+                Individual = DataTypeConverter.CreateVersionedReference<Practitioner>(o.PlayerEntity)
             }).ToList();
 
 
@@ -140,7 +148,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map to model the encounter
         /// </summary>
-        protected override PatientEncounter MapToModel(Encounter resource, RestOperationContext webOperationContext)
+        protected override PatientEncounter MapToModel(Encounter resource)
         {
             // Organization
             var status = resource.Status.Value;

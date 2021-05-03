@@ -36,7 +36,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map coded allergy intolerance resource to FHIR
         /// </summary>
-		protected override AllergyIntolerance MapToFhir(CodedObservation model, RestOperationContext restOperationContext)
+		protected override AllergyIntolerance MapToFhir(CodedObservation model)
 		{
 			throw new NotImplementedException();
 		}
@@ -44,7 +44,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map allergy intolerance from FHIR to a coded observation
         /// </summary>
-		protected override CodedObservation MapToModel(AllergyIntolerance resource, RestOperationContext restOperationContext)
+		protected override CodedObservation MapToModel(AllergyIntolerance resource)
 		{
 			throw new NotImplementedException();
 		}
@@ -67,6 +67,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return new TypeRestfulInteraction[]
             {
             }.Select(o => new ResourceInteractionComponent() { Code = o });
+        }
+
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(CodedObservation resource, IEnumerable<string> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get reverse included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(CodedObservation resource, IEnumerable<string> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -36,6 +36,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class PractitionerResourceHandler : RepositoryResourceHandlerBase<Practitioner, UserEntity>
     {
+
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(UserEntity resource, IEnumerable<string> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Get the interactions that this resource handler supports
         /// </summary>
@@ -52,13 +61,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
+        /// Get reverse includes
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(UserEntity resource, IEnumerable<string> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Map a user entity to a practitioner
         /// </summary>
-        protected override Practitioner MapToFhir(UserEntity model, RestOperationContext restOperationContext)
+        protected override Practitioner MapToFhir(UserEntity model)
         {
             // Is there a provider that matches this user?
             var provider = model.LoadCollection<EntityRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.AssignedEntity)?.LoadProperty<Provider>("TargetEntity") ;
-            var retVal = DataTypeConverter.CreateResource<Practitioner>(model, restOperationContext);
+            var retVal = DataTypeConverter.CreateResource<Practitioner>(model);
 
             // Identifiers
             retVal.Identifier = (provider?.Identifiers ?? model.Identifiers)?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
@@ -103,7 +120,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map a practitioner to a user entity
         /// </summary>
-        protected override UserEntity MapToModel(Practitioner resource, RestOperationContext restOperationContext)
+        protected override UserEntity MapToModel(Practitioner resource)
         {
             throw new NotImplementedException();
         }

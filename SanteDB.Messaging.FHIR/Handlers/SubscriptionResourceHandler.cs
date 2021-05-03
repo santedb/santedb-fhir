@@ -241,7 +241,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
 
             // Construct the return subscription
-            var retVal = DataTypeConverter.CreateResource<Subscription>(model, restOperationContext);
+            var retVal = DataTypeConverter.CreateResource<Subscription>(model);
 
             // Map status based on current state in CDR
             retVal.Id = model.Name;

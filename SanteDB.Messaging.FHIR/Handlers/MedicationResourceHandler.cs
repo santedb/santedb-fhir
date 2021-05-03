@@ -38,9 +38,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <summary>
 		/// Map this manufactured material to FHIR
 		/// </summary>
-		protected override Medication MapToFhir(ManufacturedMaterial model, RestOperationContext restOperationContext)
+		protected override Medication MapToFhir(ManufacturedMaterial model )
 		{
-			var retVal = DataTypeConverter.CreateResource<Medication>(model, restOperationContext);
+			var retVal = DataTypeConverter.CreateResource<Medication>(model);
 
 			// Code of medication code
 			retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Entity.TypeConcept)), "http://snomed.info/sct");
@@ -62,7 +62,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			// Is brand?
 			var manufacturer = model.LoadCollection<EntityRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct);
 			if (manufacturer != null)
-				retVal.Manufacturer = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Organization>(manufacturer.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)), restOperationContext);
+				retVal.Manufacturer = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Organization>(manufacturer.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)));
 
 			// Form
 			retVal.Form = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("FormConcept"), "http://hl7.org/fhir/ValueSet/medication-form-codes");
@@ -81,7 +81,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="resource">The model resource to be mapped</param>
         /// <param name="restOperationContext">The operation context this request is executing on</param>
         /// <returns>The converted <see cref="ManufacturedMaterial"/></returns>
-		protected override ManufacturedMaterial MapToModel(Medication resource, RestOperationContext restOperationContext)
+		protected override ManufacturedMaterial MapToModel(Medication resource )
 		{
 			throw new NotImplementedException();
 		}
@@ -99,6 +99,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent() { Code = o });
+        }
+
+		/// <summary>
+		/// Get included resources
+		/// </summary>
+        protected override IEnumerable<Resource> GetIncludes(ManufacturedMaterial resource, IEnumerable<string> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+		/// <summary>
+		/// Get reverse included resources
+		/// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(ManufacturedMaterial resource, IEnumerable<string> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
         }
     }
 }

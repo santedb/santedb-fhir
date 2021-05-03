@@ -44,9 +44,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <param name="model">The model.</param>
         /// <param name="restOperationContext">The operation context in which this method is being called</param>
 		/// <returns>Returns the mapped FHIR resource.</returns>
-		protected override Immunization MapToFhir(SubstanceAdministration model, RestOperationContext restOperationContext)
+		protected override Immunization MapToFhir(SubstanceAdministration model)
 		{
-			var retVal = DataTypeConverter.CreateResource<Immunization>(model, restOperationContext);
+			var retVal = DataTypeConverter.CreateResource<Immunization>(model);
 
             retVal.DoseQuantity = new SimpleQuantity()
             {
@@ -87,7 +87,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			var rct = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
 			if (rct != null)
 			{
-				retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"), restOperationContext);
+				retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
 			}
 
 			// Performer
@@ -96,7 +96,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Performer = prf.Select(o =>
                     new Immunization.PerformerComponent()
                     {
-                        Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)), restOperationContext)
+                        Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
                     }).ToList();
 
 			// Protocol
@@ -122,7 +122,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <param name="resource">The resource.</param>
         /// <param name="restOperationContext">The operation context in which this method is being called</param>
 		/// <returns>Returns the mapped model.</returns>
-		protected override SubstanceAdministration MapToModel(Immunization resource, RestOperationContext restOperationContext)
+		protected override SubstanceAdministration MapToModel(Immunization resource)
 		{
             var substanceAdministration = new SubstanceAdministration
             {
@@ -255,6 +255,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
-       
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(SubstanceAdministration resource, IEnumerable<string> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get reverse included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<string> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -37,6 +37,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class OrganizationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Organization, SanteDB.Core.Model.Entities.Organization>
     {
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(Core.Model.Entities.Organization resource, IEnumerable<string> includePaths)
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Get the interactions 
@@ -51,17 +58,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
 
         /// <summary>
+        /// Get reverse included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Entities.Organization resource, IEnumerable<string> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Map to FHIR
         /// </summary>
-        protected override Hl7.Fhir.Model.Organization MapToFhir(Core.Model.Entities.Organization model, RestOperationContext webOperationContext)
+        protected override Hl7.Fhir.Model.Organization MapToFhir(Core.Model.Entities.Organization model)
         {
-            return DataTypeConverter.CreateResource<Hl7.Fhir.Model.Organization>(model, webOperationContext);
+            return DataTypeConverter.CreateResource<Hl7.Fhir.Model.Organization>(model);
         }
 
         /// <summary>
         /// Map to Model
         /// </summary>
-        protected override Core.Model.Entities.Organization MapToModel(Hl7.Fhir.Model.Organization resource, RestOperationContext webOperationContext)
+        protected override Core.Model.Entities.Organization MapToModel(Hl7.Fhir.Model.Organization resource)
         {
             // Organization
             var retVal = new Core.Model.Entities.Organization()
