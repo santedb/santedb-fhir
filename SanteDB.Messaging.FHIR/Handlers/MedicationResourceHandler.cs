@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <summary>
 		/// Get included resources
 		/// </summary>
-        protected override IEnumerable<Resource> GetIncludes(ManufacturedMaterial resource, IEnumerable<string> includePaths)
+        protected override IEnumerable<Resource> GetIncludes(ManufacturedMaterial resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException();
         }
@@ -112,7 +112,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <summary>
 		/// Get reverse included resources
 		/// </summary>
-        protected override IEnumerable<Resource> GetReverseIncludes(ManufacturedMaterial resource, IEnumerable<string> reverseIncludePaths)
+        protected override IEnumerable<Resource> GetReverseIncludes(ManufacturedMaterial resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException();
         }

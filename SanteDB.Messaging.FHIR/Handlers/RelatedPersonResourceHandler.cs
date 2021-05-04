@@ -38,7 +38,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Get included resources
         /// </summary>
-        protected override IEnumerable<Resource> GetIncludes(Core.Model.Entities.Person resource, IEnumerable<string> includePaths)
+        protected override IEnumerable<Resource> GetIncludes(Core.Model.Entities.Person resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException();
         }
@@ -61,7 +61,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Get reverse includes
         /// </summary>
-        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Entities.Person resource, IEnumerable<string> reverseIncludePaths)
+        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Entities.Person resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException();
         }
@@ -78,9 +78,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(model);
 
             // Attempt to find a relationship to a patient (note: this person can only be related to one other person or else the FHIR model breaks
-            var patientRels = this.m_relatedRepository.Find(r => r.TargetEntityKey == model.Key && r.ObsoleteVersionSequenceId == null && r.SourceEntity.ClassConceptKey == EntityClassKeys.Patient).GroupBy(o=>o.SourceEntityKey);
+            var patientRels = model.GetAnnotations<EntityRelationship>()?.GroupBy(o => o.SourceEntityKey);
+            if (patientRels.Count() == 0)
+            {
+                patientRels = this.m_relatedRepository.Find(r => r.TargetEntityKey == model.Key && r.ObsoleteVersionSequenceId == null && r.SourceEntity.ClassConceptKey == EntityClassKeys.Patient).GroupBy(o => o.SourceEntityKey);
+            }
+
             if (patientRels.Count() > 1)
+            {
                 throw new InvalidOperationException($"FHIR only allows a RelatedPerson to be related to ONE Patient. This person is related to {patientRels.Count()} patients");
+            }
+
             relative.Relationship = patientRels.First().Select(rel=>DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o=>o.RelationshipType), new string[] { "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" }, false)).ToList();
             relative.Address = model.LoadCollection(o=>o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             // TODO: Refactor this (see DSM-42 issue ticket)

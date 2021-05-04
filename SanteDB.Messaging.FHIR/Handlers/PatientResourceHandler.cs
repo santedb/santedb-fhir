@@ -366,7 +366,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Get included objects
         /// </summary>
-        protected override IEnumerable<Resource> GetIncludes(Core.Model.Roles.Patient resource, IEnumerable<string> includePaths)
+        protected override IEnumerable<Resource> GetIncludes(Core.Model.Roles.Patient resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException();
         }
@@ -374,9 +374,28 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Get included objects
         /// </summary>
-        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Roles.Patient resource, IEnumerable<string> reverseIncludePaths)
+        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Roles.Patient resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            return reverseIncludePaths.SelectMany(includeInstruction =>
+            {
+                switch(includeInstruction.Type)
+                {
+                    case ResourceType.RelatedPerson:
+                        // Load all related persons and convert them
+                        var rpHandler = FhirResourceHandlerUtil.GetMapperFor(typeof(RelatedPerson));
+                        return resource.LoadCollection(o => o.Relationships)
+                            .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
+                                o.RelationshipRoleKey == null &&
+                                o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Person)
+                            .Select(o => {
+                                // TODO: Clean this up
+                                o.TargetEntity.AddAnnotation(o);
+                                return rpHandler.MapToFhir(o.TargetEntity);
+                            });
+                    default:
+                        throw new InvalidOperationException($"{includeInstruction.Type} is not supported reverse include");
+                }
+            });
         }
     }
 }

@@ -52,6 +52,48 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		where TModel : IdentifiedData, new()
 
 	{
+		
+		/// <summary>
+		/// Include instruction
+		/// </summary>
+		protected struct IncludeInstruction
+        {
+			/// <summary>
+			/// Create an include instruction
+			/// </summary>
+            public IncludeInstruction(ResourceType type, String path)
+            {
+				this.Type = type;
+				this.JoinPath = path;
+            }
+
+			/// <summary>
+			/// Query instruction
+			/// </summary>
+            public IncludeInstruction(String queryInstruction)
+            {
+				var parsed = queryInstruction.Split(':');
+				if(parsed.Length != 2)
+                {
+					throw new ArgumentOutOfRangeException($"{queryInstruction} is not a valid include instruction");
+                }
+
+				this.Type = EnumUtility.ParseLiteral<ResourceType>(parsed[0]).Value;
+				this.JoinPath = parsed[1];
+            }
+			/// <summary>
+			/// The type of include
+			/// </summary>
+            public ResourceType Type { get; set; }
+
+			/// <summary>
+			/// The path to join on
+			/// </summary>
+            public String JoinPath { get; set; }
+
+			
+        }
+
 		/// <summary>
 		/// The trace source instance.
 		/// </summary>
@@ -217,11 +259,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			// Include or ref include?
 			if (parameters["_include"] != null) // TODO: _include:iterate (fhir is crazy)
 			{
-				retVal.Results = retVal.Results.Union(hdsiResults.AsParallel().SelectMany(h=>this.GetIncludes(h, parameters["_include"].Split(',')))).ToList();
+				retVal.Results = retVal.Results.Union(hdsiResults.AsParallel().SelectMany(h=>this.GetIncludes(h, parameters["_include"].Split(',').Select(o=>new IncludeInstruction(o))))).ToList();
 			}
 			if (parameters["_revinclude"] != null) // TODO: _revinclude:iterate (fhir is crazy)
 			{
-				retVal.Results = retVal.Results.Union(hdsiResults.AsParallel().SelectMany(h => this.GetReverseIncludes(h, parameters["_revinclude"].Split(',')))).ToList();
+				retVal.Results = retVal.Results.Union(hdsiResults.AsParallel().SelectMany(h => this.GetReverseIncludes(h, parameters["_revinclude"].Split(',').Select(o => new IncludeInstruction(o))))).ToList();
 			}
 
 			return retVal;
@@ -335,12 +377,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <summary>
 		/// Gets includes
 		/// </summary>
-		protected abstract IEnumerable<Resource> GetIncludes(TModel resource, IEnumerable<String> includePaths);
+		protected abstract IEnumerable<Resource> GetIncludes(TModel resource, IEnumerable<IncludeInstruction> includePaths);
 
 		/// <summary>
 		/// Gets the revers include paths
 		/// </summary>
-		protected abstract IEnumerable<Resource> GetReverseIncludes(TModel resource, IEnumerable<String> reverseIncludePaths);
+		protected abstract IEnumerable<Resource> GetReverseIncludes(TModel resource, IEnumerable<IncludeInstruction> reverseIncludePaths);
 
 		/// <summary>
 		/// Queries the specified query.

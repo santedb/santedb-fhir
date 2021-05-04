@@ -120,12 +120,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
-        protected override IEnumerable<Resource> GetIncludes(Material resource, IEnumerable<string> includePaths)
+        protected override IEnumerable<Resource> GetIncludes(Material resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException();
         }
 
-        protected override IEnumerable<Resource> GetReverseIncludes(Material resource, IEnumerable<string> reverseIncludePaths)
+        protected override IEnumerable<Resource> GetReverseIncludes(Material resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException();
         }

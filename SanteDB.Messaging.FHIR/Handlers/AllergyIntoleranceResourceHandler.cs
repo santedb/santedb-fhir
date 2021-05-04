@@ -72,7 +72,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Get included resources
         /// </summary>
-        protected override IEnumerable<Resource> GetIncludes(CodedObservation resource, IEnumerable<string> includePaths)
+        protected override IEnumerable<Resource> GetIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException();
         }
@@ -80,7 +80,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Get reverse included resources
         /// </summary>
-        protected override IEnumerable<Resource> GetReverseIncludes(CodedObservation resource, IEnumerable<string> reverseIncludePaths)
+        protected override IEnumerable<Resource> GetReverseIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException();
         }
