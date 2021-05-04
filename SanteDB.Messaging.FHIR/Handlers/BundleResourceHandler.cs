@@ -64,9 +64,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public ResourceType ResourceType => ResourceType.Bundle;
 
-        public Type CanonicalType => throw new NotImplementedException();
+        /// <summary>
+        /// Get the canonical type
+        /// </summary>
+        public Type CanonicalType => typeof(SanteDB.Core.Model.Collection.Bundle);
 
-        public Type ResourceClrType => throw new NotImplementedException();
+        /// <summary>
+        /// Get the CLR type
+        /// </summary>
+        public Type ResourceClrType => typeof(Hl7.Fhir.Model.Bundle);
 
         /// <summary>
         /// Create the specified object

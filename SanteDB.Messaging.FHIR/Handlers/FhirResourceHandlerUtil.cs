@@ -103,6 +103,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
+        /// Gets the mapper for <paramref name="resourceOrModelType"/>
+        /// </summary>
+        /// <returns>The mapper (if present)</returns>
+        public static IFhirResourceMapper GetMapperFor(ResourceType resourceType)
+        {
+            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().FirstOrDefault(o => o.ResourceType == resourceType);
+        }
+
+        /// <summary>
         /// Get REST definition
         /// </summary>
         public static IEnumerable<CapabilityStatement.ResourceComponent> GetRestDefinition()

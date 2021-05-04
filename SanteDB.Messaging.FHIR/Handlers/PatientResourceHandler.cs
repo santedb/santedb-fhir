@@ -382,7 +382,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     case ResourceType.RelatedPerson:
                         // Load all related persons and convert them
-                        var rpHandler = FhirResourceHandlerUtil.GetMapperFor(typeof(RelatedPerson));
+                        var rpHandler = FhirResourceHandlerUtil.GetMapperFor(ResourceType.RelatedPerson);
                         return resource.LoadCollection(o => o.Relationships)
                             .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                 o.RelationshipRoleKey == null &&
