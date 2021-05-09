@@ -24,6 +24,7 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Roles;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -37,6 +38,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class EncounterResourceHandler : RepositoryResourceHandlerBase<Encounter, PatientEncounter>
     {
+
+        /// <summary>
+		/// Create new resource handler
+		/// </summary>
+		public EncounterResourceHandler(IRepositoryService<PatientEncounter> repo) : base(repo)
+        {
+
+        }
+
         /// <summary>
         /// Get includes 
         /// </summary>

@@ -24,6 +24,7 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -38,6 +39,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ObservationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Observation, Core.Model.Acts.Observation>
     {
+
+        /// <summary>
+		/// Create new resource handler
+		/// </summary>
+		public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo) : base(repo)
+        {
+
+        }
+
         /// <summary>
         /// Map to FHIR
         /// </summary>

@@ -53,6 +53,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public static void RegisterResourceHandler(IFhirResourceHandler handler)
         {
+            if(handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler), "Handler is required");
+            }
             s_messageProcessors.Add(handler.ResourceType, handler);
         }
 
@@ -93,22 +97,30 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
       
         /// <summary>
+        /// Get mapper for the specified object
+        /// </summary>
+        public static IFhirResourceMapper GetMapperForInstance(Object instance)
+        {
+            return GetMappersFor(instance.GetType()).FirstOrDefault(o => o.CanMapObject(instance));
+        }
+
+        /// <summary>
         /// Gets the mapper for <paramref name="resourceOrModelType"/>
         /// </summary>
         /// <param name="resourceOrModelType">The FHIR type or CDR type</param>
         /// <returns>The mapper (if present)</returns>
-        public static IFhirResourceMapper GetMapperFor(Type resourceOrModelType)
+        public static IEnumerable<IFhirResourceMapper> GetMappersFor(Type resourceOrModelType)
         {
-            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().FirstOrDefault(o => o.CanonicalType == resourceOrModelType || o.ResourceClrType == resourceOrModelType);
+            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().Where(o => o.CanonicalType == resourceOrModelType || o.ResourceClrType == resourceOrModelType);
         }
 
         /// <summary>
         /// Gets the mapper for <paramref name="resourceOrModelType"/>
         /// </summary>
         /// <returns>The mapper (if present)</returns>
-        public static IFhirResourceMapper GetMapperFor(ResourceType resourceType)
+        public static IEnumerable<IFhirResourceMapper> GetMappersFor(ResourceType resourceType)
         {
-            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().FirstOrDefault(o => o.ResourceType == resourceType);
+            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().Where(o => o.ResourceType == resourceType);
         }
 
         /// <summary>

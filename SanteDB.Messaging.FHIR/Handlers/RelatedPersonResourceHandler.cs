@@ -23,13 +23,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
         // Relationships to family members
         private List<Guid> m_relatedPersons;
 
+        // Patient repository
+        private IRepositoryService<Core.Model.Roles.Patient> m_patientRepository;
+
+        private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
         /// <summary>
         /// Create related person resource handler
         /// </summary>
-        public RelatedPersonResourceHandler()
+        public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo, IRepositoryService<Core.Model.Roles.Patient> patientRepository, IRepositoryService<EntityRelationship> repo, IRepositoryService<Concept> conceptRepository) : base(repo)
         {
-            this.m_relatedPersons = ApplicationServiceContext.Current.GetService<IRepositoryService<Concept>>().Find(x => x.ConceptSets.Any(c => c.Mnemonic == "FamilyMember")).Select(c => c.Key.Value).ToList();
+            this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r=>r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(c => c.Key.Value).ToList();
+            this.m_patientRepository = patientRepository;
+            this.m_personRepository = personRepo;
         }
+
+        /// <summary>
+        /// Can map object
+        /// </summary>
+        public override bool CanMapObject(object instance) => instance is RelatedPerson ||
+            instance is EntityRelationship er && this.m_relatedPersons.Contains(er.RelationshipTypeKey.Value);
 
         /// <summary>
         /// Get included resources
@@ -75,17 +87,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Create the relative object
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
-
             relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty(o => o.RelationshipType), new string[] { "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" }, false) };
             relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
-            // TODO: Refactor this (see DSM-42 issue ticket)
             relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(relModel.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
             relative.Identifier = relModel.LoadCollection(o => o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
             relative.Name = relModel.LoadCollection(o => o.Names).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
             relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(model.SourceEntityKey);
             relative.Telecom = relModel.LoadCollection(o => o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
             relative.Id = model.Key.ToString();
-            // TODO: Add other relationship extensions
             return relative;
         }
 
@@ -112,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Find the source of the relationship
             var sourceEntity = DataTypeConverter.ResolveEntity(resource.Patient, resource);
-            if (sourceEntity == null)
+            if(sourceEntity == null)
             {
                 throw new KeyNotFoundException($"Could not resolve {resource.Patient.Reference}");
             }
@@ -122,19 +131,32 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 relationship = new EntityRelationship()
                 {
+                    Key = Guid.NewGuid(),
                     TargetEntity = new SanteDB.Core.Model.Entities.Person(),
                     SourceEntityKey = sourceEntity.Key
                 };
             }
             else if (sourceEntity.Key != relationship.SourceEntityKey)
             {
-                throw new InvalidOperationException($"Cannot change the source of relationship from {relationship.SourceEntityKey} to {sourceEntity.Key}");
+                // HACK: Is there a relationship that exists between the existing source entity and the purported source entity (like an MDM or replaces?)
+                if (!this.m_repository.Find(o => o.TargetEntityKey == sourceEntity.Key && o.SourceEntityKey == relationship.SourceEntityKey).Any())
+                {
+                    throw new InvalidOperationException($"Cannot change the source of relationship from {relationship.SourceEntityKey} to {sourceEntity.Key}");
+                }
             }
 
+            // The source of the object is not a patient (perhaps an MDM entity)
+            if (sourceEntity is Core.Model.Roles.Patient patientSource) 
+            {
+                relationship.SourceEntity = patientSource;
+            }
+            else
+            {
+                sourceEntity = relationship.SourceEntity = patientSource = this.m_patientRepository.Get(sourceEntity.Key.Value);
+            }
 
             var person = relationship.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person;
-
-
+            
             // Set the relationship
             relationship.ClassificationKey = RelationshipClassKeys.ReferencedObjectLink;
             relationship.RelationshipTypeKey = relationshipTypes.First();
@@ -153,23 +175,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Identity
             person.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).ToList();
 
-            // Attempt to find the patient/person that is being referenced
-            person.Key = Guid.NewGuid();
-            foreach (var id in person.Identifiers) // try to lookup based on reliable id for the record to update
-            {
-                if (id.LoadProperty(o => o.Authority).IsUnique)
-                {
-                    using (AuthenticationContext.EnterSystemContext())
-                    {
-                        var match = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>().Find(o => o.Identifiers.Any(i => i.Authority.DomainName == id.Authority.DomainName && i.Value == id.Value), 0, 1, out int tr);
-                        if (tr == 1)
-                            person.Key = match.FirstOrDefault()?.Key ?? Guid.NewGuid();
-                        else if (tr > 1)
-                            this.m_traceSource.TraceWarning($"The identifier {id} resulted in ambiguous results ({tr} matches) - the FHIR layer will treat this as an INSERT rather than UPDATE");
-                    }
-                }
-            }
-            relationship.TargetEntityKey = person.Key;
+            relationship.TargetEntity = person;
             return relationship;
 
         }

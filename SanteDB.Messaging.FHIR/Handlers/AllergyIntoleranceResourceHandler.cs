@@ -20,6 +20,8 @@ using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.DataTypes;
+using SanteDB.Core.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -33,6 +35,26 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class AllergyIntoleranceResourceHandler : RepositoryResourceHandlerBase<AllergyIntolerance, CodedObservation>
 	{
+
+        // Applicable type concepts
+        private List<Guid> m_typeConcepts;
+
+        /// <summary>
+        /// Type concepts
+        /// </summary>
+        public AllergyIntoleranceResourceHandler(IRepositoryService<CodedObservation> repo, IRepositoryService<Concept> conceptRepo) : base(repo)
+        {
+            this.m_typeConcepts = conceptRepo.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
+        }
+
+        /// <summary>
+        /// Can map this object
+        /// </summary>
+        /// <param name="instance"></param>
+        /// <returns></returns>
+        public override bool CanMapObject(object instance) => instance is AllergyIntolerance ||
+            instance is CodedObservation cobs && this.m_typeConcepts.Contains(cobs.TypeConceptKey.GetValueOrDefault());
+
         /// <summary>
         /// Map coded allergy intolerance resource to FHIR
         /// </summary>

@@ -21,6 +21,7 @@ using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Applets.ViewModel.Json;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
@@ -259,11 +260,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			// Include or ref include?
 			if (parameters["_include"] != null) // TODO: _include:iterate (fhir is crazy)
 			{
-				retVal.Results = retVal.Results.Union(hdsiResults.AsParallel().SelectMany(h=>this.GetIncludes(h, parameters["_include"].Split(',').Select(o=>new IncludeInstruction(o))))).ToList();
+				retVal.Results = retVal.Results.Union(hdsiResults.SelectMany(h=>this.GetIncludes(h, parameters["_include"].Split(',').Select(o=>new IncludeInstruction(o))))).ToList();
 			}
 			if (parameters["_revinclude"] != null) // TODO: _revinclude:iterate (fhir is crazy)
 			{
-				retVal.Results = retVal.Results.Union(hdsiResults.AsParallel().SelectMany(h => this.GetReverseIncludes(h, parameters["_revinclude"].Split(',').Select(o => new IncludeInstruction(o))))).ToList();
+				retVal.Results = retVal.Results.Union(hdsiResults.SelectMany(h => this.GetReverseIncludes(h, parameters["_revinclude"].Split(',').Select(o => new IncludeInstruction(o))))).ToList();
 			}
 
 			return retVal;
@@ -459,5 +460,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			return this.MapToModel((TFhirResource)resourceInstance);
         }
 
+		/// <summary>
+		/// True if this handler can process the object
+		/// </summary>
+		public virtual bool CanMapObject(object instance) => instance is TModel || instance is TFhirResource;
     }
 }

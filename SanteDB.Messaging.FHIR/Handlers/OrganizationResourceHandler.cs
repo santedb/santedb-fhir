@@ -27,6 +27,7 @@ using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
@@ -37,6 +38,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class OrganizationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Organization, SanteDB.Core.Model.Entities.Organization>
     {
+
+        /// <summary>
+        /// Create a new resource handler
+        /// </summary>
+        public OrganizationResourceHandler(IRepositoryService<SanteDB.Core.Model.Entities.Organization> repo) : base(repo)
+        {
+
+        }
+
+
         /// <summary>
         /// Get included resources
         /// </summary>

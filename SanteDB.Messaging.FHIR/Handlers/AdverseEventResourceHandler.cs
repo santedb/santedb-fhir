@@ -23,6 +23,7 @@ using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -38,6 +39,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class AdverseEventResourceHandler : RepositoryResourceHandlerBase<AdverseEvent, Act>
     {
+
+        /// <summary>
+        /// Adverse event repo
+        /// </summary>
+        public AdverseEventResourceHandler(IRepositoryService<Act> repo) : base(repo)
+        {
+
+        }
+
+        /// <summary>
+        /// Can map this object
+        /// </summary>
+        public override bool CanMapObject(object instance) => base.CanMapObject(instance);
+
         /// <summary>
         /// Maps the specified act to an adverse event
         /// </summary>

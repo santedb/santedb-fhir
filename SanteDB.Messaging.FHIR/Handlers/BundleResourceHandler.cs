@@ -75,6 +75,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Type ResourceClrType => typeof(Hl7.Fhir.Model.Bundle);
 
         /// <summary>
+        /// Can map an object
+        /// </summary>
+        public bool CanMapObject(object instance) => instance is Hl7.Fhir.Model.Bundle || instance is Core.Model.Collection.Bundle;
+
+        /// <summary>
         /// Create the specified object
         /// </summary>
         public Resource Create(Resource target, TransactionMode mode)
@@ -191,7 +196,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Parse return value
             foreach (var entry in sdbBundle.Item)
             {
-                var handler = FhirResourceHandlerUtil.GetMapperFor(entry.GetType());
+                var handler = FhirResourceHandlerUtil.GetMapperForInstance(entry);
                 if (handler == null) continue; // TODO: Warn
                 retVal.Entry.Add(new Hl7.Fhir.Model.Bundle.EntryComponent()
                 {
@@ -225,6 +230,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Map and add to bundle
                 var itm = handler.MapToModel(entry.Resource);
                 sdbBundle.Add(itm);
+
+                // HACK: If the ITM is a relationship or participation insert it into the bundle
+                if(itm is ITargetedAssociation targetedAssociation && targetedAssociation.TargetEntity != null)
+                {
+                    sdbBundle.Insert(sdbBundle.Item.Count - 1, targetedAssociation.TargetEntity as IdentifiedData);
+                    itm = targetedAssociation.TargetEntity as IdentifiedData;
+                }
 
                 // Add original URLs so that subsequent bundle entries (which might reference this entry) can resolve
                 if (itm is ITaggable taggable)

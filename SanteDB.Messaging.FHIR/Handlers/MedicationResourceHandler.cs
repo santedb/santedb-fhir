@@ -22,6 +22,7 @@ using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -35,6 +36,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class MedicationResourceHandler : RepositoryResourceHandlerBase<Medication, ManufacturedMaterial>
 	{
+
+		/// <summary>
+		/// Create new resource handler
+		/// </summary>
+		public MedicationResourceHandler(IRepositoryService<ManufacturedMaterial> repo) : base(repo)
+		{
+
+		}
+
 		/// <summary>
 		/// Map this manufactured material to FHIR
 		/// </summary>

@@ -97,37 +97,43 @@ namespace SanteDB.Messaging.FHIR
         /// </summary>
         public bool Start()
         {
-            try
+            this.Starting?.Invoke(this, EventArgs.Empty);
+
+            // This service relies on other services so let's wait until the entire context starts
+
+            ApplicationServiceContext.Current.Started += (o, evt) =>
             {
-
-                this.Starting?.Invoke(this, EventArgs.Empty);
-
-                this.m_webHost = ApplicationServiceContext.Current.GetService<IRestServiceFactory>().CreateService(typeof(FhirServiceBehavior));
-                this.m_webHost.AddServiceBehavior(new FhirErrorEndpointBehavior());
-                foreach (var endpoint in this.m_webHost.Endpoints)
+                try
                 {
-                    endpoint.AddEndpointBehavior(new FhirMessageDispatchFormatterEndpointBehavior());
-                    this.m_traceSource.TraceInfo("Starting FHIR on {0}...", endpoint.Description.ListenUri);
+
+
+                    this.m_webHost = ApplicationServiceContext.Current.GetService<IRestServiceFactory>().CreateService(typeof(FhirServiceBehavior));
+                    this.m_webHost.AddServiceBehavior(new FhirErrorEndpointBehavior());
+                    foreach (var endpoint in this.m_webHost.Endpoints)
+                    {
+                        endpoint.AddEndpointBehavior(new FhirMessageDispatchFormatterEndpointBehavior());
+                        this.m_traceSource.TraceInfo("Starting FHIR on {0}...", endpoint.Description.ListenUri);
+                    }
+
+                    MessageUtil.SetBaseLocation(this.m_webHost.Endpoints.First().Description.ListenUri.AbsolutePath);
+                    FhirResourceHandlerUtil.Initialize(this.m_configuration, this.m_serviceManager);
+                    ExtensionUtil.Initialize(this.m_configuration);
+
+                    // Start the web host
+                    this.m_webHost.Start();
+
+                    this.m_traceSource.TraceInfo("FHIR On: {0}", this.m_webHost.Endpoints.First().Description.ListenUri);
+
                 }
+                catch (Exception e)
+                {
+                    this.m_traceSource.TraceEvent(EventLevel.Error, e.ToString());
+                    throw;
+                }
+            };
 
-                FhirResourceHandlerUtil.Initialize(this.m_configuration, this.m_serviceManager);
-                ExtensionUtil.Initialize(this.m_configuration);
-
-                // Start the web host
-                this.m_webHost.Start();
-
-                this.m_traceSource.TraceInfo("FHIR On: {0}", this.m_webHost.Endpoints.First().Description.ListenUri);
-
-                this.Started?.Invoke(this, EventArgs.Empty);
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                this.m_traceSource.TraceEvent(EventLevel.Error,  e.ToString());
-                return false;
-            }
-            
+            this.Started?.Invoke(this, EventArgs.Empty);
+            return true;
         }
 
         /// <summary>

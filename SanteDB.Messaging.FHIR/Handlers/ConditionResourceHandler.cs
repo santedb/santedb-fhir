@@ -40,6 +40,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ConditionResourceHandler : RepositoryResourceHandlerBase<Condition, CodedObservation>
 	{
+
+		/// <summary>
+		/// Create new resource handler
+		/// </summary>
+		public ConditionResourceHandler(IRepositoryService<CodedObservation> repo) : base(repo)
+		{
+			
+		}
+
+		/// <summary>
+		/// Can map 
+		/// </summary>
+		public override bool CanMapObject(object instance) => instance is Condition ||
+			instance is CodedObservation cobs && cobs.TypeConceptKey == ObservationTypeKeys.Condition;
+
 		/// <summary>
 		/// Map to FHIR
 		/// </summary>

@@ -40,6 +40,27 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class MedicationAdministrationResourceHandler : RepositoryResourceHandlerBase<MedicationAdministration, SubstanceAdministration>
     {
+
+
+        private readonly Guid[] IZ_TYPES = new Guid[] {
+            Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47"), Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178"), Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5")
+        };
+
+
+        /// <summary>
+        /// Create a new resource handler
+        /// </summary>
+        public MedicationAdministrationResourceHandler(IRepositoryService<SubstanceAdministration> repo) : base(repo)
+        {
+
+        }
+
+        /// <summary>
+        /// Can map the specified object
+        /// </summary>
+        public override bool CanMapObject(object instance) => instance is Immunization ||
+            instance is SubstanceAdministration sbadm && !IZ_TYPES.Contains(sbadm.TypeConceptKey.GetValueOrDefault());
+
         /// <summary>
         /// Maps the object to model to fhir
         /// </summary>

@@ -37,6 +37,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class SubstanceResourceHandler : RepositoryResourceHandlerBase<Substance, Material>
 	{
+
+		/// <summary>
+		/// Create new resource handler
+		/// </summary>
+        public SubstanceResourceHandler(IRepositoryService<Material> repo) : base(repo)
+        {
+
+        }
+
 		/// <summary>
 		/// Map the substance to FHIR
 		/// </summary>

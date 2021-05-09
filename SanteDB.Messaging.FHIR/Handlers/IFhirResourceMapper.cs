@@ -53,5 +53,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>The model instance</returns>
         IdentifiedData MapToModel(Resource resourceInstance);
 
+        /// <summary>
+        /// True if <paramref name="instance"/> can be processed
+        /// </summary>
+        bool CanMapObject(object instance);
     }
 }

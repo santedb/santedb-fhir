@@ -46,13 +46,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         // ER repository
         private IRepositoryService<EntityRelationship> m_erRepository;
+        private List<Guid> m_relatedPersons;
 
         /// <summary>
         /// Resource handler subscription
         /// </summary>
-        public PatientResourceHandler(IRepositoryService<EntityRelationship> erRepository)
+        public PatientResourceHandler(IRepositoryService<Core.Model.Roles.Patient> repo, IRepositoryService<EntityRelationship> erRepository, IRepositoryService<Concept> conceptRepository) : base(repo)
         {
             this.m_erRepository = erRepository;
+
+            var relTypes = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"));
+            this.m_relatedPersons = relTypes.Select(c => c.Key.Value).ToList();
+
         }
 
         /// <summary>
@@ -122,7 +127,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Contact => Person
                 if (rel.LoadProperty(o=>o.TargetEntity) is SanteDB.Core.Model.Roles.Patient && rel.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)
                 {
-                    var relative = FhirResourceHandlerUtil.GetMapperFor(ResourceType.RelatedPerson).MapToFhir(rel);
+                    var relative = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rel);
                     relative.Meta.Security = null;
                     retVal.Contained.Add(relative);
                 }
@@ -287,7 +292,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Process contained related persons
             foreach(var itm in resource.Contained.OfType<RelatedPerson>())
             {
-                var er = FhirResourceHandlerUtil.GetMapperFor(typeof(RelatedPerson)).MapToModel(itm) as Core.Model.Entities.EntityRelationship;
+                var er = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToModel(itm) as Core.Model.Entities.EntityRelationship;
                 
                 // Relationship bindings
                 er.ClassificationKey = RelationshipClassKeys.ContainedObjectLink;
@@ -326,7 +331,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     case Patient.LinkType.Seealso:
                         {
                             var referee = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Entity;
-                            if (referee.LoadCollection(o=>o.Relationships).Any(r=>r.RelationshipTypeKey == MDM_MASTER_LINK)) // HACK: This is a master and someone is attempting to point another record at it
+                            if (referee.LoadCollection(o => o.Relationships).Any(r => r.RelationshipTypeKey == MDM_MASTER_LINK)) // HACK: This is a master and someone is attempting to point another record at it
                                 patient.Relationships.Add(new EntityRelationship()
                                 {
                                     RelationshipTypeKey = MDM_MASTER_LINK,
@@ -334,8 +339,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     TargetEntityKey = patient.Key
                                 });
                             else
+                            {
+                                // Patient is pointing at a person which is different
                                 patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.EquivalentEntity, referee));
-
+                            }
                             break;
                         }
                     case Patient.LinkType.Refer: // This points to a more detailed view of the patient
@@ -389,10 +396,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     case ResourceType.RelatedPerson:
                         // Load all related persons and convert them
-                        var rpHandler = FhirResourceHandlerUtil.GetMapperFor(ResourceType.RelatedPerson);
+                        var rpHandler = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).FirstOrDefault();
                         return resource.LoadCollection(o => o.Relationships)
                             .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                 o.RelationshipRoleKey == null &&
+                                this.m_relatedPersons.Contains(o.RelationshipTypeKey.Value) &&
                                 o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Person)
                             .Select(o => rpHandler.MapToFhir(o));
                     default:

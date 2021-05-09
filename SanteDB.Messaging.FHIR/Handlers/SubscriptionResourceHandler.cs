@@ -271,7 +271,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             };
 
             // TODO: Map the HDSI query syntax to FHIR PATH
-            var mapper = FhirResourceHandlerUtil.GetMapperFor(model.ResourceType);
+            var mapper = FhirResourceHandlerUtil.GetMappersFor(model.ResourceType).FirstOrDefault();
             retVal.Criteria = $"{mapper.ResourceType}?";
 
             return retVal;
