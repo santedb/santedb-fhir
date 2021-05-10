@@ -36,7 +36,7 @@ using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
-
+   
     /// <summary>
     /// A class which is responsible for translating a series of Query Parmaeters to a LINQ expression
     /// to be passed to the persistence layer
@@ -110,25 +110,74 @@ namespace SanteDB.Messaging.FHIR.Util
             else
                 return map.Map.Select(o => new SearchParamComponent()
                 {
-                    Name = o.FhirName,
-                    Type = MapFhirParameterType<TModelType>(o.FhirType, o.ModelName),
+                    Name = o.FhirQuery,
+                    Type = MapFhirParameterType<TModelType>(o.FhirType, o.ModelQuery),
                     Documentation = new Markdown(o.Description),
-                    Definition = $"/Profile/SanteDB#search-{map.SourceType.Name}.{o.FhirName}"
+                    Definition = $"/Profile/SanteDB#search-{map.SourceType.Name}.{o.FhirQuery}"
                 }).Union(s_defaultParameters);
 
         }
 
         /// <summary>
+        /// Add search parameters
+        /// </summary>
+        public static void AddSearchParam<TFhirResource>(String fhirQueryParameter, String hdsiQueryParmeter, QueryParameterRewriteType type)
+        {
+            var mapConfig = s_map.Map.FirstOrDefault(o => o.SourceType == typeof(TFhirResource));
+            if(mapConfig == null)
+            {
+                mapConfig = new QueryParameterType() { SourceType = typeof(TFhirResource) };
+                s_map.Map.Add(mapConfig);
+            }
+
+            // parm config
+            var parmConfig = mapConfig.Map.FirstOrDefault(o => o.FhirQuery == fhirQueryParameter);
+            if(parmConfig == null)
+            {
+                parmConfig = new QueryParameterMapProperty()
+                {
+                    FhirQuery = fhirQueryParameter,
+                    ModelQuery = hdsiQueryParmeter,
+                    FhirType = type
+                };
+            }
+            else
+            {
+                parmConfig.ModelQuery = hdsiQueryParmeter;
+                parmConfig.FhirType = type;
+            }
+        }
+
+        /// <summary>
+        /// Merge parameter configuration
+        /// </summary>
+        public static void MergeParamConfig(QueryParameterMap newMap)
+        {
+            s_map.Merge(newMap);
+        }
+
+        /// <summary>
+        /// Remove the parameter configuration
+        /// </summary>
+        public static void RemoveParamConfig<TFhirResource>(String fhirQuery)
+        {
+            var mapConfig = s_map.Map.FirstOrDefault(o => o.SourceType == typeof(TFhirResource));
+            if(mapConfig == null)
+            {
+                mapConfig.Map.RemoveAll(o => o.FhirQuery == fhirQuery);
+            }
+        }
+        /// <summary>
         /// Map FHIR parameter type
         /// </summary>
-        private static SearchParamType MapFhirParameterType<TModelType>(string type, string definition)
+        private static SearchParamType MapFhirParameterType<TModelType>(QueryParameterRewriteType type, string definition)
         {
             switch (type)
             {
-                case "concept":
-                case "identifier":
+                case QueryParameterRewriteType.Concept:
+                case QueryParameterRewriteType.Identifier:
                     return SearchParamType.Token;
-                case "reference":
+                case QueryParameterRewriteType.Reference:
                     return SearchParamType.Reference;
                 default:
                     try
@@ -242,15 +291,15 @@ namespace SanteDB.Messaging.FHIR.Util
                 var parmComponents = kv.Split(':');
 
                 // Is the name extension?
-                var parmMap = map?.Map.FirstOrDefault(o => o.FhirName == parmComponents[0]);
+                var parmMap = map?.Map.FirstOrDefault(o => o.FhirQuery == parmComponents[0]);
                 if (parmMap == null)
-                    parmMap = s_default.Map.FirstOrDefault(o => o.FhirName == parmComponents[0]);
+                    parmMap = s_default.Map.FirstOrDefault(o => o.FhirQuery == parmComponents[0]);
                 if (parmMap == null && kv == "extension")
                     parmMap = new QueryParameterMapProperty()
                     {
-                        FhirName = "extension",
-                        ModelName = "extension",
-                        FhirType = "tag"
+                        FhirQuery = "extension",
+                        ModelQuery = "extension",
+                        FhirType = QueryParameterRewriteType.Tag
                     };
                 else if (parmMap == null)
                     continue;
@@ -321,7 +370,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 // Query 
                 switch (parmMap.FhirType)
                 {
-                    case "identifier":
+                    case QueryParameterRewriteType.Identifier:
                         foreach (var itm in value)
                         {
                             if (itm.Contains("|"))
@@ -331,17 +380,17 @@ namespace SanteDB.Messaging.FHIR.Util
                                 if (Uri.TryCreate(segs[0], UriKind.Absolute, out Uri data))
                                 {
                                     var aa = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>().Get(data);
-                                    hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelName, aa.DomainName), segs[1]);
+                                    hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
                                 }
                                 else
-                                    hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelName, segs[0]), segs[1]);
+                                    hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, segs[0]), segs[1]);
 
                             }
                             else
-                                hdsiQuery.Add(parmMap.ModelName + ".value", itm);
+                                hdsiQuery.Add(parmMap.ModelQuery + ".value", itm);
                         }
                         break;
-                    case "concept":
+                    case QueryParameterRewriteType.Concept:
                         foreach (var itm in value)
                         {
                             if (itm.Contains("|"))
@@ -365,41 +414,41 @@ namespace SanteDB.Messaging.FHIR.Util
                                 s_tracer.TraceInfo("Have translated FHIR domain {0} to {1}", codeSystemUri, codeSystem?.Name);
 
                                 if (codeSystem != null)
-                                    hdsiQuery.Add(String.Format("{0}.referenceTerm[{1}].term.mnemonic", parmMap.ModelName, codeSystem.Name), segs[1]);
+                                    hdsiQuery.Add(String.Format("{0}.referenceTerm[{1}].term.mnemonic", parmMap.ModelQuery, codeSystem.Name), segs[1]);
                                 else
-                                    hdsiQuery.Add(String.Format("{0}.mnemonic", parmMap.ModelName), segs[1]);
+                                    hdsiQuery.Add(String.Format("{0}.mnemonic", parmMap.ModelQuery), segs[1]);
                             }
                             else
-                                hdsiQuery.Add(parmMap.ModelName + ".referenceTerm.term.mnemonic", itm);
+                                hdsiQuery.Add(parmMap.ModelQuery + ".referenceTerm.term.mnemonic", itm);
                         }
                         break;
-                    case "reference":
+                    case QueryParameterRewriteType.Reference:
                         foreach (var itm in value)
                         {
                             if (itm.Contains("/"))
                             {
                                 var segs = itm.Split('/');
-                                hdsiQuery.Add(parmMap.ModelName, segs[1]);
+                                hdsiQuery.Add(parmMap.ModelQuery, segs[1]);
                             }
                             else
-                                hdsiQuery.Add(parmMap.ModelName, itm);
+                                hdsiQuery.Add(parmMap.ModelQuery, itm);
                         }
                         break;
-                    case "tag":
+                    case QueryParameterRewriteType.Tag:
                         foreach (var itm in value)
                         {
                             if (itm.Contains("|"))
                             {
                                 var segs = itm.Split('|');
-                                hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelName, segs[0]), segs[1]);
+                                hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, segs[0]), segs[1]);
                             }
                             else
-                                hdsiQuery.Add(parmMap.ModelName, itm);
+                                hdsiQuery.Add(parmMap.ModelQuery, itm);
                         }
                         break;
 
                     default:
-                        hdsiQuery.Add(parmMap.ModelName, value);
+                        hdsiQuery.Add(parmMap.ModelQuery, value);
                         break;
                 }
             }

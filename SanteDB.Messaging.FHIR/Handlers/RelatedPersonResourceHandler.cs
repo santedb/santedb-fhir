@@ -1,17 +1,13 @@
 ﻿using Hl7.Fhir.Model;
-using RestSrvr;
+using SanteDB.Core.Model;
+using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.DataTypes;
+using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.Text;
-using SanteDB.Core.Model;
-using SanteDB.Core;
-using SanteDB.Core.Services;
-using SanteDB.Core.Model.DataTypes;
 using System.Linq;
-using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Model.Constants;
-using SanteDB.Core.Security;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -32,7 +28,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo, IRepositoryService<Core.Model.Roles.Patient> patientRepository, IRepositoryService<EntityRelationship> repo, IRepositoryService<Concept> conceptRepository) : base(repo)
         {
-            this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r=>r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(c => c.Key.Value).ToList();
+            this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(c => c.Key.Value).ToList();
             this.m_patientRepository = patientRepository;
             this.m_personRepository = personRepo;
         }
@@ -99,6 +95,49 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
+        /// Query for substance administrations that aren't immunizations
+        /// </summary>
+        /// <param name="query">The query.</param>
+        /// <param name="offset">The offset.</param>
+        /// <param name="count">The count.</param>
+        /// <param name="totalResults">The total results.</param>
+        /// <param name="queryId">The unique query state identifier</param>
+        /// <returns>Returns the list of models which match the given parameters.</returns>
+        protected override IEnumerable<EntityRelationship> Query(System.Linq.Expressions.Expression<Func<EntityRelationship, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        {
+
+            System.Linq.Expressions.Expression typeReference = null;
+            System.Linq.Expressions.Expression typeProperty = System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(EntityRelationship).GetProperty(nameof(EntityRelationship.RelationshipTypeKey)));
+            foreach (var tr in this.m_relatedPersons)
+            {
+                var checkExpression = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(typeProperty, typeof(Guid)), System.Linq.Expressions.Expression.Constant(tr));
+                if (typeReference == null)
+                {
+                    typeReference = checkExpression;
+                }
+                else
+                {
+                    typeReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.OrElse, typeReference, checkExpression);
+                }
+            }
+
+            var classReference = System.Linq.Expressions.Expression.MakeBinary(
+                System.Linq.Expressions.ExpressionType.Equal,
+                System.Linq.Expressions.Expression.Convert(
+                    System.Linq.Expressions.Expression.MakeMemberAccess(
+                        System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(EntityRelationship).GetProperty(nameof(EntityRelationship.TargetEntity))),
+                        typeof(Entity).GetProperty(nameof(Entity.ClassConceptKey))
+                    ), typeof(Guid)), System.Linq.Expressions.Expression.Constant(EntityClassKeys.Person));
+
+            query = System.Linq.Expressions.Expression.Lambda<Func<EntityRelationship, bool>>(System.Linq.Expressions.Expression.AndAlso(typeReference, System.Linq.Expressions.Expression.AndAlso(classReference, query.Body)), query.Parameters);
+
+            if (queryId == Guid.Empty)
+                return this.m_repository.Find(query, offset, count, out totalResults);
+            else
+                return (this.m_repository as IPersistableQueryRepositoryService<EntityRelationship>).Find(query, offset, count, out totalResults, queryId);
+        }
+
+        /// <summary>
         /// Map the related person to model
         /// </summary>
         protected override Core.Model.Entities.EntityRelationship MapToModel(RelatedPerson resource)
@@ -121,7 +160,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Find the source of the relationship
             var sourceEntity = DataTypeConverter.ResolveEntity(resource.Patient, resource);
-            if(sourceEntity == null)
+            if (sourceEntity == null)
             {
                 throw new KeyNotFoundException($"Could not resolve {resource.Patient.Reference}");
             }
@@ -146,7 +185,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // The source of the object is not a patient (perhaps an MDM entity)
-            if (sourceEntity is Core.Model.Roles.Patient patientSource) 
+            if (sourceEntity is Core.Model.Roles.Patient patientSource)
             {
                 relationship.SourceEntity = patientSource;
             }
@@ -156,7 +195,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             var person = relationship.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person;
-            
+
             // Set the relationship
             relationship.ClassificationKey = RelationshipClassKeys.ReferencedObjectLink;
             relationship.RelationshipTypeKey = relationshipTypes.First();
