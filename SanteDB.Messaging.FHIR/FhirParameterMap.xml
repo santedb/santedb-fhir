@@ -230,4 +230,16 @@
     <map fhir="identifier" model="identifier" type="identifier"/>
     <map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/substance-status"/>
   </type>
+
+  <type model="Hl7.Fhir.Model.RelatedPerson, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+    <map fhir="name" model="target@Person.name.component.value"/>
+    <map fhir="family" model="target@Person.name.component[Family].value"/>
+    <map fhir="given" model="target@Person.name.component[Given].value"/>
+    <map fhir="address" model="target@Person.address.component.value"/>
+    <map fhir="state" model="target@Person.address.component[State].value"/>
+    <map fhir="birthdate" model="target@Person.dateOfBirth"/>
+    <map fhir="gender" model="target@Person.genderConcept" type="concept"/>
+    <map fhir="identifier" model="target@Person.identifier" type="identifier"/>
+    <map fhir="date" model="creationTime" />
+  </type>
 </QueryParameterMap>

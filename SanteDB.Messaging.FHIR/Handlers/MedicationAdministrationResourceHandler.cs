@@ -40,12 +40,33 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class MedicationAdministrationResourceHandler : RepositoryResourceHandlerBase<MedicationAdministration, SubstanceAdministration>
     {
+
+
+        private readonly Guid[] IZ_TYPES = new Guid[] {
+            Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47"), Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178"), Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5")
+        };
+
+
+        /// <summary>
+        /// Create a new resource handler
+        /// </summary>
+        public MedicationAdministrationResourceHandler(IRepositoryService<SubstanceAdministration> repo) : base(repo)
+        {
+
+        }
+
+        /// <summary>
+        /// Can map the specified object
+        /// </summary>
+        public override bool CanMapObject(object instance) => instance is Immunization ||
+            instance is SubstanceAdministration sbadm && !IZ_TYPES.Contains(sbadm.TypeConceptKey.GetValueOrDefault());
+
         /// <summary>
         /// Maps the object to model to fhir
         /// </summary>
-        protected override MedicationAdministration MapToFhir(SubstanceAdministration model, RestOperationContext restOperationContext)
+        protected override MedicationAdministration MapToFhir(SubstanceAdministration model)
         {
-            var retVal = DataTypeConverter.CreateResource<MedicationAdministration>(model, restOperationContext);
+            var retVal = DataTypeConverter.CreateResource<MedicationAdministration>(model);
 
             retVal.Identifier = model.LoadCollection<ActIdentifier>(nameof(Act.Identifiers)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
             retVal.StatusReason = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Act.ReasonConcept))) };
@@ -76,16 +97,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var consumableRelationship = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Consumable);
             var productRelationship = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Product);
             if (consumableRelationship != null)
-                retVal.Medication = DataTypeConverter.CreateVersionedReference<Medication>(consumableRelationship.LoadProperty<ManufacturedMaterial>("PlayerEntity"), restOperationContext);
+                retVal.Medication = DataTypeConverter.CreateVersionedReference<Medication>(consumableRelationship.LoadProperty<ManufacturedMaterial>("PlayerEntity"));
             else if (productRelationship != null)
             {
-                retVal.Medication = DataTypeConverter.CreateVersionedReference<Substance>(productRelationship.LoadProperty<Material>("PlayerEntity"), restOperationContext);
+                retVal.Medication = DataTypeConverter.CreateVersionedReference<Substance>(productRelationship.LoadProperty<Material>("PlayerEntity"));
                 //retVal.Medication = DataTypeConverter.ToFhirCodeableConcept(productRelationship.LoadProperty<Material>("PlayerEntity").LoadProperty<Concept>("TypeConcept"));
             }
 
             var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
             if (rct != null)
-                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"), restOperationContext);
+                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
 
             // Encounter
             var erService = ApplicationServiceContext.Current.GetService<IDataPersistenceService<EntityRelationship>>();
@@ -93,7 +114,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var enc = erService.Query(o => o.TargetEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.ObsoleteVersionSequenceId == null, 0, 10,  out tr, AuthenticationContext.Current.Principal);
             if (enc != null)
             {
-                retVal.EventHistory = enc.Select(o => DataTypeConverter.CreateNonVersionedReference<Encounter>(o.TargetEntityKey, restOperationContext)).ToList();
+                retVal.EventHistory = enc.Select(o => DataTypeConverter.CreateNonVersionedReference<Encounter>(o.TargetEntityKey)).ToList();
                 // TODO: Encounter
             }
 
@@ -105,7 +126,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (performer != null)
                 retVal.Performer = performer.Select(o => new MedicationAdministration.PerformerComponent()
                 {
-                    Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)), restOperationContext)
+                    Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
                 }).ToList();
 
 
@@ -126,7 +147,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map from FHIR to model
         /// </summary>
-        protected override SubstanceAdministration MapToModel(MedicationAdministration resource, RestOperationContext restOperationContext)
+        protected override SubstanceAdministration MapToModel(MedicationAdministration resource)
         {
             throw new NotImplementedException();
         }
@@ -168,6 +189,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent() { Code = o });
+        }
+
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get reverse included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
         }
     }
 }

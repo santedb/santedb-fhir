@@ -19,6 +19,8 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.Interfaces;
+using SanteDB.Messaging.FHIR.Configuration;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -51,6 +53,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public static void RegisterResourceHandler(IFhirResourceHandler handler)
         {
+            if(handler == null)
+            {
+                throw new ArgumentNullException(nameof(handler), "Handler is required");
+            }
             s_messageProcessors.Add(handler.ResourceType, handler);
         }
 
@@ -91,13 +97,30 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
       
         /// <summary>
+        /// Get mapper for the specified object
+        /// </summary>
+        public static IFhirResourceMapper GetMapperForInstance(Object instance)
+        {
+            return GetMappersFor(instance.GetType()).FirstOrDefault(o => o.CanMapObject(instance));
+        }
+
+        /// <summary>
         /// Gets the mapper for <paramref name="resourceOrModelType"/>
         /// </summary>
         /// <param name="resourceOrModelType">The FHIR type or CDR type</param>
         /// <returns>The mapper (if present)</returns>
-        public static IFhirResourceMapper GetMapperFor(Type resourceOrModelType)
+        public static IEnumerable<IFhirResourceMapper> GetMappersFor(Type resourceOrModelType)
         {
-            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().FirstOrDefault(o => o.CanonicalType == resourceOrModelType || o.ResourceClrType == resourceOrModelType);
+            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().Where(o => o.CanonicalType == resourceOrModelType || o.ResourceClrType == resourceOrModelType);
+        }
+
+        /// <summary>
+        /// Gets the mapper for <paramref name="resourceOrModelType"/>
+        /// </summary>
+        /// <returns>The mapper (if present)</returns>
+        public static IEnumerable<IFhirResourceMapper> GetMappersFor(ResourceType resourceType)
+        {
+            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().Where(o => o.ResourceType == resourceType);
         }
 
         /// <summary>
@@ -110,6 +133,33 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var structureDef = o.GetStructureDefinition();
                 return resourceDef;
             });
+        }
+
+        /// <summary>
+        /// Initialize based on configuration
+        /// </summary>
+        public static void Initialize(FhirServiceConfigurationSection m_configuration , IServiceManager serviceManager)
+        {
+            // Configuration 
+            if (m_configuration.Resources?.Any() == true)
+            {
+                foreach (var t in serviceManager.CreateInjectedOfAll<IFhirResourceHandler>())
+                {
+                    if (m_configuration.Resources.Any(r => r == t.ResourceType.ToString()))
+                        FhirResourceHandlerUtil.RegisterResourceHandler(t);
+                    else if (t is IDisposable disp)
+                        disp.Dispose();
+                }
+            }
+            else
+            {
+                // Old configuration
+                foreach (Type t in m_configuration.ResourceHandlers.Select(o => o.Type))
+                {
+                    if (t != null)
+                        FhirResourceHandlerUtil.RegisterResourceHandler(serviceManager.CreateInjected(t) as IFhirResourceHandler);
+                }
+            }
         }
 
         /// <summary>

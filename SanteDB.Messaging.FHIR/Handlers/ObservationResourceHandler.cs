@@ -24,6 +24,7 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -38,12 +39,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ObservationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Observation, Core.Model.Acts.Observation>
     {
+
+        /// <summary>
+		/// Create new resource handler
+		/// </summary>
+		public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo) : base(repo)
+        {
+
+        }
+
         /// <summary>
         /// Map to FHIR
         /// </summary>
-        protected override Hl7.Fhir.Model.Observation MapToFhir(Core.Model.Acts.Observation model, RestOperationContext restOperationContext)
+        protected override Hl7.Fhir.Model.Observation MapToFhir(Core.Model.Acts.Observation model)
         {
-            var retVal = DataTypeConverter.CreateResource<Hl7.Fhir.Model.Observation>(model, restOperationContext);
+            var retVal = DataTypeConverter.CreateResource<Hl7.Fhir.Model.Observation>(model);
             retVal.Identifier = model.LoadCollection<ActIdentifier>(nameof(Act.Identifiers)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
 
             switch (model.StatusConceptKey.ToString().ToUpper())
@@ -80,14 +90,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
             if (rct != null)
             {
-                retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(rct.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)), restOperationContext);
+                retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(rct.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)));
             }
 
             // Performer
             var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer);
             if (prf != null)
             {
-                retVal.Performer = prf.Select(o=> DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)), restOperationContext)).ToList();
+                retVal.Performer = prf.Select(o=> DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))).ToList();
             }
 
             retVal.Issued = model.CreationTime;
@@ -117,7 +127,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map to model
         /// </summary>
-        protected override Core.Model.Acts.Observation MapToModel(Hl7.Fhir.Model.Observation resource, RestOperationContext restOperationContext)
+        protected override Core.Model.Acts.Observation MapToModel(Hl7.Fhir.Model.Observation resource)
         {
             throw new NotImplementedException();
         }
@@ -175,7 +185,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Return FHIR query result
             return new FhirQueryResult("Observation")
             {
-                Results = hdsiResults.Select(o => this.MapToFhir(o, restOperationContext)).OfType<Resource>().ToList(),
+                Results = hdsiResults.Select(this.MapToFhir).OfType<Resource>().ToList(),
                 Query = query,
                 TotalResults = totalResults
             };
@@ -196,5 +206,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get reverse includes
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

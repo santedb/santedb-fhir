@@ -44,6 +44,9 @@ namespace SanteDB.Messaging.FHIR.Util
             { "\\\\", "\\#005C" },
         };
 
+        //Base path
+        private static string s_basePath = String.Empty;
+
         /// <summary>
         /// Escape a string
         /// </summary>
@@ -69,7 +72,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Create a feed
         /// </summary>
-        internal static Bundle CreateBundle(FhirQueryResult result)
+        public static Bundle CreateBundle(FhirQueryResult result)
         {
 
             Bundle retVal = new Bundle();
@@ -106,18 +109,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         queryUri += String.Format("_stateid={0}&", queryResult.Query.QueryId);
                 }
 
-                // Format
-                string format = RestOperationContext.Current.IncomingRequest.QueryString["_format"];
-                if (String.IsNullOrEmpty(format))
-                    format = "xml";
-                else if (format == "application/fhir+xml")
-                    format = "xml";
-                else if (format == "application/fhir+json")
-                    format = "json";
-
-                if (!queryUri.Contains("_format"))
-                    queryUri += String.Format("_format={0}&", format);
-
+               
                 // Self URI
                 if (queryResult != null && queryResult.TotalResults > queryResult.Results.Count)
                 {
@@ -190,17 +182,19 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Sets the base location
+        /// </summary>
+        internal static void SetBaseLocation(string absolutePath)
+        {
+            s_basePath = absolutePath;
+        }
+
+        /// <summary>
         /// Get BASE URI
         /// </summary>
         internal static string GetBaseUri()
         {
-            String baseUri = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>()?.ResourceBaseUri;
-            if (String.IsNullOrEmpty(baseUri))
-            {
-                var inUri = RestOperationContext.Current.IncomingRequest.Url;
-                baseUri = $"{inUri.Scheme}://{inUri.Host}:{inUri.Port}/{inUri.LocalPath}";
-            }
-            return baseUri;
+            return s_basePath;
         }
     }
 }

@@ -37,12 +37,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class SubstanceResourceHandler : RepositoryResourceHandlerBase<Substance, Material>
 	{
+
+		/// <summary>
+		/// Create new resource handler
+		/// </summary>
+        public SubstanceResourceHandler(IRepositoryService<Material> repo) : base(repo)
+        {
+
+        }
+
 		/// <summary>
 		/// Map the substance to FHIR
 		/// </summary>
-		protected override Substance MapToFhir(Material model, RestOperationContext restOperationContext)
+		protected override Substance MapToFhir(Material model)
 		{
-			var retVal = DataTypeConverter.CreateResource<Substance>(model, restOperationContext);
+			var retVal = DataTypeConverter.CreateResource<Substance>(model);
 
 			// Identifiers
 			retVal.Identifier = model.Identifiers.Select(o => DataTypeConverter.ToFhirIdentifier<Entity>(o)).ToList();
@@ -100,7 +109,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="resource">The resource to be mapped</param>
         /// <param name="restOperationContext">The operation context under which this method is being called</param>
         /// <returns>The mapped material</returns>
-		protected override Material MapToModel(Substance resource, RestOperationContext restOperationContext)
+		protected override Material MapToModel(Substance resource)
 		{
 			throw new NotImplementedException();
 		}
@@ -118,6 +127,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent() { Code = o });
+        }
+
+        protected override IEnumerable<Resource> GetIncludes(Material resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override IEnumerable<Resource> GetReverseIncludes(Material resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
         }
     }
 }

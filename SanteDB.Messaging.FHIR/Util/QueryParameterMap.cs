@@ -25,6 +25,26 @@ namespace SanteDB.Messaging.FHIR.Util
 {
 
     /// <summary>
+    /// Identifies the type of rewrite
+    /// </summary>
+    [XmlType(nameof(QueryParameterRewriteType), Namespace = "http://santedb.org/model/fhir")]
+    public enum QueryParameterRewriteType
+    {
+        [XmlEnum("concept")]
+        Concept,
+        [XmlEnum("identifier")]
+        Identifier,
+        [XmlEnum("reference")]
+        Reference,
+        [XmlEnum("tag")]
+        Tag,
+        [XmlEnum("string")]
+        String,
+        [XmlEnum("int")]
+        Int
+    }
+
+    /// <summary>
     /// Represents a query parameter map
     /// </summary>
     [XmlType(nameof(QueryParameterMap), Namespace = "http://santedb.org/model/fhir")]
@@ -52,7 +72,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 if (myMapping != null)
                 {
                     // Remove any overridden mappings
-                    myMapping.Map.RemoveAll(o => itm.Map.Any(i => i.FhirName == o.FhirName));
+                    myMapping.Map.RemoveAll(o => itm.Map.Any(i => i.FhirQuery == o.FhirQuery));
                     // Add overridden mappings
                     myMapping.Map.AddRange(itm.Map);
                 }
@@ -105,19 +125,19 @@ namespace SanteDB.Messaging.FHIR.Util
         /// The model query parameter
         /// </summary>
         [XmlAttribute("model")]
-        public String ModelName { get; set; }
+        public String ModelQuery { get; set; }
 
         /// <summary>
         /// The FHIR name
         /// </summary>
         [XmlAttribute("fhir")]
-        public String FhirName { get; set; }
+        public String FhirQuery { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the fhir parmaeter
         /// </summary>
         [XmlAttribute("type")]
-        public String FhirType { get; set; }
+        public QueryParameterRewriteType FhirType { get; set; }
 
         /// <summary>
         /// Gets or sets the textual description of the query parameter
