@@ -73,7 +73,7 @@ namespace SanteDB.Messaging.FHIR.Util
         static QueryRewriter()
         {
             OpenMapping(typeof(QueryRewriter).Assembly.GetManifestResourceStream("SanteDB.Messaging.FHIR.FhirParameterMap.xml"));
-            var externMap = Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "FhirParameterMap.xml");
+            var externMap = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FhirParameterMap.xml");
 
             if (File.Exists(externMap))
                 using (var s = File.OpenRead(externMap))

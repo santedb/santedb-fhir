@@ -21,6 +21,7 @@ using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Applets.ViewModel.Json;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
@@ -52,6 +53,48 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		where TModel : IdentifiedData, new()
 
 	{
+		
+		/// <summary>
+		/// Include instruction
+		/// </summary>
+		protected struct IncludeInstruction
+        {
+			/// <summary>
+			/// Create an include instruction
+			/// </summary>
+            public IncludeInstruction(ResourceType type, String path)
+            {
+				this.Type = type;
+				this.JoinPath = path;
+            }
+
+			/// <summary>
+			/// Query instruction
+			/// </summary>
+            public IncludeInstruction(String queryInstruction)
+            {
+				var parsed = queryInstruction.Split(':');
+				if(parsed.Length != 2)
+                {
+					throw new ArgumentOutOfRangeException($"{queryInstruction} is not a valid include instruction");
+                }
+
+				this.Type = EnumUtility.ParseLiteral<ResourceType>(parsed[0]).Value;
+				this.JoinPath = parsed[1];
+            }
+			/// <summary>
+			/// The type of include
+			/// </summary>
+            public ResourceType Type { get; set; }
+
+			/// <summary>
+			/// The path to join on
+			/// </summary>
+            public String JoinPath { get; set; }
+
+			
+        }
+
 		/// <summary>
 		/// The trace source instance.
 		/// </summary>
@@ -104,14 +147,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				throw new InvalidDataException();
 
 			// We want to map from TFhirResource to TModel
-			var modelInstance = this.MapToModel(target as TFhirResource, RestOperationContext.Current);
+			var modelInstance = this.MapToModel(target as TFhirResource);
 			if (modelInstance == null)
 				throw new ArgumentException("Model invalid");
 
 			var result = this.Create(modelInstance, mode);
 
             // Return fhir operation result
-            return this.MapToFhir(result, RestOperationContext.Current);
+            return this.MapToFhir(result);
 		}
 
         /// <summary>
@@ -138,7 +181,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var result = this.Delete(guidId);
 
             // Return fhir operation result
-            return this.MapToFhir(result, RestOperationContext.Current);
+            return this.MapToFhir(result);
 		}
 
         /// <summary>
@@ -194,17 +237,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			int totalResults = 0;
 			var predicate = QueryExpressionParser.BuildLinqExpression<TModel>(hdsiQuery);
 			var hdsiResults = this.Query(predicate, query.QueryId, query.Start, query.Quantity, out totalResults);
-			var restOperationContext = RestOperationContext.Current;
-
+			
             var auth = AuthenticationContext.Current;
 			// Return FHIR query result
-			return new FhirQueryResult(typeof(TFhirResource).Name)
+			var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
 			{
 				Results = hdsiResults.AsParallel().Select(o => {
                     try
                     {
                         AuthenticationContext.Current = auth;
-                        return this.MapToFhir(o, restOperationContext);
+                        return this.MapToFhir(o);
                     }
                     finally
                     {
@@ -214,6 +256,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				Query = query,
 				TotalResults = totalResults
 			};
+
+			// Include or ref include?
+			if (parameters["_include"] != null) // TODO: _include:iterate (fhir is crazy)
+			{
+				retVal.Results = retVal.Results.Union(hdsiResults.SelectMany(h=>this.GetIncludes(h, parameters["_include"].Split(',').Select(o=>new IncludeInstruction(o))))).ToList();
+			}
+			if (parameters["_revinclude"] != null) // TODO: _revinclude:iterate (fhir is crazy)
+			{
+				retVal.Results = retVal.Results.Union(hdsiResults.SelectMany(h => this.GetReverseIncludes(h, parameters["_revinclude"].Split(',').Select(o => new IncludeInstruction(o))))).ToList();
+			}
+
+			return retVal;
 		}
 
 		/// <summary>
@@ -242,7 +296,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				throw new KeyNotFoundException();
 
             // FHIR Operation result
-            return this.MapToFhir(result, RestOperationContext.Current);
+            return this.MapToFhir(result);
 		}
 
 		/// <summary>
@@ -269,7 +323,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // We want to map from TFhirResource to TModel
             target.Id = id;
-			var modelInstance = this.MapToModel(target as TFhirResource, RestOperationContext.Current);
+			var modelInstance = this.MapToModel(target as TFhirResource);
 			if (modelInstance == null)
 				throw new ArgumentException("Invalid Request");
 
@@ -287,7 +341,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			var result = this.Update(modelInstance, mode);
 
             // Return fhir operation result
-            return this.MapToFhir(result, RestOperationContext.Current);
+            return this.MapToFhir(result);
 		}
 
 		/// <summary>
@@ -311,17 +365,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// Maps a model instance to a FHIR instance.
 		/// </summary>
 		/// <param name="model">The model.</param>
-        /// <param name="restOperationContext">The operation context the method is being called on</param>
 		/// <returns>Returns the mapped FHIR resource.</returns>
-		protected abstract TFhirResource MapToFhir(TModel model, RestOperationContext restOperationContext);
+		protected abstract TFhirResource MapToFhir(TModel model);
 
 		/// <summary>
 		/// Maps a FHIR resource to a model instance.
 		/// </summary>
 		/// <param name="resource">The resource.</param>
-        /// <param name="restOperationContext">The operation context on which the operation is being called.</param>
 		/// <returns>Returns the mapped model.</returns>
-		protected abstract TModel MapToModel(TFhirResource resource, RestOperationContext restOperationContext);
+		protected abstract TModel MapToModel(TFhirResource resource);
+
+		/// <summary>
+		/// Gets includes
+		/// </summary>
+		protected abstract IEnumerable<Resource> GetIncludes(TModel resource, IEnumerable<IncludeInstruction> includePaths);
+
+		/// <summary>
+		/// Gets the revers include paths
+		/// </summary>
+		protected abstract IEnumerable<Resource> GetReverseIncludes(TModel resource, IEnumerable<IncludeInstruction> reverseIncludePaths);
 
 		/// <summary>
 		/// Queries the specified query.
@@ -378,7 +440,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // FHIR Operation result
             return new FhirQueryResult(typeof(TFhirResource).Name)
             {
-                Results = results.Select(o => this.MapToFhir(o, RestOperationContext.Current)).OfType<Resource>().ToList()
+                Results = results.Select(this.MapToFhir).OfType<Resource>().ToList()
             };
         }
 
@@ -387,7 +449,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
         public Resource MapToFhir(IdentifiedData modelInstance)
         {
-			return this.MapToFhir((TModel)modelInstance, RestOperationContext.Current);
+			return this.MapToFhir((TModel)modelInstance);
         }
 
 		/// <summary>
@@ -395,7 +457,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
         public IdentifiedData MapToModel(Resource resourceInstance)
         {
-			return this.MapToModel((TFhirResource)resourceInstance, RestOperationContext.Current);
+			return this.MapToModel((TFhirResource)resourceInstance);
         }
+
+		/// <summary>
+		/// True if this handler can process the object
+		/// </summary>
+		public virtual bool CanMapObject(object instance) => instance is TModel || instance is TFhirResource;
     }
 }

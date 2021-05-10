@@ -38,15 +38,33 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ImmunizationResourceHandler : RepositoryResourceHandlerBase<Immunization, SubstanceAdministration>
 	{
-		/// <summary>
-		/// Maps the substance administration to FHIR.
-		/// </summary>
-		/// <param name="model">The model.</param>
+        private readonly Guid INITIAL_IMMUNIZATION = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
+        private readonly Guid IMMUNIZATION = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
+        private readonly Guid BOOSTER_IMMUNIZATION = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
+
+        /// <summary>
+        /// Create a new resource handler
+        /// </summary>
+        public ImmunizationResourceHandler(IRepositoryService<SubstanceAdministration> repo) : base(repo)
+        {
+
+        }
+
+        /// <summary>
+        /// Can map object
+        /// </summary>
+        public override bool CanMapObject(object instance) => instance is Immunization ||
+            instance is SubstanceAdministration sbadm && (sbadm.TypeConceptKey == BOOSTER_IMMUNIZATION || sbadm.TypeConceptKey == INITIAL_IMMUNIZATION || sbadm.TypeConceptKey == IMMUNIZATION);
+
+        /// <summary>
+        /// Maps the substance administration to FHIR.
+        /// </summary>
+        /// <param name="model">The model.</param>
         /// <param name="restOperationContext">The operation context in which this method is being called</param>
-		/// <returns>Returns the mapped FHIR resource.</returns>
-		protected override Immunization MapToFhir(SubstanceAdministration model, RestOperationContext restOperationContext)
+        /// <returns>Returns the mapped FHIR resource.</returns>
+        protected override Immunization MapToFhir(SubstanceAdministration model)
 		{
-			var retVal = DataTypeConverter.CreateResource<Immunization>(model, restOperationContext);
+			var retVal = DataTypeConverter.CreateResource<Immunization>(model);
 
             retVal.DoseQuantity = new SimpleQuantity()
             {
@@ -87,7 +105,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			var rct = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
 			if (rct != null)
 			{
-				retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"), restOperationContext);
+				retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
 			}
 
 			// Performer
@@ -96,7 +114,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Performer = prf.Select(o =>
                     new Immunization.PerformerComponent()
                     {
-                        Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)), restOperationContext)
+                        Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
                     }).ToList();
 
 			// Protocol
@@ -122,7 +140,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <param name="resource">The resource.</param>
         /// <param name="restOperationContext">The operation context in which this method is being called</param>
 		/// <returns>Returns the mapped model.</returns>
-		protected override SubstanceAdministration MapToModel(Immunization resource, RestOperationContext restOperationContext)
+		protected override SubstanceAdministration MapToModel(Immunization resource)
 		{
             var substanceAdministration = new SubstanceAdministration
             {
@@ -217,17 +235,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <returns>Returns the list of models which match the given parameters.</returns>
 		protected override IEnumerable<SubstanceAdministration> Query(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, Guid queryId, int offset, int count, out int totalResults)
 		{
-			Guid initialImmunization = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47"),
-				immunization = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178"),
-				boosterImmunization = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
-
+			
 			var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(StatusKeys.Completed));
 			var typeReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Or,
 				System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Or,
-					System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(initialImmunization)),
-					System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(immunization))
+					System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(INITIAL_IMMUNIZATION)),
+					System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(IMMUNIZATION))
 				),
-				System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(boosterImmunization))
+				System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(BOOSTER_IMMUNIZATION))
 			);
 
 			query = System.Linq.Expressions.Expression.Lambda<Func<SubstanceAdministration, bool>>(System.Linq.Expressions.Expression.AndAlso(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), typeReference), query.Parameters);
@@ -255,6 +270,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
-       
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get reverse included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

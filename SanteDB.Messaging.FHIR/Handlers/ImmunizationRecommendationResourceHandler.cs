@@ -75,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
 		/// <param name="model">The model.</param>
 		/// <returns>Returns the mapped FHIR resource.</returns>
-		protected override ImmunizationRecommendation MapToFhir(SubstanceAdministration model, RestOperationContext restOperationContext)
+		protected override ImmunizationRecommendation MapToFhir(SubstanceAdministration model)
 		{
 			ImmunizationRecommendation retVal = new ImmunizationRecommendation();
 
@@ -85,7 +85,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
 			var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget)?.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity));
 			if (rct != null)
-				retVal.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(rct, restOperationContext);
+				retVal.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(rct);
 
 			var mat = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Product).PlayerEntity;
 
@@ -128,7 +128,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <param name="resource">The resource.</param>
 		/// <returns>Returns the mapped model.</returns>
 		/// <exception cref="System.NotImplementedException"></exception>
-		protected override SubstanceAdministration MapToModel(ImmunizationRecommendation resource, RestOperationContext restOperationContext)
+		protected override SubstanceAdministration MapToModel(ImmunizationRecommendation resource)
 		{
 			throw new NotImplementedException();
 		}
@@ -187,6 +187,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				TypeRestfulInteraction.Read,
 				TypeRestfulInteraction.SearchType
             }.Select(o => new ResourceInteractionComponent() { Code = o });
+        }
+
+		/// <summary>
+		/// Get included resources
+		/// </summary>
+        protected override IEnumerable<Resource> GetIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+		/// <summary>
+		/// Get reverse includes
+		/// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
         }
     }
 }

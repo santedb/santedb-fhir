@@ -1,0 +1,187 @@
+﻿{
+  "resourceType": "Bundle",
+  "type": "history",
+  "entry": [
+    {
+      "fullUrl": "Patient/1",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "1",
+        "active": true,
+        "identifier": [
+          {
+            "use": "official",
+            "system": "http://santedb.org/fhir/test",
+            "value": "FHR-002"
+          }
+        ],
+        "name": [
+          {
+            "use": "usual",
+            "family": "SMITH",
+            "given": [
+              "JOHN"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "2012-04-25"
+      },
+      "request": {
+        "method": "POST",
+        "url": "Patient/1"
+      }
+    },
+    {
+      "fullUrl": "RelatedPerson/1",
+      "resource": {
+        "resourceType": "RelatedPerson",
+        "id": "1",
+        "identifier": [
+          {
+            "use": "official",
+            "system": "http://santedb.org/fhir/test",
+            "value": "FHR-00423"
+          }
+        ],
+        "patient": {
+          "reference": "Patient/1"
+        },
+        "relationship": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                "code": "MTH"
+              }
+            ]
+          }
+        ],
+        "name": [
+          {
+            "use": "usual",
+            "family": "SMITH",
+            "given": [
+              "SARAH"
+            ]
+          }
+        ],
+        "gender": "female"
+      },
+      "request": {
+        "method": "POST",
+        "url": "RelatedPerson/1"
+      }
+    },
+    {
+      "fullUrl": "Patient/2",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "2",
+        "active": true,
+        "identifier": [
+          {
+            "use": "official",
+            "system": "http://santedb.org/fhir/test",
+            "value": "FHR-004"
+          }
+        ],
+        "name": [
+          {
+            "use": "usual",
+            "family": "SMITH",
+            "given": [
+              "JANE"
+            ]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "2014-04-25"
+      },
+      "request": {
+        "method": "POST",
+        "url": "Patient/2"
+      }
+    },
+    {
+      "fullUrl": "RelatedPerson/2",
+      "resource": {
+        "resourceType": "RelatedPerson",
+        "id": "2",
+        "identifier": [
+          {
+            "use": "official",
+            "system": "http://santedb.org/fhir/test",
+            "value": "FHR-00423"
+          }
+        ],
+        "patient": {
+          "reference": "Patient/2"
+        },
+        "relationship": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                "code": "MTH"
+              }
+            ]
+          }
+        ],
+        "name": [
+          {
+            "use": "usual",
+            "family": "SMITH",
+            "given": [
+              "SARAH"
+            ]
+          }
+        ],
+        "gender": "female"
+      },
+      "request": {
+        "method": "POST",
+        "url": "RelatedPerson/2"
+      }
+    },
+    {
+      "fullUrl": "Patient/3",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "3",
+        "identifier": [
+          {
+            "use": "normal",
+            "system": "http://santedb.org/fhir/test",
+            "value": "FHR-00423"
+          }
+        ],
+        "name": [
+          {
+            "use": "usual",
+            "family": "SMITH",
+            "given": [
+              "SARAH"
+            ]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1984-05-25",
+        "link": [
+          {
+            "other": "RelatedPerson/1",
+            "type": "see-also"
+          },
+          {
+            "other": "RelatedPerson/2",
+            "type": "see-also"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "url": "Patient/3"
+      }
+    }
+  ]
+}

@@ -22,6 +22,7 @@ using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -35,12 +36,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class LocationResourceHandler : RepositoryResourceHandlerBase<Location, Place>
     {
+
+        /// <summary>
+		/// Create new resource handler
+		/// </summary>
+        public LocationResourceHandler(IRepositoryService<Place> repo) : base(repo)
+        {
+
+        }
+
         /// <summary>
         /// Map the inbound place to a FHIR model
         /// </summary>
-        protected override Location MapToFhir(Place model, RestOperationContext restOperationContext)
+        protected override Location MapToFhir(Place model)
         {
-            Location retVal = DataTypeConverter.CreateResource<Location>(model, restOperationContext);
+            Location retVal = DataTypeConverter.CreateResource<Location>(model);
             retVal.Identifier = model.LoadCollection<EntityIdentifier>("Identifiers").Select(o => DataTypeConverter.ToFhirIdentifier<Entity>(o)).ToList();
 
             // Map status
@@ -82,7 +92,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Part of?
             var parent = model.LoadCollection<EntityRelationship>(nameof(Entity.Relationships)).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
             if (parent != null)
-                retVal.PartOf = DataTypeConverter.CreateVersionedReference<Location>(parent.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)), restOperationContext);
+                retVal.PartOf = DataTypeConverter.CreateVersionedReference<Location>(parent.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)));
 
             return retVal;
         }
@@ -93,7 +103,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="resource">The resource to be mapped</param>
         /// <param name="restOperationContext">The operation context under which this method is being called</param>
         /// <returns></returns>
-		protected override Place MapToModel(Location resource, RestOperationContext restOperationContext)
+		protected override Place MapToModel(Location resource)
         {
             throw new NotImplementedException();
         }
@@ -111,6 +121,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent() { Code = o });
+        }
+
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(Place resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Get reverse includes
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(Place resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
         }
     }
 }

@@ -30,6 +30,7 @@ using SanteDB.Core.Model.Security;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Rest.Serialization;
+using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -137,24 +138,8 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
             else
                 response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
 
-            // Construct an error result
-            var errorResult = new OperationOutcome()
-            {
-                Issue = new List<OperationOutcome.IssueComponent>()
-            {
-                new OperationOutcome.IssueComponent() { Diagnostics  = error.Message, Severity = IssueSeverity.Error, Code = IssueType.Exception }
-            }
-            };
+            var errorResult = DataTypeConverter.CreateOperationOutcome(error);
 
-            if (error is DetectedIssueException dte)
-                foreach (var iss in dte.Issues)
-                    errorResult.Issue.Add(new OperationOutcome.IssueComponent()
-                    {
-                        Diagnostics = iss.Text,
-                        Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
-                        iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
-                        IssueSeverity.Information
-                    });
             // Return error in XML only at this point
             new FhirMessageDispatchFormatter().SerializeResponse(response, null, errorResult);
             return true;

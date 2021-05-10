@@ -40,12 +40,27 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ConditionResourceHandler : RepositoryResourceHandlerBase<Condition, CodedObservation>
 	{
+
+		/// <summary>
+		/// Create new resource handler
+		/// </summary>
+		public ConditionResourceHandler(IRepositoryService<CodedObservation> repo) : base(repo)
+		{
+			
+		}
+
+		/// <summary>
+		/// Can map 
+		/// </summary>
+		public override bool CanMapObject(object instance) => instance is Condition ||
+			instance is CodedObservation cobs && cobs.TypeConceptKey == ObservationTypeKeys.Condition;
+
 		/// <summary>
 		/// Map to FHIR
 		/// </summary>
-		protected override Condition MapToFhir(CodedObservation model, RestOperationContext restOperationContext)
+		protected override Condition MapToFhir(CodedObservation model)
 		{
-			var retVal = DataTypeConverter.CreateResource<Condition>(model, restOperationContext);
+			var retVal = DataTypeConverter.CreateResource<Condition>(model);
 
 			retVal.Identifier = model.LoadCollection<ActIdentifier>("Identifiers").Select(o => DataTypeConverter.ToFhirIdentifier<Act>(o)).ToList();
 
@@ -89,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (recordTarget != null)
             {
                 this.m_traceSource.TraceInfo("RCT: {0}", recordTarget.PlayerEntityKey);
-                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>("PlayerEntity"), restOperationContext);
+                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>("PlayerEntity"));
             }
 			// Onset
 			if (model.StartTime.HasValue || model.StopTime.HasValue)
@@ -104,7 +119,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			retVal.RecordedDateElement = new FhirDateTime(model.CreationTime);
 			var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
 			if (author != null)
-				retVal.Asserter = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.LoadProperty<Entity>("PlayerEntity"), restOperationContext);
+				retVal.Asserter = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.LoadProperty<Entity>("PlayerEntity"));
 
 			return retVal;
 		}
@@ -115,7 +130,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="resource">The FHIR condition to be mapped</param>
         /// <param name="restOperationContext">The REST operation context under which this method is called</param>
         /// <returns>The constructed model instance</returns>
-		protected override CodedObservation MapToModel(Condition resource, RestOperationContext restOperationContext)
+		protected override CodedObservation MapToModel(Condition resource)
 		{
 			throw new NotImplementedException();
 		}
@@ -144,6 +159,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent() { Code = o });
+        }
+
+		/// <summary>
+		/// Get included resources
+		/// </summary>
+        protected override IEnumerable<Resource> GetIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+		/// <summary>
+		/// Get reverse includes
+		/// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
         }
     }
 }

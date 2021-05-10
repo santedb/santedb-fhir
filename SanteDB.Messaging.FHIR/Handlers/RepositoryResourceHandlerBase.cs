@@ -24,6 +24,7 @@ using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
 using System;
 using System.Collections.Generic;
@@ -42,17 +43,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
 	{
 		// Repository service model
 		protected IRepositoryService<TModel> m_repository;
+		private IRepositoryService<Core.Model.Collection.Bundle> m_bundleRepository;
 
 		/// <summary>
 		/// CTOR
 		/// </summary>
-		public RepositoryResourceHandlerBase()
+		public RepositoryResourceHandlerBase(IRepositoryService<TModel> repository)
 		{
-            ApplicationServiceContext.Current.Started += (o, e) =>
-            {
-                this.m_repository = ApplicationServiceContext.Current.GetService<IRepositoryService<TModel>>();
-
-            };
+			this.m_repository = repository;
+			this.m_bundleRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Collection.Bundle>>();
 		}
 
 		/// <summary>
@@ -60,7 +59,30 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
 		protected override TModel Create(TModel modelInstance, TransactionMode mode)
 		{
-			return this.m_repository.Insert(modelInstance);
+			if (modelInstance is ITargetedAssociation targetedAssociation)
+			{
+				// We may be creating multiple objects so let's do that
+				var transaction = new Core.Model.Collection.Bundle()
+				{
+					Item = new List<IdentifiedData>() { modelInstance }
+				};
+				if(targetedAssociation.TargetEntity != null)
+                {
+					transaction.Item.Insert(0, targetedAssociation.TargetEntity as IdentifiedData);
+                }
+				if(targetedAssociation.SourceEntity != null)
+                {
+					transaction.Item.Insert(0, targetedAssociation.SourceEntity as IdentifiedData);
+                }
+				
+				// Create
+				this.m_bundleRepository.Insert(transaction);
+				return modelInstance;
+			}
+			else
+			{
+				return this.m_repository.Insert(modelInstance);
+			}
 		}
 
 		/// <summary>
@@ -126,9 +148,34 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <summary>
 		/// Perform an update operation
 		/// </summary>
-		protected override TModel Update(TModel model, TransactionMode mode)
+		protected override TModel Update(TModel modelInstance, TransactionMode mode)
 		{
-			return this.m_repository.Save(model);
+			if (modelInstance is ITargetedAssociation targetedAssociation)
+			{
+				// We may be creating multiple objects so let's do that
+				var transaction = new Core.Model.Collection.Bundle()
+				{
+					Item = new List<IdentifiedData>() { modelInstance }
+				};
+				if (targetedAssociation.TargetEntity != null)
+				{
+					transaction.Item.Insert(0, targetedAssociation.TargetEntity as IdentifiedData);
+				}
+				if (targetedAssociation.SourceEntity != null)
+				{
+					transaction.Item.Insert(0, targetedAssociation.SourceEntity as IdentifiedData);
+				}
+				
+
+				// Create
+				this.m_bundleRepository.Save(transaction);
+				return modelInstance;
+			}
+			else
+			{
+				return this.m_repository.Save(modelInstance);
+			}
+
 		}
 	}
 }

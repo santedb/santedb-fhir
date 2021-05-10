@@ -19,7 +19,9 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.Exceptions;
 using SanteDB.Core.Extensions;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
@@ -36,6 +38,7 @@ using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text.RegularExpressions;
+using static Hl7.Fhir.Model.OperationOutcome;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -55,14 +58,12 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the t resource.</typeparam>
         /// <param name="targetEntity">The target entity.</param>
         /// <returns>Returns a reference instance.</returns>
-        public static ResourceReference CreateVersionedReference<TResource>(IVersionedEntity targetEntity, RestOperationContext context)
+        public static ResourceReference CreateVersionedReference<TResource>(IVersionedEntity targetEntity)
             where TResource : DomainResource, new()
         {
             if (targetEntity == null)
                 throw new ArgumentNullException(nameof(targetEntity));
-            else if (context == null)
-                throw new ArgumentNullException(nameof(context));
-
+            
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
             var refer = new ResourceReference($"{fhirType}/{targetEntity.Key}/_history/{targetEntity.VersionKey}");
@@ -77,12 +78,11 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the resource.</typeparam>
         /// <param name="targetEntity">The target entity.</param>
         /// <returns>Returns a reference instance.</returns>
-        public static ResourceReference CreateNonVersionedReference<TResource>(IdentifiedData targetEntity, RestOperationContext context) where TResource : DomainResource, new()
+        public static ResourceReference CreateNonVersionedReference<TResource>(IdentifiedData targetEntity) where TResource : DomainResource, new()
         {
             if (targetEntity == null)
                 throw new ArgumentNullException(nameof(targetEntity));
-            else if (context == null)
-                throw new ArgumentNullException(nameof(context));
+           
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
@@ -113,13 +113,11 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the resource.</typeparam>
         /// <param name="targetEntity">The target entity.</param>
         /// <returns>Returns a reference instance.</returns>
-        public static ResourceReference CreateInternalReference<TResource>(IdentifiedData targetEntity, RestOperationContext context) where TResource : DomainResource, new()
+        public static ResourceReference CreateInternalReference<TResource>(IdentifiedData targetEntity) where TResource : DomainResource, new()
         {
             if (targetEntity == null)
                 throw new ArgumentNullException(nameof(targetEntity));
-            else if (context == null)
-                throw new ArgumentNullException(nameof(context));
-
+           
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
             var refer = new ResourceReference(targetEntity.Key.ToString());
             refer.Display = targetEntity.ToDisplay();
@@ -140,14 +138,44 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Create an operation outcome from the error
+        /// </summary>
+        public static OperationOutcome CreateOperationOutcome(Exception error)
+        {
+            while(error.InnerException != null)
+            {
+                error = error.InnerException;
+            }
+
+            // Construct an error result
+            var errorResult = new OperationOutcome()
+            {
+                Issue = new List<OperationOutcome.IssueComponent>()
+            {
+                new OperationOutcome.IssueComponent() { Diagnostics  = error.Message, Severity = IssueSeverity.Error, Code = IssueType.Exception }
+            }
+            };
+
+            if (error is DetectedIssueException dte)
+            {
+                errorResult.Issue = dte.Issues.Select(iss => new OperationOutcome.IssueComponent()
+                {
+                    Diagnostics = iss.Text,
+                    Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
+                        iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
+                        IssueSeverity.Information
+                }).ToList();
+            }
+            return errorResult;
+        }
+
+        /// <summary>
         /// Creates a FHIR reference.
         /// </summary>
         /// <typeparam name="TResource">The type of the resource.</typeparam>
         /// <returns>Returns a reference instance.</returns>
-        public static ResourceReference CreateNonVersionedReference<TResource>(Guid? targetKey, RestOperationContext context) where TResource : DomainResource, new()
+        public static ResourceReference CreateNonVersionedReference<TResource>(Guid? targetKey) where TResource : DomainResource, new()
         {
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
@@ -162,9 +190,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the t resource.</typeparam>
         /// <param name="resource">The resource.</param>
         /// <returns>TResource.</returns>
-        public static TResource CreateResource<TResource>(IVersionedEntity resource, RestOperationContext context) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IVersionedEntity resource) where TResource : Resource, new()
         {
-            var retVal = CreateResource<TResource>((IIdentifiedEntity)resource, context);
+            var retVal = CreateResource<TResource>((IIdentifiedEntity)resource);
             retVal.VersionId = resource.VersionKey.ToString();
             retVal.Meta.VersionId = resource.VersionKey?.ToString();
             return retVal;
@@ -173,7 +201,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Create non versioned resource
         /// </summary>
-        public static TResource CreateResource<TResource>(IIdentifiedEntity resource, RestOperationContext context) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IIdentifiedEntity resource) where TResource : Resource, new()
         { 
             var retVal = new TResource();
 
@@ -206,7 +234,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
             {
-                retVal.Meta.Profile = DataTypeConverter.AddExtensions(extendableObject, fhirExtendable, context);
+                retVal.Meta.Profile = DataTypeConverter.AddExtensions(extendableObject, fhirExtendable);
             }
 
             return retVal;
@@ -216,11 +244,11 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Add extensions from <paramref name="extendable"/> to <paramref name="fhirExtension"/>
         /// </summary>
         /// <returns>The extensions that were applied</returns>
-        public static IEnumerable<String> AddExtensions(Core.Model.Interfaces.IExtendable extendable, Hl7.Fhir.Model.IExtendable fhirExtension, RestOperationContext context)
+        public static IEnumerable<String> AddExtensions(Core.Model.Interfaces.IExtendable extendable, Hl7.Fhir.Model.IExtendable fhirExtension)
         {
             var resource = fhirExtension as Resource;
             // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
-            fhirExtension.Extension = extendable?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(o => DataTypeConverter.ToExtension(o, context)).ToList();
+            fhirExtension.Extension = extendable?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension).ToList();
 
             if (resource != null)
             {
@@ -445,7 +473,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Act Extension to Fhir Extension
         /// </summary>
-        public static Extension ToExtension(IModelExtension ext, RestOperationContext context)
+        public static Extension ToExtension(IModelExtension ext)
         {
 
             var extensionTypeService = ApplicationServiceContext.Current.GetService<IExtensionTypeRepository>();
@@ -465,7 +493,7 @@ namespace SanteDB.Messaging.FHIR.Util
             else if (ext.Value is Concept concept)
                 retVal.Value = ToFhirCodeableConcept(concept);
             else if (ext.Value is SanteDB.Core.Model.Roles.Patient patient)
-                retVal.Value = DataTypeConverter.CreateVersionedReference<Patient>(patient, context);
+                retVal.Value = DataTypeConverter.CreateVersionedReference<Patient>(patient);
             else
                 retVal.Value = new Base64Binary(ext.Data);
             return retVal;

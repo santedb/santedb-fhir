@@ -19,6 +19,7 @@
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
 using System;
+using System.Collections.Generic;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -52,5 +53,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>The model instance</returns>
         IdentifiedData MapToModel(Resource resourceInstance);
 
+        /// <summary>
+        /// True if <paramref name="instance"/> can be processed
+        /// </summary>
+        bool CanMapObject(object instance);
     }
 }

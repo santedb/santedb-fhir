@@ -1,0 +1,77 @@
+﻿{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "Patient/1",
+      "resource": {
+        "resourceType": "Patient",
+        "id": "1",
+        "active": true,
+        "identifier": [
+          {
+            "use": "official",
+            "system": "http://santedb.org/fhir/test",
+            "value": "FHR-1234"
+          }
+        ],
+        "name": [
+          {
+            "use": "usual",
+            "family": "SMITH",
+            "given": [
+              "SANDEEP"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "2017-04-03"
+      },
+      "request": {
+        "method": "POST",
+        "url": "Patient/1"
+      }
+    },
+    {
+      "fullUrl": "RelatedPerson/1",
+      "resource": {
+        "resourceType": "RelatedPerson",
+        "id": "1",
+        "patient": {
+          "reference": "Patient/1"
+        },
+        "relationship": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/v3-RoleCode",
+                "code": "MTH"
+              }
+            ]
+          }
+        ],
+        "identifier": [
+          {
+            "use": "official",
+            "system": "http://santedb.org/fhir/test",
+            "value": "FHR-9988"
+          }
+        ],
+        "name": [
+          {
+            "use": "usual",
+            "family": "SMITH",
+            "given": [
+              "SARAH"
+            ]
+          }
+        ],
+        "gender": "female"
+      },
+      "request": {
+        "method": "POST",
+        "url": "RelatedPerson/1"
+      }
+    }
+  ]
+}

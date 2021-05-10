@@ -129,7 +129,8 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 SummaryType? summaryType = SummaryType.False;
                 if (httpRequest.QueryString["_summary"] != null)
                     summaryType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<SummaryType>(httpRequest.QueryString["_summary"], true);
-
+                if (accepts == "*/*") // Any = null
+                    accepts = null;
                 contentType = accepts ?? contentType ?? formatParm;
                 if (result is Base baseObject)
                 {

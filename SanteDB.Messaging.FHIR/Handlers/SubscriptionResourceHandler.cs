@@ -241,7 +241,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
 
             // Construct the return subscription
-            var retVal = DataTypeConverter.CreateResource<Subscription>(model, restOperationContext);
+            var retVal = DataTypeConverter.CreateResource<Subscription>(model);
 
             // Map status based on current state in CDR
             retVal.Id = model.Name;
@@ -271,7 +271,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             };
 
             // TODO: Map the HDSI query syntax to FHIR PATH
-            var mapper = FhirResourceHandlerUtil.GetMapperFor(model.ResourceType);
+            var mapper = FhirResourceHandlerUtil.GetMappersFor(model.ResourceType).FirstOrDefault();
             retVal.Criteria = $"{mapper.ResourceType}?";
 
             return retVal;

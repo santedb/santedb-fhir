@@ -23,6 +23,7 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Roles;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -34,8 +35,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Practitioner resource handler
     /// </summary>
-    public class PractitionerResourceHandler : RepositoryResourceHandlerBase<Practitioner, UserEntity>
+    public class PractitionerResourceHandler : RepositoryResourceHandlerBase<Practitioner, Provider>
     {
+
+        /// <summary>
+        /// Create a new resource handler
+        /// </summary>
+        public PractitionerResourceHandler(IRepositoryService<Provider> repo) : base(repo)
+        {
+
+        }
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(Provider resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Get the interactions that this resource handler supports
         /// </summary>
@@ -52,13 +69,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
+        /// Get reverse includes
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(Provider resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
         /// Map a user entity to a practitioner
         /// </summary>
-        protected override Practitioner MapToFhir(UserEntity model, RestOperationContext restOperationContext)
+        protected override Practitioner MapToFhir(Provider model)
         {
             // Is there a provider that matches this user?
             var provider = model.LoadCollection<EntityRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.AssignedEntity)?.LoadProperty<Provider>("TargetEntity") ;
-            var retVal = DataTypeConverter.CreateResource<Practitioner>(model, restOperationContext);
+            var retVal = DataTypeConverter.CreateResource<Practitioner>(model);
 
             // Identifiers
             retVal.Identifier = (provider?.Identifiers ?? model.Identifiers)?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
@@ -103,7 +128,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map a practitioner to a user entity
         /// </summary>
-        protected override UserEntity MapToModel(Practitioner resource, RestOperationContext restOperationContext)
+        protected override Provider MapToModel(Practitioner resource)
         {
             throw new NotImplementedException();
         }
