@@ -51,5 +51,9 @@ namespace SanteDB.Messaging.FHIR
         /// </summary>
         public const string OriginalIdTag = "$fhir.originalId";
 
+        /// <summary>
+        /// The object is empty and should be processed / updated at a later time
+        /// </summary>
+        public const string PlaceholderTag = "$fhir.placeholder";
     }
 }

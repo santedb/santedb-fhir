@@ -194,26 +194,34 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 sourceEntity = relationship.SourceEntity = patientSource = this.m_patientRepository.Get(sourceEntity.Key.Value);
             }
 
-            var person = relationship.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person;
-
-            // Set the relationship
             relationship.ClassificationKey = RelationshipClassKeys.ReferencedObjectLink;
             relationship.RelationshipTypeKey = relationshipTypes.First();
 
-            // Attempt to find the relationship this is talking about
-            person.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
-            person.DateOfBirthXml = resource.BirthDate;
-            // TODO: See DSM-42 Correction
-            person.GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
-            person.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
-            person.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
-            person.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
-            person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
-            person.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
+            var person = relationship.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person ?? new Core.Model.Entities.Person() { Key = Guid.NewGuid() };
+            if (resource.Name.Any() || resource.Address.Any() || resource.Telecom.Any())
+            {
+                // Set the relationship
+                // Attempt to find the relationship this is talking about
+                person.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
+                person.DateOfBirthXml = resource.BirthDate;
+                // TODO: See DSM-42 Correction
+                person.GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
+             
+                // TODO: Cross reference via identifiers
+                person.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
+                person.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
+                person.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
+                person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
+                person.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
+                // Identity
+                person.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).ToList();
+            }
+            else
+            {
+                // TODO: Cross reference via identifiers
 
-            // Identity
-            person.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).ToList();
-
+                person.AddTag(FhirConstants.PlaceholderTag, "true");
+            }
             relationship.TargetEntity = person;
             return relationship;
 

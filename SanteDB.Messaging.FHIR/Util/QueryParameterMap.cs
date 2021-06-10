@@ -34,6 +34,8 @@ namespace SanteDB.Messaging.FHIR.Util
         Concept,
         [XmlEnum("identifier")]
         Identifier,
+        [XmlEnum("token")]
+        Token,
         [XmlEnum("reference")]
         Reference,
         [XmlEnum("tag")]
