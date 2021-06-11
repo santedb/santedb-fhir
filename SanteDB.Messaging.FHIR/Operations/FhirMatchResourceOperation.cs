@@ -140,7 +140,7 @@ namespace SanteDB.Messaging.FHIR.Operations
         {
             var result = mapper.MapToFhir(matchResult.Record);
 
-            var resultExtension = matchResult.Attributes.Select(o => new Extension()
+            var resultExtension = matchResult.Vectors.Select(o => new Extension()
             {
                 Url = "http://santedb.org/fhir/StructureDefinition/match-attribute",
                 Value = new FhirString($"{o.Name} = {o.Score:0.0#}")
