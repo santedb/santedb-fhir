@@ -176,6 +176,7 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 case QueryParameterRewriteType.Concept:
                 case QueryParameterRewriteType.Identifier:
+                case QueryParameterRewriteType.Token:
                     return SearchParamType.Token;
                 case QueryParameterRewriteType.Reference:
                     return SearchParamType.Reference;

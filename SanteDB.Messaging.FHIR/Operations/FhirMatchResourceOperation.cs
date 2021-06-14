@@ -86,9 +86,11 @@ namespace SanteDB.Messaging.FHIR.Operations
                 // Next run the match
                 var configurationName = RestOperationContext.Current.IncomingRequest.QueryString["_configurationName"];
                 IEnumerable<IRecordMatchResult> results = null;
+                var mergeService = ApplicationServiceContext.Current.GetService(typeof(IRecordMergingService<>).MakeGenericType(handler.CanonicalType)) as IRecordMergingService;
+
                 if (!String.IsNullOrEmpty(configurationName))
                 {
-                    results = matchService.Match(modelInstance, configurationName).ToArray();
+                    results = matchService.Match(modelInstance, configurationName, mergeService?.GetIgnoreList(modelInstance.Key.Value)).ToArray();
                 }
                 else // use the configured option
                 {
@@ -98,7 +100,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         throw new InvalidOperationException($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceMergeConfigurationSection to your configuration file");
                     }
 
-                    results = configBase.MatchConfiguration.SelectMany(o => matchService.Match(modelInstance, o)).ToArray();
+                    results = configBase.MatchConfiguration.SelectMany(o => matchService.Match(modelInstance, o.MatchConfiguration, mergeService?.GetIgnoreList(modelInstance.Key.Value))).ToArray();
                 }
 
                 // Only certain matches
@@ -138,6 +140,12 @@ namespace SanteDB.Messaging.FHIR.Operations
         {
             var result = mapper.MapToFhir(matchResult.Record);
 
+            var resultExtension = matchResult.Vectors.Select(o => new Extension()
+            {
+                Url = "http://santedb.org/fhir/StructureDefinition/match-attribute",
+                Value = new FhirString($"{o.Name} = {o.Score:0.0#}")
+            });
+
             // Now publish search data
             return new Bundle.EntryComponent()
             {
@@ -147,7 +155,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 {
                     Mode = Bundle.SearchEntryMode.Match,
                     Score = (decimal)matchResult.Strength,
-                    Extension = new List<Extension>()
+                    Extension = new List<Extension>(resultExtension)
                     {
                         new Extension()
                         {
@@ -161,7 +169,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         },
                         new Extension()
                         {
-                            Url = "http://santedb.org/fhir/StructureDefinition/raw-score",
+                            Url = "http://santedb.org/fhir/StructureDefinition/match-score",
                             Value = new FhirDecimal((decimal)matchResult.Score)
                         }
                     }

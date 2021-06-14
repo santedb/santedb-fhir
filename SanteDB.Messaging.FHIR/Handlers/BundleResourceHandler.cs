@@ -243,10 +243,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
                     taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
+
                 }
 
             }
-            sdbBundle.Item.RemoveAll(o => o == null);
+            sdbBundle.Item.RemoveAll(o => o == null || o is ITaggable taggable && taggable.GetTag(FhirConstants.PlaceholderTag) == "true");
             return sdbBundle;
         }
 
