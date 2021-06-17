@@ -29,6 +29,7 @@ using SanteDB.Core.Exceptions;
 using SanteDB.Core.Model.Security;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Rest.Serialization;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -76,68 +77,75 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
         {
             this.m_tracer.TraceEvent(EventLevel.Error, "Error on WCF FHIR Pipeline: {0}", error);
 
-            // Get to the root of the error
-            while (error.InnerException != null)
-                error = error.InnerException;
-
-            // Formulate appropriate response
-            if (error is DomainStateException)
-                response.StatusCode = (int)System.Net.HttpStatusCode.ServiceUnavailable;
-            else if (error is PolicyViolationException)
+            if (error is FhirException fhirException)
             {
-                var pve = error as PolicyViolationException;
-                if (pve.PolicyDecision == PolicyGrantType.Elevate)
-                {
-                    // Ask the user to elevate themselves
-                    response.StatusCode = 401;
-                    var authHeader = $"{(RestOperationContext.Current.AppliedPolicies.Any(o=>o.GetType().Name.Contains("Basic")) ? "Basic" : "Bearer")} realm=\"{RestOperationContext.Current.IncomingRequest.Url.Host}\" error=\"insufficient_scope\" scope=\"{pve.PolicyId}\"  error_description=\"{error.Message}\"";
-                    response.Headers.Add("WWW-Authenticate", authHeader);
-                }
-                else
-                {
-                    response.StatusCode = 403;
-                }
+                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)fhirException.Status;
             }
-            else if (error is SecurityException || error is UnauthorizedAccessException)
-                response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-            else if (error is SecurityTokenException)
-            {
-                response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
-                response.Headers.Add("WWW-Authenticate", $"Bearer");
-            }
-            else if(error is SecuritySessionException ses)
-            {
-                switch(ses.Type)
-                {
-                    case SessionExceptionType.Expired:
-                    case SessionExceptionType.NotYetValid:
-                    case SessionExceptionType.NotEstablished:
-                        response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
-                        response.Headers.Add("WWW-Authenticate", $"Bearer");
-                        break;
-                    default:
-                        response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-                        break;
-                }
-            }
-            else if (error is FaultException)
-                response.StatusCode = (int)(error as FaultException).StatusCode;
-            else if (error is Newtonsoft.Json.JsonException ||
-                error is System.Xml.XmlException)
-                response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
-            else if (error is FileNotFoundException || error is KeyNotFoundException)
-                response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
-            else if (error is DbException || error is ConstraintException)
-                response.StatusCode = (int)(System.Net.HttpStatusCode)422;
-            else if (error is PatchException)
-                response.StatusCode = (int)System.Net.HttpStatusCode.Conflict;
-            else if (error is NotImplementedException)
-                response.StatusCode = (int)System.Net.HttpStatusCode.NotImplemented;
-            else if (error is NotSupportedException)
-                response.StatusCode = (int)System.Net.HttpStatusCode.MethodNotAllowed;
             else
-                response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
+            {
+                // Get to the root of the error
+                while (error.InnerException != null)
+                    error = error.InnerException;
 
+                // Formulate appropriate response
+                if (error is DomainStateException)
+                    response.StatusCode = (int)System.Net.HttpStatusCode.ServiceUnavailable;
+                else if (error is PolicyViolationException)
+                {
+                    var pve = error as PolicyViolationException;
+                    if (pve.PolicyDecision == PolicyGrantType.Elevate)
+                    {
+                        // Ask the user to elevate themselves
+                        response.StatusCode = 401;
+                        var authHeader = $"{(RestOperationContext.Current.AppliedPolicies.Any(o => o.GetType().Name.Contains("Basic")) ? "Basic" : "Bearer")} realm=\"{RestOperationContext.Current.IncomingRequest.Url.Host}\" error=\"insufficient_scope\" scope=\"{pve.PolicyId}\"  error_description=\"{error.Message}\"";
+                        response.Headers.Add("WWW-Authenticate", authHeader);
+                    }
+                    else
+                    {
+                        response.StatusCode = 403;
+                    }
+                }
+                else if (error is SecurityException || error is UnauthorizedAccessException)
+                    response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                else if (error is SecurityTokenException)
+                {
+                    response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
+                    response.Headers.Add("WWW-Authenticate", $"Bearer");
+                }
+                else if (error is SecuritySessionException ses)
+                {
+                    switch (ses.Type)
+                    {
+                        case SessionExceptionType.Expired:
+                        case SessionExceptionType.NotYetValid:
+                        case SessionExceptionType.NotEstablished:
+                            response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
+                            response.Headers.Add("WWW-Authenticate", $"Bearer");
+                            break;
+                        default:
+                            response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
+                            break;
+                    }
+                }
+                else if (error is FaultException)
+                    response.StatusCode = (int)(error as FaultException).StatusCode;
+                else if (error is Newtonsoft.Json.JsonException ||
+                    error is System.Xml.XmlException)
+                    response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
+                else if (error is FileNotFoundException || error is KeyNotFoundException)
+                    response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
+                else if (error is DbException || error is ConstraintException)
+                    response.StatusCode = (int)(System.Net.HttpStatusCode)422;
+                else if (error is PatchException)
+                    response.StatusCode = (int)System.Net.HttpStatusCode.Conflict;
+                else if (error is NotImplementedException)
+                    response.StatusCode = (int)System.Net.HttpStatusCode.NotImplemented;
+                else if (error is NotSupportedException)
+                    response.StatusCode = (int)System.Net.HttpStatusCode.MethodNotAllowed;
+                else
+                    response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
+
+            }
             var errorResult = DataTypeConverter.CreateOperationOutcome(error);
 
             // Return error in XML only at this point
