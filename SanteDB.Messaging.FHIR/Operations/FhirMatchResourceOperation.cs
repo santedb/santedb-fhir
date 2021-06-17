@@ -90,7 +90,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 
                 if (!String.IsNullOrEmpty(configurationName))
                 {
-                    results = matchService.Match(modelInstance, configurationName, mergeService?.GetIgnoreList(modelInstance.Key.Value)).ToArray();
+                    results = matchService.Match(modelInstance, configurationName, mergeService?.GetIgnoredKeys(modelInstance.Key.Value)).ToArray();
                 }
                 else // use the configured option
                 {
@@ -100,7 +100,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         throw new InvalidOperationException($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceMergeConfigurationSection to your configuration file");
                     }
 
-                    results = configBase.MatchConfiguration.SelectMany(o => matchService.Match(modelInstance, o.MatchConfiguration, mergeService?.GetIgnoreList(modelInstance.Key.Value))).ToArray();
+                    results = configBase.MatchConfiguration.SelectMany(o => matchService.Match(modelInstance, o.MatchConfiguration, mergeService?.GetIgnoredKeys(modelInstance.Key.Value))).ToArray();
                 }
 
                 // Only certain matches

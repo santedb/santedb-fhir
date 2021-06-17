@@ -51,7 +51,7 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <param name="operationName">The name of the operation</param>
         /// <returns>The result of the operation</returns>
         /// <param name="parameters">The body to pass as a parameter to the operation</param>
-        [Post("/\\${operationName}")]
+        [Post("/${operationName}")]
         Resource Execute(string operationName, Parameters parameters);
 
         /// <summary>
@@ -105,8 +105,17 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// <param name="operationName">The name of the operation</param>
         /// <returns>The result of the operation</returns>
         /// <param name="parameters">The body to pass as a parameter to the operation</param>
-        [Post("/{resourceType}/\\${operationName}")]
-        Resource Execute(string resourceType, string operationName, Parameters parameters);
+        [Post("/{resourceType}/${operationName}")]
+        Resource ExecuteOperationPost(string resourceType, string operationName, Parameters parameters);
+
+        /// <summary>
+        /// Execute the specified operation name using a GET
+        /// </summary>
+        /// <param name="resourceType">The type of resource the operation is on</param>
+        /// <param name="operationName">The name of the operation</param>
+        /// <returns>The result of the operation</returns>
+        [Get("/{resourceType}/${operationName}")]
+        Resource ExecuteOperationGet(string resourceType, string operationName);
 
         /// <summary>
         /// Create a resource

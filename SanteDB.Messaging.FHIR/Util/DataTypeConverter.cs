@@ -30,6 +30,7 @@ using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using System;
 using System.Collections.Generic;
@@ -142,31 +143,51 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static OperationOutcome CreateOperationOutcome(Exception error)
         {
-            while(error.InnerException != null)
+            if (error is FhirException fhirException)
             {
-                error = error.InnerException;
-            }
-
-            // Construct an error result
-            var errorResult = new OperationOutcome()
-            {
-                Issue = new List<OperationOutcome.IssueComponent>()
-            {
-                new OperationOutcome.IssueComponent() { Diagnostics  = error.Message, Severity = IssueSeverity.Error, Code = IssueType.Exception }
-            }
-            };
-
-            if (error is DetectedIssueException dte)
-            {
-                errorResult.Issue = dte.Issues.Select(iss => new OperationOutcome.IssueComponent()
+                return new OperationOutcome()
                 {
-                    Diagnostics = iss.Text,
-                    Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
-                        iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
-                        IssueSeverity.Information
-                }).ToList();
+                    Issue = new List<IssueComponent>()
+                    {
+                        new IssueComponent()
+                        {
+                            Severity = IssueSeverity.Error,
+                            Code = fhirException.Code,
+                            Diagnostics = fhirException.Message
+                        }
+                    }
+                };
             }
-            return errorResult;
+            else
+            {
+                while (error.InnerException != null)
+                {
+                    error = error.InnerException;
+                }
+
+                // Construct an error result
+                var errorResult = new OperationOutcome()
+                {
+                    Issue = new List<OperationOutcome.IssueComponent>()
+                    {
+                        new OperationOutcome.IssueComponent() { Diagnostics  = error.Message, Severity = IssueSeverity.Error, Code = IssueType.Exception }
+                    }
+                };
+
+                if (error is DetectedIssueException dte)
+                {
+                    errorResult.Issue = dte.Issues.Select(iss => new OperationOutcome.IssueComponent()
+                    {
+                        Diagnostics = iss.Text,
+                        Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
+                            iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
+                            IssueSeverity.Information
+                    }).ToList();
+                }
+
+                return errorResult;
+
+            }
         }
 
         /// <summary>
