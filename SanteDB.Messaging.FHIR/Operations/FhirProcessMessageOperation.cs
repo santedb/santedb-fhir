@@ -29,6 +29,15 @@ namespace SanteDB.Messaging.FHIR.Operations
         public ResourceType[] AppliesTo => null;
 
         /// <summary>
+        /// Get the parameters
+        /// </summary>
+        public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<String, FHIRAllTypes>()
+        {
+            { "content", FHIRAllTypes.Bundle },
+            { "async", FHIRAllTypes.Boolean }
+        };
+
+        /// <summary>
         /// True if operation is get
         /// </summary>
         public bool IsGet => false;

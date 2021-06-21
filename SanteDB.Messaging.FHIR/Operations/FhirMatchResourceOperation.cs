@@ -34,6 +34,16 @@ namespace SanteDB.Messaging.FHIR.Operations
         }
 
         /// <summary>
+        /// Get the parameters
+        /// </summary>
+        public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<String, FHIRAllTypes>()
+        {
+            { "resource", FHIRAllTypes.Any  },
+            { "onlyCertainMatches", FHIRAllTypes.Boolean },
+            { "count", FHIRAllTypes.Integer }
+        };
+
+        /// <summary>
         /// Gets the name of the operation
         /// </summary>
         public string Name => "match";
