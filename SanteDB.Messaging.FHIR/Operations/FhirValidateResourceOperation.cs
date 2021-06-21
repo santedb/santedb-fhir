@@ -32,6 +32,11 @@ namespace SanteDB.Messaging.FHIR.Operations
         public Uri Uri => new Uri("http://hl7.org/fhir/OperationDefinition/Resource-validate");
 
         /// <summary>
+        /// True if this impacts state
+        /// </summary>
+        public bool IsGet => false;
+
+        /// <summary>
         /// Invoke the operation
         /// </summary>
         public Resource Invoke(Parameters parameters)

@@ -19,7 +19,9 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Auditing;
 using SanteDB.Core.BusinessRules;
+using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Extensions;
@@ -29,6 +31,7 @@ using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Security;
+using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
@@ -52,6 +55,211 @@ namespace SanteDB.Messaging.FHIR.Util
         /// The trace source.
         /// </summary>
         private static readonly Tracer traceSource = new Tracer(FhirConstants.TraceSourceName);
+
+        /// <summary>
+        /// Convert the audit data to a security audit
+        /// </summary>
+        public static AuditEvent ToSecurityAudit(AuditData audit)
+        {
+
+            var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
+
+            var retVal = new AuditEvent()
+            {
+                Id = audit.Key.ToString(),
+                Recorded = audit.Timestamp,
+            };
+
+            // Event type primary classifier
+            var idConcept = conceptService.GetConceptReferenceTerm($"SecurityAuditCode-{audit.EventIdentifier}", "DCM");
+            if (idConcept != null)
+            {
+                retVal.Type = ToCoding(idConcept);
+            }
+
+            // Event sub-type
+            if (audit.EventTypeCode != null)
+            {
+                var refTerm = conceptService.GetConceptReferenceTerm(audit.EventTypeCode.Code, "DCM");
+                if (refTerm != null)
+                {
+                    retVal.Subtype.Add(ToCoding(refTerm));
+                }
+            }
+
+            // Outcome 
+            switch (audit.Outcome)
+            {
+                case OutcomeIndicator.EpicFail:
+                    retVal.Outcome = AuditEvent.AuditEventOutcome.N12;
+                    break;
+                case OutcomeIndicator.SeriousFail:
+                    retVal.Outcome = AuditEvent.AuditEventOutcome.N8;
+                    break;
+                case OutcomeIndicator.MinorFail:
+                    retVal.Outcome = AuditEvent.AuditEventOutcome.N4;
+                    break;
+                case OutcomeIndicator.Success:
+                    retVal.Outcome = AuditEvent.AuditEventOutcome.N0;
+                    break;
+            }
+
+            // Action type
+            switch (audit.ActionCode)
+            {
+                case ActionType.Create:
+                    retVal.Action = AuditEvent.AuditEventAction.C;
+                    break;
+                case ActionType.Delete:
+                    retVal.Action = AuditEvent.AuditEventAction.D;
+                    break;
+                case ActionType.Execute:
+                    retVal.Action = AuditEvent.AuditEventAction.E;
+                    break;
+                case ActionType.Read:
+                    retVal.Action = AuditEvent.AuditEventAction.R;
+                    break;
+                case ActionType.Update:
+                    retVal.Action = AuditEvent.AuditEventAction.U;
+                    break;
+            }
+
+            // POU?
+            var pou = audit.AuditableObjects.Find(o => o.ObjectId == SanteDBClaimTypes.PurposeOfUse)?.NameData;
+            if (pou != null && Guid.TryParse(pou, out Guid pouKey))
+            {
+                retVal.PurposeOfEvent = new List<CodeableConcept>() { ToFhirCodeableConcept(conceptService.Get(pouKey)) };
+            }
+
+            // Actors
+            foreach (var act in audit.Actors)
+            {
+                var ntype = AuditEvent.AuditEventAgentNetworkType.N1;
+                switch (act.NetworkAccessPointType)
+                {
+                    case NetworkAccessPointType.IPAddress:
+                        ntype = AuditEvent.AuditEventAgentNetworkType.N2;
+                        break;
+                    case NetworkAccessPointType.MachineName:
+                        ntype = AuditEvent.AuditEventAgentNetworkType.N1;
+                        break;
+                    case NetworkAccessPointType.TelephoneNumber:
+                        ntype = AuditEvent.AuditEventAgentNetworkType.N3;
+                        break;
+                    default:
+                        ntype = AuditEvent.AuditEventAgentNetworkType.N5;
+                        break;
+                }
+
+
+                retVal.Agent.Add(new AuditEvent.AgentComponent()
+                {
+                    AltId = act.AlternativeUserId,
+                    Role = act.ActorRoleCode.Select(o => ToFhirCodeableConcept(conceptService.GetConceptByReferenceTerm(o.Code, o.CodeSystem))).ToList(),
+                    Name = act.UserName,
+                    Network = new AuditEvent.NetworkComponent()
+                    {
+                        Address = act.NetworkAccessPointId,
+                        Type = ntype
+                    },
+                    Requestor = act.UserIsRequestor
+                });
+            }
+
+            // Source
+            String enterprise = audit.Metadata.Find(o => o.Key == AuditMetadataKey.EnterpriseSiteID)?.Value,
+                sourceId = audit.Metadata.Find(o => o.Key == AuditMetadataKey.AuditSourceID)?.Value,
+                sourceType = audit.Metadata.Find(o => o.Key == AuditMetadataKey.AuditSourceType)?.Value;
+            if (!String.IsNullOrEmpty(sourceId) && Guid.TryParse(sourceId, out Guid originalSource))
+            {
+                AuditSourceType sourceTypeEnum = 0;
+                if(Int32.TryParse(sourceType, out int sType))
+                {
+                    sourceTypeEnum = (AuditSourceType)sType;
+                }
+                else if(!Enum.TryParse<AuditSourceType>(sourceType, out sourceTypeEnum))
+                {
+                    sourceTypeEnum = AuditSourceType.Other;
+                }
+
+
+                retVal.Source = new AuditEvent.SourceComponent()
+                {
+                    Observer = CreateNonVersionedReference<Device>(originalSource),
+                    Type = new List<Coding>() {  new Coding(sourceTypeEnum.ToString(), "http://terminology.hl7.org/CodeSystem/security-source-type") }
+                };
+            }
+            else
+            {
+                var configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<AuditAccountabilityConfigurationSection>();
+
+                retVal.Source = new AuditEvent.SourceComponent()
+                {
+                    Observer = CreateNonVersionedReference<Device>(configuration.SourceInformation?.EnterpriseDeviceKey ?? Guid.Empty),
+                    Type = new List<Coding>() { new Coding("http://terminology.hl7.org/CodeSystem/security-source-type", "4") }
+                };
+            }
+
+            // Objects / entities
+            foreach (var itm in audit.AuditableObjects)
+            {
+                var add = new AuditEvent.EntityComponent()
+                {
+                    Name = itm.NameData,
+                    Query = System.Text.Encoding.UTF8.GetBytes(itm.QueryData)
+                };
+
+                if (itm.Type != AuditableObjectType.NotSpecified)
+                {
+                    add.Type = new Coding("http://terminology.hl7.org/CodeSystem/audit-entity-type", ((int)itm.Type).ToString());
+                }
+                if (itm.Role.HasValue)
+                {
+                    add.Role = new Coding("http://terminology.hl7.org/CodeSystem/object-role", ((int)itm.Role).ToString());
+                }
+                if (itm.LifecycleType.HasValue)
+                {
+                    add.Lifecycle = new Coding("http://terminology.hl7.org/CodeSystem/dicom-audit-lifecycle", ((int)itm.LifecycleType).ToString());
+                }
+                
+                foreach(var dtl in itm.ObjectData)
+                {
+                    add.Detail.Add(new AuditEvent.DetailComponent()
+                    {
+                        Type = dtl.Key,
+                        Value = new Base64Binary(dtl.Value)
+                    });
+                }
+
+                if (Guid.TryParse(itm.ObjectId, out Guid objectIdKey)) {
+                    switch (itm.IDTypeCode)
+                    {
+                        case AuditableObjectIdType.Custom:
+                            break;
+                        case AuditableObjectIdType.PatientNumber:
+                            add.What = CreateNonVersionedReference<Patient>(objectIdKey);
+                            break;
+                        case AuditableObjectIdType.UserIdentifier:
+                            add.What = CreateNonVersionedReference<Practitioner>(objectIdKey);
+                            break;
+                        case AuditableObjectIdType.EncounterNumber:
+                            add.What = CreateNonVersionedReference<Encounter>(objectIdKey);
+                            break;
+                        default:
+                            add.What = new ResourceReference()
+                            {
+                                Reference = $"urn:uuid:{objectIdKey}",
+                                Display = $"RIM [Entity/{objectIdKey}"
+                            };
+                            break;
+                    }
+
+                    retVal.Entity.Add(add);
+                }
+            }
+
+            return retVal;
+        }
 
         /// <summary>
         /// Creates a FHIR reference.

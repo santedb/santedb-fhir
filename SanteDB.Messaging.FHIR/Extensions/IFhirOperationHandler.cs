@@ -34,6 +34,11 @@ namespace SanteDB.Messaging.FHIR.Extensions
         ResourceType[] AppliesTo { get; }
 
         /// <summary>
+        /// True if the operation impacts the object state
+        /// </summary>
+        bool IsGet { get; }
+
+        /// <summary>
         /// Invoke the specified operation
         /// </summary>
         /// <param name="parameters">The parameter set to action</param>

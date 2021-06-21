@@ -675,12 +675,13 @@ namespace SanteDB.Messaging.FHIR.Rest
                     // Add operation handlers
                     foreach(var op in ExtensionUtil.OperationHandlers.Where(o=> o.AppliesTo?.Contains(def.Type.Value) == true))
                     {
-                        var operationDescription = new ServiceOperationDescription("POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
+                        var operationDescription = new ServiceOperationDescription(op.IsGet ? "GET" : "POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
                         operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
                         operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                         operationDescription.Tags.Add(def.Type.ToString());
                         operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
                         retVal.Operations.Add(operationDescription);
+
                     }
                 }
 
@@ -692,6 +693,11 @@ namespace SanteDB.Messaging.FHIR.Rest
                 {
                     var operationDescription = new ServiceOperationDescription("POST", $"/${op.Name}", acceptProduces, true);
                     operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
+                    operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
+                    operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
+                    retVal.Operations.Add(operationDescription);
+
+                    operationDescription = new ServiceOperationDescription("GET", $"/${op.Name}", acceptProduces, true);
                     operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
                     operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
                     retVal.Operations.Add(operationDescription);

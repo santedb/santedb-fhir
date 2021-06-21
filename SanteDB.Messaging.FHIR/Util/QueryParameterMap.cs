@@ -43,7 +43,9 @@ namespace SanteDB.Messaging.FHIR.Util
         [XmlEnum("string")]
         String,
         [XmlEnum("int")]
-        Int
+        Int,
+        [XmlEnum("indicator")]
+        Indicator,
     }
 
     /// <summary>

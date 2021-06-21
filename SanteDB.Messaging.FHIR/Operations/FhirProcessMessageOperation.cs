@@ -29,6 +29,11 @@ namespace SanteDB.Messaging.FHIR.Operations
         public ResourceType[] AppliesTo => null;
 
         /// <summary>
+        /// True if operation is get
+        /// </summary>
+        public bool IsGet => false;
+
+        /// <summary>
         /// Invoke the process message operation
         /// </summary>
         public Resource Invoke(Parameters parameters)

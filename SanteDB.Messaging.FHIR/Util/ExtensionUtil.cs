@@ -58,13 +58,14 @@ namespace SanteDB.Messaging.FHIR.Util
                     .ToList();
 
             if (configuration.OperationHandlers?.Any() == true)
-                s_operationHandlers = configuration.ExtensionHandlers.Select(t => svcManager.CreateInjected(t.Type))
+                s_operationHandlers = configuration.OperationHandlers.Select(t => svcManager.CreateInjected(t.Type))
                     .OfType<IFhirOperationHandler>()
+                    .Union(svcManager.CreateInjectedOfAll<IFhirOperationHandler>(typeof(ExtensionUtil).Assembly))
                     .ToList();
             else if (configuration.Operations?.Any() == true)
                 s_operationHandlers = svcManager
                     .CreateInjectedOfAll<IFhirOperationHandler>()
-                    .Where(o=>configuration.Operations.Contains(o.Uri.ToString()))
+                    .Where(o=>configuration.Operations.Contains(o.Uri.ToString()) || configuration.Operations.Contains(o.Name))
                     .ToList();
             else
                 s_operationHandlers = svcManager

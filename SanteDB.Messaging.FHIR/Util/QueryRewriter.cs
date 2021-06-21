@@ -180,6 +180,8 @@ namespace SanteDB.Messaging.FHIR.Util
                     return SearchParamType.Token;
                 case QueryParameterRewriteType.Reference:
                     return SearchParamType.Reference;
+                case QueryParameterRewriteType.Indicator:
+                    return SearchParamType.Token;
                 default:
                     try
                     {
@@ -381,6 +383,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 if (Uri.TryCreate(segs[0], UriKind.Absolute, out Uri data))
                                 {
                                     var aa = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>().Get(data);
+
                                     hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
                                 }
                                 else
@@ -389,6 +392,13 @@ namespace SanteDB.Messaging.FHIR.Util
                             }
                             else
                                 hdsiQuery.Add(parmMap.ModelQuery + ".value", itm);
+                        }
+                        break;
+                    case QueryParameterRewriteType.Indicator:
+                        var mq = NameValueCollection.ParseQueryString(parmMap.ModelQuery);
+                        foreach(var itm in mq)
+                        {
+                            hdsiQuery.Add(itm.Key, itm.Value);
                         }
                         break;
                     case QueryParameterRewriteType.Concept:

@@ -54,6 +54,11 @@ namespace SanteDB.Messaging.FHIR.Operations
         };
 
         /// <summary>
+        /// True if the operation is a get
+        /// </summary>
+        public bool IsGet => false;
+
+        /// <summary>
         /// Invoke the specified operation
         /// </summary>
         public Resource Invoke(Parameters parameters)

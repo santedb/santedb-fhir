@@ -52,10 +52,16 @@
   </type>
 
   <type model="Hl7.Fhir.Model.Patient, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+    <map file="active" model="statusConcept.mnemonic=ACTIVE" type="indicator" />
+    <map file="telecom" model="telecom.value" />
     <map fhir="name" model="name.component.value"/>
     <map fhir="family" model="name.component[Family].value"/>
     <map fhir="given" model="name.component[Given].value"/>
     <map fhir="address" model="address.component.value"/>
+    <map fhir="address-city" model="address.component[City].value"/>
+    <map fhir="address-state" model="address.component[State].value"/>
+    <map fhir="address-country" model="address.component[Country].value"/>
+    <map fhir="address-postalcode" model="address.component[PostalCode].value"/>
     <map fhir="state" model="address.component[State].value"/>
     <map fhir="birthdate" model="dateOfBirth"/>
     <map fhir="gender" model="genderConcept" type="concept"/>
@@ -68,7 +74,7 @@
     <map fhir="organization.address" model="relationship[scoper].target.address.component.value"/>
     <map fhir="registration-time" model="creationTime"/>
     <map fhir="date" model="creationTime" />
-    <map fhir="is-anonymous" model="tag[isAnonymous].value"/>
+    <map fhir="mothersMaidenName" model="relationship[Mother].target@Person.name[Maiden].component.value"/>
   </type>
 
   <type model="Hl7.Fhir.Model.Observation, Hl7.Fhir.R4.Core, Version=1.4.0.0">
