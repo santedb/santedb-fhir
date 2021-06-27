@@ -49,7 +49,7 @@
     <add type="SanteDB.Messaging.Atna.Configuration.AtnaConfigurationSection, SanteDB.Messaging.Atna" />
     <add type="SanteDB.OrmLite.Configuration.OrmConfigurationSection, SanteDB.OrmLite" />
     <add type="SanteDB.Core.Configuration.Data.DataConfigurationSection, SanteDB.Core.Api"/>
-    <add type="SanteDB.Core.Configuration.ResourceMergeConfigurationSection, SanteDB.Core.Api, Version=2.1.0.0"/>
+    <add type="SanteDB.Core.Configuration.ResourceMergeConfigurationSection, SanteDB.Core.Api"/>
     <add type="SanteDB.Matcher.Configuration.AssemblyMatchConfigurationSection, SanteDB.Matcher, Version=2.10.0.29461, Culture=Neutral, PublicKeyToken=null"/>
   </sections>
   <section xsi:type="MemoryCacheConfigurationSection" autoSubscribe="true" maxSize="10000" maxAge="3600" maxQueryAge="3600" />
@@ -124,7 +124,7 @@
       <add type="SanteDB.Persistence.Data.ADO.Services.AdoRoleProvider, SanteDB.Persistence.Data.ADO" />
       <add type="SanteDB.Core.Security.Privacy.DataPolicyFilterService, SanteDB.Core.Api" />
       <add type="SanteDB.Server.Core.Services.Impl.DefaultNetworkInformationService, SanteDB.Server.Core"/>
-      <add type="SanteDB.Persistence.MDM.Services.MdmDataManagementService, SanteDB.Persistence.MDM, Version=2.1.0.0"/>
+      <add type="SanteDB.Persistence.MDM.Services.MdmDataManagementService, SanteDB.Persistence.MDM"/>
     </serviceProviders>
   </section>
 </SanteDBConfiguration>
