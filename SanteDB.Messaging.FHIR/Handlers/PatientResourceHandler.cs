@@ -225,6 +225,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 patient = this.m_repository.Get(key);
             }
+            else if(resource.Identifier?.Count > 0)
+            {
+                foreach(var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                {
+                    if(ii.LoadProperty(o=>o.Authority).IsUnique)
+                    {
+                        patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                    }
+                    if(patient != null)
+                    {
+                        break;
+                    }
+                }
+
+                if(patient == null)
+                {
+                    patient = new Core.Model.Roles.Patient();
+                }
+            }
             else
             {
                 patient = new Core.Model.Roles.Patient();

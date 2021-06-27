@@ -945,6 +945,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // First is there a bundle in the contained within
             var sdbBundle = containedWithin.Annotations(typeof(Core.Model.Collection.Bundle)).FirstOrDefault() as Core.Model.Collection.Bundle;
+            
             IdentifiedData retVal = null;
 
             if (resourceRef.Identifier != null)
@@ -969,7 +970,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
                     var match = refRegex.Match(resourceRef.Reference);
                     if (!match.Success)
-                        throw new InvalidOperationException($"{resourceRef.Reference} was not in the expected format. Expecting urn:uuid:UUID or Type/UUID");
+                        throw new InvalidOperationException($"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
 
                     if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value, out Guid relUuid)) // rel reference
                         retVal = repo.Get(relUuid); // Allow any triggers to fire
