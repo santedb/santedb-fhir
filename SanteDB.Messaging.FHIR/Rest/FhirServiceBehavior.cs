@@ -680,6 +680,14 @@ namespace SanteDB.Messaging.FHIR.Rest
                         operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                         operationDescription.Tags.Add(def.Type.ToString());
                         operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
+                        
+                        if(op.IsGet)
+                        {
+                            foreach(var i in op.Parameters)
+                            {
+                                operationDescription.Parameters.Add(new OperationParameterDescription(i.Key, typeof(String), OperationParameterLocation.Query));
+                            }
+                        }
                         retVal.Operations.Add(operationDescription);
 
                     }
