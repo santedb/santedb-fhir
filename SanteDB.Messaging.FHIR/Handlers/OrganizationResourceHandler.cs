@@ -89,28 +89,44 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Core.Model.Entities.Organization MapToModel(Hl7.Fhir.Model.Organization resource)
         {
-            // Organization
-            var retVal = new Core.Model.Entities.Organization()
+            Core.Model.Entities.Organization retVal = null;
+            if(Guid.TryParse(resource.Id, out Guid key))
             {
-                TypeConcept = resource.Type.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault(),
-                Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList(),
-                CreationTime = DateTimeOffset.Now,
-                // TODO: Extensions
-                Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
-                Key = Guid.NewGuid(),
-                Names = new List<EntityName>() { new EntityName(NameUseKeys.OfficialRecord, resource.Name) },
-                StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete,
-                Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
-            };
+                retVal = this.m_repository.Get(key);
+            }
+            else if(resource.Identifier?.Count > 0)
+            {
+                foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                {
+                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    {
+                        retVal = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                    }
+                    if (retVal != null)
+                    {
+                        break;
+                    }
+                }
+            }
+            if(retVal == null)
+            {
+                retVal = new Core.Model.Entities.Organization()
+                {
+                    Key = Guid.NewGuid()
+                };
+            }
+
+            // Organization
+            retVal.TypeConcept = resource.Type.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
+            retVal.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
+
+            // TODO: Extensions
+            retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
+            retVal.Names = new List<EntityName>() { new EntityName(NameUseKeys.OfficialRecord, resource.Name) };
+            retVal.StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
+            retVal.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
 
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
-
-            if (!Guid.TryParse(resource.Id, out Guid key))
-            {
-                key = Guid.NewGuid();
-            }
-            retVal.Key = key;
-
             return retVal;
         }
     }

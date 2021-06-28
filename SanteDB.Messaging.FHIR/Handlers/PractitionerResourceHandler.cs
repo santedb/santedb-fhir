@@ -45,6 +45,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
 
         }
+
         /// <summary>
         /// Get included resources
         /// </summary>
@@ -60,6 +61,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             return new TypeRestfulInteraction[]
             {
+                TypeRestfulInteraction.Create,
+                TypeRestfulInteraction.Delete,
+                TypeRestfulInteraction.Update,
                 TypeRestfulInteraction.HistoryInstance,
                 TypeRestfulInteraction.Read,
                 TypeRestfulInteraction.SearchType,
@@ -130,7 +134,53 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Provider MapToModel(Practitioner resource)
         {
-            throw new NotImplementedException();
+
+            Provider retVal = null;
+            if (Guid.TryParse(resource.Id, out Guid key))
+            {
+                retVal = this.m_repository.Get(key);
+            }
+            else if (resource.Identifier?.Count > 0)
+            {
+                foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                {
+                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    {
+                        retVal = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                    }
+                    if (retVal != null)
+                    {
+                        break;
+                    }
+                }
+            }
+            if (retVal == null)
+            {
+                retVal = new Provider()
+                {
+                    Key = Guid.NewGuid()
+                };
+            }
+
+            // Organization
+            retVal.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
+            // TODO: Extensions
+            retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
+            retVal.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
+            retVal.StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
+            retVal.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
+            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
+            retVal.GenderConceptKey = resource.Gender == null ? NullReasonKeys.Unknown : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
+            retVal.DateOfBirthXml = resource.BirthDate;
+            retVal.DateOfBirthPrecision = DatePrecision.Day;
+
+            // TODO: Photo
+            if (resource.Photo != null && resource.Photo.Any())
+            {
+                retVal.Extensions.RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+                retVal.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
+            }
+            return retVal;
         }
     }
 }

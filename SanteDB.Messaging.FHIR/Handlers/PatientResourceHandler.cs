@@ -381,6 +381,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // TODO: Photo
+            if(resource.Photo != null && resource.Photo.Any())
+            {
+                patient.Extensions.RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+                patient.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
+            }
             return patient;
         }
 
