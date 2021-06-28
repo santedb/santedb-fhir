@@ -146,6 +146,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 parmConfig.ModelQuery = hdsiQueryParmeter;
                 parmConfig.FhirType = type;
             }
+            mapConfig.Map.Add(parmConfig);
         }
 
         /// <summary>
