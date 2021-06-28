@@ -291,13 +291,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if(resource.GeneralPractitioner != null)
             {
-                var referenceKey = DataTypeConverter.ResolveEntity(resource.ManagingOrganization, resource) as Entity;
-                if (referenceKey == null)
-                    throw new KeyNotFoundException("Can't locate a registered general practitioner");
-                else
+                patient.Relationships.AddRange(resource.GeneralPractitioner.Select(r =>
                 {
-                    patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey));
-                }
+                    var referenceKey = DataTypeConverter.ResolveEntity(r, resource) as Entity;
+                    if (referenceKey == null)
+                        throw new KeyNotFoundException("Can't locate a registered general practitioner");
+                    return new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey);
+                }));
             }
             if (resource.ManagingOrganization != null)
             {

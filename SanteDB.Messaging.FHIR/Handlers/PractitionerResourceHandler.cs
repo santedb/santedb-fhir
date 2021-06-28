@@ -86,23 +86,26 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override Practitioner MapToFhir(Provider model)
         {
             // Is there a provider that matches this user?
-            var provider = model.LoadCollection<EntityRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.AssignedEntity)?.LoadProperty<Provider>("TargetEntity") ;
+            var provider = model.LoadCollection(o=>o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.AssignedEntity)?.LoadProperty(o=>o.TargetEntity) as Provider;
+            model = provider ?? model;
+
             var retVal = DataTypeConverter.CreateResource<Practitioner>(model);
 
+
             // Identifiers
-            retVal.Identifier = (provider?.Identifiers ?? model.Identifiers)?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
+            retVal.Identifier = model.LoadCollection(o=>o.Identifiers)?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
 
             // ACtive
             retVal.Active = model.StatusConceptKey == StatusKeys.Active;
 
             // Names
-            retVal.Name = (provider?.LoadCollection<EntityName>("Names") ?? model.LoadCollection<EntityName>("Names"))?.Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
+            retVal.Name = model.LoadCollection(o=>o.Names)?.Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
 
             // Telecoms
-            retVal.Telecom = (provider?.LoadCollection<EntityTelecomAddress>("Telecom") ?? model.LoadCollection<EntityTelecomAddress>("Telecom"))?.Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+            retVal.Telecom = model.LoadCollection(o=>o.Telecoms)?.Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
 
             // Address
-            retVal.Address = (provider?.LoadCollection<EntityAddress>("Addresses") ?? model.LoadCollection<EntityAddress>("Addresses"))?.Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
+            retVal.Address = model.LoadCollection(p=>p.Addresses)?.Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
 
             // Birthdate
             retVal.BirthDateElement = DataTypeConverter.ToFhirDate(provider?.DateOfBirth ?? model.DateOfBirth);
@@ -117,14 +120,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 };
 
-            // Load the koala-fications 
-            retVal.Qualification = provider?.LoadCollection<Concept>("ProviderSpecialty").Select(o => new Practitioner.QualificationComponent()
-            {
-                Code = DataTypeConverter.ToFhirCodeableConcept(o)
-            }).ToList();
+            // Load the koala-fication
+            var qual = provider.LoadProperty(o => o.ProviderSpecialty);
+            if (qual != null) {
+                retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(qual) } };
+            }
 
             // Language of communication
-            retVal.Communication = (provider?.LoadCollection<PersonLanguageCommunication>(nameof(Core.Model.Entities.Person.LanguageCommunication)) ?? model.LoadCollection<PersonLanguageCommunication>(nameof(Core.Model.Entities.Person.LanguageCommunication)))?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();
+            retVal.Communication = model.LoadCollection(o=>o.LanguageCommunication)?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();
 
             return retVal;
         }
