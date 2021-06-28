@@ -151,7 +151,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// Behavior modifiers
         /// </summary>
         [XmlArray("behaviorModifiers"), XmlArrayItem("add"), JsonProperty("behaviorModifiers")]
-        public IEnumerable<TypeReferenceConfiguration> BehaviorModifiers { get; set; }
+        public List<TypeReferenceConfiguration> BehaviorModifiers { get; set; }
     }
 
 }
