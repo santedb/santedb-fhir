@@ -354,13 +354,30 @@ namespace SanteDB.Messaging.FHIR.Util
                     if(parmComponents.Length > 1)
                         switch(parmComponents[1])
                         {
+                            case "fuzzy":
+                            case "approx":
+                                opValue = "";
+                                filterValue = $":(approx|'{filterValue}')";
+                                break;
                             case "contains":
                                 opValue = "~";
                                 filterValue = $"*{filterValue}*";
                                 break;
+                            case "exact":
+                                opValue = "";
+                                break;
                             case "missing":
                                 filterValue = "null";
                                 chop = false;
+                                break;
+                            default: 
+                                switch(parmMap.FhirType)
+                                {
+                                    case QueryParameterRewriteType.String: // Default string matching is wonky in FHIR but meh we can mimic it at least
+                                        opValue = "~";
+                                        filterValue = $"*{filterValue.Replace(' ', '?')}*";
+                                        break;
+                                }
                                 break;
                         }
 
@@ -370,6 +387,12 @@ namespace SanteDB.Messaging.FHIR.Util
 
                 if (value.Count(o => !String.IsNullOrEmpty(o)) == 0)
                     continue;
+
+                // Apply a function
+                if(!String.IsNullOrEmpty(parmMap.Function))
+                {
+                    value = value.Select(o => parmMap.Function.Replace("$1", o)).ToList();
+                }
 
                 // Query 
                 switch (parmMap.FhirType)

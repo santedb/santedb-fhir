@@ -149,6 +149,11 @@ namespace SanteDB.Messaging.FHIR.Util
         [XmlAttribute("desc")]
         public String Description { get; set; }
 
+        /// <summary>
+        /// Gets the function to apply to the match
+        /// </summary>
+        [XmlAttribute("function")]
+        public string Function { get; set; }
     }
 
 }
