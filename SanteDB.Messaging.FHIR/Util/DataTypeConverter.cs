@@ -477,7 +477,7 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var resource = fhirExtension as Resource;
             // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
-            fhirExtension.Extension = extendable?.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension).ToList();
+            fhirExtension.Extension = extendable?.LoadCollection(o=>o.Extensions ).Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension).ToList();
 
             if (resource != null)
             {
