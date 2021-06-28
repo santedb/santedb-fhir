@@ -405,7 +405,35 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Roles.Patient resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            return includePaths.SelectMany(includeInstruction =>
+            {
+                switch (includeInstruction.Type)
+                {
+                    case ResourceType.Organization:
+                        // Load all related persons and convert them
+                        var rpHandler = FhirResourceHandlerUtil.GetMappersFor(ResourceType.Organization).FirstOrDefault();
+
+                        switch(includeInstruction.JoinPath)
+                        {
+                            case "managingOrganization":
+                                return resource.LoadCollection(o => o.Relationships)
+                                    .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
+                                        o.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper &&
+                                        o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
+                                    .Select(o => rpHandler.MapToFhir(o));
+                            case "generalPractitioner":
+                                return resource.LoadCollection(o => o.Relationships)
+                                    .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
+                                        o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
+                                        o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
+                                    .Select(o => rpHandler.MapToFhir(o));
+                            default:
+                                throw new InvalidOperationException($"Cannot determine how to include {includeInstruction}");
+                        }
+                    default:
+                        throw new InvalidOperationException($"{includeInstruction.Type} is not supported reverse include");
+                }
+            });
         }
 
         /// <summary>

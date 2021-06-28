@@ -44,6 +44,17 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
 
+            if(configuration.BehaviorModifiers?.Any() == true)
+            {
+                s_behaviorModifiers = configuration.BehaviorModifiers.Select(t => svcManager.CreateInjected(t.Type))
+                   .OfType<IFhirRestBehaviorModifier>()
+                   .ToList();
+            }
+            else
+                s_behaviorModifiers = svcManager
+                    .CreateInjectedOfAll<IFhirRestBehaviorModifier>()
+                    .ToList();
+
             if (configuration.ExtensionHandlers?.Any() == true)
                 s_extensionHandlers = configuration.ExtensionHandlers.Select(t => svcManager.CreateInjected(t.Type))
                     .OfType<IFhirExtensionHandler>()

@@ -92,7 +92,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			/// </summary>
             public String JoinPath { get; set; }
 
-			
+			/// <summary>
+			/// Represent as a string
+			/// </summary>
+			public override string ToString() => $"{this.Type}:{this.JoinPath}";
+
         }
 
 		/// <summary>
