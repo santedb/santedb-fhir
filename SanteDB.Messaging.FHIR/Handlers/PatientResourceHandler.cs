@@ -241,12 +241,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 if(patient == null)
                 {
-                    patient = new Core.Model.Roles.Patient();
+                    patient = new Core.Model.Roles.Patient()
+                    {
+                        Key = Guid.NewGuid()
+                    };
                 }
             }
             else
             {
-                patient = new Core.Model.Roles.Patient();
+                patient = new Core.Model.Roles.Patient()
+                {
+                    Key = Guid.NewGuid()
+                };
             }
 
             patient.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();

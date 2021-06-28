@@ -171,7 +171,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 relationship = new EntityRelationship()
                 {
                     Key = Guid.NewGuid(),
-                    TargetEntity = new SanteDB.Core.Model.Entities.Person(),
+                    TargetEntity = new SanteDB.Core.Model.Entities.Person()
+                    {
+                        Key = Guid.NewGuid()
+                    },
                     SourceEntityKey = sourceEntity.Key
                 };
             }
