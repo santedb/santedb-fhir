@@ -59,12 +59,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query a FHIR resource
         /// </summary>
-        FhirQueryResult Query(NameValueCollection parameters);
+        Bundle Query(NameValueCollection parameters);
 
         /// <summary>
         /// Get the history of a specific FHIR object
         /// </summary>
-        FhirQueryResult History(string id);
+        Bundle History(string id);
 
         /// <summary>
         /// Get the definition for this resource

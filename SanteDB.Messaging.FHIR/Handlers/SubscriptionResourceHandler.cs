@@ -144,7 +144,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Get the history of this object
         /// </summary>
-        public FhirQueryResult History(string id)
+        public Bundle History(string id)
         {
             throw new NotSupportedException("Versioning is not supported on this object");
         }
@@ -152,7 +152,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query the subscription object
         /// </summary>
-        public FhirQueryResult Query(System.Collections.Specialized.NameValueCollection parameters)
+        public Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
         {
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
@@ -168,7 +168,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var auth = AuthenticationContext.Current;
             // Return FHIR query result
-            return new FhirQueryResult(nameof(Subscription))
+            var retVal = new FhirQueryResult(nameof(Subscription))
             {
                 Results = hdsiResults.AsParallel().Select(o =>
                 {
@@ -185,6 +185,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Query = query,
                 TotalResults = totalResults
             };
+            return MessageUtil.CreateBundle(retVal);
         }
 
         /// <summary>
