@@ -52,13 +52,24 @@
   </type>
 
   <type model="Hl7.Fhir.Model.Patient, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+    <map file="active" model="statusConcept.mnemonic=ACTIVE" type="indicator" />
+    <map file="telecom" model="telecom.value" />
     <map fhir="name" model="name.component.value"/>
     <map fhir="family" model="name.component[Family].value"/>
     <map fhir="given" model="name.component[Given].value"/>
     <map fhir="address" model="address.component.value"/>
+    <map fhir="address-city" model="address.component[City].value"/>
+    <map fhir="address-state" model="address.component[State].value"/>
+    <map fhir="address-country" model="address.component[Country].value"/>
+    <map fhir="address-postalcode" model="address.component[PostalCode].value"/>
     <map fhir="state" model="address.component[State].value"/>
     <map fhir="birthdate" model="dateOfBirth"/>
+    <map fhir="death-date" model="deceasedDate"/>
+    <map fhir="deceased" model="deceasedDate=!null" type="indicator"/>
     <map fhir="gender" model="genderConcept" type="concept"/>
+    <map fhir="language" model="language.languageCode"/>
+    <map fhir="link" model="relationship.target@Patient" type="reference"/>
+    <map fhir="phonetic" model="name.component.value" function=":(soundslike|$1)" />
     <map fhir="identifier" model="identifier" type="identifier"/>
     <map fhir="general-practitioner" model="relationship[HealthcareProvider].target" type="reference"/>
     <map fhir="general-practitioner.name" model="relationship[HealthcareProvider].target.name.component.value"/>
@@ -68,7 +79,6 @@
     <map fhir="organization.address" model="relationship[scoper].target.address.component.value"/>
     <map fhir="registration-time" model="creationTime"/>
     <map fhir="date" model="creationTime" />
-    <map fhir="is-anonymous" model="tag[isAnonymous].value"/>
   </type>
 
   <type model="Hl7.Fhir.Model.Observation, Hl7.Fhir.R4.Core, Version=1.4.0.0">

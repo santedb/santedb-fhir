@@ -95,7 +95,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Not supported
         /// </summary>
-        public FhirQueryResult History(string id)
+        public Bundle History(string id)
         {
             throw new NotSupportedException();
         }
@@ -103,7 +103,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query for the specified search structure definition
         /// </summary>
-        public FhirQueryResult Query(NameValueCollection parameters)
+        public Bundle Query(NameValueCollection parameters)
         {
             throw new NotSupportedException();
         }

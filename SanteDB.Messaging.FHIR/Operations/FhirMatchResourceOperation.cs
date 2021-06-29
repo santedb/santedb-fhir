@@ -34,6 +34,16 @@ namespace SanteDB.Messaging.FHIR.Operations
         }
 
         /// <summary>
+        /// Get the parameters
+        /// </summary>
+        public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<String, FHIRAllTypes>()
+        {
+            { "resource", FHIRAllTypes.Any  },
+            { "onlyCertainMatches", FHIRAllTypes.Boolean },
+            { "count", FHIRAllTypes.Integer }
+        };
+
+        /// <summary>
         /// Gets the name of the operation
         /// </summary>
         public string Name => "match";
@@ -52,6 +62,11 @@ namespace SanteDB.Messaging.FHIR.Operations
             ResourceType.Organization,
             ResourceType.Location
         };
+
+        /// <summary>
+        /// True if the operation is a get
+        /// </summary>
+        public bool IsGet => false;
 
         /// <summary>
         /// Invoke the specified operation

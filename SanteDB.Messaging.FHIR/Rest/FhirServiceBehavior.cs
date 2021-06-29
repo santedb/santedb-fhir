@@ -307,9 +307,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         {
             this.ThrowIfNotReady();
 
-            // Stuff for auditing and exception handling
-            FhirQueryResult result = null;
-
             try
             {
 
@@ -325,17 +322,17 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 // TODO: Appropriately format response
                 // Process incoming request
-                result = resourceProcessor.Query(RestOperationContext.Current.IncomingRequest.QueryString);
+                var result = resourceProcessor.Query(RestOperationContext.Current.IncomingRequest.QueryString);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, RestOperationContext.Current.IncomingRequest.Url.Query, result.Results?.ToArray());
+                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, RestOperationContext.Current.IncomingRequest.Url.Query, result);
                 // Create the Atom feed
-                return MessageUtil.CreateBundle(result);
+                return result;
 
             }
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error searching FHIR resource {0}: {1}", resourceType, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query, result?.Results?.ToArray());
+                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query);
                 throw;
             }
 
@@ -381,11 +378,11 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // TODO: Appropriately format response
                 // Process incoming request
                 var result = resourceProcessor.History(id);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, $"_id={id}", result.Results.ToArray());
+                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, $"_id={id}", result);
 
                 // Create the result
-                RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Results[0].Meta.LastUpdated.Value.DateTime);
-                return MessageUtil.CreateBundle(result);
+                RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated?.DateTime ?? DateTime.Now);
+                return result;
 
             }
             catch (Exception e)
@@ -675,12 +672,21 @@ namespace SanteDB.Messaging.FHIR.Rest
                     // Add operation handlers
                     foreach(var op in ExtensionUtil.OperationHandlers.Where(o=> o.AppliesTo?.Contains(def.Type.Value) == true))
                     {
-                        var operationDescription = new ServiceOperationDescription("POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
+                        var operationDescription = new ServiceOperationDescription(op.IsGet ? "GET" : "POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
                         operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
                         operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                         operationDescription.Tags.Add(def.Type.ToString());
                         operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
+                        
+                        if(op.IsGet)
+                        {
+                            foreach(var i in op.Parameters)
+                            {
+                                operationDescription.Parameters.Add(new OperationParameterDescription(i.Key, typeof(String), OperationParameterLocation.Query));
+                            }
+                        }
                         retVal.Operations.Add(operationDescription);
+
                     }
                 }
 
@@ -692,6 +698,11 @@ namespace SanteDB.Messaging.FHIR.Rest
                 {
                     var operationDescription = new ServiceOperationDescription("POST", $"/${op.Name}", acceptProduces, true);
                     operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
+                    operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
+                    operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
+                    retVal.Operations.Add(operationDescription);
+
+                    operationDescription = new ServiceOperationDescription("GET", $"/${op.Name}", acceptProduces, true);
                     operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
                     operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
                     retVal.Operations.Add(operationDescription);

@@ -97,13 +97,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
                         retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;
 
-                        return retVal;
+                        return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, retVal);
                     };
                 case Hl7.Fhir.Model.Bundle.BundleType.Message:
                     {
 
                         var processMessageHandler = ExtensionUtil.GetOperation(null, "process-message");
-                        return processMessageHandler.Invoke(new Parameters()
+                        return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, processMessageHandler.Invoke(new Parameters()
                         {
                             Parameter = new List<Parameters.ParameterComponent>()
                             {
@@ -118,7 +118,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     Value = new FhirBoolean(false)
                                 }
                             }
-                        });
+                        }));
                     }
                 default:
                     throw new NotSupportedException($"Processing of bundles with type {fhirBundle.Type} is not supported");
@@ -170,7 +170,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// History read
         /// </summary>
-        public FhirQueryResult History(string id)
+        public Hl7.Fhir.Model.Bundle History(string id)
         {
             throw new NotSupportedException();
         }
@@ -254,7 +254,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query 
         /// </summary>
-        public FhirQueryResult Query(NameValueCollection parameters)
+        public Hl7.Fhir.Model.Bundle Query(NameValueCollection parameters)
         {
             throw new NotSupportedException();
         }

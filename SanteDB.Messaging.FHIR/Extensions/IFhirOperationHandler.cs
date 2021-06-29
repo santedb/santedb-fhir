@@ -34,6 +34,16 @@ namespace SanteDB.Messaging.FHIR.Extensions
         ResourceType[] AppliesTo { get; }
 
         /// <summary>
+        /// Get the parameter list for this object
+        /// </summary>
+        IDictionary<String, FHIRAllTypes> Parameters { get; }
+
+        /// <summary>
+        /// True if the operation impacts the object state
+        /// </summary>
+        bool IsGet { get; }
+
+        /// <summary>
         /// Invoke the specified operation
         /// </summary>
         /// <param name="parameters">The parameter set to action</param>

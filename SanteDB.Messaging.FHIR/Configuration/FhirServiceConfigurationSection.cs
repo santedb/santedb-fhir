@@ -146,6 +146,12 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// </summary>
         [XmlElement("base"), JsonProperty("base")]
         public String ResourceBaseUri { get; set; }
+
+        /// <summary>
+        /// Behavior modifiers
+        /// </summary>
+        [XmlArray("behaviorModifiers"), XmlArrayItem("add"), JsonProperty("behaviorModifiers")]
+        public List<TypeReferenceConfiguration> BehaviorModifiers { get; set; }
     }
 
 }

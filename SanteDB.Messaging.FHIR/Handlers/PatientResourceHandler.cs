@@ -225,14 +225,40 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 patient = this.m_repository.Get(key);
             }
+            else if(resource.Identifier?.Count > 0)
+            {
+                foreach(var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                {
+                    if(ii.LoadProperty(o=>o.Authority).IsUnique)
+                    {
+                        patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                    }
+                    if(patient != null)
+                    {
+                        break;
+                    }
+                }
+
+                if(patient == null)
+                {
+                    patient = new Core.Model.Roles.Patient()
+                    {
+                        Key = Guid.NewGuid()
+                    };
+                }
+            }
             else
             {
-                patient = new Core.Model.Roles.Patient();
+                patient = new Core.Model.Roles.Patient()
+                {
+                    Key = Guid.NewGuid()
+                };
             }
 
             patient.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
             patient.CreationTime = DateTimeOffset.Now;
             patient.DateOfBirthXml = resource.BirthDate;
+            patient.DateOfBirthPrecision = DatePrecision.Day;
             patient.GenderConceptKey = resource.Gender == null ? NullReasonKeys.Unknown : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             patient.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             patient.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
@@ -263,6 +289,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 patient.MultipleBirthOrder = intBirth.Value;
             }
 
+            if(resource.GeneralPractitioner != null)
+            {
+                patient.Relationships.AddRange(resource.GeneralPractitioner.Select(r =>
+                {
+                    var referenceKey = DataTypeConverter.ResolveEntity(r, resource) as Entity;
+                    if (referenceKey == null)
+                        throw new KeyNotFoundException("Can't locate a registered general practitioner");
+                    return new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey);
+                }));
+            }
             if (resource.ManagingOrganization != null)
             {
                 var referenceKey = DataTypeConverter.ResolveEntity(resource.ManagingOrganization, resource) as Entity;
@@ -355,6 +391,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // TODO: Photo
+            if(resource.Photo != null && resource.Photo.Any())
+            {
+                patient.Extensions.RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+                patient.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
+            }
             return patient;
         }
 
@@ -380,7 +421,52 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Roles.Patient resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            return includePaths.SelectMany(includeInstruction =>
+            {
+                switch (includeInstruction.Type)
+                {
+                    case ResourceType.Practitioner:
+                        {
+                            var rpHandler = FhirResourceHandlerUtil.GetMappersFor(ResourceType.Practitioner).FirstOrDefault();
+                            switch (includeInstruction.JoinPath)
+                            {
+                                case "generalPractitioner":
+                                    return resource.LoadCollection(o => o.Relationships)
+                                        .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
+                                            o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
+                                            o.LoadProperty(r => r.TargetEntity) is Core.Model.Roles.Provider)
+                                        .Select(o => rpHandler.MapToFhir(o.TargetEntity));
+                                default:
+                                    throw new InvalidOperationException($"Cannot determine how to include {includeInstruction}");
+                            }
+                        }
+                    case ResourceType.Organization:
+                        { 
+                            // Load all related persons and convert them
+                            var rpHandler = FhirResourceHandlerUtil.GetMappersFor(ResourceType.Organization).FirstOrDefault();
+
+                            switch (includeInstruction.JoinPath)
+                            {
+                                case "managingOrganization":
+                                    return resource.LoadCollection(o => o.Relationships)
+                                        .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
+                                            o.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper &&
+                                            o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
+                                        .Select(o => rpHandler.MapToFhir(o.TargetEntity));
+                                case "generalPractitioner":
+                                    return resource.LoadCollection(o => o.Relationships)
+                                        .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
+                                            o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
+                                            o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
+                                        .Select(o => rpHandler.MapToFhir(o.TargetEntity));
+                                default:
+                                    throw new InvalidOperationException($"Cannot determine how to include {includeInstruction}");
+                            }
+                        }
+                    default:
+                        throw new InvalidOperationException($"{includeInstruction.Type} is not supported reverse include");
+                }
+            });
         }
 
         /// <summary>

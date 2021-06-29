@@ -26,10 +26,24 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// </summary>
         public ResourceType[] AppliesTo => FhirResourceHandlerUtil.ResourceHandlers.Select(o => o.ResourceType).Distinct().ToArray();
 
+        
         /// <summary>
         /// Gets the URI to the definition
         /// </summary>
         public Uri Uri => new Uri("http://hl7.org/fhir/OperationDefinition/Resource-validate");
+
+        /// <summary>
+        /// True if this impacts state
+        /// </summary>
+        public bool IsGet => false;
+
+        /// <summary>
+        /// Get the parameters
+        /// </summary>
+        public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<String, FHIRAllTypes>()
+        {
+            { "resource", FHIRAllTypes.Any }
+        };
 
         /// <summary>
         /// Invoke the operation

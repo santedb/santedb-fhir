@@ -92,7 +92,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			/// </summary>
             public String JoinPath { get; set; }
 
-			
+			/// <summary>
+			/// Represent as a string
+			/// </summary>
+			public override string ToString() => $"{this.Type}:{this.JoinPath}";
+
         }
 
 		/// <summary>
@@ -139,6 +143,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <exception cref="System.Data.SyntaxErrorException"></exception>
         public virtual Resource Create(Resource target, TransactionMode mode)
 		{
+
 			this.m_traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceType, target);
 
 			if (target == null)
@@ -146,6 +151,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			else if (!(target is TFhirResource))
 				throw new InvalidDataException();
 
+			target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Create, this.ResourceType, target);
+			
 			// We want to map from TFhirResource to TModel
 			var modelInstance = this.MapToModel(target as TFhirResource);
 			if (modelInstance == null)
@@ -154,7 +161,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			var result = this.Create(modelInstance, mode);
 
             // Return fhir operation result
-            return this.MapToFhir(result);
+            var retVal = this.MapToFhir(result);
+			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, this.ResourceType, retVal);
 		}
 
         /// <summary>
@@ -181,7 +189,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var result = this.Delete(guidId);
 
             // Return fhir operation result
-            return this.MapToFhir(result);
+            var retVal = this.MapToFhir(result);
+			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Delete, this.ResourceType, retVal);
 		}
 
         /// <summary>
@@ -225,7 +234,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="parameters">The parameters.</param>
         /// <returns>Returns the FHIR query result containing the results of the query.</returns>
         /// <exception cref="System.ArgumentNullException">parameters</exception>
-        public virtual FhirQueryResult Query(System.Collections.Specialized.NameValueCollection parameters)
+        public virtual Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
 		{
 			if (parameters == null)
 				throw new ArgumentNullException(nameof(parameters));
@@ -267,7 +276,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				retVal.Results = retVal.Results.Union(hdsiResults.SelectMany(h => this.GetReverseIncludes(h, parameters["_revinclude"].Split(',').Select(o => new IncludeInstruction(o))))).ToList();
 			}
 
-			return retVal;
+			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal)) as Bundle;
 		}
 
 		/// <summary>
@@ -296,7 +305,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				throw new KeyNotFoundException();
 
             // FHIR Operation result
-            return this.MapToFhir(result);
+            var retVal = this.MapToFhir(result);
+			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(String.IsNullOrEmpty(versionId) ? TypeRestfulInteraction.Read : TypeRestfulInteraction.Vread, this.ResourceType, retVal);
 		}
 
 		/// <summary>
@@ -321,6 +331,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			else if (!(target is TFhirResource))
 				throw new InvalidDataException();
 
+			target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Update, this.ResourceType, target);
+
             // We want to map from TFhirResource to TModel
             target.Id = id;
 			var modelInstance = this.MapToModel(target as TFhirResource);
@@ -341,7 +353,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			var result = this.Update(modelInstance, mode);
 
             // Return fhir operation result
-            return this.MapToFhir(result);
+            var retVal = this.MapToFhir(result);
+			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Update, this.ResourceType, retVal);
 		}
 
 		/// <summary>
@@ -416,7 +429,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Reads the complete history of the specified identifier
         /// </summary>
-        public FhirQueryResult History(string id)
+        public Bundle History(string id)
         {
             if (String.IsNullOrEmpty(id))
                 throw new ArgumentNullException(nameof(id));
@@ -438,10 +451,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // FHIR Operation result
-            return new FhirQueryResult(typeof(TFhirResource).Name)
+            var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
             {
                 Results = results.Select(this.MapToFhir).OfType<Resource>().ToList()
             };
+
+			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.HistoryInstance, this.ResourceType, MessageUtil.CreateBundle(retVal)) as Bundle;
         }
 
 		/// <summary>

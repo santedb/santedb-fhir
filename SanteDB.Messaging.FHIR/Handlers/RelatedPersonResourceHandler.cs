@@ -171,7 +171,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 relationship = new EntityRelationship()
                 {
                     Key = Guid.NewGuid(),
-                    TargetEntity = new SanteDB.Core.Model.Entities.Person(),
+                    TargetEntity = new SanteDB.Core.Model.Entities.Person()
+                    {
+                        Key = Guid.NewGuid()
+                    },
                     SourceEntityKey = sourceEntity.Key
                 };
             }
@@ -197,7 +200,29 @@ namespace SanteDB.Messaging.FHIR.Handlers
             relationship.ClassificationKey = RelationshipClassKeys.ReferencedObjectLink;
             relationship.RelationshipTypeKey = relationshipTypes.First();
 
-            var person = relationship.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person ?? new Core.Model.Entities.Person() { Key = Guid.NewGuid() };
+            Core.Model.Entities.Person person = relationship.LoadProperty(o=>o.TargetEntity) as Core.Model.Entities.Person;
+            if (person == null && resource.Identifier?.Count > 0)
+            {
+                foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                {
+                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    {
+                        person = this.m_personRepository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                    }
+                    if (person != null)
+                    {
+                        break;
+                    }
+                }
+            }
+            if (person == null)
+            {
+                person = new Core.Model.Entities.Person()
+                {
+                    Key = Guid.NewGuid()
+                };
+            }
+            
             if (resource.Name.Any() || resource.Address.Any() || resource.Telecom.Any())
             {
                 // Set the relationship
@@ -219,7 +244,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             else
             {
                 // TODO: Cross reference via identifiers
-
+                person.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
                 person.AddTag(FhirConstants.PlaceholderTag, "true");
             }
             relationship.TargetEntity = person;

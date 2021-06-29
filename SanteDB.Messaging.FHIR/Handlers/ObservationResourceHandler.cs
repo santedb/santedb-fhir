@@ -150,7 +150,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Parameters
         /// </summary>
-        public override FhirQueryResult Query(System.Collections.Specialized.NameValueCollection parameters)
+        public override Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
         {
             if (parameters == null)
                 throw new ArgumentNullException(nameof(parameters));
@@ -183,12 +183,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var restOperationContext = RestOperationContext.Current;
 
             // Return FHIR query result
-            return new FhirQueryResult("Observation")
+            var retVal = new FhirQueryResult("Observation")
             {
                 Results = hdsiResults.Select(this.MapToFhir).OfType<Resource>().ToList(),
                 Query = query,
                 TotalResults = totalResults
             };
+            return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal)) as Bundle;
         }
 
         /// <summary>

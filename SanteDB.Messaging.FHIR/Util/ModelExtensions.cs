@@ -26,5 +26,13 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             return new ResourceDescription(me.ToString(), $"FHIR Resource {me}");
         }
+
+        /// <summary>
+        /// FHIR Resource
+        /// </summary>
+        public static ResourceDescription CreateDescription(this FHIRAllTypes me)
+        {
+            return new ResourceDescription(me.ToString(), $"FHIR Resource {me}");
+        }
     }
 }

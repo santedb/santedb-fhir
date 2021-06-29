@@ -107,8 +107,8 @@ namespace SanteDB.Messaging.FHIR.Test
             var query = new System.Collections.Specialized.NameValueCollection();
             query.Add("identifier", "http://santedb.org/fhir/test|FHR-1234");
             var queryResult = patientHandler.Query(query);
-            Assert.AreEqual(1, queryResult.TotalResults);
-            messageString = TestUtil.MessageToString(MessageUtil.CreateBundle(queryResult));
+            Assert.AreEqual(1, queryResult.Total);
+            messageString = TestUtil.MessageToString(queryResult);
 
             // Get the patient - and mother
             patientHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
@@ -116,20 +116,20 @@ namespace SanteDB.Messaging.FHIR.Test
             query.Add("identifier", "http://santedb.org/fhir/test|FHR-1234");
             query.Add("_revinclude", "RelatedPerson:patient");
             queryResult = patientHandler.Query(query);
-            Assert.AreEqual(1, queryResult.TotalResults);
-            Assert.AreEqual(2, queryResult.Results.Count);
-            messageString = TestUtil.MessageToString(MessageUtil.CreateBundle(queryResult));
+            Assert.AreEqual(1, queryResult.Total);
+            Assert.AreEqual(2, queryResult.Entry.Count);
+            messageString = TestUtil.MessageToString(queryResult);
 
             // Grab the related person 
-            var sourceRelatedPerson = queryResult.Results.OfType<RelatedPerson>().First();
+            var sourceRelatedPerson = queryResult.Entry.Select(o=>o.Resource).OfType<RelatedPerson>().First();
             Assert.AreEqual(sdbPerson.Key.ToString(), sourceRelatedPerson.Id);
 
             // The Persistence layer did not create a patient
             query = new System.Collections.Specialized.NameValueCollection();
             query.Add("identifier", "http://santedb.org/fhir/test|FHR-9988");
             queryResult = patientHandler.Query(query);
-            Assert.AreEqual(0, queryResult.TotalResults);
-            messageString = TestUtil.MessageToString(MessageUtil.CreateBundle(queryResult));
+            Assert.AreEqual(0, queryResult.Total);
+            messageString = TestUtil.MessageToString(queryResult);
 
             // Attempt to update the related person's name
             sourceRelatedPerson.Name.First().Family = "SINGH";
@@ -145,9 +145,9 @@ namespace SanteDB.Messaging.FHIR.Test
             query = new System.Collections.Specialized.NameValueCollection();
             query.Add("identifier", "http://santedb.org/fhir/test|FHR-9988");
             queryResult = patientHandler.Query(query);
-            Assert.AreEqual(1, queryResult.TotalResults);
-            messageString = TestUtil.MessageToString(MessageUtil.CreateBundle(queryResult));
-            Assert.AreEqual(afterRelatedPerson.Id, queryResult.Results.First().Id);
+            Assert.AreEqual(1, queryResult.Total);
+            messageString = TestUtil.MessageToString(queryResult);
+            Assert.AreEqual(afterRelatedPerson.Id, queryResult.Entry.First().Resource.Id);
         }
 
         /// <summary>
@@ -214,20 +214,20 @@ namespace SanteDB.Messaging.FHIR.Test
             var query = new System.Collections.Specialized.NameValueCollection();
             query.Add("identifier", "http://santedb.org/fhir/test|FHR-4322");
             var queryResult = patientHandler.Query(query);
-            Assert.AreEqual(1, queryResult.TotalResults);
+            Assert.AreEqual(1, queryResult.Total);
 
             // Ensure a QUERY for related person returns
             query = new System.Collections.Specialized.NameValueCollection();
             query.Add("identifier", "http://santedb.org/fhir/test|FHR-4321");
             queryResult = patientHandler.Query(query);
-            Assert.AreEqual(1, queryResult.TotalResults);
+            Assert.AreEqual(1, queryResult.Total);
 
             // Ensure Query for RelatedPerson returns 1 
             patientHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson);
             query = new System.Collections.Specialized.NameValueCollection();
             query.Add("identifier", "http://santedb.org/fhir/test|FHR-4321");
             queryResult = patientHandler.Query(query);
-            Assert.AreEqual(1, queryResult.TotalResults);
+            Assert.AreEqual(1, queryResult.Total);
 
         }
     }

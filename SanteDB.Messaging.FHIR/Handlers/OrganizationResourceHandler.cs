@@ -81,7 +81,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Hl7.Fhir.Model.Organization MapToFhir(Core.Model.Entities.Organization model)
         {
-            return DataTypeConverter.CreateResource<Hl7.Fhir.Model.Organization>(model);
+            var retVal = DataTypeConverter.CreateResource<Hl7.Fhir.Model.Organization>(model);
+
+            retVal.Identifier = model.LoadCollection(o => o.Identifiers).Select(o=>DataTypeConverter.ToFhirIdentifier(o)).ToList();
+            retVal.Active = model.StatusConceptKey == StatusKeys.Active;
+            retVal.Telecom = model.LoadCollection(o => o.Telecoms).Select(DataTypeConverter.ToFhirTelecom).ToList();
+            retVal.Address = model.LoadCollection(o => o.Addresses).Select(DataTypeConverter.ToFhirAddress).ToList();
+            retVal.Name = model.LoadCollection(o => o.Names).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.ToDisplay();
+            retVal.Alias = model.LoadCollection(o => o.Names).Where(o => o.NameUseKey == NameUseKeys.Pseudonym).Select(o => o.ToDisplay());
+
+            var parent = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
+            if (parent != null) {
+                retVal.PartOf = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(parent.TargetEntityKey);
+            }
+
+            return retVal;
         }
 
         /// <summary>
@@ -89,28 +103,54 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Core.Model.Entities.Organization MapToModel(Hl7.Fhir.Model.Organization resource)
         {
-            // Organization
-            var retVal = new Core.Model.Entities.Organization()
+            Core.Model.Entities.Organization retVal = null;
+            if(Guid.TryParse(resource.Id, out Guid key))
             {
-                TypeConcept = resource.Type.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault(),
-                Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList(),
-                CreationTime = DateTimeOffset.Now,
-                // TODO: Extensions
-                Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
-                Key = Guid.NewGuid(),
-                Names = new List<EntityName>() { new EntityName(NameUseKeys.OfficialRecord, resource.Name) },
-                StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete,
-                Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
-            };
-
-            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
-
-            if (!Guid.TryParse(resource.Id, out Guid key))
-            {
-                key = Guid.NewGuid();
+                retVal = this.m_repository.Get(key);
             }
-            retVal.Key = key;
+            else if(resource.Identifier?.Count > 0)
+            {
+                foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                {
+                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    {
+                        retVal = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                    }
+                    if (retVal != null)
+                    {
+                        break;
+                    }
+                }
+            }
+            if(retVal == null)
+            {
+                retVal = new Core.Model.Entities.Organization()
+                {
+                    Key = Guid.NewGuid()
+                };
+            }
 
+            // Organization
+            retVal.TypeConcept = resource.Type.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
+            retVal.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
+
+            // TODO: Extensions
+            retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
+            retVal.Names = new List<EntityName>() { new EntityName(NameUseKeys.OfficialRecord, resource.Name) };
+            retVal.Names.AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
+            retVal.StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
+            retVal.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
+
+            if(resource.PartOf != null)
+            {
+                var referenceKey = DataTypeConverter.ResolveEntity(resource.PartOf, resource)?.Key;
+                if(referenceKey == null)
+                {
+                    throw new KeyNotFoundException($"Could not resolve {resource.PartOf.Reference}");
+                }
+                retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, referenceKey));
+            } 
+            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
             return retVal;
         }
     }

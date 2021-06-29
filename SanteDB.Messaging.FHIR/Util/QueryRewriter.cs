@@ -146,6 +146,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 parmConfig.ModelQuery = hdsiQueryParmeter;
                 parmConfig.FhirType = type;
             }
+            mapConfig.Map.Add(parmConfig);
         }
 
         /// <summary>
@@ -180,6 +181,8 @@ namespace SanteDB.Messaging.FHIR.Util
                     return SearchParamType.Token;
                 case QueryParameterRewriteType.Reference:
                     return SearchParamType.Reference;
+                case QueryParameterRewriteType.Indicator:
+                    return SearchParamType.Token;
                 default:
                     try
                     {
@@ -351,13 +354,30 @@ namespace SanteDB.Messaging.FHIR.Util
                     if(parmComponents.Length > 1)
                         switch(parmComponents[1])
                         {
+                            case "fuzzy":
+                            case "approx":
+                                opValue = "";
+                                filterValue = $":(approx|'{filterValue}')";
+                                break;
                             case "contains":
                                 opValue = "~";
                                 filterValue = $"*{filterValue}*";
                                 break;
+                            case "exact":
+                                opValue = "";
+                                break;
                             case "missing":
                                 filterValue = "null";
                                 chop = false;
+                                break;
+                            default: 
+                                switch(parmMap.FhirType)
+                                {
+                                    case QueryParameterRewriteType.String: // Default string matching is wonky in FHIR but meh we can mimic it at least
+                                        opValue = "~";
+                                        filterValue = $"*{filterValue.Replace(' ', '?')}*";
+                                        break;
+                                }
                                 break;
                         }
 
@@ -367,6 +387,12 @@ namespace SanteDB.Messaging.FHIR.Util
 
                 if (value.Count(o => !String.IsNullOrEmpty(o)) == 0)
                     continue;
+
+                // Apply a function
+                if(!String.IsNullOrEmpty(parmMap.Function))
+                {
+                    value = value.Select(o => parmMap.Function.Replace("$1", o)).ToList();
+                }
 
                 // Query 
                 switch (parmMap.FhirType)
@@ -381,6 +407,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 if (Uri.TryCreate(segs[0], UriKind.Absolute, out Uri data))
                                 {
                                     var aa = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>().Get(data);
+
                                     hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
                                 }
                                 else
@@ -389,6 +416,13 @@ namespace SanteDB.Messaging.FHIR.Util
                             }
                             else
                                 hdsiQuery.Add(parmMap.ModelQuery + ".value", itm);
+                        }
+                        break;
+                    case QueryParameterRewriteType.Indicator:
+                        var mq = NameValueCollection.ParseQueryString(parmMap.ModelQuery);
+                        foreach(var itm in mq)
+                        {
+                            hdsiQuery.Add(itm.Key, itm.Value);
                         }
                         break;
                     case QueryParameterRewriteType.Concept:

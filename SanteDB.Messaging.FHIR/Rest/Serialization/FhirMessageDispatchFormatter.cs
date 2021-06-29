@@ -25,12 +25,14 @@ using RestSrvr.Attributes;
 using RestSrvr.Message;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Serialization;
+using SanteDB.Messaging.FHIR.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Xml;
 using System.Xml.Schema;
@@ -158,7 +160,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                                 }).Serialize(baseObject, jw);
                             break;
                         default:
-                            throw new InvalidOperationException($"Can't handle this content/type");
+                            throw new FhirException((HttpStatusCode)406, OperationOutcome.IssueType.NotSupported, $"{contentType} not supported");
                     }
                     ms.Seek(0, SeekOrigin.Begin);
                     responseMessage.Body = ms;
