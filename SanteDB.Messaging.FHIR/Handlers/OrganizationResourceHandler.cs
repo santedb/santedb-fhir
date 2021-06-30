@@ -143,12 +143,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if(resource.PartOf != null)
             {
-                var referenceKey = DataTypeConverter.ResolveEntity(resource.PartOf, resource)?.Key;
-                if(referenceKey == null)
+                var reference = DataTypeConverter.ResolveEntity(resource.PartOf, resource);
+                if(reference == null)
                 {
                     throw new KeyNotFoundException($"Could not resolve {resource.PartOf.Reference}");
                 }
-                retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, referenceKey));
+                retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference as Entity));
             } 
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
             return retVal;
