@@ -157,7 +157,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 foreach (Type t in m_configuration.ResourceHandlers.Select(o => o.Type))
                 {
                     if (t != null)
-                        FhirResourceHandlerUtil.RegisterResourceHandler(serviceManager.CreateInjected(t) as IFhirResourceHandler);
+                    {
+                        var rh = serviceManager.CreateInjected(t);
+                        if (rh is IFhirResourceHandler resourceHandler)
+                        {
+                            FhirResourceHandlerUtil.RegisterResourceHandler(resourceHandler);
+                        }
+                    }
                 }
             }
         }

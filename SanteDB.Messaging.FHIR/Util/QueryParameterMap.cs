@@ -30,6 +30,8 @@ namespace SanteDB.Messaging.FHIR.Util
     [XmlType(nameof(QueryParameterRewriteType), Namespace = "http://santedb.org/model/fhir")]
     public enum QueryParameterRewriteType
     {
+        [XmlEnum("none")]
+        None,
         [XmlEnum("concept")]
         Concept,
         [XmlEnum("identifier")]

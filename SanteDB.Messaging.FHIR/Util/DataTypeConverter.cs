@@ -35,6 +35,7 @@ using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
+using SanteDB.Messaging.FHIR.Handlers;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -963,20 +964,40 @@ namespace SanteDB.Messaging.FHIR.Util
             }
             else if (!String.IsNullOrEmpty(resourceRef.Reference))
             {
-                retVal = sdbBundle?.Item.OfType<ITaggable>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference) as IdentifiedData;
-                if (retVal == null)
+                if (resourceRef.Reference.StartsWith("#") && containedWithin is DomainResource domainResource) // Rel
                 {
-                    // Attempt to resolve the reference 
-                    var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
-                    var match = refRegex.Match(resourceRef.Reference);
-                    if (!match.Success)
-                        throw new InvalidOperationException($"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
+                    var contained = domainResource.Contained.Find(o => o.Id.Equals(resourceRef.Reference.Substring(1)));
+                    if(contained == null)
+                    {
+                        throw new InvalidOperationException($"Relative reference provided but cannot find contained object {resourceRef.Reference}");
+                    }
 
-                    if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value, out Guid relUuid)) // rel reference
-                        retVal = repo.Get(relUuid); // Allow any triggers to fire
-                    else if (Guid.TryParse(match.Groups[1].Value, out Guid absRef))
-                        retVal = repo.Get(absRef);
-                        
+                    var mapper = FhirResourceHandlerUtil.GetMapperForInstance(contained);
+                    if(mapper == null)
+                    {
+                        throw new InvalidOperationException($"Don't understand how to convert {contained.ResourceType}");
+                    }
+
+                    retVal = mapper.MapToModel(contained);
+                    
+                }
+                else
+                {
+                    retVal = sdbBundle?.Item.OfType<ITaggable>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference) as IdentifiedData;
+                    if (retVal == null)
+                    {
+                        // Attempt to resolve the reference 
+                        var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
+                        var match = refRegex.Match(resourceRef.Reference);
+                        if (!match.Success)
+                            throw new InvalidOperationException($"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
+
+                        if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value, out Guid relUuid)) // rel reference
+                            retVal = repo.Get(relUuid); // Allow any triggers to fire
+                        else if (Guid.TryParse(match.Groups[1].Value, out Guid absRef))
+                            retVal = repo.Get(absRef);
+
+                    }
                 }
             }
             else
