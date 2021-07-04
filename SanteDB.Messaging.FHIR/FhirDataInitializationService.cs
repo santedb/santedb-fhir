@@ -128,6 +128,7 @@ namespace SanteDB.Messaging.FHIR
                         }
                         catch (Exception ex)
                         {
+                            this.m_traceSource.TraceError("Error Applying Dataset: {0}", ex);
                             fhirResult = DataTypeConverter.CreateOperationOutcome(ex);
                         }
 
