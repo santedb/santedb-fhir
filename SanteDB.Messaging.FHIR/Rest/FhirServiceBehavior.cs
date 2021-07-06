@@ -245,10 +245,12 @@ namespace SanteDB.Messaging.FHIR.Rest
                 AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Create, AuditableObjectLifecycle.Creation, EventIdentifierType.Import, OutcomeIndicator.Success, null, result);
 
                 String baseUri = MessageUtil.GetBaseUri();
-                RestOperationContext.Current.OutgoingResponse.Headers.Add("Content-Location", String.Format("{0}/{1}/{2}/_history/{3}", baseUri, resourceType, result.Id, result.VersionId));
-                RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated.Value.DateTime);
-                RestOperationContext.Current.OutgoingResponse.SetETag($"W/\"{result.VersionId}\"");
-
+                if (!(result is Bundle))
+                {
+                    RestOperationContext.Current.OutgoingResponse.Headers.Add("Content-Location", String.Format("{0}/{1}/{2}/_history/{3}", baseUri, resourceType, result.Id, result.VersionId));
+                    RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated.Value.DateTime);
+                    RestOperationContext.Current.OutgoingResponse.SetETag($"W/\"{result.VersionId}\"");
+                }
 
                 return result;
 
@@ -673,7 +675,11 @@ namespace SanteDB.Messaging.FHIR.Rest
                     foreach(var op in ExtensionUtil.OperationHandlers.Where(o=> o.AppliesTo?.Contains(def.Type.Value) == true))
                     {
                         var operationDescription = new ServiceOperationDescription(op.IsGet ? "GET" : "POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
-                        operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
+
+                        if (!op.IsGet)
+                        {
+                            operationDescription.Parameters.Add(new OperationParameterDescription("parameters", ResourceType.Parameters.CreateDescription(), OperationParameterLocation.Body));
+                        }
                         operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                         operationDescription.Tags.Add(def.Type.ToString());
                         operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());

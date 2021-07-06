@@ -54,6 +54,81 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
         private Tracer m_tracer = new Tracer(FhirConstants.TraceSourceName);
 
         /// <summary>
+        /// Classify the error code
+        /// </summary>
+        public static int ClassifyErrorCode(Exception error)
+        {
+            if (error is FhirException fhirException)
+            {
+                return (int)fhirException.Status;
+            }
+            else
+            {
+                // Get to the root of the error
+                while (error.InnerException != null)
+                    error = error.InnerException;
+
+                // Formulate appropriate response
+                if (error is DomainStateException)
+                    return (int)System.Net.HttpStatusCode.ServiceUnavailable;
+                else if (error is PolicyViolationException)
+                {
+                    var pve = error as PolicyViolationException;
+                    if (pve.PolicyDecision == PolicyGrantType.Elevate)
+                    {
+                        // Ask the user to elevate themselves
+                        return 401;
+                    }
+                    else
+                    {
+                        return 403;
+                    }
+                }
+                else if (error is SecurityException || error is UnauthorizedAccessException)
+                    return (int)System.Net.HttpStatusCode.Forbidden;
+                else if (error is SecurityTokenException)
+                {
+                    return (int)System.Net.HttpStatusCode.Unauthorized;
+                }
+                else if (error is SecuritySessionException ses)
+                {
+                    switch (ses.Type)
+                    {
+                        case SessionExceptionType.Expired:
+                        case SessionExceptionType.NotYetValid:
+                        case SessionExceptionType.NotEstablished:
+                            return (int)System.Net.HttpStatusCode.Unauthorized;
+                        default:
+                            return (int)System.Net.HttpStatusCode.Forbidden;
+                            break;
+                    }
+                }
+                else if (error is ArgumentException)
+                    return (int)400;
+                else if (error is FaultException)
+                    return (int)(error as FaultException).StatusCode;
+                else if (error is Newtonsoft.Json.JsonException ||
+                    error is System.Xml.XmlException)
+                    return (int)System.Net.HttpStatusCode.BadRequest;
+                else if (error is FileNotFoundException || error is KeyNotFoundException)
+                    return (int)System.Net.HttpStatusCode.NotFound;
+                else if (error is DbException || error is ConstraintException)
+                    return (int)(System.Net.HttpStatusCode)422;
+                else if (error is PatchException)
+                    return (int)System.Net.HttpStatusCode.Conflict;
+                else if (error is NotImplementedException)
+                    return (int)System.Net.HttpStatusCode.NotImplemented;
+                else if (error is NotSupportedException)
+                    return (int)System.Net.HttpStatusCode.MethodNotAllowed;
+                else if (error is DetectedIssueException)
+                    return (int)422;
+                else
+                    return (int)System.Net.HttpStatusCode.InternalServerError;
+
+            }
+        }
+
+        /// <summary>
         /// Apply the service behavior
         /// </summary>
         public void ApplyServiceBehavior(RestService service, ServiceDispatcher dispatcher)
@@ -77,39 +152,20 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
         {
             this.m_tracer.TraceEvent(EventLevel.Error, "Error on WCF FHIR Pipeline: {0}", error);
 
-            if (error is FhirException fhirException)
-            {
-                RestOperationContext.Current.OutgoingResponse.StatusCode = (int)fhirException.Status;
-            }
-            else
+            RestOperationContext.Current.OutgoingResponse.StatusCode = ClassifyErrorCode(error);
+            if(RestOperationContext.Current.OutgoingResponse.StatusCode == 401)
             {
                 // Get to the root of the error
                 while (error.InnerException != null)
                     error = error.InnerException;
 
-                // Formulate appropriate response
-                if (error is DomainStateException)
-                    response.StatusCode = (int)System.Net.HttpStatusCode.ServiceUnavailable;
-                else if (error is PolicyViolationException)
+                if (error is PolicyViolationException pve)
                 {
-                    var pve = error as PolicyViolationException;
-                    if (pve.PolicyDecision == PolicyGrantType.Elevate)
-                    {
-                        // Ask the user to elevate themselves
-                        response.StatusCode = 401;
-                        var authHeader = $"{(RestOperationContext.Current.AppliedPolicies.Any(o => o.GetType().Name.Contains("Basic")) ? "Basic" : "Bearer")} realm=\"{RestOperationContext.Current.IncomingRequest.Url.Host}\" error=\"insufficient_scope\" scope=\"{pve.PolicyId}\"  error_description=\"{error.Message}\"";
-                        response.Headers.Add("WWW-Authenticate", authHeader);
-                    }
-                    else
-                    {
-                        response.StatusCode = 403;
-                    }
+                    var authHeader = $"{(RestOperationContext.Current.AppliedPolicies.Any(o => o.GetType().Name.Contains("Basic")) ? "Basic" : "Bearer")} realm=\"{RestOperationContext.Current.IncomingRequest.Url.Host}\" error=\"insufficient_scope\" scope=\"{pve.PolicyId}\"  error_description=\"{error.Message}\"";
+                    response.Headers.Add("WWW-Authenticate", authHeader);
                 }
-                else if (error is SecurityException || error is UnauthorizedAccessException)
-                    response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;
-                else if (error is SecurityTokenException)
+                else if(error is SecurityTokenException ste)
                 {
-                    response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
                     response.Headers.Add("WWW-Authenticate", $"Bearer");
                 }
                 else if (error is SecuritySessionException ses)
@@ -127,26 +183,10 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
                             break;
                     }
                 }
-                else if (error is FaultException)
-                    response.StatusCode = (int)(error as FaultException).StatusCode;
-                else if (error is Newtonsoft.Json.JsonException ||
-                    error is System.Xml.XmlException)
-                    response.StatusCode = (int)System.Net.HttpStatusCode.BadRequest;
-                else if (error is FileNotFoundException || error is KeyNotFoundException)
-                    response.StatusCode = (int)System.Net.HttpStatusCode.NotFound;
-                else if (error is DbException || error is ConstraintException)
-                    response.StatusCode = (int)(System.Net.HttpStatusCode)422;
-                else if (error is PatchException)
-                    response.StatusCode = (int)System.Net.HttpStatusCode.Conflict;
-                else if (error is NotImplementedException)
-                    response.StatusCode = (int)System.Net.HttpStatusCode.NotImplemented;
-                else if (error is NotSupportedException)
-                    response.StatusCode = (int)System.Net.HttpStatusCode.MethodNotAllowed;
-                else
-                    response.StatusCode = (int)System.Net.HttpStatusCode.InternalServerError;
 
             }
-            var errorResult = DataTypeConverter.CreateOperationOutcome(error);
+            
+            var errorResult = DataTypeConverter.CreateErrorResult(error);
 
             // Return error in XML only at this point
             new FhirMessageDispatchFormatter().SerializeResponse(response, null, errorResult);

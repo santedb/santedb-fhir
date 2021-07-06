@@ -350,10 +350,14 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Create an operation outcome from the error
         /// </summary>
-        public static OperationOutcome CreateOperationOutcome(Exception error)
+        public static Resource CreateErrorResult(Exception error)
         {
             if (error is FhirException fhirException)
             {
+                if (fhirException.Resource != null)
+                {
+                    return fhirException.Resource;
+                }
                 return new OperationOutcome()
                 {
                     Issue = new List<IssueComponent>()
@@ -643,7 +647,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
             else
             {
-                throw new InvalidOperationException("Identifier must carry a coding system");
+                throw new ArgumentException("Identifier must carry a coding system");
             }
 
             // TODO: Fill in use
@@ -774,7 +778,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (system == null)
             {
-                throw new InvalidOperationException("Coding must have system attached");
+                throw new ArgumentException("Coding must have system attached");
             }
 
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR coding");
@@ -892,7 +896,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
             else
             {
-                throw new InvalidOperationException("Identifier must carry a coding system");
+                throw new ArgumentException("Identifier must carry a coding system");
             }
 
             if (fhirId.Period != null)
@@ -969,13 +973,13 @@ namespace SanteDB.Messaging.FHIR.Util
                     var contained = domainResource.Contained.Find(o => o.Id.Equals(resourceRef.Reference.Substring(1)));
                     if(contained == null)
                     {
-                        throw new InvalidOperationException($"Relative reference provided but cannot find contained object {resourceRef.Reference}");
+                        throw new ArgumentException($"Relative reference provided but cannot find contained object {resourceRef.Reference}");
                     }
 
                     var mapper = FhirResourceHandlerUtil.GetMapperForInstance(contained);
                     if(mapper == null)
                     {
-                        throw new InvalidOperationException($"Don't understand how to convert {contained.ResourceType}");
+                        throw new ArgumentException($"Don't understand how to convert {contained.ResourceType}");
                     }
 
                     retVal = mapper.MapToModel(contained);
@@ -990,7 +994,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
                         var match = refRegex.Match(resourceRef.Reference);
                         if (!match.Success)
-                            throw new InvalidOperationException($"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
+                            throw new KeyNotFoundException($"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
 
                         if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value, out Guid relUuid)) // rel reference
                             retVal = repo.Get(relUuid); // Allow any triggers to fire
@@ -1024,6 +1028,7 @@ namespace SanteDB.Messaging.FHIR.Util
             retVal.RelationshipRole = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault());
             retVal.TargetEntity = new Core.Model.Entities.Person()
             {
+                Key = Guid.NewGuid(),
                 Addresses = patientContact.Address != null ? new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(patientContact.Address) } : null,
                 CreationTime = DateTimeOffset.Now,
                 // TODO: Gender (after refactor)

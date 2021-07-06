@@ -34,6 +34,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Text;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
@@ -134,21 +135,25 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 if (accepts == "*/*") // Any = null
                     accepts = null;
                 contentType = accepts ?? contentType ?? formatParm;
+
+                var charset = ContentType.GetCharSetFromHeaderValue(contentType);
+                var format = ContentType.GetMediaTypeFromHeaderValue(contentType);
+
                 if (result is Base baseObject)
                 {
                     var ms = new MemoryStream();
                     // The request was in JSON or the accept is JSON
-                    switch (contentType)
+                    switch (format)
                     {
                         case "application/fhir+xml":
                             using (var xw = XmlWriter.Create(ms, new XmlWriterSettings() { 
-                                Encoding = System.Text.Encoding.UTF8,
+                                Encoding = new UTF8Encoding(false),
                                 Indent = isOutputPretty
                             }))
                                 new FhirXmlSerializer().Serialize(baseObject, xw, summaryType.Value);
                             break;
                         case "application/fhir+json":
-                            using (var sw = new StreamWriter(ms, System.Text.Encoding.UTF8, 1024, true))
+                            using (var sw = new StreamWriter(ms, new UTF8Encoding(false), 1024, true))
                             using (var jw = new JsonTextWriter(sw)
                             {
                                 Formatting = isOutputPretty ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None,

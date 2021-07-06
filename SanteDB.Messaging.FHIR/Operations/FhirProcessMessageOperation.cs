@@ -1,5 +1,9 @@
 ﻿using Hl7.Fhir.Model;
+using RestSrvr;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
+using SanteDB.Messaging.FHIR.Rest.Behavior;
+using SanteDB.Messaging.FHIR.Rest.Serialization;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -77,6 +81,10 @@ namespace SanteDB.Messaging.FHIR.Operations
                 }
 
                 var retVal = new Bundle(); // Return for operation
+                retVal.Meta = new Meta()
+                {
+                    LastUpdated = DateTimeOffset.Now
+                };
                 var uuid = Guid.NewGuid();
                 try
                 {
@@ -115,13 +123,16 @@ namespace SanteDB.Messaging.FHIR.Operations
                             }
                         }
                     });
-                    var outcome = DataTypeConverter.CreateOperationOutcome(e);
+                    var outcome = DataTypeConverter.CreateErrorResult(e);
                     outcome.Id = uuid.ToString();
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
                         FullUrl = $"OperationOutcome/{uuid}",
                         Resource = outcome
                     });
+
+                    throw new FhirException((System.Net.HttpStatusCode)FhirErrorEndpointBehavior.ClassifyErrorCode(e), retVal, e);
+
                 }
                 finally
                 {

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Hl7.Fhir.Model;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
@@ -37,9 +38,24 @@ namespace SanteDB.Messaging.FHIR.Exceptions
         }
 
         /// <summary>
+        /// Creates a new FHIR exception with specified code
+        /// </summary>
+        /// <param name="statusCode">The HTTP status code</param>
+        public FhirException(HttpStatusCode statusCode, Resource responseResource, Exception innerException) : base("Error Executing FHIR Operation", innerException)
+        {
+            this.Status = statusCode;
+            this.Resource = responseResource;
+        }
+
+        /// <summary>
         /// Gets the HTTP status code
         /// </summary>
         public HttpStatusCode Status { get; }
+
+        /// <summary>
+        /// Gets the resource the thrower wants to return
+        /// </summary>
+        public Resource Resource { get; }
 
         /// <summary>
         /// Gets the FHIR code
