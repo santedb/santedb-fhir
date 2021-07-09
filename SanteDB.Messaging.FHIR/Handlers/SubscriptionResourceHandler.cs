@@ -83,7 +83,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete, hdsiQuery.ToString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
 
             if (subscription.Status == Subscription.SubscriptionStatus.Active)
-                this.m_pubSubManager.ActivateSubscription(retVal.Key.Value, true);
+                retVal = this.m_pubSubManager.ActivateSubscription(retVal.Key.Value, true);
 
             return this.MapToFhir(retVal, RestOperationContext.Current);
         }
