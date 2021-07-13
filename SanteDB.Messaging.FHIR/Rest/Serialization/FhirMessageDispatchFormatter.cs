@@ -23,8 +23,11 @@ using Newtonsoft.Json;
 using RestSrvr;
 using RestSrvr.Attributes;
 using RestSrvr.Message;
+using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Serialization;
+using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using System;
 using System.Collections.Generic;
@@ -61,12 +64,15 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
             PermissiveParsing = true
         };
 
+        // Configuration for the service
+        private FhirServiceConfigurationSection m_configuration;
+
         /// <summary>
         /// Creates a new instance of the FHIR message dispatch formatter
         /// </summary>
         public FhirMessageDispatchFormatter()
         {
-
+            this.m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
         }
 
         /// <summary>
@@ -135,6 +141,12 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 if (accepts == "*/*") // Any = null
                     accepts = null;
                 contentType = accepts ?? contentType ?? formatParm;
+
+                // No specified content type
+                if(String.IsNullOrEmpty(contentType))
+                {
+                    contentType = this.m_configuration.DefaultResponseFormat ?? "application/fhir+xml";
+                }
 
                 var charset = ContentType.GetCharSetFromHeaderValue(contentType);
                 var format = ContentType.GetMediaTypeFromHeaderValue(contentType);

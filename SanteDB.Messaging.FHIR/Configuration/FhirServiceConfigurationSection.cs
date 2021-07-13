@@ -152,6 +152,12 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// </summary>
         [XmlArray("behaviorModifiers"), XmlArrayItem("add"), JsonProperty("behaviorModifiers")]
         public List<TypeReferenceConfiguration> BehaviorModifiers { get; set; }
+
+        /// <summary>
+        /// Default content type
+        /// </summary>
+        [XmlAttribute("defaultContentType"), JsonProperty("defaultContentType")]
+        public string DefaultResponseFormat { get; set; }
     }
 
 }

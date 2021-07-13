@@ -224,6 +224,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (Guid.TryParse(resource.Id, out Guid key))
             {
                 patient = this.m_repository.Get(key);
+
+                // Patient doesn't exist?
+                if(patient == null)
+                {
+                    patient = new Core.Model.Roles.Patient()
+                    {
+                        Key = key
+                    };
+                }
             }
             else if(resource.Identifier?.Count > 0)
             {
@@ -484,8 +493,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         return resource.LoadCollection(o => o.Relationships)
                             .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                 o.RelationshipRoleKey == null &&
-                                this.m_relatedPersons.Contains(o.RelationshipTypeKey.Value) &&
-                                o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Person)
+                                this.m_relatedPersons.Contains(o.RelationshipTypeKey.Value))
                             .Select(o => rpHandler.MapToFhir(o));
                     default:
                         throw new InvalidOperationException($"{includeInstruction.Type} is not supported reverse include");
