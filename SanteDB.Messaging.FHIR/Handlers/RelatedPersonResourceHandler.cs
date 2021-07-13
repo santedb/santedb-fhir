@@ -156,6 +156,34 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (Guid.TryParse(resource.Id, out Guid key))
             {
                 relationship = this.m_repository.Get(key);
+
+                // HACK: We couldn't find the relationship via key - but it might still be an external reference to a patient
+                // <rant>
+                // RelatedPerson is evil - it combines the concept of a "Relationship" with a "Person" so the ID might point to the person which is related,
+                // Take for example a mother who's given birth to twins, a submission may be:
+                //      Patient/1 -> Baby 1
+                //      Patient/2 -> Baby 2
+                //      RelatedPerson/1 -> Mother for Patient/1
+                //      RelatedPerson/2 -> Mother for Patient/2
+                //      Patient/3 -> Mother Patient which links to RelatedPerson/1 and RelatedPerson/2
+                // Here, FHIR is indicating RelatedPerson/1 and RelatedPerson/2 are two different relationships, even though they're the same freaking person
+                // which is why RelatedPerson is evil. 
+                // 
+                // SanteDB, when disclosing the ID of a RelatedPerson will always use the key of the relationship , but for an initial registration it depends whatever
+                // random identifiers the sender uses and how the sender views the world. 
+                // </rant>
+                // <tldr>RelatedPerson is evil and this is a total hack to overcome FHIR's hacking of RelatedPerson</tldr>
+                if(relationship == null)
+                {
+                    var lookupPerson = this.m_personRepository.Get(key);
+                    if(lookupPerson != null) {
+                        relationship = new EntityRelationship()
+                        {
+                            Key = Guid.NewGuid(),
+                            TargetEntity = lookupPerson
+                        };
+                    }
+                }
             }
 
             // Find the source of the relationship
@@ -173,10 +201,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     Key = Guid.NewGuid(),
                     TargetEntity = new SanteDB.Core.Model.Entities.Person()
                     {
-                        Key = Guid.NewGuid()
+                        Key = key == Guid.Empty ? Guid.NewGuid() : key
                     },
                     SourceEntityKey = sourceEntity.Key
                 };
+            }
+            else if(!relationship.SourceEntityKey.HasValue) // no source entity
+            {
+                relationship.SourceEntityKey = sourceEntity.Key;
             }
             else if (sourceEntity.Key != relationship.SourceEntityKey)
             {
@@ -188,6 +220,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // The source of the object is not a patient (perhaps an MDM entity)
+            // Here the GET has returned an entity
             if (sourceEntity is Core.Model.Roles.Patient patientSource)
             {
                 relationship.SourceEntity = patientSource;
@@ -215,6 +248,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 }
             }
+            // We couldn't find any matching patients via business identifiers
             if (person == null)
             {
                 person = new Core.Model.Entities.Person()
@@ -223,6 +257,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
             }
             
+            // HACK: Try to figure out what tf the client is trying to convey and map it into our worldview
+            // <rant>
+            // If you needed further evidence of how RelatedPerson is evil, this bit of code shows it - basically some clients (and examples)
+            // will send RelatedPerson as a combo of Person+Relationship, however other clients (and examples) use RelatedPerson as only a Relationship
+            // so we have to handle both cases. Basically, if the client sent us a RelatedPerson with only an identifier and relationship type then we
+            // treat it as *only* a relationship indicator (i.e. the client is relying on us to reference or resolve an existing person to relate) , however
+            // if the client sends us name, address, or telecom, we can assume the client is attempting to create (or perhaps update, who really knows?) 
+            // the person to which the relationship points to.
+            // </rant>
+            // <tldr>RelatedPerson is evil - it could be a person + relationship or just a relationship and we have to handle both cases which is why this ugly code is here</tldr>
             if (resource.Name.Any() || resource.Address.Any() || resource.Telecom.Any())
             {
                 // Set the relationship
