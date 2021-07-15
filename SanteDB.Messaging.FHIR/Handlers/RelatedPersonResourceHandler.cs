@@ -16,6 +16,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class RelatedPersonResourceHandler : RepositoryResourceHandlerBase<RelatedPerson, Core.Model.Entities.EntityRelationship>
     {
+
+        // MDM MAster key
+        private readonly Guid MDM_MASTER_CLASS_KEY = Guid.Parse("49328452-7e30-4dcd-94cd-fd532d111578");
+
         // Relationships to family members
         private List<Guid> m_relatedPersons;
 
@@ -75,8 +79,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns></returns>
         protected override RelatedPerson MapToFhir(Core.Model.Entities.EntityRelationship model)
         {
-            var relModel = model.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person;
-            if (relModel == null)
+            var relModel = model.LoadProperty(o => o.TargetEntity);
+
+            if (relModel.ClassConceptKey == MDM_MASTER_CLASS_KEY) // Is the target a MASTER record?
+            {
+                relModel = this.m_patientRepository.Get(relModel.Key.Value) ??
+                    this.m_personRepository.Get(relModel.Key.Value); 
+            }
+
+            if (!(relModel is Core.Model.Entities.Person person))
             {
                 throw new InvalidOperationException("Cannot create unless source and target are Person");
             }
@@ -85,7 +96,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
             relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty(o => o.RelationshipType), new string[] { "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" }, false) };
             relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
-            relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(relModel.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
+            relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
             relative.Identifier = relModel.LoadCollection(o => o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
             relative.Name = relModel.LoadCollection(o => o.Names).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
             relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(model.SourceEntityKey);
@@ -199,10 +210,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 relationship = new EntityRelationship()
                 {
                     Key = Guid.NewGuid(),
-                    TargetEntity = new SanteDB.Core.Model.Entities.Person()
-                    {
-                        Key = key == Guid.Empty ? Guid.NewGuid() : key
-                    },
                     SourceEntityKey = sourceEntity.Key
                 };
             }
@@ -240,10 +247,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     if (ii.LoadProperty(o => o.Authority).IsUnique)
                     {
-                        person = this.m_personRepository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                        person = this.m_patientRepository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault() ??
+                            this.m_personRepository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (person != null)
                     {
+                        person.AddTag(FhirConstants.PlaceholderTag, "true"); // This is just a placeholder entry in case there are other patients
                         break;
                     }
                 }
@@ -251,7 +260,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // We couldn't find any matching patients via business identifiers
             if (person == null)
             {
-                person = new Core.Model.Entities.Person()
+                relationship.TargetEntity = person = new Core.Model.Entities.Person()
                 {
                     Key = Guid.NewGuid()
                 };
