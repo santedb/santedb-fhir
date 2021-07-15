@@ -226,7 +226,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 patient = this.m_repository.Get(key);
 
                 // Patient doesn't exist?
-                if(patient == null)
+                if (patient == null)
                 {
                     patient = new Core.Model.Roles.Patient()
                     {
@@ -234,21 +234,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     };
                 }
             }
-            else if(resource.Identifier?.Count > 0)
+            else if (resource.Identifier?.Count > 0)
             {
-                foreach(var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
-                    if(ii.LoadProperty(o=>o.Authority).IsUnique)
+                    if (ii.LoadProperty(o => o.Authority).IsUnique)
                     {
                         patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
-                    if(patient != null)
+                    if (patient != null)
                     {
                         break;
                     }
                 }
 
-                if(patient == null)
+                if (patient == null)
                 {
                     patient = new Core.Model.Roles.Patient()
                     {
@@ -298,7 +298,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 patient.MultipleBirthOrder = intBirth.Value;
             }
 
-            if(resource.GeneralPractitioner != null)
+            if (resource.GeneralPractitioner != null)
             {
                 patient.Relationships.AddRange(resource.GeneralPractitioner.Select(r =>
                 {
@@ -362,7 +362,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             var referee = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Entity;
                             // Is this a current MDM link?
-                            if (referee.LoadCollection(o => o.Relationships).Any(r => r.RelationshipTypeKey == MDM_MASTER_LINK) 
+                            if (referee.GetTag(FhirConstants.PlaceholderTag) == "true") // The referee wants us to become the data
+                            {
+                                patient.Key = referee.Key;
+                            }
+                            else if (referee.LoadCollection(o => o.Relationships).Any(r => r.RelationshipTypeKey == MDM_MASTER_LINK)
                                 && referee.GetTag("$mdm.type") == "M") // HACK: This is a master and someone is attempting to point another record at it
                             {
                                 patient.Relationships.Add(new EntityRelationship()
@@ -374,15 +378,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             }
                             else
                             {
-                                if (referee.GetTag(FhirConstants.PlaceholderTag) == "true") // The referee wants us to become the data
-                                {
-                                    patient.Key = referee.Key;
-                                }
-                                else
-                                {
-                                    // Patient is pointing at a person which is different
-                                    patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.EquivalentEntity, referee));
-                                }
+                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.EquivalentEntity, referee));
                             }
                             break;
                         }
@@ -400,7 +396,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // TODO: Photo
-            if(resource.Photo != null && resource.Photo.Any())
+            if (resource.Photo != null && resource.Photo.Any())
             {
                 patient.Extensions.RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
                 patient.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
@@ -434,6 +430,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 switch (includeInstruction.Type)
                 {
+
                     case ResourceType.Practitioner:
                         {
                             var rpHandler = FhirResourceHandlerUtil.GetMappersFor(ResourceType.Practitioner).FirstOrDefault();
@@ -450,7 +447,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             }
                         }
                     case ResourceType.Organization:
-                        { 
+                        {
                             // Load all related persons and convert them
                             var rpHandler = FhirResourceHandlerUtil.GetMappersFor(ResourceType.Organization).FirstOrDefault();
 
