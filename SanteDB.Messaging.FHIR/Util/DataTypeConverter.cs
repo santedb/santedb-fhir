@@ -19,7 +19,7 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
-using SanteDB.Core.Auditing;
+using SanteDB.Core.Model.Audit;
 using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
@@ -60,7 +60,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Convert the audit data to a security audit
         /// </summary>
-        public static AuditEvent ToSecurityAudit(AuditData audit)
+        public static AuditEvent ToSecurityAudit(AuditEventData audit)
         {
 
             var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
@@ -482,7 +482,7 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var resource = fhirExtension as Resource;
             // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
-            fhirExtension.Extension = extendable?.LoadCollection(o=>o.Extensions ).Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension).ToList();
+            fhirExtension.Extension = extendable?.LoadCollection(o=>o.Extensions).Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension).ToList();
 
             if (resource != null)
             {

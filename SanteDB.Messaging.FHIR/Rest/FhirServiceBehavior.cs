@@ -20,7 +20,7 @@ using Hl7.Fhir.Model;
 using RestSrvr;
 using RestSrvr.Attributes;
 using SanteDB.Core;
-using SanteDB.Core.Auditing;
+using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Interop;
@@ -172,7 +172,7 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 var result = handler.Update(id, target, TransactionMode.Commit);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Update, AuditableObjectLifecycle.Amendment, EventIdentifierType.Import, OutcomeIndicator.Success, id, result);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Import, ActionType.Update, AuditableObjectLifecycle.Amendment, EventIdentifierType.Import, OutcomeIndicator.Success, id, result);
 
                 String baseUri = MessageUtil.GetBaseUri();
                 RestOperationContext.Current.OutgoingResponse.Headers.Add("Content-Location", String.Format("{0}/{1}/_history/{2}", baseUri, result.Id, result.VersionId));
@@ -185,7 +185,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error updating FHIR resource {0}({1}): {2}", resourceType, id, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Update, AuditableObjectLifecycle.Amendment, EventIdentifierType.Import, OutcomeIndicator.EpicFail, id);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Import, ActionType.Update, AuditableObjectLifecycle.Amendment, EventIdentifierType.Import, OutcomeIndicator.EpicFail, id);
                 throw;
             }
         }
@@ -210,14 +210,14 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 var result = handler.Delete(id, TransactionMode.Commit);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Delete, AuditableObjectLifecycle.LogicalDeletion, EventIdentifierType.Import, OutcomeIndicator.Success, id, result);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Import, ActionType.Delete, AuditableObjectLifecycle.LogicalDeletion, EventIdentifierType.Import, OutcomeIndicator.Success, id, result);
                 return null;
 
             }
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error deleting FHIR resource {0}({1}): {2}", resourceType, id, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Delete, AuditableObjectLifecycle.LogicalDeletion, EventIdentifierType.Import, OutcomeIndicator.EpicFail, id);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Import, ActionType.Delete, AuditableObjectLifecycle.LogicalDeletion, EventIdentifierType.Import, OutcomeIndicator.EpicFail, id);
                 throw;
             }
         }
@@ -242,7 +242,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 RestOperationContext.Current.OutgoingResponse.StatusCode = (int)HttpStatusCode.Created;
 
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Create, AuditableObjectLifecycle.Creation, EventIdentifierType.Import, OutcomeIndicator.Success, null, result);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Import, ActionType.Create, AuditableObjectLifecycle.Creation, EventIdentifierType.Import, OutcomeIndicator.Success, null, result);
 
                 String baseUri = MessageUtil.GetBaseUri();
                 if (!(result is Bundle))
@@ -258,7 +258,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error creating FHIR resource {0}: {1}", resourceType, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Create, AuditableObjectLifecycle.Creation, EventIdentifierType.Import, OutcomeIndicator.EpicFail, null);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Import, ActionType.Create, AuditableObjectLifecycle.Creation, EventIdentifierType.Import, OutcomeIndicator.EpicFail, null);
                 throw;
             }
         }
@@ -326,7 +326,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Process incoming request
                 var result = resourceProcessor.Query(RestOperationContext.Current.IncomingRequest.QueryString);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, RestOperationContext.Current.IncomingRequest.Url.Query, result);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, RestOperationContext.Current.IncomingRequest.Url.Query, result);
                 // Create the Atom feed
                 return result;
 
@@ -334,7 +334,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error searching FHIR resource {0}: {1}", resourceType, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query);
                 throw;
             }
 
@@ -380,7 +380,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // TODO: Appropriately format response
                 // Process incoming request
                 var result = resourceProcessor.History(id);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, $"_id={id}", result);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, $"_id={id}", result);
 
                 // Create the result
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated?.DateTime ?? DateTime.Now);
@@ -390,7 +390,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error getting FHIR resource history {0}({1}): {2}", resourceType, id, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, $"_id={id}", null);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, $"_id={id}", null);
                 throw;
             }
         }
@@ -440,7 +440,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Process incoming request
                 var result = resourceProcessor.Read(id, vid);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, $"_id={id}&_versionId={vid}", result);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, $"_id={id}&_versionId={vid}", result);
 
                 // Create the result
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated.Value.DateTime);
@@ -452,7 +452,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error reading FHIR resource {0}({1},{2}): {3}", resourceType, id, vid, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, $"_id={id}&_versionId={vid}", null);
+                AuditUtil.AuditEventDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, $"_id={id}&_versionId={vid}", null);
                 throw;
             }
         }
