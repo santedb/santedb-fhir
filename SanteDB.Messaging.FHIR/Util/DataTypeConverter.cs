@@ -19,7 +19,6 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
-using SanteDB.Core.Model.Audit;
 using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
@@ -44,6 +43,7 @@ using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text.RegularExpressions;
 using static Hl7.Fhir.Model.OperationOutcome;
+using SanteDB.Core.Auditing;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -60,7 +60,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Convert the audit data to a security audit
         /// </summary>
-        public static AuditEvent ToSecurityAudit(AuditEventData audit)
+        public static AuditEvent ToSecurityAudit(AuditData audit)
         {
 
             var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
