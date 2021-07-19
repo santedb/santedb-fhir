@@ -68,6 +68,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>Returns the mapped FHIR resource.</returns>
         protected override Patient MapToFhir(Core.Model.Roles.Patient model)
         {
+
+            // If the model is being constructed as part of a bundle, then the caller
+            // should have included the bundle so we can add any related resources 
+            var partOfBundle = model.GetAnnotations<Bundle>().FirstOrDefault();
+
             var retVal = DataTypeConverter.CreateResource<Patient>(model);
             retVal.Active = model.StatusConceptKey == StatusKeys.Active || model.StatusConceptKey == StatusKeys.New;
             retVal.Address = model.GetAddresses().Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
@@ -131,7 +136,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     relative.Meta.Security = null;
                     retVal.Contained.Add(relative);
                 }
-                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
+
+                if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
                 {
                     var person = rel.LoadProperty(o => o.TargetEntity);
 
@@ -160,9 +166,35 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     //});
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper)
-                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.LoadProperty(o => o.TargetEntity));
+                {
+                    var scoper = rel.LoadProperty(o => o.TargetEntity);
+                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(scoper);
+
+                    // If this is part of a bundle, include it
+                    if (partOfBundle != null)
+                    {
+                        partOfBundle.Entry.Add(new Bundle.EntryComponent()
+                        {
+                            FullUrl = retVal.ManagingOrganization.Reference,
+                            Resource = FhirResourceHandlerUtil.GetMapperForInstance(scoper).MapToFhir(scoper)
+                        });
+                    }
+                }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
-                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty(o => o.TargetEntity)));
+                {
+                    var practitioner = rel.LoadProperty(o => o.TargetEntity);
+                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(practitioner));
+
+                    // If this is part of a bundle, include it
+                    if (partOfBundle != null)
+                    {
+                        partOfBundle.Entry.Add(new Bundle.EntryComponent()
+                        {
+                            FullUrl = retVal.GeneralPractitioner.Last().Reference,
+                            Resource = FhirResourceHandlerUtil.GetMapperForInstance(practitioner).MapToFhir(practitioner)
+                        });
+                    }
+                }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
@@ -187,6 +219,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     Type = Patient.LinkType.Seealso,
                     Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rrv)
                 });
+
+                // If this is part of a bundle, include it
+                if (partOfBundle != null)
+                {
+                    partOfBundle.Entry.Add(new Bundle.EntryComponent()
+                    {
+                        FullUrl = retVal.Link.Last().Other.Reference,
+                        Resource = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rrv)
+                    });
+                }
             }
 
             var photo = model.LoadCollection(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);

@@ -950,7 +950,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // First is there a bundle in the contained within
             var sdbBundle = containedWithin.Annotations(typeof(Core.Model.Collection.Bundle)).FirstOrDefault() as Core.Model.Collection.Bundle;
-            
+            var fhirBundle = containedWithin.Annotations(typeof(Bundle)).FirstOrDefault() as Bundle;
+
             IdentifiedData retVal = null;
 
             if (resourceRef.Identifier != null)
@@ -988,6 +989,16 @@ namespace SanteDB.Messaging.FHIR.Util
                 else
                 {
                     retVal = sdbBundle?.Item.OfType<ITaggable>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference) as IdentifiedData;
+
+                    if(retVal == null) // attempt to resolve via fhir bundle
+                    {
+                        var fhirResource = fhirBundle.FindEntry(resourceRef);
+                        if(fhirResource?.Any() == true)
+                        {
+                            retVal = FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.FirstOrDefault().Resource).MapToModel(fhirResource.FirstOrDefault().Resource);
+                        }
+                    }
+                    
                     if (retVal == null)
                     {
                         // Attempt to resolve the reference 

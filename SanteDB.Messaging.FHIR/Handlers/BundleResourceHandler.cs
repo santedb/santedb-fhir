@@ -229,6 +229,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 // Map and add to bundle
                 var itm = handler.MapToModel(entry.Resource);
+                sdbBundle.Remove(itm.Key.GetValueOrDefault());
                 sdbBundle.Add(itm);
 
                 // HACK: If the ITM is a relationship or participation insert it into the bundle
@@ -246,7 +247,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 }
 
+                if(entry.Request != null)
+                {
+                    sdbBundle.FocalObjects.Add(itm.Key.Value);
+                }
             }
+
             sdbBundle.Item.RemoveAll(o => o == null || o is ITaggable taggable && taggable.GetTag(FhirConstants.PlaceholderTag) == "true");
             return sdbBundle;
         }
