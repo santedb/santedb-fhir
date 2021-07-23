@@ -162,12 +162,12 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
 
                 if (error is PolicyViolationException pve)
                 {
-                    var authHeader = $"{(RestOperationContext.Current.AppliedPolicies.Any(o => o.GetType().Name.Contains("Basic")) ? "Basic" : "Bearer")} realm=\"{RestOperationContext.Current.IncomingRequest.Url.Host}\" error=\"insufficient_scope\" scope=\"{pve.PolicyId}\"  error_description=\"{error.Message}\"";
-                    response.Headers.Add("WWW-Authenticate", authHeader);
+                    var method = RestOperationContext.Current.AppliedPolicies.Any(o => o.GetType().Name.Contains("Basic")) ? "Basic" : "Bearer";
+                    response.AddAuthenticateHeader(method, RestOperationContext.Current.IncomingRequest.Url.Host, "insufficient_scope", pve.PolicyId, error.Message);
                 }
                 else if(error is SecurityTokenException ste)
                 {
-                    response.Headers.Add("WWW-Authenticate", $"Bearer");
+                    response.AddAuthenticateHeader("Bearer", RestOperationContext.Current.IncomingRequest.Url.Host, "token_error", description: ste.Message);
                 }
                 else if (error is SecuritySessionException ses)
                 {
@@ -177,7 +177,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
                         case SessionExceptionType.NotYetValid:
                         case SessionExceptionType.NotEstablished:
                             response.StatusCode = (int)System.Net.HttpStatusCode.Unauthorized;
-                            response.Headers.Add("WWW-Authenticate", $"Bearer");
+                            response.AddAuthenticateHeader("Bearer", RestOperationContext.Current.IncomingRequest.Url.Host, "unauthorized", PermissionPolicyIdentifiers.Login, ses.Message);
                             break;
                         default:
                             response.StatusCode = (int)System.Net.HttpStatusCode.Forbidden;

@@ -72,12 +72,13 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Create a feed
         /// </summary>
-        public static Bundle CreateBundle(FhirQueryResult result)
+        public static Bundle CreateBundle(FhirQueryResult result, Bundle.BundleType bundleType)
         {
 
             Bundle retVal = new Bundle();
             FhirQueryResult queryResult = result as FhirQueryResult;
             retVal.Id = String.Format("urn:uuid:{0}", Guid.NewGuid());
+            retVal.Type = bundleType;
 
             // Make the Self uri
             String baseUri = $"{result.ResourceType}";
@@ -150,23 +151,19 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 retVal.Entry = result.Results.Select(itm =>
                 {
-                    var feedResult = new Bundle.EntryComponent(); //new Bundleentry(String.Format("{0} id {1} version {2}", itm.GetType().Name, itm.Id, itm.VersionId), null ,resourceUrl);
-                    feedResult.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = itm.HasVersionId ? $"{itm.ResourceType}/{itm.Id}/_history/{itm.VersionId}" : $"{itm.ResourceType}/{itm.Id}"  } };
-                    feedResult.FullUrl = $"{GetBaseUri()}/{itm.ResourceType}/{itm.Id}";
 
-                    // TODO: Generate the text with a util
-
+                    itm.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = itm.Resource.HasVersionId ? $"{itm.Resource.ResourceType}/{itm.Resource.Id}/_history/{itm.Resource.VersionId}" : $"{itm.Resource.ResourceType}/{itm.Resource.Id}"  } };
+                    itm.FullUrl = itm.FullUrl ?? $"{GetBaseUri()}/{itm.Resource.ResourceType}/{itm.Resource.Id}";
 
                     // Add confidence if the attribute permits
-                    var confidence = itm.Annotations(typeof(ITag)).OfType<ITag>().FirstOrDefault(t => t.TagKey == "$conf");
-                    if (confidence != null)
-                        feedResult.Search = new Bundle.SearchComponent()
-                        {
-                            Score = Decimal.Parse(confidence.Value)
-                        };
+                    if(itm.Search != null && itm.Search.Mode == Bundle.SearchEntryMode.Match) // Search data
+                    {
+                        var confidence = itm.Annotations(typeof(ITag)).OfType<ITag>().FirstOrDefault(t => t.TagKey == "$conf");
+                        if (confidence != null)
+                            itm.Search.Score = Decimal.Parse(confidence.Value);
+                    }
 
-                    feedResult.Resource = itm;
-                    return feedResult;
+                    return itm;
                 }).ToList();
             }
 

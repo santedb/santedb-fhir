@@ -6,6 +6,7 @@ using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
+using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -164,7 +165,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             // Now publish search data
             return new Bundle.EntryComponent()
             {
-                FullUrl = $"{result.ResourceType}/{result.Id}/_history/{result.VersionId}",
+                FullUrl = $"{MessageUtil.GetBaseUri()}/{result.ResourceType}/{result.Id}/_history/{result.VersionId}",
                 Resource = result,
                 Search = new Bundle.SearchComponent()
                 {

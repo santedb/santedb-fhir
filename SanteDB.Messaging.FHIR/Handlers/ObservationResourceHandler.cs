@@ -185,11 +185,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Return FHIR query result
             var retVal = new FhirQueryResult("Observation")
             {
-                Results = hdsiResults.Select(this.MapToFhir).OfType<Resource>().ToList(),
+                Results = hdsiResults.Select(this.MapToFhir).Select(o=>new Bundle.EntryComponent()
+                {
+                    Resource = o,
+                    Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match },
+                }).ToList(),
                 Query = query,
                 TotalResults = totalResults
             };
-            return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal)) as Bundle;
+
+            base.ProcessIncludes(hdsiResults, parameters, retVal);
+            return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
         }
 
         /// <summary>

@@ -276,7 +276,7 @@ namespace SanteDB.Messaging.FHIR.Util
             
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
-            var refer = new ResourceReference($"{fhirType}/{targetEntity.Key}/_history/{targetEntity.VersionKey}");
+            var refer = new ResourceReference($"{MessageUtil.GetBaseUri()}/{fhirType}/{targetEntity.Key}/_history/{targetEntity.VersionKey}");
 
             refer.Display = targetEntity.ToString();
             return refer;
@@ -296,7 +296,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
-            var refer = new ResourceReference($"{fhirType}/{targetEntity.Key}");
+            var refer = new ResourceReference($"{MessageUtil.GetBaseUri()}/{fhirType}/{targetEntity.Key}");
             refer.Display = targetEntity.ToDisplay();
             return refer;
 
@@ -383,7 +383,11 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     Issue = new List<OperationOutcome.IssueComponent>()
                     {
-                        new OperationOutcome.IssueComponent() { Diagnostics  = error.Message, Severity = IssueSeverity.Error, Code = IssueType.Exception }
+                        new OperationOutcome.IssueComponent() { 
+                            Diagnostics  = error.Message, 
+                            Severity = IssueSeverity.Error, 
+                            Code = IssueType.Exception 
+                        }
                     }
                 };
 
@@ -412,8 +416,7 @@ namespace SanteDB.Messaging.FHIR.Util
         {
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
-
-            var refer = new ResourceReference($"{fhirType}/{targetKey}");
+            var refer = new ResourceReference($"{MessageUtil.GetBaseUri()}/{fhirType}/{targetKey}");
             return refer;
 
         }
@@ -451,7 +454,7 @@ namespace SanteDB.Messaging.FHIR.Util
             if (resource is ITaggable taggable)
             {
 
-                retVal.Meta.Tag = taggable.Tags.Select(tag => new Coding("http://santedb.org/fhir/tags", $"{tag.TagKey}:{tag.Value}")).ToList();
+                retVal.Meta.Tag = taggable.Tags.Where(o=>!o.TagKey.StartsWith("$fhir")).Select(tag => new Coding("http://santedb.org/fhir/tags", $"{tag.TagKey}:{tag.Value}")).ToList();
                 foreach (var tag in taggable.Tags)
                 {
                     retVal.AddAnnotation(tag);
@@ -468,7 +471,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
             {
-                retVal.Meta.Profile = DataTypeConverter.AddExtensions(extendableObject, fhirExtendable);
+                DataTypeConverter.AddExtensions(extendableObject, fhirExtendable);
             }
 
             return retVal;
@@ -682,7 +685,7 @@ namespace SanteDB.Messaging.FHIR.Util
             var oid = oidRegistrar.Get(new Uri(fhirSystem));
 
             if (oid == null)
-                throw new KeyNotFoundException($"Could not find identity domain {fhirSystem}");
+                throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.NotFound, $"Could not find identity domain {fhirSystem}");
             return oid;
         }
 
@@ -786,7 +789,7 @@ namespace SanteDB.Messaging.FHIR.Util
             // Lookup
             var retVal = conceptService.GetConceptByReferenceTerm(code, system);
             if (retVal == null)
-                throw new KeyNotFoundException($"Could not map concept {system}#{code} to a concept");
+                throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not map concept {system}#{code} to a concept");
             return retVal;
         }
 
@@ -819,7 +822,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var retVal = ToConcept(new Coding(system, code));
             if (retVal == null)
-                throw new ConstraintException($"Could not find concept with reference term '{code}' in {system}");
+                throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not find concept with reference term '{code}' in {system}");
             return retVal;
         }
 
@@ -992,20 +995,25 @@ namespace SanteDB.Messaging.FHIR.Util
 
                     if(retVal == null) // attempt to resolve via fhir bundle
                     {
-                        var fhirResource = fhirBundle.FindEntry(resourceRef);
+                        // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
+                        //var fhirResource = fhirBundle.FindEntry(resourceRef);
+                        var fhirResource = fhirBundle.Entry.Where(o=>o.FullUrl == resourceRef.Reference || $"{o.Resource.ResourceType}/{o.Resource.Id}" == resourceRef.Reference);
                         if(fhirResource?.Any() == true)
                         {
+                            // TODO: Error trapping
                             retVal = FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.FirstOrDefault().Resource).MapToModel(fhirResource.FirstOrDefault().Resource);
-                        }
+                            sdbBundle.Item.Add(retVal);
+                        } 
                     }
                     
                     if (retVal == null)
                     {
+                        // HACK: We don't care about the absoluteness of a URL
                         // Attempt to resolve the reference 
                         var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
                         var match = refRegex.Match(resourceRef.Reference);
                         if (!match.Success)
-                            throw new KeyNotFoundException($"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
+                            throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
 
                         if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value, out Guid relUuid)) // rel reference
                             retVal = repo.Get(relUuid); // Allow any triggers to fire
@@ -1020,7 +1028,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // TODO: Weak references
             if (retVal == null)
-                throw new NotSupportedException($"Weak references (to other servers) are not currently supported (ref: {resourceRef.Reference})");
+                throw new FhirException((System.Net.HttpStatusCode)422, IssueType.NotSupported, $"Weak references (to other servers) are not currently supported (ref: {resourceRef.Reference})");
             return retVal;
         }
 
@@ -1031,13 +1039,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns the mapped entity relationship instance..</returns>
         public static EntityRelationship ToEntityRelationship(Patient.ContactComponent patientContact, Patient patient)
         {
-            var retVal = new EntityRelationship();
-
-            // Relationship is a contact
-            retVal.RelationshipTypeKey = EntityRelationshipTypeKeys.Contact;
-            retVal.ClassificationKey = RelationshipClassKeys.ContainedObjectLink;
-            retVal.RelationshipRole = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault());
-            retVal.TargetEntity = new Core.Model.Entities.Person()
+            var retVal = new EntityRelationship(EntityRelationshipTypeKeys.Contact, new Core.Model.Entities.Person()
             {
                 Key = Guid.NewGuid(),
                 Addresses = patientContact.Address != null ? new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(patientContact.Address) } : null,
@@ -1045,20 +1047,32 @@ namespace SanteDB.Messaging.FHIR.Util
                 // TODO: Gender (after refactor)
                 Names = patientContact.Name != null ? new List<EntityName>() { DataTypeConverter.ToEntityName(patientContact.Name) } : null,
                 Telecoms = patientContact.Telecom?.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList()
+            })
+            {
+                ClassificationKey = RelationshipClassKeys.ContainedObjectLink,
+                RelationshipRoleKey = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault())?.Key,
             };
 
+           
             retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());
             if (patientContact.Organization != null)
-
-            // Is there an organization assigned?
-            if (patientContact.Organization != null && patientContact.Name == null &&
-                patientContact.Address == null)
             {
                 var refObjectKey = DataTypeConverter.ResolveEntity(patientContact.Organization, patient);
-                if (refObjectKey != null)
+                if (refObjectKey == null) {
+                    throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not resolve reference to patientContext.Organization");
+                }
+
+                // It is just an organization
+                if (patientContact.Name == null &&
+                    patientContact.Address == null)
+                {
+                    retVal.TargetEntity = null;
+                    retVal.TargetEntityKey = refObjectKey.Key;
+                }
+                else // It is a person which is scoped by an orgnaizati
+                {
                     retVal.TargetEntity.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Scoper, refObjectKey.Key));
-                else  // TODO: Implement
-                    throw new KeyNotFoundException($"Could not resolve reference to patientContext.Organization");
+                }
             }
 
             return retVal;
@@ -1075,14 +1089,19 @@ namespace SanteDB.Messaging.FHIR.Util
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR telecom");
 
             if (!String.IsNullOrEmpty(fhirTelecom.Value)) {
-                var mnemonic = "temp";
+                var useMnemonic = "temp";
                 if(fhirTelecom.Use.HasValue)
-                    mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.Use);
+                    useMnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.Use);
+
+                string typeMnemonic = null;
+                if (fhirTelecom.System.HasValue)
+                    typeMnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.System);
 
                 return new EntityTelecomAddress
                 {
                     Value = fhirTelecom.Value,
-                    AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/contact-point-use")?.Key
+                    AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
+                    TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key
                 };
             }
             return null;
@@ -1293,7 +1312,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
             return new ContactPoint()
             {
-                Use = DataTypeConverter.ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUse, "http://hl7.org/fhir/contact-point-use"),
+                System = DataTypeConverter.ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.LoadProperty(o=>o.TypeConcept), "http://hl7.org/fhir/contact-point-system"),
+                Use = DataTypeConverter.ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.LoadProperty(o=>o.AddressUse), "http://hl7.org/fhir/contact-point-use"),
                 Value = telecomAddress.IETFValue
             };
         }

@@ -131,8 +131,9 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     Type = Bundle.BundleType.History,
                     Id = Guid.NewGuid().ToString()
                 };
+                var id = Guid.NewGuid();
 
-                if(!this.Settings.TryGetValue("$event", out string eventCode))
+                if (!this.Settings.TryGetValue("$event", out string eventCode))
                 {
                     eventCode = "urn:ihe:iti:pmir:2019:patient-feed";
                 }
@@ -144,8 +145,10 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     {
                         new Bundle.EntryComponent()
                         {
+                            FullUrl =$"urn:uuid:{id}",
                             Resource = new MessageHeader()
                             {
+                                Id=id.ToString(),
                                 Event = new FhirUri(eventCode),
                                 Focus = new List<ResourceReference>()
                                 {
@@ -168,6 +171,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         },
                         new Bundle.EntryComponent()
                         {
+                            FullUrl = $"urn:uuid:{focusBundle.Id}",
                             Resource = focusBundle
                         }
                     }
@@ -179,29 +183,33 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify that an object was created
             /// </summary>
-            public void NotifyCreated<TModel>(TModel data)
+            public void NotifyCreated<TModel>(TModel data) where TModel : IdentifiedData
             {
                 try
                 {
                     var msgBundle = this.CreateMessageBundle(out Bundle focusBundle);
-
                     // Convert the data element over
                     (data as IdentifiedData).AddAnnotation(focusBundle);
                     var focalResource = this.ConvertToResource(data);
                     focusBundle.Entry.Add(new Bundle.EntryComponent()
                     {
+                        FullUrl = $"urn:uuid:{data.Key}",
                         Resource = focalResource
                     });
 
                     // Iterate over the bundle and set the HTTP request option
-                    foreach(var entry in focusBundle.Entry)
+                    foreach (var entry in focusBundle.Entry)
                     {
-                        if(entry.Request == null)
+                        if (entry.Request == null)
                         {
                             entry.Request = new Bundle.RequestComponent()
                             {
-                                Url = entry.FullUrl,
+                                Url = $"{entry.Resource.ResourceType}/{entry.Resource.Id}",
                                 Method = Bundle.HTTPVerb.POST
+                            };
+                            entry.Response = new Bundle.ResponseComponent()
+                            {
+                                Status = "200"
                             };
                         }
                     }
@@ -217,7 +225,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify object was merged
             /// </summary>
-            public void NotifyMerged<TModel>(TModel survivor, TModel[] subsumed)
+            public void NotifyMerged<TModel>(TModel survivor, TModel[] subsumed) where TModel : IdentifiedData
             {
                 try
                 {
@@ -227,14 +235,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     focusBundle.Entry.AddRange(subsumed.Select(o =>
                     {
                         var fhirModel = this.ConvertToResource(o);
-                        
+
                         // HACK: FHIR is not very well suited to developing generic handlers for resources 
                         // in this way. Each resource is its own structure with its own different way of 
                         // expressing replacement, its own way of linking between data - it makes the code
                         // look horrible but whatever.
-                        if(fhirModel is Patient patient)
+                        if (fhirModel is Patient patient)
                         {
-                           patient.Link.Add(new Patient.LinkComponent()
+                            patient.Link.Add(new Patient.LinkComponent()
                             {
                                 Type = Patient.LinkType.ReplacedBy,
                                 Other = new ResourceReference($"Patient/{patient.Id}")
@@ -244,11 +252,15 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         // Entry component
                         return new Bundle.EntryComponent()
                         {
-                            FullUrl = $"{fhirModel.ResourceType}/{fhirModel.Id}",
+                            FullUrl = $"urn:uuid:{o.Key}",
                             Request = new Bundle.RequestComponent()
                             {
                                 Method = Bundle.HTTPVerb.PUT,
                                 Url = $"{fhirModel.ResourceType}/{fhirModel.Id}"
+                            },
+                            Response = new Bundle.ResponseComponent()
+                            {
+                                Status = "200"
                             }
                         };
                     }));
@@ -264,7 +276,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify obsoleted
             /// </summary>
-            public void NotifyObsoleted<TModel>(TModel data)
+            public void NotifyObsoleted<TModel>(TModel data) where TModel : IdentifiedData
             {
                 try
                 {
@@ -274,11 +286,16 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     var focalResource = this.ConvertToResource(data);
                     focusBundle.Entry.Add(new Bundle.EntryComponent()
                     {
+                        FullUrl = $"urn:uuid:{data.Key}",
                         Resource = focalResource,
                         Request = new Bundle.RequestComponent()
                         {
                             Url = $"{focalResource.ResourceType}/{focalResource.Id}",
                             Method = Bundle.HTTPVerb.DELETE
+                        },
+                        Response = new Bundle.ResponseComponent()
+                        {
+                            Status = "200"
                         }
                     });
 
@@ -293,7 +310,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify unmerged
             /// </summary>
-            public void NotifyUnMerged<TModel>(TModel primary, TModel[] unMerged)
+            public void NotifyUnMerged<TModel>(TModel primary, TModel[] unMerged) where TModel : IdentifiedData
             {
                 this.m_tracer.TraceWarning("TODO: Implement notification");
             }
@@ -301,7 +318,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify updated
             /// </summary>
-            public void NotifyUpdated<TModel>(TModel data)
+            public void NotifyUpdated<TModel>(TModel data) where TModel : IdentifiedData
             {
                 try
                 {
@@ -312,6 +329,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     var focalResource = this.ConvertToResource(data);
                     focusBundle.Entry.Add(new Bundle.EntryComponent()
                     {
+                        FullUrl = $"urn:uuid:{data.Key}",
                         Resource = focalResource
                     });
 
@@ -322,8 +340,12 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         {
                             entry.Request = new Bundle.RequestComponent()
                             {
-                                Url = entry.FullUrl,
+                                Url = $"{entry.Resource.ResourceType}/{entry.Resource.Id}",
                                 Method = Bundle.HTTPVerb.PUT
+                            };
+                            entry.Response = new Bundle.ResponseComponent()
+                            {
+                                Status = "200"
                             };
                         }
                     }

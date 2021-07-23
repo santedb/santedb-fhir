@@ -34,13 +34,13 @@ namespace SanteDB.Messaging.FHIR
         public FhirQueryResult(string resourceType)
         {
             this.ResourceType = resourceType;
-            this.Results = new List<Resource>();
+            this.Results = new List<Bundle.EntryComponent>();
         }
 
         /// <summary>
         /// Gets or sets the results
         /// </summary>
-        public List<Resource> Results { get; set; }
+        public List<Bundle.EntryComponent> Results { get; set; }
 
         /// <summary>
         /// Gets or sets the query that initiated the action

@@ -102,14 +102,14 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Mimic an authentication
         /// </summary>
-        internal static void AuthenticateFhir(string appId, byte[] appSecret)
+        internal static IDisposable AuthenticateFhir(string appId, byte[] appSecret)
         {
             var appIdService = ApplicationServiceContext.Current.GetService<IApplicationIdentityProviderService>();
             var appPrincipal = appIdService.Authenticate(appId, BitConverter.ToString(appSecret).Replace("-", ""));
             var sesPvdService = ApplicationServiceContext.Current.GetService<ISessionProviderService>();
             var sesIdService = ApplicationServiceContext.Current.GetService<ISessionIdentityProviderService>();
             var session = sesPvdService.Establish(appPrincipal, "http://localhost", false, null, null, null);
-            AuthenticationContext.Current = new AuthenticationContext(sesIdService.Authenticate(session));
+            return AuthenticationContext.EnterContext(sesIdService.Authenticate(session));
         }
 
     }

@@ -76,7 +76,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 throw new NotSupportedException($"Resource type {enumType.Value} is not supported by this service");
             }
 
-            QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, NameValueCollection.ParseQueryString(queryObject.Query.Substring(1)).ToNameValueCollection(), out NameValueCollection hdsiQuery);
+            var hdsiQuery = new NameValueCollection();
+            if (!String.IsNullOrEmpty(queryObject.Query))
+            {
+                QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, NameValueCollection.ParseQueryString(queryObject.Query.Substring(1)).ToNameValueCollection(), out hdsiQuery);
+            }
 
             // Create the pub-sub definition
             var channel = this.CreateChannel($"Channel for {subscription.Id}", subscription.Channel, mode);
@@ -166,26 +170,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var hdsiResults = this.m_pubSubManager.FindSubscription(predicate, query.Start, query.Quantity, out totalResults);
             var restOperationContext = RestOperationContext.Current;
 
-            var auth = AuthenticationContext.Current;
+            var auth = AuthenticationContext.Current.Principal;
             // Return FHIR query result
             var retVal = new FhirQueryResult(nameof(Subscription))
             {
                 Results = hdsiResults.AsParallel().Select(o =>
                 {
-                    try
+                    using(AuthenticationContext.EnterContext(auth))
                     {
-                        AuthenticationContext.Current = auth;
-                        return this.MapToFhir(o, restOperationContext);
+                        return new Bundle.EntryComponent()
+                        {
+                            Resource = this.MapToFhir(o, restOperationContext),
+                            Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match }
+                        };
                     }
-                    finally
-                    {
-                        AuthenticationContext.Current = new AuthenticationContext(AuthenticationContext.AnonymousPrincipal);
-                    }
-                }).OfType<Resource>().ToList(),
+                }).ToList(),
                 Query = query,
                 TotalResults = totalResults
             };
-            return MessageUtil.CreateBundle(retVal);
+            return MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset);
         }
 
         /// <summary>

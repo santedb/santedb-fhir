@@ -116,7 +116,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify that an object was created
             /// </summary>
-            public void NotifyCreated<TModel>(TModel data)
+            public void NotifyCreated<TModel>(TModel data) where TModel : IdentifiedData
             {
                 try
                 {
@@ -132,7 +132,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify object was merged
             /// </summary>
-            public void NotifyMerged<TModel>(TModel survivor, TModel[] subsumed)
+            public void NotifyMerged<TModel>(TModel survivor, TModel[] subsumed) where TModel : IdentifiedData
             {
                 this.m_tracer.TraceWarning("TODO: Implement notification");
             }
@@ -140,7 +140,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify obsoleted
             /// </summary>
-            public void NotifyObsoleted<TModel>(TModel data)
+            public void NotifyObsoleted<TModel>(TModel data) where TModel : IdentifiedData
             {
                 try
                 {
@@ -156,7 +156,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify unmerged
             /// </summary>
-            public void NotifyUnMerged<TModel>(TModel primary, TModel[] unMerged)
+            public void NotifyUnMerged<TModel>(TModel primary, TModel[] unMerged) where TModel : IdentifiedData
             {
                 this.m_tracer.TraceWarning("TODO: Implement notification");
             }
@@ -164,7 +164,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Notify updated
             /// </summary>
-            public void NotifyUpdated<TModel>(TModel data)
+            public void NotifyUpdated<TModel>(TModel data) where TModel : IdentifiedData
             {
                 try
                 {
