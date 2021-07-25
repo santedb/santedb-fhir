@@ -115,7 +115,7 @@ namespace SanteDB.Messaging.FHIR
                         this.m_traceSource.TraceInfo("Starting FHIR on {0}...", endpoint.Description.ListenUri);
                     }
 
-                    MessageUtil.SetBaseLocation(this.m_webHost.Endpoints.First().Description.ListenUri.AbsolutePath);
+                    MessageUtil.SetBaseLocation(this.m_configuration.ResourceBaseUri ?? this.m_webHost.Endpoints.First().Description.ListenUri.ToString());
                     FhirResourceHandlerUtil.Initialize(this.m_configuration, this.m_serviceManager);
                     ExtensionUtil.Initialize(this.m_configuration);
 

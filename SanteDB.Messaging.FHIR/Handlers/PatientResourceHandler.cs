@@ -68,6 +68,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>Returns the mapped FHIR resource.</returns>
         protected override Patient MapToFhir(Core.Model.Roles.Patient model)
         {
+
+            // If the model is being constructed as part of a bundle, then the caller
+            // should have included the bundle so we can add any related resources 
+            var partOfBundle = model.GetAnnotations<Bundle>().FirstOrDefault();
+
             var retVal = DataTypeConverter.CreateResource<Patient>(model);
             retVal.Active = model.StatusConceptKey == StatusKeys.Active || model.StatusConceptKey == StatusKeys.New;
             retVal.Address = model.GetAddresses().Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
@@ -131,38 +136,80 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     relative.Meta.Security = null;
                     retVal.Contained.Add(relative);
                 }
-                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
+
+                if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
                 {
-                    var person = rel.LoadProperty(o => o.TargetEntity);
+                    var relEntity = rel.LoadProperty(o => o.TargetEntity);
 
-                    var contact = new Patient.ContactComponent()
+                    if (relEntity is Core.Model.Entities.Person person)
                     {
-                        ElementId = $"{person.Key}",
-                        Address = DataTypeConverter.ToFhirAddress(person.GetAddresses().FirstOrDefault()),
-                        Relationship = new List<CodeableConcept>() {
-                            DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o=>o.RelationshipRole), "http://terminology.hl7.org/CodeSystem/v2-0131", true),
-                            DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o => o.RelationshipType), "http://terminology.hl7.org/CodeSystem/v2-0131", true)
-                        }.OfType<CodeableConcept>().ToList(),
-                        Name = DataTypeConverter.ToFhirHumanName(person.GetNames().FirstOrDefault()),
-                        // TODO: Gender
-                        Telecom = person.GetTelecoms().Select(t => DataTypeConverter.ToFhirTelecom(t)).ToList(),
-                    };
+                        var contact = new Patient.ContactComponent()
+                        {
+                            ElementId = $"{person.Key}",
+                            Address = DataTypeConverter.ToFhirAddress(person.GetAddresses().FirstOrDefault()),
+                            Relationship = new List<CodeableConcept>() {
+                                DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o=>o.RelationshipRole), "http://terminology.hl7.org/CodeSystem/v2-0131", true),
+                                DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o => o.RelationshipType), "http://terminology.hl7.org/CodeSystem/v2-0131", true)
+                            }.OfType<CodeableConcept>().ToList(),
+                            Name = DataTypeConverter.ToFhirHumanName(person.GetNames().FirstOrDefault()),
+                            // TODO: Gender
+                            Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true),
+                            Telecom = person.GetTelecoms().Select(t => DataTypeConverter.ToFhirTelecom(t)).ToList()
+                        };
 
-                    DataTypeConverter.AddExtensions(person, contact);
+                        var scoper = person.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper);
+                        if(scoper != null)
+                        {
+                            contact.Organization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(scoper.LoadProperty(o=>o.TargetEntity));
+                        }
+                        DataTypeConverter.AddExtensions(person, contact);
+                        retVal.Contact.Add(contact);
 
-                    retVal.Contact.Add(contact);
-
-                    // TODO: 
-                    //retVal.Link.Add(new Patient.LinkComponent()
-                    //{
-                    //    Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rel.TargetEntityKey),
-                    //    Type = Patient.LinkType.Seealso
-                    //});
+                    }
+                    else if(relEntity is Core.Model.Entities.Organization org) // it *IS* an organization
+                    {
+                        var contact = new Patient.ContactComponent()
+                        {
+                            ElementId = $"{org.Key}",
+                            Relationship = new List<CodeableConcept>() {
+                                DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o=>o.RelationshipRole), "http://terminology.hl7.org/CodeSystem/v2-0131", true),
+                                DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o => o.RelationshipType), "http://terminology.hl7.org/CodeSystem/v2-0131", true)
+                            }.OfType<CodeableConcept>().ToList(),
+                            Organization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(org)
+                        };
+                        retVal.Contact.Add(contact);
+                    }
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper)
-                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(rel.LoadProperty(o => o.TargetEntity));
+                {
+                    var scoper = rel.LoadProperty(o => o.TargetEntity);
+                    retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(scoper);
+
+                    // If this is part of a bundle, include it
+                    if (partOfBundle != null)
+                    {
+                        partOfBundle.Entry.Add(new Bundle.EntryComponent()
+                        {
+                            FullUrl = $"{MessageUtil.GetBaseUri()}/Organization/{scoper.Key}",
+                            Resource = FhirResourceHandlerUtil.GetMapperForInstance(scoper).MapToFhir(scoper)
+                        });
+                    }
+                }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
-                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(rel.LoadProperty(o => o.TargetEntity)));
+                {
+                    var practitioner = rel.LoadProperty(o => o.TargetEntity);
+                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(practitioner));
+
+                    // If this is part of a bundle, include it
+                    if (partOfBundle != null)
+                    {
+                        partOfBundle.Entry.Add(new Bundle.EntryComponent()
+                        {
+                            FullUrl = $"{MessageUtil.GetBaseUri()}/Practitioner/{practitioner.Key}",
+                            Resource = FhirResourceHandlerUtil.GetMapperForInstance(practitioner).MapToFhir(practitioner)
+                        });
+                    }
+                }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
@@ -176,10 +223,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
                 else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
+                else if (partOfBundle != null) // This is part of a bundle and we need to include it 
+                {
+                    // HACK: This piece of code is used to add any RelatedPersons to the container bundle if it is part of a bundle
+                    if(m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
+                    {
+                        var relative = FhirResourceHandlerUtil.GetMapperForInstance(rel).MapToFhir(rel);
+                        partOfBundle.Entry.Add(new Bundle.EntryComponent()
+                        {
+                            FullUrl = $"{MessageUtil.GetBaseUri()}/RelatedPerson/{rel.Key}",
+                            Resource = relative
+                        });
+                    }
+                }
             }
 
             // Reverse relationships of family member?
-            var reverseRelationships = this.m_erRepository.Find(o => o.TargetEntityKey == model.Key && o.RelationshipType.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember") && o.ObsoleteVersionSequenceId == null);
+            var uuids = model.Relationships.Where(r => r.RelationshipTypeKey == MDM_MASTER_LINK).Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
+            var reverseRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && o.RelationshipType.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember") && o.ObsoleteVersionSequenceId == null);
             foreach (var rrv in reverseRelationships)
             {
                 retVal.Link.Add(new Patient.LinkComponent()
@@ -187,6 +248,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     Type = Patient.LinkType.Seealso,
                     Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rrv)
                 });
+
+                // If this is part of a bundle, include it
+                if (partOfBundle != null)
+                {
+                    partOfBundle.Entry.Add(new Bundle.EntryComponent()
+                    {
+                        FullUrl = $"{MessageUtil.GetBaseUri()}/RelatedPerson/{rrv.Key}",
+                        Resource = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rrv)
+                    });
+                }
             }
 
             var photo = model.LoadCollection(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);

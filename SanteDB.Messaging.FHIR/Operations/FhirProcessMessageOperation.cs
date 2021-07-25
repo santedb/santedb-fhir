@@ -88,13 +88,16 @@ namespace SanteDB.Messaging.FHIR.Operations
                 var uuid = Guid.NewGuid();
                 try
                 {
-                    var opReturn = handler.Invoke(messageHeader, contentParameter.Entry.Where(o => messageHeader.Focus.Any(f => f.Reference == o.FullUrl)).ToArray());
+                    // HACK: The .EndsWith is a total hack - FHIR wants .FullUrl to be absolute, but many senders will send relative references which is stupid AF
+                    var opReturn = handler.Invoke(messageHeader, contentParameter.Entry.Where(o => messageHeader.Focus.Any(f => o.FullUrl == f.Reference || $"{o.Resource.ResourceType}/{o.Resource.Id}" == f.Reference)).ToArray());
+
+
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
-                        FullUrl = $"MessageHeader/{uuid}",
+                        FullUrl = $"urn:uuid:{uuid}",
                         Resource = new MessageHeader()
                         {
-			    Id = uuid.ToString(),
+			                Id = uuid.ToString(),
                             Response = new MessageHeader.ResponseComponent()
                             {
                                 Code = MessageHeader.ResponseType.Ok,
@@ -102,9 +105,12 @@ namespace SanteDB.Messaging.FHIR.Operations
                             }
                         }
                     });
+
+                    // HACK: Another hack - FullUrl is assumed to be a UUID because I'm not turning an id of XXX and trying to derive a fullUrl for something that is in a 
+                    // bundle anyways
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
-                        FullUrl = $"{opReturn.ResourceType}/{opReturn.Id}",
+                        FullUrl = $"urn:uuid:{opReturn.Id}",
                         Resource = opReturn
                     });
                 }
@@ -112,7 +118,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 {
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
-                        FullUrl = $"MessageHeader/{uuid}",
+                        FullUrl = $"urn:uuid:{uuid}",
                         Resource = new MessageHeader()
                         {
 			    Id = uuid.ToString(),
@@ -127,7 +133,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                     outcome.Id = uuid.ToString();
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
-                        FullUrl = $"OperationOutcome/{uuid}",
+                        FullUrl = $"urn:uuid:{uuid}",
                         Resource = outcome
                     });
 

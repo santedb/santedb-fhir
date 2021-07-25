@@ -252,33 +252,50 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
 			{
 				Results = hdsiResults.AsParallel().Select(o => {
-                    try
+					using(AuthenticationContext.EnterContext(auth.Principal))
                     {
-                        AuthenticationContext.Current = auth;
-                        return this.MapToFhir(o);
+						return new Bundle.EntryComponent()
+						{
+							Resource = this.MapToFhir(o),
+							Search = new Bundle.SearchComponent()
+							{
+								Mode = Bundle.SearchEntryMode.Match
+							}
+						};
                     }
-                    finally
-                    {
-                        AuthenticationContext.Current = new AuthenticationContext(AuthenticationContext.AnonymousPrincipal);
-                    }
-                }).OfType<Resource>().ToList(),
+                }).ToList(),
 				Query = query,
 				TotalResults = totalResults
 			};
 
+			this.ProcessIncludes(hdsiResults, parameters, retVal);
+
+			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
+		}
+
+		/// <summary>
+		/// Process includes for the specified result set
+		/// </summary>
+		protected virtual void ProcessIncludes(IEnumerable<TModel> results, System.Collections.Specialized.NameValueCollection parameters, FhirQueryResult queryResult)
+        {
 			// Include or ref include?
 			if (parameters["_include"] != null) // TODO: _include:iterate (fhir is crazy)
 			{
-				retVal.Results = retVal.Results.Union(hdsiResults.SelectMany(h=>this.GetIncludes(h, parameters["_include"].Split(',').Select(o=>new IncludeInstruction(o))))).ToList();
+				queryResult.Results = queryResult.Results.Union(results.SelectMany(h => this.GetIncludes(h, parameters["_include"].Split(',').Select(o => new IncludeInstruction(o)))).Select(o => new Bundle.EntryComponent()
+				{
+					Resource = o,
+					Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Include }
+				})).ToList();
 			}
 			if (parameters["_revinclude"] != null) // TODO: _revinclude:iterate (fhir is crazy)
 			{
-				retVal.Results = retVal.Results.Union(hdsiResults.SelectMany(h => this.GetReverseIncludes(h, parameters["_revinclude"].Split(',').Select(o => new IncludeInstruction(o))))).ToList();
+				queryResult.Results = queryResult.Results.Union(results.SelectMany(h => this.GetReverseIncludes(h, parameters["_revinclude"].Split(',').Select(o => new IncludeInstruction(o)))).Select(o => new Bundle.EntryComponent()
+				{
+					Resource = o,
+					Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Include }
+				})).ToList();
 			}
-
-			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal)) as Bundle;
 		}
-
 		/// <summary>
 		/// Retrieves a specific resource.
 		/// </summary>
@@ -302,7 +319,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
 			var result = this.Read(guidId, versionGuidId);
 			if (result == null)
-				throw new KeyNotFoundException();
+				throw new KeyNotFoundException($"{this.ResourceType}/{id} not found");
 
             // FHIR Operation result
             var retVal = this.MapToFhir(result);
@@ -450,13 +467,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 results.Add(result);
             }
 
-            // FHIR Operation result
-            var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
-            {
-                Results = results.Select(this.MapToFhir).OfType<Resource>().ToList()
+			// FHIR Operation result
+			var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
+			{
+				Results = results.Select(this.MapToFhir).Select(o => new Bundle.EntryComponent()
+				{
+					Resource = o,
+					Response = new Bundle.ResponseComponent()
+					{
+						Status = "200"
+					}
+				}).ToList()
             };
 
-			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.HistoryInstance, this.ResourceType, MessageUtil.CreateBundle(retVal)) as Bundle;
+			return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.HistoryInstance, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.History)) as Bundle;
         }
 
 		/// <summary>
