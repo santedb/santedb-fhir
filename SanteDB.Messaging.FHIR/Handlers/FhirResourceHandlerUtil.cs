@@ -36,7 +36,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
       
         // Message processors
-        private static IDictionary<ResourceType, IFhirResourceHandler> s_messageProcessors = new ConcurrentDictionary<ResourceType, IFhirResourceHandler>();
+        private static ConcurrentDictionary<ResourceType, IFhirResourceHandler> s_messageProcessors = new ConcurrentDictionary<ResourceType, IFhirResourceHandler>();
 
         // Resource handler
         private static Tracer s_tracer = Tracer.GetTracer(typeof(FhirResourceHandlerUtil));
@@ -57,7 +57,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 throw new ArgumentNullException(nameof(handler), "Handler is required");
             }
-            s_messageProcessors.Add(handler.ResourceType, handler);
+            s_messageProcessors.TryAdd(handler.ResourceType, handler);
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public static void UnRegisterResourceHandler(IFhirResourceHandler handler)
         {
-            s_messageProcessors.Remove(handler.ResourceType);
+            s_messageProcessors.TryRemove(handler.ResourceType, out _);
         }
 
         /// <summary>
