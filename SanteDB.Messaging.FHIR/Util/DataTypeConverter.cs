@@ -964,7 +964,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal = sdbBundle?.Item.OfType<IHasIdentifiers>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.AuthorityKey && i.Value == identifier.Value)) as IdentifiedData;
                 if (retVal == null) // Not been processed in bundle
                 {
-                    retVal = repo.Find(o => o.Identifiers.Any(a => a.AuthorityKey == identifier.AuthorityKey && a.Value == identifier.Value), 0, 1, out int tr).FirstOrDefault();
+                    retVal = repo.Find(o => o.Identifiers.Any(a => a.Authority.Key == identifier.AuthorityKey && a.Value == identifier.Value), 0, 1, out int tr).FirstOrDefault();
                     if (tr > 1)
                         throw new InvalidOperationException($"Reference to {identifier} is ambiguous ({tr} records have this identity)");
                 }
