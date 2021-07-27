@@ -101,7 +101,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                             Response = new MessageHeader.ResponseComponent()
                             {
                                 Code = MessageHeader.ResponseType.Ok,
-                                Details = new ResourceReference($"{opReturn.ResourceType}/{opReturn.Id}")
+                                Details = new ResourceReference($"urn:uuid:{opReturn.Id}")
                             }
                         }
                     });
@@ -125,7 +125,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                             Response = new MessageHeader.ResponseComponent()
                             {
                                 Code = MessageHeader.ResponseType.FatalError,
-                                Details = new ResourceReference($"OperationOutcome/{uuid}")
+                                Details = new ResourceReference($"urn:uuid:{uuid}")
                             }
                         }
                     });
