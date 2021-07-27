@@ -997,7 +997,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     {
                         // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
                         //var fhirResource = fhirBundle.FindEntry(resourceRef);
-                        var fhirResource = fhirBundle.Entry.Where(o=>o.FullUrl == resourceRef.Reference || $"{o.Resource.ResourceType}/{o.Resource.Id}" == resourceRef.Reference);
+                        var fhirResource = fhirBundle?.Entry.Where(o=>o.FullUrl == resourceRef.Reference || $"{o.Resource.ResourceType}/{o.Resource.Id}" == resourceRef.Reference);
                         if(fhirResource?.Any() == true)
                         {
                             // TODO: Error trapping
@@ -1010,7 +1010,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     {
                         // HACK: We don't care about the absoluteness of a URL
                         // Attempt to resolve the reference 
-                        var refRegex = new Regex("^(urn:uuid:.{36}|(\\w*?)/(.{36}))$");
+                        var refRegex = new Regex("^(urn:uuid:.{36}|\\/?(\\w*?)/(.{36}))$");
                         var match = refRegex.Match(resourceRef.Reference);
                         if (!match.Success)
                             throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");

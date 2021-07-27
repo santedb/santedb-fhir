@@ -12,6 +12,7 @@ using SanteDB.Core.Model;
 using System;
 using System.Linq;
 using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Security;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -58,8 +59,11 @@ namespace SanteDB.Messaging.FHIR.Test
                 MessageHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>()
             };
 
-            FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-            ExtensionUtil.Initialize(testConfiguration);
+            using (AuthenticationContext.EnterSystemContext())
+            {
+                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
+                ExtensionUtil.Initialize(testConfiguration);
+            }
 
         }
 
