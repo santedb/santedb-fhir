@@ -143,7 +143,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if(resource.PartOf != null)
             {
-                var reference = DataTypeConverter.ResolveEntity(resource.PartOf, resource);
+                var reference = DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.PartOf, resource);
                 if(reference == null)
                 {
                     throw new KeyNotFoundException($"Could not resolve {resource.PartOf.Reference}");

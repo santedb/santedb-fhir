@@ -373,7 +373,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 patient.Relationships.AddRange(resource.GeneralPractitioner.Select(r =>
                 {
-                    var referenceKey = DataTypeConverter.ResolveEntity(r, resource) as Entity;
+                    var referenceKey = DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(r, resource) as Entity ??
+                        DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(r, resource);
                     if (referenceKey == null)
                         throw new KeyNotFoundException("Can't locate a registered general practitioner");
                     return new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey);
@@ -381,7 +382,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             if (resource.ManagingOrganization != null)
             {
-                var referenceKey = DataTypeConverter.ResolveEntity(resource.ManagingOrganization, resource) as Entity;
+                var referenceKey = DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.ManagingOrganization, resource);
                 if (referenceKey == null)
                     throw new KeyNotFoundException("Can't locate a registered managing organization");
                 else
@@ -412,7 +413,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     case Patient.LinkType.Replaces:
                         {
                             // Find the victim
-                            var replacee = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Core.Model.Roles.Patient;
+                            var replacee = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(lnk.Other, resource);
                             if (replacee == null)
                                 throw new KeyNotFoundException($"Cannot locate patient referenced by {lnk.Type} relationship");
                             replacee.StatusConceptKey = StatusKeys.Obsolete;
@@ -422,16 +423,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     case Patient.LinkType.ReplacedBy:
                         {
                             // Find the new
-                            var replacer = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Core.Model.Roles.Patient;
+                            var replacer = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(lnk.Other, resource) as Core.Model.Roles.Patient;
                             if (replacer == null)
                                 throw new KeyNotFoundException($"Cannot locate patient referenced by {lnk.Type} relationship");
                             patient.StatusConceptKey = StatusKeys.Obsolete;
-                            replacer.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, patient));
+                            patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, patient)
+                            {
+                                HolderKey = replacer.Key
+                            });
                             break;
                         }
                     case Patient.LinkType.Seealso:
                         {
-                            var referee = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Entity;
+                            var referee = DataTypeConverter.ResolveEntity<Entity>(lnk.Other, resource); // We use Entity here in lieu Patient since the code below can handle the MDM layer
                             // Is this a current MDM link?
                             if (referee.GetTag(FhirConstants.PlaceholderTag) == "true") // The referee wants us to become the data
                             {
@@ -455,7 +459,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         }
                     case Patient.LinkType.Refer: // This points to a more detailed view of the patient
                         {
-                            var referee = DataTypeConverter.ResolveEntity(lnk.Other, resource) as Entity;
+                            var referee = DataTypeConverter.ResolveEntity<Entity>(lnk.Other, resource);
                             if (referee.GetTag("$mdm.type") == "M") // HACK: MDM User is attempting to point this at another Master (note: THE MDM LAYER WON'T LIKE THIS)
                                 patient.Relationships.Add(new EntityRelationship(MDM_MASTER_LINK, referee));
                             else

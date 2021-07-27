@@ -947,21 +947,22 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Resolve the specified entity
         /// </summary>
-        public static IdentifiedData ResolveEntity(ResourceReference resourceRef, Resource containedWithin)
+        public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin)
+            where TEntity : Entity, new()
         {
-            var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<Entity>>();
+            var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TEntity>>();
 
             // First is there a bundle in the contained within
             var sdbBundle = containedWithin.Annotations(typeof(Core.Model.Collection.Bundle)).FirstOrDefault() as Core.Model.Collection.Bundle;
             var fhirBundle = containedWithin.Annotations(typeof(Bundle)).FirstOrDefault() as Bundle;
 
-            IdentifiedData retVal = null;
+            TEntity retVal = null;
 
             if (resourceRef.Identifier != null)
             {
                 // Already exists in SDB bundle?
                 var identifier = DataTypeConverter.ToEntityIdentifier(resourceRef.Identifier);
-                retVal = sdbBundle?.Item.OfType<IHasIdentifiers>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.AuthorityKey && i.Value == identifier.Value)) as IdentifiedData;
+                retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.AuthorityKey && i.Value == identifier.Value)).FirstOrDefault();
                 if (retVal == null) // Not been processed in bundle
                 {
                     retVal = repo.Find(o => o.Identifiers.Any(a => a.Authority.Key == identifier.AuthorityKey && a.Value == identifier.Value), 0, 1, out int tr).FirstOrDefault();
@@ -986,12 +987,12 @@ namespace SanteDB.Messaging.FHIR.Util
                         throw new ArgumentException($"Don't understand how to convert {contained.ResourceType}");
                     }
 
-                    retVal = mapper.MapToModel(contained);
+                    retVal = (TEntity)mapper.MapToModel(contained);
                     
                 }
                 else
                 {
-                    retVal = sdbBundle?.Item.OfType<ITaggable>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference) as IdentifiedData;
+                    retVal = sdbBundle?.Item.OfType<TEntity>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference);
 
                     if(retVal == null) // attempt to resolve via fhir bundle
                     {
@@ -1001,7 +1002,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         if(fhirResource?.Any() == true)
                         {
                             // TODO: Error trapping
-                            retVal = FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.FirstOrDefault().Resource).MapToModel(fhirResource.FirstOrDefault().Resource);
+                            retVal = (TEntity)FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.FirstOrDefault().Resource).MapToModel(fhirResource.FirstOrDefault().Resource);
                             sdbBundle.Item.Add(retVal);
                         } 
                     }
@@ -1057,7 +1058,7 @@ namespace SanteDB.Messaging.FHIR.Util
             retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());
             if (patientContact.Organization != null)
             {
-                var refObjectKey = DataTypeConverter.ResolveEntity(patientContact.Organization, patient);
+                var refObjectKey = DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(patientContact.Organization, patient);
                 if (refObjectKey == null) {
                     throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not resolve reference to patientContext.Organization");
                 }
