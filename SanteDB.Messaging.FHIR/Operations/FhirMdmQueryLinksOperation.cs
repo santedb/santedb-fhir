@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using RestSrvr;
 using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Operations
@@ -78,51 +79,15 @@ namespace SanteDB.Messaging.FHIR.Operations
 		/// <returns>The result of the operation</returns>
 		public Resource Invoke(Parameters parameters)
 		{
-			var merger = ApplicationServiceContext.Current.GetService(typeof(IRecordMergingService<>).MakeGenericType(typeof(SanteDB.Core.Model.Roles.Patient))) as IRecordMergingService;
+			var offset = int.TryParse(RestOperationContext.Current.IncomingRequest.QueryString["offset"], out var tempOffset) ? tempOffset : 0;
+			var count = int.TryParse(RestOperationContext.Current.IncomingRequest.QueryString["count"], out var tempCount) ? (int?)tempCount : null;
 
-			//var merger = ApplicationServiceContext.Current.GetService<IRecordMergingService>();
+			var merger = ApplicationServiceContext.Current.GetService(typeof(IRecordMergingService<>).MakeGenericType(typeof(SanteDB.Core.Model.Roles.Patient))) as IRecordMergingService;
 
 			if (merger == null)
 			{
 				throw new InvalidOperationException("No merging service configuration");
 			}
-
-			var result = merger.GetMergeCandidates(Guid.Empty);
-
-			var resource = new Parameters();
-
-			//resource.Parameter = result.OfType<EntityRelationship>().Select(c => new Parameters.ParameterComponent
-			//{
-			//	Name = "link",
-			//	Part = new List<Parameters.ParameterComponent>
-			//	{
-			//		new Parameters.ParameterComponent
-			//		{
-			//			Name = "masterResourceId",
-			//			Value = new FhirString(c.TargetEntityKey.ToString())
-			//		},
-			//		new Parameters.ParameterComponent
-			//		{
-			//			Name = "sourceResourceId",
-			//			Value = new FhirString(c.SourceEntityKey.ToString())
-			//		},
-			//		new Parameters.ParameterComponent
-			//		{
-			//			Name = "matchResult",
-			//			Value = null,
-			//		},
-			//		new Parameters.ParameterComponent
-			//		{
-			//			Name = "linkSource",
-			//			Value = null,
-			//		},
-			//		//new Parameters.ParameterComponent
-			//		//{
-			//		//	Name = "score",
-			//		//	Value = new FhirDecimal(Convert.ToDecimal(c.Strength))
-			//		//}
-			//	}
-			//}).ToList();
 
 			var matchingService = ApplicationServiceContext.Current.GetService<IRecordMatchingService>();
 
@@ -133,15 +98,9 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<SanteDB.Core.Model.Roles.Patient>>();
 
-			// for each master link
-			//	call match
-			//	for each result
-			//		find 
+			var result = merger.GetMergeCandidates(Guid.Empty, offset, count);
 
-			//Parallel.ForEach(result.OfType<EntityRelationship>(), c =>
-			//{
-
-			//});
+			var resource = new Parameters();
 
 			foreach (var c in result.OfType<EntityRelationship>())
 			{
