@@ -24,6 +24,7 @@ using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Serialization;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -407,7 +408,10 @@ namespace SanteDB.Messaging.FHIR.Util
                                 if (Uri.TryCreate(segs[0], UriKind.Absolute, out Uri data))
                                 {
                                     var aa = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>().Get(data);
-
+                                    if (aa == null)
+                                    {
+                                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotFound, $"No authority for {data} found");
+                                    }
                                     hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
                                 }
                                 else

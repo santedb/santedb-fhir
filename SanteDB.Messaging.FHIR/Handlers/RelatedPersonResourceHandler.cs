@@ -198,7 +198,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Find the source of the relationship
-            var sourceEntity = DataTypeConverter.ResolveEntity(resource.Patient, resource);
+            Entity sourceEntity = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Patient, resource);
             if (sourceEntity == null)
             {
                 throw new KeyNotFoundException($"Could not resolve {resource.Patient.Reference}");

@@ -116,24 +116,25 @@ namespace SanteDB.Messaging.FHIR.Operations
                 }
                 catch(Exception e)
                 {
+                    var outcome = DataTypeConverter.CreateErrorResult(e);
+                    outcome.Id = Guid.NewGuid().ToString();
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
                         FullUrl = $"urn:uuid:{uuid}",
                         Resource = new MessageHeader()
                         {
-			    Id = uuid.ToString(),
+			                Id = uuid.ToString(),
                             Response = new MessageHeader.ResponseComponent()
                             {
                                 Code = MessageHeader.ResponseType.FatalError,
-                                Details = new ResourceReference($"urn:uuid:{uuid}")
+                                Details = new ResourceReference($"urn:uuid:{outcome.Id}")
                             }
                         }
                     });
-                    var outcome = DataTypeConverter.CreateErrorResult(e);
-                    outcome.Id = uuid.ToString();
+                    
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
-                        FullUrl = $"urn:uuid:{uuid}",
+                        FullUrl = $"urn:uuid:{outcome.Id}",
                         Resource = outcome
                     });
 
