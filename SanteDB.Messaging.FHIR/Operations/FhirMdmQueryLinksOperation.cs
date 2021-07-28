@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using RestSrvr;
+using SanteDB.Persistence.MDM;
 using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Operations
@@ -96,13 +97,16 @@ namespace SanteDB.Messaging.FHIR.Operations
 				throw new InvalidOperationException("No record matching service found");
 			}
 
+			var entityRelationshipService = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
+
 			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<SanteDB.Core.Model.Roles.Patient>>();
 
-			var result = merger.GetMergeCandidates(Guid.Empty, offset, count);
+			//var result = merger.GetMergeCandidates(Guid.Empty, offset, count);
+			var relationships = entityRelationshipService.Find(c => c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship && c.ObsoleteVersionSequenceId == null, offset, count, out _, null);
 
 			var resource = new Parameters();
 
-			foreach (var c in result.OfType<EntityRelationship>())
+			foreach (var c in relationships)
 			{
 				var matchResult = matchingService.Classify(patientService.Get(c.TargetEntityKey.Value), new List<Patient>
 				{
