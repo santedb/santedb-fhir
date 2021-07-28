@@ -18,11 +18,15 @@
  */
 
 using Hl7.Fhir.Model;
+using SanteDB.Core;
+using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Extensions;
 using System;
 using System.Collections.Generic;
-using SanteDB.Core;
-using SanteDB.Core.Services;
+using System.Linq;
+using System.Threading.Tasks;
+using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Operations
 {
@@ -87,10 +91,106 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			var resource = new Parameters();
 
-			resource.Parameter.Add(new Parameters.ParameterComponent
+			//resource.Parameter = result.OfType<EntityRelationship>().Select(c => new Parameters.ParameterComponent
+			//{
+			//	Name = "link",
+			//	Part = new List<Parameters.ParameterComponent>
+			//	{
+			//		new Parameters.ParameterComponent
+			//		{
+			//			Name = "masterResourceId",
+			//			Value = new FhirString(c.TargetEntityKey.ToString())
+			//		},
+			//		new Parameters.ParameterComponent
+			//		{
+			//			Name = "sourceResourceId",
+			//			Value = new FhirString(c.SourceEntityKey.ToString())
+			//		},
+			//		new Parameters.ParameterComponent
+			//		{
+			//			Name = "matchResult",
+			//			Value = null,
+			//		},
+			//		new Parameters.ParameterComponent
+			//		{
+			//			Name = "linkSource",
+			//			Value = null,
+			//		},
+			//		//new Parameters.ParameterComponent
+			//		//{
+			//		//	Name = "score",
+			//		//	Value = new FhirDecimal(Convert.ToDecimal(c.Strength))
+			//		//}
+			//	}
+			//}).ToList();
+
+			var matchingService = ApplicationServiceContext.Current.GetService<IRecordMatchingService>();
+
+			if (matchingService == null)
 			{
-				Name = "hello"
-			});
+				throw new InvalidOperationException("No record matching service found");
+			}
+
+			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<SanteDB.Core.Model.Roles.Patient>>();
+
+			// for each master link
+			//	call match
+			//	for each result
+			//		find 
+
+			//Parallel.ForEach(result.OfType<EntityRelationship>(), c =>
+			//{
+
+			//});
+
+			foreach (var c in result.OfType<EntityRelationship>())
+			{
+				var matchResult = matchingService.Classify(patientService.Get(c.TargetEntityKey.Value), new List<Patient>
+				{
+					new Patient
+					{
+						Key = c.SourceEntityKey
+					}
+				}, "org.santedb.matcher.example").FirstOrDefault(x => x.Classification == RecordMatchClassification.Match || x.Classification == RecordMatchClassification.NonMatch);
+
+				if (matchResult == null)
+				{
+					continue;
+				}
+
+				resource.Parameter.Add(new Parameters.ParameterComponent
+				{
+					Name = "link",
+					Part = new List<Parameters.ParameterComponent>
+					{
+						new Parameters.ParameterComponent
+						{
+							Name = "masterResourceId",
+							Value = new FhirString(c.TargetEntityKey.ToString())
+						},
+						new Parameters.ParameterComponent
+						{
+							Name = "sourceResourceId",
+							Value = new FhirString(matchResult.Record.Key.ToString())
+						},
+						new Parameters.ParameterComponent
+						{
+							Name = "matchResult",
+							Value = new FhirString(matchResult.Classification == RecordMatchClassification.Match ? "MATCH" : "NO_MATCH"),
+						},
+						new Parameters.ParameterComponent
+						{
+							Name = "linkSource",
+							Value = new FhirString("auto"),
+						},
+						new Parameters.ParameterComponent
+						{
+							Name = "score",
+							Value = new FhirDecimal(Convert.ToDecimal(matchResult.Score))
+						}
+					}
+				});
+			}
 
 			// TODO
 			// get links
