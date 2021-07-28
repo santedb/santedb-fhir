@@ -18,16 +18,17 @@
  */
 
 using Hl7.Fhir.Model;
+using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Extensions;
+using SanteDB.Persistence.MDM;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using RestSrvr;
-using SanteDB.Persistence.MDM;
+using System.Linq.Expressions;
+using Expression = System.Linq.Expressions.Expression;
 using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Operations
@@ -52,9 +53,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 		/// </summary>
 		public ResourceType[] AppliesTo => new[]
 		{
-			ResourceType.Organization,
-			ResourceType.Patient,
-			ResourceType.Practitioner
+			ResourceType.Patient
 		};
 
 		/// <summary>
@@ -62,10 +61,29 @@ namespace SanteDB.Messaging.FHIR.Operations
 		/// </summary>
 		public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<string, FHIRAllTypes>()
 		{
-			{ "count", FHIRAllTypes.Integer },
+			{ "_count", FHIRAllTypes.Integer },
 			{ "linkSource", FHIRAllTypes.String },
 			{ "matchResult", FHIRAllTypes.String },
-			{ "offset", FHIRAllTypes.Integer }
+			{ "_offset", FHIRAllTypes.Integer }
+		};
+
+		/// <summary>
+		/// The link source map.
+		/// </summary>
+		private static readonly Dictionary<string, Guid> linkSourceMap = new Dictionary<string, Guid>
+		{
+			{ "AUTO", MdmConstants.AutomagicClassification },
+			{ "MANUAL", MdmConstants.VerifiedClassification },
+		};
+
+		/// <summary>
+		/// The match result source map.
+		/// </summary>
+		private static readonly Dictionary<string, RecordMatchClassification> matchResultMap = new Dictionary<string, RecordMatchClassification>
+		{
+			{ "MATCH", RecordMatchClassification.Match },
+			{ "POSSIBLE_MATCH", RecordMatchClassification.Probable },
+			{ "NO_MATCH", RecordMatchClassification.NonMatch },
 		};
 
 		/// <summary>
@@ -82,13 +100,8 @@ namespace SanteDB.Messaging.FHIR.Operations
 		{
 			var offset = int.TryParse(RestOperationContext.Current.IncomingRequest.QueryString["offset"], out var tempOffset) ? tempOffset : 0;
 			var count = int.TryParse(RestOperationContext.Current.IncomingRequest.QueryString["count"], out var tempCount) ? (int?)tempCount : null;
-
-			var merger = ApplicationServiceContext.Current.GetService(typeof(IRecordMergingService<>).MakeGenericType(typeof(SanteDB.Core.Model.Roles.Patient))) as IRecordMergingService;
-
-			if (merger == null)
-			{
-				throw new InvalidOperationException("No merging service configuration");
-			}
+			var linkSource = RestOperationContext.Current.IncomingRequest.QueryString["linkSource"]?.ToUpperInvariant();
+			var matchResult = RestOperationContext.Current.IncomingRequest.QueryString["matchResult"]?.ToUpperInvariant();
 
 			var matchingService = ApplicationServiceContext.Current.GetService<IRecordMatchingService>();
 
@@ -97,26 +110,47 @@ namespace SanteDB.Messaging.FHIR.Operations
 				throw new InvalidOperationException("No record matching service found");
 			}
 
+			var configuration = RestOperationContext.Current.IncomingRequest.QueryString["_configurationName"] ?? "org.santedb.matcher.example";
+
+			if (string.IsNullOrEmpty(configuration))
+			{
+				throw new InvalidOperationException("No resource merge configuration for specified. Use the ?_configurationName parameter specify a configuration.");
+			}
+
 			var entityRelationshipService = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
+			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<Patient>>();
 
-			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<SanteDB.Core.Model.Roles.Patient>>();
+			Expression<Func<EntityRelationship, bool>> queryExpression = c => c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship && c.ObsoleteVersionSequenceId == null;
 
-			//var result = merger.GetMergeCandidates(Guid.Empty, offset, count);
-			var relationships = entityRelationshipService.Find(c => c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship && c.ObsoleteVersionSequenceId == null, offset, count, out _, null);
+			if (!string.IsNullOrEmpty(linkSource) && linkSourceMap.TryGetValue(linkSource, out var linkSourceKey))
+			{
+				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body, Expression.MakeBinary(ExpressionType.Equal, Expression.Property(Expression.Parameter(typeof(EntityRelationship)), typeof(EntityRelationship), nameof(EntityRelationship.ClassificationKey)), Expression.Constant(linkSourceKey, typeof(Guid?))));
+
+				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
+			}
+
+			var relationships = entityRelationshipService.Find(queryExpression, offset, count, out _, null);
+
+			Expression<Func<RecordMatchClassification, bool>> matchClassificationExpression = x => x == RecordMatchClassification.Match || x == RecordMatchClassification.Probable || x == RecordMatchClassification.NonMatch;
+
+			if (!string.IsNullOrEmpty(matchResult) && matchResultMap.TryGetValue(matchResult, out var matchResultKey))
+			{
+				matchClassificationExpression = x => x == matchResultKey;
+			}
 
 			var resource = new Parameters();
 
-			foreach (var c in relationships)
+			foreach (var entityRelationship in relationships)
 			{
-				var matchResult = matchingService.Classify(patientService.Get(c.TargetEntityKey.Value), new List<Patient>
+				var classificationResult = matchingService.Classify(patientService.Get(entityRelationship.TargetEntityKey.Value), new List<Patient>
 				{
 					new Patient
 					{
-						Key = c.SourceEntityKey
+						Key = entityRelationship.SourceEntityKey
 					}
-				}, "org.santedb.matcher.example").FirstOrDefault(x => x.Classification == RecordMatchClassification.Match || x.Classification == RecordMatchClassification.NonMatch);
+				}, configuration).FirstOrDefault(x => matchClassificationExpression.Compile().Invoke(x.Classification));
 
-				if (matchResult == null)
+				if (classificationResult == null)
 				{
 					continue;
 				}
@@ -129,37 +163,31 @@ namespace SanteDB.Messaging.FHIR.Operations
 						new Parameters.ParameterComponent
 						{
 							Name = "masterResourceId",
-							Value = new FhirString(c.TargetEntityKey.ToString())
+							Value = new FhirString(entityRelationship.TargetEntityKey.ToString())
 						},
 						new Parameters.ParameterComponent
 						{
 							Name = "sourceResourceId",
-							Value = new FhirString(matchResult.Record.Key.ToString())
+							Value = new FhirString(classificationResult.Record.Key.ToString())
 						},
 						new Parameters.ParameterComponent
 						{
 							Name = "matchResult",
-							Value = new FhirString(matchResult.Classification == RecordMatchClassification.Match ? "MATCH" : "NO_MATCH"),
+							Value = new FhirString(matchResultMap.First(c => c.Value == classificationResult.Classification).Key)
 						},
 						new Parameters.ParameterComponent
 						{
 							Name = "linkSource",
-							Value = new FhirString("auto"),
+							Value = new FhirString(linkSourceMap.First(c => c.Value == entityRelationship.ClassificationKey).Key)
 						},
 						new Parameters.ParameterComponent
 						{
 							Name = "score",
-							Value = new FhirDecimal(Convert.ToDecimal(matchResult.Score))
+							Value = new FhirDecimal(Convert.ToDecimal(classificationResult.Score))
 						}
 					}
 				});
 			}
-
-			// TODO
-			// get links
-			// call scoring service
-			// build response
-			// return
 
 			return resource;
 		}
