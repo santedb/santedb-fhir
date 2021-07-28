@@ -396,6 +396,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     errorResult.Issue = dte.Issues.Select(iss => new OperationOutcome.IssueComponent()
                     {
                         Diagnostics = iss.Text,
+                        Code = IssueType.BusinessRule,
                         Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
                             iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
                             IssueSeverity.Information
