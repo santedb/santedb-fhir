@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: khannan (Nityan Khanna)
+ * User: khannan (Nityan Khanna) & ibrahim (Mo Ibrahim)
  * Date: 2021-7-27
  */
 
@@ -114,7 +114,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			if (string.IsNullOrEmpty(configuration))
 			{
-				throw new InvalidOperationException("No resource merge configuration for specified. Use the ?_configurationName parameter specify a configuration.");
+				throw new InvalidOperationException("No resource merge configuration specified. Use the ?_configurationName parameter specify a configuration.");
 			}
 
 			var entityRelationshipService = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
