@@ -36,7 +36,7 @@ namespace SanteDB.Messaging.FHIR.Auditing
         /// </summary>
         public FhirAuditDispatcher(IConfigurationManager configurationManager, IServiceManager serviceManager)
         {
-            this.m_configuration = configurationManager.GetSection<FhirDispatcherConfigurationSection>().Targets.Find(o=>o.Name == "Audit");
+            this.m_configuration = configurationManager.GetSection<FhirDispatcherConfigurationSection>().Targets.Find(o=>o.Name.Equals("audit", StringComparison.OrdinalIgnoreCase));
             if(this.m_configuration == null)
             {
                 throw new InvalidOperationException("Cannot find a dispatcher configuration named Audit");
@@ -44,6 +44,7 @@ namespace SanteDB.Messaging.FHIR.Auditing
             
             // The client for this object
             this.m_client = new FhirClient(this.m_configuration.Endpoint, false);
+            this.m_client.PreferredFormat = ResourceFormat.Json;
             this.m_client.ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
             {
                 AcceptUnknownMembers = true,

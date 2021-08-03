@@ -21,6 +21,7 @@ using RestSrvr;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using System;
 using System.Collections.Generic;
@@ -34,7 +35,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// Allergy / intolerance resource handler
     /// </summary>
     public class AllergyIntoleranceResourceHandler : RepositoryResourceHandlerBase<AllergyIntolerance, CodedObservation>
-	{
+    {
 
         // Applicable type concepts
         private List<Guid> m_typeConcepts;
@@ -44,6 +45,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public AllergyIntoleranceResourceHandler(IRepositoryService<CodedObservation> repo, IRepositoryService<Concept> conceptRepo) : base(repo)
         {
+
             this.m_typeConcepts = conceptRepo.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
         }
 
@@ -59,27 +61,27 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Map coded allergy intolerance resource to FHIR
         /// </summary>
 		protected override AllergyIntolerance MapToFhir(CodedObservation model)
-		{
-			throw new NotImplementedException();
-		}
+        {
+            throw new NotImplementedException();
+        }
 
         /// <summary>
         /// Map allergy intolerance from FHIR to a coded observation
         /// </summary>
 		protected override CodedObservation MapToModel(AllergyIntolerance resource)
-		{
-			throw new NotImplementedException();
-		}
+        {
+            throw new NotImplementedException();
+        }
 
-		/// <summary>
-		/// Query which filters only allergies and intolerances
-		/// </summary>
-		protected override IEnumerable<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query, Guid queryId, int offset, int count, out int totalResults)
-		{
-			var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.AllergyIntoleranceTypes, query.Parameters[0]);
-			query = System.Linq.Expressions.Expression.Lambda<Func<CodedObservation, bool>>(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), query.Parameters);
-			return base.Query(query, queryId, offset, count, out totalResults);
-		}
+        /// <summary>
+        /// Query which filters only allergies and intolerances
+        /// </summary>
+        protected override IEnumerable<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        {
+            var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.AllergyIntoleranceTypes, query.Parameters[0]);
+            query = System.Linq.Expressions.Expression.Lambda<Func<CodedObservation, bool>>(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), query.Parameters);
+            return base.Query(query, queryId, offset, count, out totalResults);
+        }
 
         /// <summary>
         /// Get interactions

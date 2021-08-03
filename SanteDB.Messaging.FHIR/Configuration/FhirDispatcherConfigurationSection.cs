@@ -52,6 +52,14 @@ namespace SanteDB.Messaging.FHIR.Configuration
     {
 
         /// <summary>
+        /// Creates a new dispatch configuration section
+        /// </summary>
+        public FhirDispatcherConfigurationSection()
+        {
+            this.Targets = new List<FhirDispatcherTargetConfiguration>();
+        }
+
+        /// <summary>
         /// Targets for the dispatcher
         /// </summary>
         [XmlArray("targets"), XmlArrayItem("add")]

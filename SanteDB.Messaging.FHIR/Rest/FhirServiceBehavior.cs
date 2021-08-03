@@ -39,6 +39,7 @@ using System.Net;
 using System.Reflection;
 using System.Xml.Schema;
 using System.Xml.Serialization;
+using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Rest
 {
@@ -172,7 +173,7 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 var result = handler.Update(id, target, TransactionMode.Commit);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Update, AuditableObjectLifecycle.Amendment, EventIdentifierType.Import, OutcomeIndicator.Success, id, result);
+                this.AuditDataAction(TypeRestfulInteraction.Update, OutcomeIndicator.Success, result);
 
                 String baseUri = MessageUtil.GetBaseUri();
                 RestOperationContext.Current.OutgoingResponse.Headers.Add("Content-Location", String.Format("{0}/{1}/_history/{2}", baseUri, result.Id, result.VersionId));
@@ -185,7 +186,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error updating FHIR resource {0}({1}): {2}", resourceType, id, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Update, AuditableObjectLifecycle.Amendment, EventIdentifierType.Import, OutcomeIndicator.EpicFail, id);
+                this.AuditDataAction(TypeRestfulInteraction.Update, OutcomeIndicator.MinorFail);
                 throw;
             }
         }
@@ -210,14 +211,14 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 var result = handler.Delete(id, TransactionMode.Commit);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Delete, AuditableObjectLifecycle.LogicalDeletion, EventIdentifierType.Import, OutcomeIndicator.Success, id, result);
+                this.AuditDataAction(TypeRestfulInteraction.Delete, OutcomeIndicator.Success, result);
                 return null;
 
             }
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error deleting FHIR resource {0}({1}): {2}", resourceType, id, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Delete, AuditableObjectLifecycle.LogicalDeletion, EventIdentifierType.Import, OutcomeIndicator.EpicFail, id);
+                this.AuditDataAction(TypeRestfulInteraction.Delete, OutcomeIndicator.MinorFail);
                 throw;
             }
         }
@@ -242,7 +243,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 RestOperationContext.Current.OutgoingResponse.StatusCode = (int)HttpStatusCode.Created;
 
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Create, AuditableObjectLifecycle.Creation, EventIdentifierType.Import, OutcomeIndicator.Success, null, result);
+                this.AuditDataAction(TypeRestfulInteraction.Create, OutcomeIndicator.Success, result);
 
                 String baseUri = MessageUtil.GetBaseUri();
                 if (!(result is Bundle))
@@ -258,7 +259,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error creating FHIR resource {0}: {1}", resourceType, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Import, ActionType.Create, AuditableObjectLifecycle.Creation, EventIdentifierType.Import, OutcomeIndicator.EpicFail, null);
+                this.AuditDataAction(TypeRestfulInteraction.Create, OutcomeIndicator.Success);
                 throw;
             }
         }
@@ -326,7 +327,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Process incoming request
                 var result = resourceProcessor.Query(RestOperationContext.Current.IncomingRequest.QueryString);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, RestOperationContext.Current.IncomingRequest.Url.Query, result);
+                this.AuditDataAction(TypeRestfulInteraction.SearchType, OutcomeIndicator.Success, result.Entry.Select(o=>o.Resource).ToArray());
                 // Create the Atom feed
                 return result;
 
@@ -334,10 +335,72 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error searching FHIR resource {0}: {1}", resourceType, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, RestOperationContext.Current.IncomingRequest.Url.Query);
+                this.AuditDataAction(TypeRestfulInteraction.SearchType, OutcomeIndicator.MinorFail);
                 throw;
             }
 
+        }
+
+        /// <summary>
+        /// Audit data action on FHIR interface
+        /// </summary>
+        private void AuditDataAction(TypeRestfulInteraction type, OutcomeIndicator outcome, params Resource[] objects)
+        {
+            AuditData audit = new AuditData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(type), "http://hl7.org/fhir/ValueSet/type-restful-interaction"));
+            AuditableObjectLifecycle lifecycle = AuditableObjectLifecycle.NotSet;
+            switch(type)
+            {
+                case TypeRestfulInteraction.Create:
+                    audit.ActionCode = ActionType.Create;
+                    audit.EventIdentifier = EventIdentifierType.Import;
+                    lifecycle = AuditableObjectLifecycle.Creation;
+                    break;
+                case TypeRestfulInteraction.Delete:
+                    audit.ActionCode = ActionType.Delete;
+                    audit.EventIdentifier = EventIdentifierType.Import;
+                    lifecycle = AuditableObjectLifecycle.LogicalDeletion;
+                    break;
+                case TypeRestfulInteraction.HistoryInstance:
+                case TypeRestfulInteraction.HistoryType:
+                case TypeRestfulInteraction.SearchType:
+                    audit.ActionCode = ActionType.Execute;
+                    audit.EventIdentifier = EventIdentifierType.Query;
+                    lifecycle = AuditableObjectLifecycle.Disclosure;
+                    audit.AuditableObjects.Add(new AuditableObject()
+                    {
+                        QueryData = RestOperationContext.Current?.IncomingRequest.Url.ToString(),
+                        Role = AuditableObjectRole.Query,
+                        Type = AuditableObjectType.SystemObject,
+                        ObjectData = RestOperationContext.Current?.IncomingRequest.Headers.AllKeys.Where(o=>o.Equals("accept", StringComparison.OrdinalIgnoreCase)).Select(o=>new ObjectDataExtension(o, RestOperationContext.Current.IncomingRequest.Headers.Get(o))).ToList()
+                    });
+                    break;
+                case TypeRestfulInteraction.Update:
+                case TypeRestfulInteraction.Patch:
+                    audit.ActionCode = ActionType.Update;
+                    audit.EventIdentifier = EventIdentifierType.Import;
+                    lifecycle = AuditableObjectLifecycle.Amendment;
+                    break;
+                case TypeRestfulInteraction.Vread:
+                case TypeRestfulInteraction.Read:
+                    audit.ActionCode = ActionType.Read;
+                    audit.EventIdentifier = EventIdentifierType.Query;
+                    lifecycle = AuditableObjectLifecycle.Disclosure;
+                    audit.AuditableObjects.Add(new AuditableObject()
+                    {
+                        QueryData = RestOperationContext.Current?.IncomingRequest.Url.ToString(),
+                        Role = AuditableObjectRole.Query,
+                        Type = AuditableObjectType.SystemObject,
+                        ObjectData = RestOperationContext.Current?.IncomingRequest.Headers.AllKeys.Where(o => o.Equals("accept", StringComparison.OrdinalIgnoreCase)).Select(o => new ObjectDataExtension(o, RestOperationContext.Current.IncomingRequest.Headers.Get(o))).ToList()
+                    });
+                    break;
+            }
+
+            AuditUtil.AddLocalDeviceActor(audit);
+            AuditUtil.AddUserActor(audit);
+
+            audit.AuditableObjects.AddRange(objects.SelectMany(o=>this.CreateAuditObjects(o,lifecycle)));
+
+            AuditUtil.SendAudit(audit);
         }
 
         /// <summary>
@@ -380,7 +443,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // TODO: Appropriately format response
                 // Process incoming request
                 var result = resourceProcessor.History(id);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, $"_id={id}", result);
+                this.AuditDataAction(TypeRestfulInteraction.HistoryInstance, OutcomeIndicator.Success, result.Entry.Select(o => o.Resource).ToArray());
 
                 // Create the result
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated?.DateTime ?? DateTime.Now);
@@ -390,7 +453,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error getting FHIR resource history {0}({1}): {2}", resourceType, id, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, $"_id={id}", null);
+                this.AuditDataAction(TypeRestfulInteraction.HistoryInstance, OutcomeIndicator.MinorFail);
                 throw;
             }
         }
@@ -440,7 +503,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Process incoming request
                 var result = resourceProcessor.Read(id, vid);
 
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.Success, $"_id={id}&_versionId={vid}", result);
+                this.AuditDataAction(String.IsNullOrEmpty(vid) ? TypeRestfulInteraction.Read : TypeRestfulInteraction.Vread, OutcomeIndicator.Success, result);
 
                 // Create the result
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated.Value.DateTime);
@@ -452,7 +515,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error reading FHIR resource {0}({1},{2}): {3}", resourceType, id, vid, e);
-                AuditUtil.AuditDataAction<Resource>(EventTypeCodes.Query, ActionType.Read, AuditableObjectLifecycle.Disclosure, EventIdentifierType.Export, OutcomeIndicator.EpicFail, $"_id={id}&_versionId={vid}", null);
+                this.AuditDataAction(String.IsNullOrEmpty(vid) ? TypeRestfulInteraction.Read : TypeRestfulInteraction.Vread, OutcomeIndicator.MinorFail);
                 throw;
             }
         }
@@ -523,13 +586,14 @@ namespace SanteDB.Messaging.FHIR.Rest
                     throw new FileNotFoundException(); // endpoint not found!
 
                 var result = handler.Invoke(parameters);
+                this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.Success, result);
                 return result;
 
             }
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error executing FHIR operation {0}/{1}: {2}", resourceType, operationName, e);
-                AuditUtil.AuditNetworkRequestFailure(e, RestOperationContext.Current.IncomingRequest.Url, RestOperationContext.Current.IncomingRequest.Headers, RestOperationContext.Current.OutgoingResponse.Headers);
+                this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.MinorFail);
                 throw;
             }
 
@@ -556,14 +620,79 @@ namespace SanteDB.Messaging.FHIR.Rest
                     throw new FileNotFoundException(); // endpoint not found!
 
                 var result = handler.Invoke(null);
+                this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.Success, result);
+
                 return result;
 
             }
             catch (Exception e)
             {
                 this.m_tracer.TraceError("Error executing FHIR operation {0}/{1}: {2}", resourceType, operationName, e);
-                AuditUtil.AuditNetworkRequestFailure(e, RestOperationContext.Current.IncomingRequest.Url, RestOperationContext.Current.IncomingRequest.Headers, RestOperationContext.Current.OutgoingResponse.Headers);
+                this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.MinorFail);
                 throw;
+            }
+
+        }
+
+        /// <summary>
+        /// Audit an operation that was exceuted
+        /// </summary>
+        private void AuditOperationAction(string resourceType, string operationName, OutcomeIndicator outcome, params Resource[] objects)
+        {
+            var audit = new AuditData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(SystemRestfulInteraction.Batch), "http://hl7.org/fhir/ValueSet/system-restful-interaction"));
+            AuditUtil.AddLocalDeviceActor(audit);
+            AuditUtil.AddUserActor(audit);
+
+            var handler = ExtensionUtil.GetOperation(resourceType, operationName);
+
+            audit.AuditableObjects.Add(new AuditableObject()
+            {
+                IDTypeCode = AuditableObjectIdType.Uri,
+                ObjectId = handler?.Uri.ToString() ?? $"urn:uuid:{Guid.Empty}",
+                QueryData = RestOperationContext.Current?.IncomingRequest.Url.ToString(),
+                ObjectData = RestOperationContext.Current?.IncomingRequest.Headers.AllKeys.Select(o => new ObjectDataExtension(o, RestOperationContext.Current.IncomingRequest.Headers.Get(o))).ToList(),
+                Role = AuditableObjectRole.Job,
+                Type = AuditableObjectType.SystemObject
+            });
+                
+            audit.AuditableObjects.AddRange(objects.SelectMany(o=>this.CreateAuditObjects(o, AuditableObjectLifecycle.NotSet)));
+            AuditUtil.SendAudit(audit);
+
+        }
+
+        /// <summary>
+        /// Create auditable object
+        /// </summary>
+        private IEnumerable<AuditableObject> CreateAuditObjects(Resource resource, AuditableObjectLifecycle lifecycle)
+        {
+            var obj = new AuditableObject()
+            {
+                ObjectId = $"urn:uuid:{resource.Id}",
+                IDTypeCode = AuditableObjectIdType.Uri,
+                LifecycleType = lifecycle
+            };
+
+            switch (resource.ResourceType)
+            {
+                case ResourceType.Patient:
+                    obj.Type = AuditableObjectType.Person;
+                    obj.Role = AuditableObjectRole.Patient;
+                    obj.IDTypeCode = AuditableObjectIdType.PatientNumber;
+                    obj.ObjectId = resource.Id;
+                    return new AuditableObject[] { obj };
+                case ResourceType.Organization:
+                    obj.Type = AuditableObjectType.Organization;
+                    obj.Role = AuditableObjectRole.Resource;
+                    return new AuditableObject[] { obj };
+
+                case ResourceType.Practitioner:
+                    obj.Type = AuditableObjectType.Person;
+                    obj.Role = AuditableObjectRole.Provider;
+                    return new AuditableObject[] { obj };
+                case ResourceType.Bundle:
+                    return (resource as Bundle).Entry.SelectMany(o => CreateAuditObjects(o.Resource, lifecycle));
+                default:
+                    return new AuditableObject[0];
             }
 
         }
