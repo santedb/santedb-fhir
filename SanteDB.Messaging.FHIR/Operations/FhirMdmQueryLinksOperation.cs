@@ -1,5 +1,5 @@
 ﻿/*
- * Portions Copyright 2019-2020, Fyfe Software Inc. and the SanteSuite Contributors (See NOTICE)
+ * Portions Copyright 2019-2021, Fyfe Software Inc. and the SanteSuite Contributors (See NOTICE)
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you 
  * may not use this file except in compliance with the License. You may 
@@ -13,21 +13,23 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: khannan (Nityan Khanna)
+ * User: khannan (Nityan Khanna) & ibrahim (Mo Ibrahim)
  * Date: 2021-7-27
  */
 
 using Hl7.Fhir.Model;
+using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Extensions;
+using SanteDB.Persistence.MDM;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using RestSrvr;
-using SanteDB.Persistence.MDM;
+using System.Linq.Expressions;
+using System.Text;
+using Expression = System.Linq.Expressions.Expression;
 using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Operations
@@ -38,12 +40,12 @@ namespace SanteDB.Messaging.FHIR.Operations
 	public class FhirMdmQueryLinksOperation : IFhirOperationHandler
 	{
 		/// <summary>
-		/// Gets the name of the operation
+		/// Gets the name of the operation.
 		/// </summary>
 		public string Name => "mdm-query-links";
 
 		/// <summary>
-		/// Gets the URI where this operation is defined
+		/// Gets the URI where this operation is defined.
 		/// </summary>
 		public Uri Uri => new Uri("OperationDefinition/mdm-query-links", UriKind.Relative);
 
@@ -52,42 +54,85 @@ namespace SanteDB.Messaging.FHIR.Operations
 		/// </summary>
 		public ResourceType[] AppliesTo => new[]
 		{
-			ResourceType.Organization,
-			ResourceType.Patient,
-			ResourceType.Practitioner
+			ResourceType.Patient
 		};
 
 		/// <summary>
-		/// Get the parameter list for this object
+		/// Get the parameter list for this object.
 		/// </summary>
-		public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<string, FHIRAllTypes>()
+		public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<string, FHIRAllTypes>
 		{
-			{ "count", FHIRAllTypes.Integer },
+			{ "_count", FHIRAllTypes.Integer },
 			{ "linkSource", FHIRAllTypes.String },
 			{ "matchResult", FHIRAllTypes.String },
-			{ "offset", FHIRAllTypes.Integer }
+			{ "_offset", FHIRAllTypes.Integer },
+			{ "_configurationName", FHIRAllTypes.String }
 		};
 
 		/// <summary>
-		/// True if the operation impacts the object state
+		/// The link source map.
+		/// </summary>
+		private static readonly Dictionary<string, Guid> linkSourceMap = new Dictionary<string, Guid>
+		{
+			{ "AUTO", MdmConstants.AutomagicClassification },
+			{ "MANUAL", MdmConstants.VerifiedClassification },
+		};
+
+		/// <summary>
+		/// The match result source map.
+		/// </summary>
+		private static readonly Dictionary<string, RecordMatchClassification> matchResultMap = new Dictionary<string, RecordMatchClassification>
+		{
+			{ "MATCH", RecordMatchClassification.Match },
+			{ "POSSIBLE_MATCH", RecordMatchClassification.Probable },
+			{ "NO_MATCH", RecordMatchClassification.NonMatch }
+		};
+
+		/// <summary>
+		/// True if the operation impacts the object state.
 		/// </summary>
 		public bool IsGet => true;
 
 		/// <summary>
-		/// Invoke the specified operation
+		/// Invoke the specified operation.
 		/// </summary>
-		/// <param name="parameters">The parameter set to action</param>
-		/// <returns>The result of the operation</returns>
+		/// <param name="parameters">The parameter set to action.</param>
+		/// <returns>The result of the operation.</returns>
 		public Resource Invoke(Parameters parameters)
 		{
-			var offset = int.TryParse(RestOperationContext.Current.IncomingRequest.QueryString["offset"], out var tempOffset) ? tempOffset : 0;
-			var count = int.TryParse(RestOperationContext.Current.IncomingRequest.QueryString["count"], out var tempCount) ? (int?)tempCount : null;
+			var configuration = RestOperationContext.Current.IncomingRequest.QueryString["_configurationName"];
 
-			var merger = ApplicationServiceContext.Current.GetService(typeof(IRecordMergingService<>).MakeGenericType(typeof(SanteDB.Core.Model.Roles.Patient))) as IRecordMergingService;
-
-			if (merger == null)
+			if (string.IsNullOrEmpty(configuration))
 			{
-				throw new InvalidOperationException("No merging service configuration");
+				throw new InvalidOperationException("No resource merge configuration specified. Use the ?_configurationName parameter specify a configuration.");
+			}
+
+			var countParameter = RestOperationContext.Current.IncomingRequest.QueryString["_count"];
+			var offsetParameter = RestOperationContext.Current.IncomingRequest.QueryString["_offset"];
+			uint offset = 0;
+			uint count = 1000;
+
+			if (!string.IsNullOrEmpty(offsetParameter) && !uint.TryParse(offsetParameter, out offset))
+			{
+				throw new InvalidOperationException("Invalid value for _offset. The _offset value must be a positive integer.");
+			}
+
+			if (!string.IsNullOrEmpty(countParameter) && !uint.TryParse(countParameter, out count))
+			{
+				throw new InvalidOperationException("Invalid value for _count. The _count value must be a positive integer.");
+			}
+
+			var linkSource = RestOperationContext.Current.IncomingRequest.QueryString["linkSource"]?.ToUpperInvariant();
+			var matchResult = RestOperationContext.Current.IncomingRequest.QueryString["matchResult"]?.ToUpperInvariant();
+
+			if (!string.IsNullOrEmpty(linkSource) && !linkSourceMap.ContainsKey(linkSource))
+			{
+				throw new InvalidOperationException($"Invalid value for linkSource: '{linkSource}'. The link source must be one of the following values: {string.Join(", ", linkSourceMap.Keys)}.");
+			}
+
+			if (!string.IsNullOrEmpty(matchResult) && !matchResultMap.ContainsKey(matchResult))
+			{
+				throw new InvalidOperationException($"Invalid value for matchResult: '{matchResult}'. The match result must be one of the following values: {string.Join(", ", matchResultMap.Keys)}.");
 			}
 
 			var matchingService = ApplicationServiceContext.Current.GetService<IRecordMatchingService>();
@@ -98,25 +143,77 @@ namespace SanteDB.Messaging.FHIR.Operations
 			}
 
 			var entityRelationshipService = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
+			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<Patient>>();
 
-			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<SanteDB.Core.Model.Roles.Patient>>();
+			Expression<Func<EntityRelationship, bool>> queryExpression = c => c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship && c.ObsoleteVersionSequenceId == null;
 
-			//var result = merger.GetMergeCandidates(Guid.Empty, offset, count);
-			var relationships = entityRelationshipService.Find(c => c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship && c.ObsoleteVersionSequenceId == null, offset, count, out _, null);
+			if (!string.IsNullOrEmpty(linkSource) && linkSourceMap.TryGetValue(linkSource, out var linkSourceKey))
+			{
+				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body, 
+					Expression.MakeBinary(ExpressionType.Equal, 
+						Expression.Property(Expression.Parameter(typeof(EntityRelationship)), typeof(EntityRelationship), nameof(EntityRelationship.ClassificationKey)), 
+						Expression.Constant(linkSourceKey, typeof(Guid?))));
+
+				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
+			}
+
+			var relationships = entityRelationshipService.Find(queryExpression, (int)offset, (int?)count, out var totalResults, null);
+
+			Expression<Func<RecordMatchClassification, bool>> matchClassificationExpression = x => x == RecordMatchClassification.Match || x == RecordMatchClassification.Probable || x == RecordMatchClassification.NonMatch;
+
+			if (!string.IsNullOrEmpty(matchResult) && matchResultMap.TryGetValue(matchResult, out var matchResultKey))
+			{
+				matchClassificationExpression = x => x == matchResultKey;
+			}
 
 			var resource = new Parameters();
 
-			foreach (var c in relationships)
+			var previousOffset = (int)offset - (int)count < 0 ? 0 : (int)offset - (int)count;
+
+			var builder = new StringBuilder();
+
+			foreach (var key in RestOperationContext.Current.IncomingRequest.QueryString.AllKeys.Intersect(this.Parameters.Keys).Where(c => c != "_count" && c != "_offset"))
 			{
-				var matchResult = matchingService.Classify(patientService.Get(c.TargetEntityKey.Value), new List<Patient>
+				builder.Append($"&{key}={RestOperationContext.Current.IncomingRequest.QueryString[key]}");
+			}
+
+			var queryParameters = builder.ToString();
+
+			if (offset > 0 && totalResults > 0)
+			{
+				resource.Parameter.Add(new Parameters.ParameterComponent
+				{
+					Name = "prev",
+					Value = new FhirUri($"{RestOperationContext.Current.IncomingRequest.Url.GetLeftPart(UriPartial.Authority)}{RestOperationContext.Current.IncomingRequest.Url.LocalPath}?_offset={previousOffset}&_count={count}{queryParameters}")
+				});
+			}
+
+			resource.Parameter.Add(new Parameters.ParameterComponent
+			{
+				Name = "self",
+				Value = new FhirUri(RestOperationContext.Current.IncomingRequest.Url)
+			});
+
+			if (offset + count < totalResults)
+			{
+				resource.Parameter.Add(new Parameters.ParameterComponent
+				{
+					Name = "next",
+					Value = new FhirUri($"{RestOperationContext.Current.IncomingRequest.Url.GetLeftPart(UriPartial.Authority)}{RestOperationContext.Current.IncomingRequest.Url.LocalPath}?_offset={offset + count}&_count={count}{queryParameters}")
+				});
+			}
+
+			foreach (var entityRelationship in relationships)
+			{
+				var classificationResult = matchingService.Classify(patientService.Get(entityRelationship.TargetEntityKey.Value), new List<Patient>
 				{
 					new Patient
 					{
-						Key = c.SourceEntityKey
+						Key = entityRelationship.SourceEntityKey
 					}
-				}, "org.santedb.matcher.example").FirstOrDefault(x => x.Classification == RecordMatchClassification.Match || x.Classification == RecordMatchClassification.NonMatch);
+				}, configuration).FirstOrDefault(x => matchClassificationExpression.Compile().Invoke(x.Classification));
 
-				if (matchResult == null)
+				if (classificationResult == null)
 				{
 					continue;
 				}
@@ -128,38 +225,44 @@ namespace SanteDB.Messaging.FHIR.Operations
 					{
 						new Parameters.ParameterComponent
 						{
-							Name = "masterResourceId",
-							Value = new FhirString(c.TargetEntityKey.ToString())
+							Name = "goldenResourceId",
+							Value = new FhirString($"Patient/{entityRelationship.TargetEntityKey}")
 						},
 						new Parameters.ParameterComponent
 						{
 							Name = "sourceResourceId",
-							Value = new FhirString(matchResult.Record.Key.ToString())
+							Value = new FhirString($"Patient/{classificationResult.Record.Key}")
 						},
 						new Parameters.ParameterComponent
 						{
 							Name = "matchResult",
-							Value = new FhirString(matchResult.Classification == RecordMatchClassification.Match ? "MATCH" : "NO_MATCH"),
+							Value = new FhirString(matchResultMap.First(c => c.Value == classificationResult.Classification).Key)
 						},
 						new Parameters.ParameterComponent
 						{
 							Name = "linkSource",
-							Value = new FhirString("auto"),
+							Value = new FhirString(linkSourceMap.First(c => c.Value == entityRelationship.ClassificationKey).Key)
 						},
 						new Parameters.ParameterComponent
 						{
 							Name = "score",
-							Value = new FhirDecimal(Convert.ToDecimal(matchResult.Score))
+							Value = new FhirDecimal(Convert.ToDecimal(classificationResult.Score))
 						}
 					}
 				});
 			}
 
-			// TODO
-			// get links
-			// call scoring service
-			// build response
-			// return
+			resource.Parameter.Add(new Parameters.ParameterComponent
+			{
+				Name = "resultCount",
+				Value = new Integer(resource.Parameter.Count(c => c.Name == "link"))
+			});
+
+			resource.Parameter.Add(new Parameters.ParameterComponent
+			{
+				Name = "totalResults",
+				Value = new Integer(totalResults)
+			});
 
 			return resource;
 		}
