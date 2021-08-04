@@ -46,6 +46,10 @@ using static Hl7.Fhir.Model.OperationOutcome;
 using SanteDB.Core.Auditing;
 using SanteDB.Core.Model.Security;
 using System.Xml;
+using System.Security;
+using System.Security.Authentication;
+using System.Data.Common;
+using System.IO;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -442,39 +446,121 @@ namespace SanteDB.Messaging.FHIR.Util
             }
             else
             {
-                while (error.InnerException != null)
-                {
-                    error = error.InnerException;
-                }
+
 
                 // Construct an error result
                 var errorResult = new OperationOutcome()
                 {
-                    Issue = new List<OperationOutcome.IssueComponent>()
-                    {
-                        new OperationOutcome.IssueComponent() {
-                            Diagnostics  = error.Message,
-                            Severity = IssueSeverity.Error,
-                            Code = IssueType.Exception
-                        }
-                    }
+                    Issue = new List<IssueComponent>()
                 };
 
-                if (error is DetectedIssueException dte)
+                while (error != null)
                 {
-                    errorResult.Issue = dte.Issues.Select(iss => new OperationOutcome.IssueComponent()
+                    
+                    if (error is DetectedIssueException dte)
                     {
-                        Diagnostics = iss.Text,
-                        Code = IssueType.BusinessRule,
-                        Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
-                            iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
-                            IssueSeverity.Information
-                    }).ToList();
-                }
+                        errorResult.Issue.AddRange(dte.Issues.Select(iss => new OperationOutcome.IssueComponent()
+                        {
+                            Diagnostics = iss.Text,
+                            Code = ClassifyDetectedIssueKey(iss.TypeKey),
+                            Severity = iss.Priority == DetectedIssuePriorityType.Error ? IssueSeverity.Error :
+                                iss.Priority == DetectedIssuePriorityType.Warning ? IssueSeverity.Warning :
+                                IssueSeverity.Information
+                        }));
+                    }
+                    else
+                    {
+                        errorResult.Issue.Add(
+                            new OperationOutcome.IssueComponent()
+                            {
+                                Diagnostics = error.Message,
+                                Severity = IssueSeverity.Error,
+                                Code = ClassifyExceptionCode(error)
+                            }
+                        );
 
+                    }
+                    error = error.InnerException;
+
+                }
                 return errorResult;
 
             }
+        }
+
+        /// <summary>
+        /// Classify detected issue key
+        /// </summary>
+        private static IssueType? ClassifyDetectedIssueKey(Guid typeKey)
+        {
+            if (typeKey == DetectedIssueKeys.AlreadyDoneIssue)
+            {
+                return IssueType.Duplicate;
+            }
+            else if (typeKey == DetectedIssueKeys.BusinessRuleViolationIssue)
+            {
+                return IssueType.BusinessRule;
+            }
+            else if(typeKey == DetectedIssueKeys.CodificationIssue)
+            {
+                return IssueType.CodeInvalid;
+            }
+            else if(typeKey == DetectedIssueKeys.FormalConstraintIssue)
+            {
+                return IssueType.Required;
+            }
+            else if(typeKey == DetectedIssueKeys.InvalidDataIssue)
+            {
+                return IssueType.Required;
+            }
+            else if(typeKey == DetectedIssueKeys.OtherIssue)
+            {
+                return IssueType.Unknown;
+            }
+            else if(typeKey == DetectedIssueKeys.PrivacyIssue || typeKey == DetectedIssueKeys.SecurityIssue)
+            {
+                return IssueType.Security;
+            }
+            else if(typeKey == DetectedIssueKeys.SafetyConcernIssue)
+            {
+                return IssueType.Unknown;
+            }
+            else
+            {
+                return IssueType.BusinessRule;
+            }
+        }
+
+        /// <summary>
+        /// Classify exception code
+        /// </summary>
+        private static IssueType ClassifyExceptionCode(Exception error)
+        {
+            var retVal = IssueType.Exception;
+
+            if(error is SecurityException || error is AuthenticationException ||
+                error is PolicyViolationException)
+            {
+                return IssueType.Security;
+            }
+            else if( error is ConstraintException )
+            {
+                return IssueType.BusinessRule;
+            }
+            else if (error is DataPersistenceException || error is DbException)
+            {
+                return IssueType.NoStore;
+            }
+            else if (error is DuplicateNameException)
+            {
+                return IssueType.Duplicate;
+            }
+            else if (error is KeyNotFoundException || error is FileNotFoundException)
+            {
+                return IssueType.NotFound;
+            }
+
+            return retVal;
         }
 
         /// <summary>

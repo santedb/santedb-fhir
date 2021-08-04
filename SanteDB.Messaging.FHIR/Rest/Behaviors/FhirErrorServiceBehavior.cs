@@ -67,7 +67,9 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
             {
                 // Get to the root of the error
                 while (error.InnerException != null)
+                {
                     error = error.InnerException;
+                }
 
                 // Formulate appropriate response
                 if (error is DomainStateException)
@@ -101,7 +103,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
                             return (int)System.Net.HttpStatusCode.Unauthorized;
                         default:
                             return (int)System.Net.HttpStatusCode.Forbidden;
-                            break;
+                          
                     }
                 }
                 else if (error is ArgumentException)
