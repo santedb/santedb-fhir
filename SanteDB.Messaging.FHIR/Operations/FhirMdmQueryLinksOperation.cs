@@ -102,6 +102,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 		{
 			var configuration = RestOperationContext.Current.IncomingRequest.QueryString["_configurationName"];
 
+			// validate query parameters
 			if (string.IsNullOrEmpty(configuration))
 			{
 				throw new InvalidOperationException("No resource merge configuration specified. Use the ?_configurationName parameter specify a configuration.");
@@ -147,6 +148,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			Expression<Func<EntityRelationship, bool>> queryExpression = c => c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship && c.ObsoleteVersionSequenceId == null;
 
+			// we need to build the query dynamically so that we can avoid code duplication when adding another parameter to the query
 			if (!string.IsNullOrEmpty(linkSource) && linkSourceMap.TryGetValue(linkSource, out var linkSourceKey))
 			{
 				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body, 
@@ -157,10 +159,12 @@ namespace SanteDB.Messaging.FHIR.Operations
 				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
 			}
 
+			// query the underlying service
 			var relationships = entityRelationshipService.Find(queryExpression, (int)offset, (int?)count, out var totalResults, null);
 
 			Expression<Func<RecordMatchClassification, bool>> matchClassificationExpression = x => x == RecordMatchClassification.Match || x == RecordMatchClassification.Probable || x == RecordMatchClassification.NonMatch;
 
+			// rewrite the match classification expression if necessary
 			if (!string.IsNullOrEmpty(matchResult) && matchResultMap.TryGetValue(matchResult, out var matchResultKey))
 			{
 				matchClassificationExpression = x => x == matchResultKey;
@@ -172,6 +176,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			var builder = new StringBuilder();
 
+			// rebuild the outgoing query string
 			foreach (var key in RestOperationContext.Current.IncomingRequest.QueryString.AllKeys.Intersect(this.Parameters.Keys).Where(c => c != "_count" && c != "_offset"))
 			{
 				builder.Append($"&{key}={RestOperationContext.Current.IncomingRequest.QueryString[key]}");
@@ -203,6 +208,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 				});
 			}
 
+			// build the result set
 			foreach (var entityRelationship in relationships)
 			{
 				var classificationResult = matchingService.Classify(patientService.Get(entityRelationship.TargetEntityKey.Value), new List<Patient>
