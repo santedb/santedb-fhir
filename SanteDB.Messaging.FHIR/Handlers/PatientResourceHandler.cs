@@ -260,6 +260,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
+            // Was this record replaced?
+            if (!retVal.Active.GetValueOrDefault()) {
+                var replacedRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && o.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && o.ObsoleteVersionSequenceId == null);
+                foreach(var repl in replacedRelationships)
+                {
+                    retVal.Link.Add(new Patient.LinkComponent()
+                    {
+                        Type = Patient.LinkType.ReplacedBy,
+                        Other = DataTypeConverter.CreateNonVersionedReference<Patient>(repl.LoadProperty(o=>o.TargetEntity)),
+                    });
+
+                }
+            }
             var photo = model.LoadCollection(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
             if (photo != null)
                 retVal.Photo = new List<Attachment>() {

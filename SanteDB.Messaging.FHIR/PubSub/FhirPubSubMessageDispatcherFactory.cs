@@ -240,8 +240,9 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         // in this way. Each resource is its own structure with its own different way of 
                         // expressing replacement, its own way of linking between data - it makes the code
                         // look horrible but whatever.
-                        if (fhirModel is Patient patient)
+                        if (fhirModel is Patient patient )
                         {
+                            patient.Link.Clear();
                             patient.Link.Add(new Patient.LinkComponent()
                             {
                                 Type = Patient.LinkType.ReplacedBy,
@@ -253,6 +254,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         return new Bundle.EntryComponent()
                         {
                             FullUrl = $"urn:uuid:{o.Key}",
+                            Resource = fhirModel,
                             Request = new Bundle.RequestComponent()
                             {
                                 Method = Bundle.HTTPVerb.PUT,

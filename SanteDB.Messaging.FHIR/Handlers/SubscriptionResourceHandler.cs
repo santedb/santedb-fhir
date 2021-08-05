@@ -84,7 +84,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Create the pub-sub definition
             var channel = this.CreateChannel($"Channel for {subscription.Id}", subscription.Channel, mode);
-            var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete, hdsiQuery.ToString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
+            var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete | PubSubEventType.Merge, hdsiQuery.ToString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
 
             if (subscription.Status == Subscription.SubscriptionStatus.Active)
                 retVal = this.m_pubSubManager.ActivateSubscription(retVal.Key.Value, true);
