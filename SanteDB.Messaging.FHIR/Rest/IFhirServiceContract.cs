@@ -18,6 +18,7 @@
  */
 using Hl7.Fhir.Model;
 using RestSrvr.Attributes;
+using SanteDB.Rest.Common;
 using System;
 using System.IO;
 using System.Xml.Schema;
@@ -35,7 +36,7 @@ namespace SanteDB.Messaging.FHIR.Rest
     [ServiceConsumes("application/fhir+xml")]
     [ServiceProduces("application/fhir+json")]
     [ServiceProduces("application/fhir+xml")]
-    public interface IFhirServiceContract
+    public interface IFhirServiceContract : IRestApiContractImplementation
     {
 
         /// <summary>

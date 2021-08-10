@@ -18,7 +18,7 @@
  - User: fyfej (Justin Fyfe)
  - Date: 2020-1-8
  -->
-<RestServiceConfiguration xmlns="http://santedb.org/configuration" name="FHIR">
+<RestServiceConfiguration xmlns="http://santedb.org/configuration" name="FHIR" >
   <behaviors>
     <add type="SanteDB.Server.Core.Rest.Security.TokenAuthorizationAccessBehavior, SanteDB.Server.Core"/>
   </behaviors>
