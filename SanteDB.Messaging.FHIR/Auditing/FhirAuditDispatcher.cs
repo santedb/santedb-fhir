@@ -9,7 +9,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using SanteDB.Core.Auditing;
+using SanteDB.Core.Model.Audit;
 
 namespace SanteDB.Messaging.FHIR.Auditing
 {
@@ -67,7 +67,7 @@ namespace SanteDB.Messaging.FHIR.Auditing
         /// <summary>
         /// Send an audit to the repository
         /// </summary>
-        public void SendAudit(AuditData audit)
+        public void SendAudit(AuditEventData audit)
         {
             try
             {

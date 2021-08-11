@@ -20,7 +20,7 @@ using Hl7.Fhir.Model;
 using RestSrvr;
 using RestSrvr.Attributes;
 using SanteDB.Core;
-using SanteDB.Core.Auditing;
+using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Interop;
@@ -346,7 +346,7 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// </summary>
         private void AuditDataAction(TypeRestfulInteraction type, OutcomeIndicator outcome, params Resource[] objects)
         {
-            AuditData audit = new AuditData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(type), "http://hl7.org/fhir/ValueSet/type-restful-interaction"));
+            AuditEventData audit = new AuditEventData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(type), "http://hl7.org/fhir/ValueSet/type-restful-interaction"));
             AuditableObjectLifecycle lifecycle = AuditableObjectLifecycle.NotSet;
             switch(type)
             {
@@ -639,7 +639,7 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// </summary>
         private void AuditOperationAction(string resourceType, string operationName, OutcomeIndicator outcome, params Resource[] objects)
         {
-            var audit = new AuditData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(SystemRestfulInteraction.Batch), "http://hl7.org/fhir/ValueSet/system-restful-interaction"));
+            var audit = new AuditEventData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(SystemRestfulInteraction.Batch), "http://hl7.org/fhir/ValueSet/system-restful-interaction"));
             AuditUtil.AddLocalDeviceActor(audit);
             AuditUtil.AddUserActor(audit);
 
