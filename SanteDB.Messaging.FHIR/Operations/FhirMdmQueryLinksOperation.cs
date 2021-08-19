@@ -75,17 +75,17 @@ namespace SanteDB.Messaging.FHIR.Operations
 		private static readonly Dictionary<string, Guid> linkSourceMap = new Dictionary<string, Guid>
 		{
 			{ "AUTO", MdmConstants.AutomagicClassification },
-			{ "MANUAL", MdmConstants.VerifiedClassification },
+			{ "MANUAL", MdmConstants.VerifiedClassification }
 		};
 
 		/// <summary>
 		/// The match result source map.
 		/// </summary>
-		private static readonly Dictionary<string, RecordMatchClassification> matchResultMap = new Dictionary<string, RecordMatchClassification>
+		private static readonly Dictionary<string, Guid> matchResultMap = new Dictionary<string, Guid>
 		{
-			{ "MATCH", RecordMatchClassification.Match },
-			{ "POSSIBLE_MATCH", RecordMatchClassification.Probable },
-			{ "NO_MATCH", RecordMatchClassification.NonMatch }
+			{ "MATCH",  MdmConstants.MasterRecordRelationship },
+			{ "POSSIBLE_MATCH", MdmConstants.CandidateLocalRelationship },
+			{ "NO_MATCH", MdmConstants.IgnoreCandidateRelationship }
 		};
 
 		/// <summary>
@@ -146,14 +146,31 @@ namespace SanteDB.Messaging.FHIR.Operations
 			var entityRelationshipService = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
 			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<Patient>>();
 
-			Expression<Func<EntityRelationship, bool>> queryExpression = c => c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship && c.ObsoleteVersionSequenceId == null;
+			Expression<Func<EntityRelationship, bool>> queryExpression = c => c.ObsoleteVersionSequenceId == null;
+
+			if (string.IsNullOrEmpty(matchResult))
+			{
+				queryExpression = c => (c.RelationshipTypeKey == MdmConstants.MasterRecordRelationship || 
+													c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship || 
+													c.RelationshipTypeKey == MdmConstants.IgnoreCandidateRelationship) && c.ObsoleteVersionSequenceId == null;
+			}
+			// dynamically add the match result parameter to the query expression
+			else if (!string.IsNullOrEmpty(matchResult) && matchResultMap.TryGetValue(matchResult, out var matchResultKey))
+			{
+				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body,
+					Expression.MakeBinary(ExpressionType.Equal,
+						Expression.Property(Expression.Parameter(typeof(EntityRelationship)), typeof(EntityRelationship), nameof(EntityRelationship.RelationshipTypeKey)),
+						Expression.Constant(matchResultKey, typeof(Guid?))));
+
+				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
+			}
 
 			// we need to build the query dynamically so that we can avoid code duplication when adding another parameter to the query
 			if (!string.IsNullOrEmpty(linkSource) && linkSourceMap.TryGetValue(linkSource, out var linkSourceKey))
 			{
-				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body, 
-					Expression.MakeBinary(ExpressionType.Equal, 
-						Expression.Property(Expression.Parameter(typeof(EntityRelationship)), typeof(EntityRelationship), nameof(EntityRelationship.ClassificationKey)), 
+				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body,
+					Expression.MakeBinary(ExpressionType.Equal,
+						Expression.Property(Expression.Parameter(typeof(EntityRelationship)), typeof(EntityRelationship), nameof(EntityRelationship.ClassificationKey)),
 						Expression.Constant(linkSourceKey, typeof(Guid?))));
 
 				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
@@ -161,14 +178,6 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			// query the underlying service
 			var relationships = entityRelationshipService.Find(queryExpression, (int)offset, (int?)count, out var totalResults, null);
-
-			Expression<Func<RecordMatchClassification, bool>> matchClassificationExpression = x => x == RecordMatchClassification.Match || x == RecordMatchClassification.Probable || x == RecordMatchClassification.NonMatch;
-
-			// rewrite the match classification expression if necessary
-			if (!string.IsNullOrEmpty(matchResult) && matchResultMap.TryGetValue(matchResult, out var matchResultKey))
-			{
-				matchClassificationExpression = x => x == matchResultKey;
-			}
 
 			var resource = new Parameters();
 
@@ -217,7 +226,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 					{
 						Key = entityRelationship.SourceEntityKey
 					}
-				}, configuration).FirstOrDefault(x => matchClassificationExpression.Compile().Invoke(x.Classification));
+				}, configuration).FirstOrDefault();
 
 				if (classificationResult == null)
 				{
@@ -242,7 +251,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 						new Parameters.ParameterComponent
 						{
 							Name = "matchResult",
-							Value = new FhirString(matchResultMap.First(c => c.Value == classificationResult.Classification).Key)
+							Value = new FhirString(matchResultMap.First(c => c.Value == entityRelationship.RelationshipTypeKey).Key)
 						},
 						new Parameters.ParameterComponent
 						{
