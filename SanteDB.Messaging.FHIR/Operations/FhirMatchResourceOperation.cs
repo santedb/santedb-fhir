@@ -100,7 +100,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 this.m_tracer.TraceInfo("Will execute match on {0}", modelInstance);
 
                 // Next run the match
-                var configurationName = RestOperationContext.Current.IncomingRequest.QueryString["_configurationName"] ?? "org.santedb.matcher.example";
+                var configurationName = RestOperationContext.Current.IncomingRequest.QueryString["_configurationName"];
                 IEnumerable<IRecordMatchResult> results = null;
                 var mergeService = ApplicationServiceContext.Current.GetService(typeof(IRecordMergingService<>).MakeGenericType(handler.CanonicalType)) as IRecordMergingService;
 

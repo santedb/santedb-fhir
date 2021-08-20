@@ -35,6 +35,7 @@ using SanteDB.Messaging.FHIR.Rest.Serialization;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics;
@@ -49,6 +50,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
     /// <summary>
     /// Service behavior
     /// </summary>
+    [DisplayName("FHIR R4 OperationOutcome Error Responses")]
     public class FhirErrorEndpointBehavior :  IServiceBehavior, IServiceErrorHandler
     {
 

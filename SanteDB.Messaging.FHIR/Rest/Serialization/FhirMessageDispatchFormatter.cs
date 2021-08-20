@@ -145,7 +145,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 // No specified content type
                 if(String.IsNullOrEmpty(contentType))
                 {
-                    contentType = this.m_configuration.DefaultResponseFormat ?? "application/fhir+xml";
+                    contentType = this.m_configuration.DefaultResponseFormat == FhirResponseFormatConfiguration.Json ? "application/fhir+json" : "application/fhir+xml";
                 }
 
                 var charset = ContentType.GetCharSetFromHeaderValue(contentType);
