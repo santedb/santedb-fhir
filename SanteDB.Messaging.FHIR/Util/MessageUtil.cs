@@ -154,8 +154,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal.Entry = result.Results.Select(itm =>
                 {
 
-                    itm.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = itm.Resource.HasVersionId ? $"{itm.Resource.ResourceType}/{itm.Resource.Id}/_history/{itm.Resource.VersionId}" : $"{itm.Resource.ResourceType}/{itm.Resource.Id}"  } };
-                    itm.FullUrl = itm.FullUrl ?? $"{GetBaseUri()}/{itm.Resource.ResourceType}/{itm.Resource.Id}";
+                    itm.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = itm.Resource.HasVersionId ? $"{itm.Resource.TypeName}/{itm.Resource.Id}/_history/{itm.Resource.VersionId}" : $"{itm.Resource.TypeName}/{itm.Resource.Id}"  } };
+                    itm.FullUrl = itm.FullUrl ?? $"{GetBaseUri()}/{itm.Resource.TypeName}/{itm.Resource.Id}";
 
                     // Add confidence if the attribute permits
                     if(itm.Search != null && itm.Search.Mode == Bundle.SearchEntryMode.Match) // Search data

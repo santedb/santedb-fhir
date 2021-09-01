@@ -77,47 +77,57 @@ namespace SanteDB.Messaging.FHIR.Operations
             var retVal = new OperationOutcome();
 
             // Get the profile handler for the specified profile, if no profile then just perform a profile mode
-            var hdlr = FhirResourceHandlerUtil.GetResourceHandler(resource.Resource.ResourceType);
-            if (hdlr == null)
+            if(!resource.Resource.TryDeriveResourceType(out ResourceType rt))
+            {
                 retVal.Issue.Add(new OperationOutcome.IssueComponent()
                 {
                     Code = OperationOutcome.IssueType.NotSupported,
                     Severity = OperationOutcome.IssueSeverity.Fatal,
-                    Diagnostics = $"Resource {resource.Resource.ResourceType} not supported"
+                    Diagnostics = $"Resource {resource.Resource.TypeName} not supported"
                 });
-            else
-            {
-                // Find all profiles and validate
-                if (profile?.Value != null)
-                    retVal.Issue = ExtensionUtil.ProfileHandlers.Where(o => (profile.Value as FhirUri).Value == o.ProfileUri.ToString()).Select(o => o.Validate(resource.Resource))
-                        .SelectMany(i => i.Select(o => DataTypeConverter.ToIssue(o))).ToList();
-                
-                try
-                {
-
-                    // Instruct the handler to perform an update with 
-                    hdlr.Update(resource.Resource.Id, resource.Resource, Core.Services.TransactionMode.Rollback);
+            }
+            else { 
+                var hdlr = FhirResourceHandlerUtil.GetResourceHandler(rt);
+                if (hdlr == null)
                     retVal.Issue.Add(new OperationOutcome.IssueComponent()
                     {
-                        Diagnostics = "Resource Valid",
-                        Severity = OperationOutcome.IssueSeverity.Information,
-                        Code = OperationOutcome.IssueType.Unknown
+                        Code = OperationOutcome.IssueType.NotSupported,
+                        Severity = OperationOutcome.IssueSeverity.Fatal,
+                        Diagnostics = $"Resource {resource.Resource.TypeName} not supported"
                     });
-                }
-                catch (DetectedIssueException e)
+                else
                 {
-                    retVal.Issue.AddRange(e.Issues.Select(o => DataTypeConverter.ToIssue(o)));
-                }
-                catch (Exception e)
-                {
-                    retVal.Issue.Add(new OperationOutcome.IssueComponent()
-                    {
-                        Severity = OperationOutcome.IssueSeverity.Error,
-                        Code = OperationOutcome.IssueType.NoStore,
-                        Diagnostics = e.Message
-                    });
-                }
+                    // Find all profiles and validate
+                    if (profile?.Value != null)
+                        retVal.Issue = ExtensionUtil.ProfileHandlers.Where(o => (profile.Value as FhirUri).Value == o.ProfileUri.ToString()).Select(o => o.Validate(resource.Resource))
+                            .SelectMany(i => i.Select(o => DataTypeConverter.ToIssue(o))).ToList();
 
+                    try
+                    {
+
+                        // Instruct the handler to perform an update with 
+                        hdlr.Update(resource.Resource.Id, resource.Resource, Core.Services.TransactionMode.Rollback);
+                        retVal.Issue.Add(new OperationOutcome.IssueComponent()
+                        {
+                            Diagnostics = "Resource Valid",
+                            Severity = OperationOutcome.IssueSeverity.Information,
+                            Code = OperationOutcome.IssueType.Unknown
+                        });
+                    }
+                    catch (DetectedIssueException e)
+                    {
+                        retVal.Issue.AddRange(e.Issues.Select(o => DataTypeConverter.ToIssue(o)));
+                    }
+                    catch (Exception e)
+                    {
+                        retVal.Issue.Add(new OperationOutcome.IssueComponent()
+                        {
+                            Severity = OperationOutcome.IssueSeverity.Error,
+                            Code = OperationOutcome.IssueType.NoStore,
+                            Diagnostics = e.Message
+                        });
+                    }
+                }
             }
             return retVal;
 

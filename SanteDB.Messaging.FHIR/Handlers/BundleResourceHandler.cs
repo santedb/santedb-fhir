@@ -222,7 +222,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var sdbBundle = new Core.Model.Collection.Bundle();
             foreach (var entry in fhirBundle.Entry)
             {
-                var entryType = entry.Resource.ResourceType;
+                if (!entry.Resource.TryDeriveResourceType(out ResourceType entryType))
+                {
+                    continue;
+                }
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
 
                 // Allow this entry to know its context in the bundle

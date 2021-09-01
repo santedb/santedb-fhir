@@ -32,6 +32,7 @@ using SanteDB.Messaging.FHIR.Rest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -82,25 +83,24 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 this.m_fhirConfiguration = configManager.GetSection<FhirServiceConfigurationSection>();
                 this.m_configuration = configManager.GetSection<FhirDispatcherConfigurationSection>()?.Targets.Find(o => o.Endpoint == endpoint.ToString());
 
+                settings.TryGetValue("Content-Type", out string contentType);
+              
                 // The client for this object
-                this.m_client = new FhirClient(this.Endpoint, false);
-                this.m_client.ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
+                this.m_client = new FhirClient(this.Endpoint, new FhirClientSettings()
                 {
-                    AcceptUnknownMembers = true,
-                    AllowUnrecognizedEnums = true
-                };
+                    ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
+                    {
+                        AllowUnrecognizedEnums = true,
+                        PermissiveParsing = true,
+                        AcceptUnknownMembers = true
+                    },
+                    PreferredFormat = ContentType.GetResourceFormatFromFormatParam(contentType ?? "xml"),
+                    PreferCompressedResponses = true,
+                    VerifyFhirVersion = false
+                });
 
-                if (settings.TryGetValue("Content-Type", out string contentType))
-                {
-                    this.m_client.PreferredFormat = ContentType.GetResourceFormatFromFormatParam(contentType);
-                }
-
-                // Add settings from the service
-                this.m_client.OnBeforeRequest += (o, e) =>
-                {
-                    foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
-                        e.RawRequest.Headers.Add(kv.Key, kv.Value);
-                };
+                foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
+                    this.m_client.RequestHeaders.Add(kv.Key, kv.Value);
 
                 if (this.m_configuration?.Authenticator != null)
                 {
@@ -224,7 +224,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         {
                             entry.Request = new Bundle.RequestComponent()
                             {
-                                Url = $"{entry.Resource.ResourceType}/{entry.Resource.Id}",
+                                Url = $"{entry.Resource.TypeName}/{entry.Resource.Id}",
                                 Method = Bundle.HTTPVerb.POST
                             };
                             entry.Response = new Bundle.ResponseComponent()
@@ -278,7 +278,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             Request = new Bundle.RequestComponent()
                             {
                                 Method = Bundle.HTTPVerb.PUT,
-                                Url = $"{fhirModel.ResourceType}/{fhirModel.Id}"
+                                Url = $"{fhirModel.TypeName}/{fhirModel.Id}"
                             },
                             Response = new Bundle.ResponseComponent()
                             {
@@ -312,7 +312,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource,
                         Request = new Bundle.RequestComponent()
                         {
-                            Url = $"{focalResource.ResourceType}/{focalResource.Id}",
+                            Url = $"{focalResource.TypeName}/{focalResource.Id}",
                             Method = Bundle.HTTPVerb.DELETE
                         },
                         Response = new Bundle.ResponseComponent()
@@ -362,7 +362,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         {
                             entry.Request = new Bundle.RequestComponent()
                             {
-                                Url = $"{entry.Resource.ResourceType}/{entry.Resource.Id}",
+                                Url = $"{entry.Resource.TypeName}/{entry.Resource.Id}",
                                 Method = Bundle.HTTPVerb.PUT
                             };
                             entry.Response = new Bundle.ResponseComponent()

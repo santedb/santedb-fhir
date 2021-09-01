@@ -133,10 +133,14 @@ namespace SanteDB.Messaging.FHIR
                         }
 
                         // Process the resource
-                        var handler = FhirResourceHandlerUtil.GetResourceHandler(fhirResource.ResourceType);
+                        if(!fhirResource.TryDeriveResourceType(out ResourceType rt))
+                        {
+                            throw new InvalidOperationException($"FHIR API doesn't support {fhirResource.TypeName}");
+                        }
+                        var handler = FhirResourceHandlerUtil.GetResourceHandler(rt);
                         if (handler == null)
                         {
-                            throw new InvalidOperationException($"This instance of SanteMPI does not support {fhirResource.ResourceType}");
+                            throw new InvalidOperationException($"This instance of SanteMPI does not support {rt}");
                         }
 
                         // Handle the resource

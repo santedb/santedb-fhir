@@ -107,9 +107,16 @@ namespace SanteDB.Messaging.FHIR.Operations
             try
             {
                 // First we want to get the handler, as this will tell us the SanteDB CDR type 
-                var handler = FhirResourceHandlerUtil.GetResourceHandler(resource.ResourceType) as IFhirResourceMapper;
+                if(!resource.TryDeriveResourceType(out ResourceType rt))
+                {
+                    throw new InvalidOperationException($"Operation on {resource.TypeName} not supported");
+                }
+
+                var handler = FhirResourceHandlerUtil.GetResourceHandler(rt) as IFhirResourceMapper;
                 if (handler == null)
-                    throw new NotSupportedException($"Operation on {resource.ResourceType} not supported");
+                {
+                    throw new NotSupportedException($"Operation on {rt} not supported");
+                }
 
                 var matchService = ApplicationServiceContext.Current.GetService<IRecordMatchingService>();
                 if (matchService == null)
@@ -130,7 +137,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 }
                 else // use the configured option
                 {
-                    var configBase = this.m_configuration.ResourceTypes.FirstOrDefault(o => o.ResourceType == modelInstance.GetType());
+                    var configBase = this.m_configuration.ResourceTypes.FirstOrDefault(o => o.ResourceType.Type == modelInstance.GetType());
                     if (configBase == null)
                     {
                         throw new InvalidOperationException($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceMergeConfigurationSection to your configuration file");
@@ -164,8 +171,8 @@ namespace SanteDB.Messaging.FHIR.Operations
             }
             catch(Exception e)
             {
-                this.m_tracer.TraceError($"Error running match on {resource.ResourceType} - {e}");
-                throw new Exception($"Error running match operation on {resource.ResourceType}", e);
+                this.m_tracer.TraceError($"Error running match on {resource.TypeName} - {e}");
+                throw new Exception($"Error running match operation on {resource.TypeName}", e);
             }
         }
 
@@ -185,7 +192,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             // Now publish search data
             return new Bundle.EntryComponent()
             {
-                FullUrl = $"{MessageUtil.GetBaseUri()}/{result.ResourceType}/{result.Id}/_history/{result.VersionId}",
+                FullUrl = $"{MessageUtil.GetBaseUri()}/{result.TypeName}/{result.Id}/_history/{result.VersionId}",
                 Resource = result,
                 Search = new Bundle.SearchComponent()
                 {
