@@ -674,27 +674,34 @@ namespace SanteDB.Messaging.FHIR.Rest
                 LifecycleType = lifecycle
             };
 
-            switch (resource.ResourceType)
+            if (resource.TryDeriveResourceType(out ResourceType rt))
             {
-                case ResourceType.Patient:
-                    obj.Type = AuditableObjectType.Person;
-                    obj.Role = AuditableObjectRole.Patient;
-                    obj.IDTypeCode = AuditableObjectIdType.PatientNumber;
-                    obj.ObjectId = resource.Id;
-                    return new AuditableObject[] { obj };
-                case ResourceType.Organization:
-                    obj.Type = AuditableObjectType.Organization;
-                    obj.Role = AuditableObjectRole.Resource;
-                    return new AuditableObject[] { obj };
+                switch (rt)
+                {
+                    case ResourceType.Patient:
+                        obj.Type = AuditableObjectType.Person;
+                        obj.Role = AuditableObjectRole.Patient;
+                        obj.IDTypeCode = AuditableObjectIdType.PatientNumber;
+                        obj.ObjectId = resource.Id;
+                        return new AuditableObject[] { obj };
+                    case ResourceType.Organization:
+                        obj.Type = AuditableObjectType.Organization;
+                        obj.Role = AuditableObjectRole.Resource;
+                        return new AuditableObject[] { obj };
 
-                case ResourceType.Practitioner:
-                    obj.Type = AuditableObjectType.Person;
-                    obj.Role = AuditableObjectRole.Provider;
-                    return new AuditableObject[] { obj };
-                case ResourceType.Bundle:
-                    return (resource as Bundle).Entry.SelectMany(o => CreateAuditObjects(o.Resource, lifecycle));
-                default:
-                    return new AuditableObject[0];
+                    case ResourceType.Practitioner:
+                        obj.Type = AuditableObjectType.Person;
+                        obj.Role = AuditableObjectRole.Provider;
+                        return new AuditableObject[] { obj };
+                    case ResourceType.Bundle:
+                        return (resource as Bundle).Entry.SelectMany(o => CreateAuditObjects(o.Resource, lifecycle));
+                    default:
+                        return new AuditableObject[0];
+                }
+            }
+            else
+            {
+                return new AuditableObject[0];
             }
 
         }

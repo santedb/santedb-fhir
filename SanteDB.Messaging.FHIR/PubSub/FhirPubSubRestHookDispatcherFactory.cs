@@ -74,28 +74,28 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 this.Settings = settings;
 
                 this.m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>()?.GetSection<FhirDispatcherConfigurationSection>()?.Targets.Find(o => o.Endpoint == endpoint.ToString());
-                
-                // The client for this object
-                this.m_client = new FhirClient(this.Endpoint, false);
-                this.m_client.ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
-                {
-                    AcceptUnknownMembers = true,
-                    AllowUnrecognizedEnums = true
-                };
-                
-                if(settings.TryGetValue("Content-Type", out string contentType))
-                {
-                    this.m_client.PreferredFormat = ContentType.GetResourceFormatFromFormatParam(contentType);
-                }
-                
-                // Add settings from the service
-                this.m_client.OnBeforeRequest += (o, e) =>
-                {
-                    foreach (var kv in this.Settings.Where(z=>z.Key != "Content-Type"))
-                        e.RawRequest.Headers.Add(kv.Key, kv.Value);
-                };
 
-                if(this.m_configuration?.Authenticator != null)
+                settings.TryGetValue("Content-Type", out string contentType);
+
+                // The client for this object
+                this.m_client = new FhirClient(this.Endpoint, new FhirClientSettings()
+                {
+                    ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
+                    {
+                        AllowUnrecognizedEnums = true,
+                        PermissiveParsing = true,
+                        AcceptUnknownMembers = true
+                    },
+                    PreferredFormat = ContentType.GetResourceFormatFromFormatParam(contentType ?? "xml"),
+                    PreferCompressedResponses = true,
+                    VerifyFhirVersion = false
+                });
+
+                foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
+                    this.m_client.RequestHeaders.Add(kv.Key, kv.Value);
+
+
+                if (this.m_configuration?.Authenticator != null)
                 {
                     var authenticator = ApplicationServiceContext.Current.GetService<IServiceManager>().CreateInjected(this.m_configuration.Authenticator.Type) as IFhirClientAuthenticator;
                     authenticator.AttachClient(this.m_client, this.m_configuration, settings);

@@ -68,7 +68,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		{
 			var retVal = DataTypeConverter.CreateResource<Immunization>(model);
 
-            retVal.DoseQuantity = new SimpleQuantity()
+            retVal.DoseQuantity = new Quantity()
             {
                 Unit = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.DoseUnit)), "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code,
 				Value = model.DoseQuantity

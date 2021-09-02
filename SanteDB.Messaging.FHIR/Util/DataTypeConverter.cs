@@ -413,9 +413,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// To quantity 
         /// </summary>
-        public static SimpleQuantity ToQuantity(decimal? quantity, Concept unitConcept)
+        public static Quantity ToQuantity(decimal? quantity, Concept unitConcept)
         {
-            return new SimpleQuantity()
+            return new Quantity()
             {
                 Value = quantity,
                 Unit = DataTypeConverter.ToFhirCodeableConcept(unitConcept, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code
@@ -645,9 +645,9 @@ namespace SanteDB.Messaging.FHIR.Util
             // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
             fhirExtension.Extension = extendable?.LoadCollection(o => o.Extensions).Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension).ToList();
 
-            if (resource != null)
+            if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
-                fhirExtension.Extension = fhirExtension.Extension.Union(ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, resource.ResourceType, out IEnumerable<IFhirExtensionHandler> appliedExtensions)).ToList();
+                fhirExtension.Extension = fhirExtension.Extension.Union(ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions)).ToList();
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
             else
@@ -1151,7 +1151,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     var mapper = FhirResourceHandlerUtil.GetMapperForInstance(contained);
                     if (mapper == null)
                     {
-                        throw new ArgumentException($"Don't understand how to convert {contained.ResourceType}");
+                        throw new ArgumentException($"Don't understand how to convert {contained.TypeName}");
                     }
 
                     retVal = (TEntity)mapper.MapToModel(contained);
@@ -1165,7 +1165,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     {
                         // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
                         //var fhirResource = fhirBundle.FindEntry(resourceRef);
-                        var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.ResourceType}/{o.Resource.Id}" == resourceRef.Reference);
+                        var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference);
                         if (fhirResource?.Any() == true)
                         {
                             // TODO: Error trapping

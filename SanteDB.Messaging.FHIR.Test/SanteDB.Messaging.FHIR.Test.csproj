@@ -49,8 +49,8 @@
     <None Remove="TestConfig.xml" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="NUnit" Version="3.12.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
+    <PackageReference Include="NUnit" Version="3.13.2" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.0.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.5.0" />
     <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="7.5.0" />
   </ItemGroup>
@@ -64,7 +64,7 @@
       <ItemGroup>
         <ProjectReference Include="..\..\santedb-cache-memory\SanteDB.Caching.Memory\SanteDB.Caching.Memory.csproj">
         </ProjectReference>
-		<ProjectReference Include="..\..\santedb-api\SanteDB.Core.Api\SanteDB.Core.Api.csproj">
+        <ProjectReference Include="..\..\santedb-api\SanteDB.Core.Api\SanteDB.Core.Api.csproj">
           <Project>{3A45F695-47A2-464C-ACE6-BDABBFA39FBC}</Project>
           <Name>SanteDB.Core.Api</Name>
         </ProjectReference>

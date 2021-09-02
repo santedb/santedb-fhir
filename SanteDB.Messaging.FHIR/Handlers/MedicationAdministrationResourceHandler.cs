@@ -136,7 +136,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Site = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("Site")),
                 Route = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("Route")),
-                Dose = new SimpleQuantity()
+                Dose = new Quantity()
                 {
                     Value = model.DoseQuantity,
                     Unit = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.DoseUnit)), "http://hl7.org/fhir/sid/ucum").GetCoding()?.Code
