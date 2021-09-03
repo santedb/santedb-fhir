@@ -18,11 +18,13 @@
  * User: fyfej
  * Date: 2021-8-5
  */
+using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Interop.Description;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -38,6 +40,24 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Get primary code
         /// </summary>
         public static Coding GetCoding(this CodeableConcept me) => me.Coding.FirstOrDefault();
+        
+        /// <summary>
+        /// Get the resource type
+        /// </summary>
+        /// <param name="me"></param>
+        /// <returns></returns>
+        public static ResourceType? GetResourceType(this Type me)
+        {
+            var fhirType = me.GetCustomAttribute<FhirTypeAttribute>()?.Name;
+            if (String.IsNullOrEmpty(fhirType))
+            {
+                return null;
+            }
+            else
+            {
+                return Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(fhirType);
+            }
+        }
 
         /// <summary>
         /// Create a description
