@@ -1,5 +1,7 @@
 ﻿/*
- * Portions Copyright 2019-2021, Fyfe Software Inc. and the SanteSuite Contributors (See NOTICE)
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you 
  * may not use this file except in compliance with the License. You may 
@@ -13,10 +15,9 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: khannan (Nityan Khanna) & ibrahim (Mo Ibrahim)
- * Date: 2021-7-27
+ * User: Nityan Khanna & Mo Ibrahim
+ * Date: 2021-8-5
  */
-
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
@@ -62,6 +63,8 @@ namespace SanteDB.Messaging.FHIR.Operations
 		/// </summary>
 		public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<string, FHIRAllTypes>
 		{
+			{ "goldenResourceId", FHIRAllTypes.String },
+			{ "resourceId", FHIRAllTypes.String },
 			{ "_count", FHIRAllTypes.Integer },
 			{ "linkSource", FHIRAllTypes.String },
 			{ "matchResult", FHIRAllTypes.String },
@@ -125,6 +128,8 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			var linkSource = RestOperationContext.Current.IncomingRequest.QueryString["linkSource"]?.ToUpperInvariant();
 			var matchResult = RestOperationContext.Current.IncomingRequest.QueryString["matchResult"]?.ToUpperInvariant();
+			var masterResourceId = RestOperationContext.Current.IncomingRequest.QueryString["goldenResourceId"]?.ToUpperInvariant();
+			var resourceId = RestOperationContext.Current.IncomingRequest.QueryString["resourceId"]?.ToUpperInvariant();
 
 			if (!string.IsNullOrEmpty(linkSource) && !linkSourceMap.ContainsKey(linkSource))
 			{
@@ -148,13 +153,13 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			Expression<Func<EntityRelationship, bool>> queryExpression = c => c.ObsoleteVersionSequenceId == null;
 
+			// add the match result filter
 			if (string.IsNullOrEmpty(matchResult))
 			{
 				queryExpression = c => (c.RelationshipTypeKey == MdmConstants.MasterRecordRelationship || 
 													c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship || 
 													c.RelationshipTypeKey == MdmConstants.IgnoreCandidateRelationship) && c.ObsoleteVersionSequenceId == null;
 			}
-			// dynamically add the match result parameter to the query expression
 			else if (!string.IsNullOrEmpty(matchResult) && matchResultMap.TryGetValue(matchResult, out var matchResultKey))
 			{
 				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body,
@@ -165,13 +170,35 @@ namespace SanteDB.Messaging.FHIR.Operations
 				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
 			}
 
-			// we need to build the query dynamically so that we can avoid code duplication when adding another parameter to the query
+			// add the link source filter
 			if (!string.IsNullOrEmpty(linkSource) && linkSourceMap.TryGetValue(linkSource, out var linkSourceKey))
 			{
 				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body,
 					Expression.MakeBinary(ExpressionType.Equal,
 						Expression.Property(Expression.Parameter(typeof(EntityRelationship)), typeof(EntityRelationship), nameof(EntityRelationship.ClassificationKey)),
 						Expression.Constant(linkSourceKey, typeof(Guid?))));
+
+				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
+			}
+
+			// add the target key filter
+			if (Guid.TryParse(masterResourceId, out var targetKey))
+			{
+				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body,
+					Expression.MakeBinary(ExpressionType.Equal,
+						Expression.Property(Expression.Parameter(typeof(EntityRelationship)), typeof(EntityRelationship), nameof(EntityRelationship.TargetEntityKey)),
+						Expression.Constant(targetKey, typeof(Guid?))));
+
+				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
+			}
+
+			// add the source key filter
+			if (Guid.TryParse(resourceId, out var sourceKey))
+			{
+				var updatedExpression = Expression.MakeBinary(ExpressionType.AndAlso, queryExpression.Body,
+					Expression.MakeBinary(ExpressionType.Equal,
+						Expression.Property(Expression.Parameter(typeof(EntityRelationship)), typeof(EntityRelationship), nameof(EntityRelationship.SourceEntityKey)),
+						Expression.Constant(sourceKey, typeof(Guid?))));
 
 				queryExpression = Expression.Lambda<Func<EntityRelationship, bool>>(updatedExpression, queryExpression.Parameters);
 			}

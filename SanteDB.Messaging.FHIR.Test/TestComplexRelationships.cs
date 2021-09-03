@@ -81,7 +81,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 // Load the Complex Patient Message
                 var request = TestUtil.GetFhirMessage("ComplexPatient") as Bundle;
                 var messageString = TestUtil.MessageToString(request);
-                var sourcePatient = request.Entry.FirstOrDefault(o => o.Resource.ResourceType == ResourceType.Patient).Resource as Hl7.Fhir.Model.Patient;
+                var sourcePatient = request.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource as Hl7.Fhir.Model.Patient;
 
                 var result = FhirResourceHandlerUtil.GetMappersFor(Hl7.Fhir.Model.ResourceType.Bundle).First().Create(request, Core.Services.TransactionMode.Commit);
                 messageString = TestUtil.MessageToString(result);
@@ -90,8 +90,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 var bresult = result as Bundle;
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is Hl7.Fhir.Model.Patient));
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is RelatedPerson));
-                var createdFhirPatient = bresult.Entry.FirstOrDefault(o => o.Resource.ResourceType == ResourceType.Patient).Resource;
-                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.ResourceType == ResourceType.RelatedPerson).Resource;
+                var createdFhirPatient = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
+                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
 
                 // Ensure that the message is saved correctly
                 var sdbPatient = this.m_patientRespository.Get(Guid.Parse(createdFhirPatient.Id));
@@ -170,8 +170,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 // Load the Complex Patient Message
                 var request = TestUtil.GetFhirMessage("ComplexPatientPatientRelationship") as Bundle;
 
-                var sourcePatient = request.Entry.FirstOrDefault(o => o.Resource.ResourceType == ResourceType.Patient).Resource as Hl7.Fhir.Model.Patient;
-                var relatedPatient = request.Entry.LastOrDefault(o => o.Resource.ResourceType == ResourceType.Patient).Resource as Hl7.Fhir.Model.Patient;
+                var sourcePatient = request.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource as Hl7.Fhir.Model.Patient;
+                var relatedPatient = request.Entry.LastOrDefault(o => o.Resource.TypeName == "Patient").Resource as Hl7.Fhir.Model.Patient;
 
                 // Patients must be different
                 Assert.AreNotEqual(sourcePatient.Id, relatedPatient.Id);
@@ -183,9 +183,9 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(2, bresult.Entry.Count(o => o.Resource is Hl7.Fhir.Model.Patient));
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is RelatedPerson));
 
-                var createdFhirPatient = bresult.Entry.FirstOrDefault(o => o.Resource.ResourceType == ResourceType.Patient).Resource;
-                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.ResourceType == ResourceType.RelatedPerson).Resource;
-                var createdFhirRelatedPatient = bresult.Entry.LastOrDefault(o => o.Resource.ResourceType == ResourceType.Patient).Resource;
+                var createdFhirPatient = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
+                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
+                var createdFhirRelatedPatient = bresult.Entry.LastOrDefault(o => o.Resource.TypeName == "Patient").Resource;
 
                 // Ensure focal patient was created
                 var sdbFocalPatient = this.m_patientRespository.Get(Guid.Parse(createdFhirPatient.Id));

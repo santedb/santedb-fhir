@@ -1,5 +1,7 @@
 ﻿/*
- * Portions Copyright 2019-2020, Fyfe Software Inc. and the SanteSuite Contributors (See NOTICE)
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you 
  * may not use this file except in compliance with the License. You may 
@@ -13,9 +15,10 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: fyfej (Justin Fyfe)
- * Date: 2019-11-27
+ * User: fyfej
+ * Date: 2021-8-5
  */
+using Hl7.Fhir.Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -72,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             foreach (var itm in map.Map)
             {
-                var myMapping = this.Map.FirstOrDefault(p => p.SourceType == itm.SourceType);
+                var myMapping = this.Map.FirstOrDefault(p => p.ResourceSpecified == itm.ResourceSpecified && p.Resource == itm.Resource );
 
                 // I have a local mapping
                 if (myMapping != null)
@@ -98,18 +101,33 @@ namespace SanteDB.Messaging.FHIR.Util
 
 
         /// <summary>
-        /// Gets or sets the source type
+        /// Gets or sets the resource type
+        /// </summary>
+        [XmlAttribute("resource")]
+        public ResourceType Resource { get; set; }
+
+        /// <summary>
+        /// True if resource is specified
         /// </summary>
         [XmlIgnore]
-        public Type SourceType { get; set; }
+        public bool ResourceSpecified { get; set; }
 
         /// <summary>
         /// The model type
         /// </summary>
         [XmlAttribute("model")]
         public String SourceTypeXml {
-            get { return this.SourceType.AssemblyQualifiedName; }
-            set { this.SourceType = Type.GetType(value); }
+            get => null;
+            set { 
+                var resourceType = Type.GetType(value);
+                if(resourceType == null)
+                {
+                    this.ResourceSpecified = true;
+                    var inst = Activator.CreateInstance(resourceType) as Resource;
+                    inst.TryDeriveResourceType(out ResourceType rt);
+                    this.Resource = rt;
+                }
+            }
         }
 
         /// <summary>

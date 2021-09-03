@@ -1,4 +1,24 @@
-﻿using Hl7.Fhir.Model;
+﻿/*
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you 
+ * may not use this file except in compliance with the License. You may 
+ * obtain a copy of the License at 
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
+ * License for the specific language governing permissions and limitations under 
+ * the License.
+ * 
+ * User: fyfej
+ * Date: 2021-8-5
+ */
+using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
@@ -12,6 +32,7 @@ using SanteDB.Messaging.FHIR.Rest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -62,25 +83,24 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 this.m_fhirConfiguration = configManager.GetSection<FhirServiceConfigurationSection>();
                 this.m_configuration = configManager.GetSection<FhirDispatcherConfigurationSection>()?.Targets.Find(o => o.Endpoint == endpoint.ToString());
 
+                settings.TryGetValue("Content-Type", out string contentType);
+              
                 // The client for this object
-                this.m_client = new FhirClient(this.Endpoint, false);
-                this.m_client.ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
+                this.m_client = new FhirClient(this.Endpoint, new FhirClientSettings()
                 {
-                    AcceptUnknownMembers = true,
-                    AllowUnrecognizedEnums = true
-                };
+                    ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
+                    {
+                        AllowUnrecognizedEnums = true,
+                        PermissiveParsing = true,
+                        AcceptUnknownMembers = true
+                    },
+                    PreferredFormat = ContentType.GetResourceFormatFromFormatParam(contentType ?? "xml"),
+                    PreferCompressedResponses = true,
+                    VerifyFhirVersion = false
+                });
 
-                if (settings.TryGetValue("Content-Type", out string contentType))
-                {
-                    this.m_client.PreferredFormat = ContentType.GetResourceFormatFromFormatParam(contentType);
-                }
-
-                // Add settings from the service
-                this.m_client.OnBeforeRequest += (o, e) =>
-                {
-                    foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
-                        e.RawRequest.Headers.Add(kv.Key, kv.Value);
-                };
+                foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
+                    this.m_client.RequestHeaders.Add(kv.Key, kv.Value);
 
                 if (this.m_configuration?.Authenticator != null)
                 {
@@ -204,7 +224,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         {
                             entry.Request = new Bundle.RequestComponent()
                             {
-                                Url = $"{entry.Resource.ResourceType}/{entry.Resource.Id}",
+                                Url = $"{entry.Resource.TypeName}/{entry.Resource.Id}",
                                 Method = Bundle.HTTPVerb.POST
                             };
                             entry.Response = new Bundle.ResponseComponent()
@@ -258,7 +278,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             Request = new Bundle.RequestComponent()
                             {
                                 Method = Bundle.HTTPVerb.PUT,
-                                Url = $"{fhirModel.ResourceType}/{fhirModel.Id}"
+                                Url = $"{fhirModel.TypeName}/{fhirModel.Id}"
                             },
                             Response = new Bundle.ResponseComponent()
                             {
@@ -292,7 +312,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource,
                         Request = new Bundle.RequestComponent()
                         {
-                            Url = $"{focalResource.ResourceType}/{focalResource.Id}",
+                            Url = $"{focalResource.TypeName}/{focalResource.Id}",
                             Method = Bundle.HTTPVerb.DELETE
                         },
                         Response = new Bundle.ResponseComponent()
@@ -342,7 +362,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         {
                             entry.Request = new Bundle.RequestComponent()
                             {
-                                Url = $"{entry.Resource.ResourceType}/{entry.Resource.Id}",
+                                Url = $"{entry.Resource.TypeName}/{entry.Resource.Id}",
                                 Method = Bundle.HTTPVerb.PUT
                             };
                             entry.Response = new Bundle.ResponseComponent()

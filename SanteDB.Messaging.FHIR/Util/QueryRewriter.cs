@@ -1,5 +1,7 @@
 ﻿/*
- * Portions Copyright 2019-2020, Fyfe Software Inc. and the SanteSuite Contributors (See NOTICE)
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); you 
  * may not use this file except in compliance with the License. You may 
@@ -13,9 +15,10 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: fyfej (Justin Fyfe)
- * Date: 2019-11-27
+ * User: fyfej
+ * Date: 2021-8-5
  */
+using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
@@ -97,7 +100,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 s_map.Merge(map);
             }
 
-            s_default = s_map.Map.FirstOrDefault(o => o.SourceType == typeof(Resource));
+            s_default = s_map.Map.FirstOrDefault(o => !o.ResourceSpecified);
         }
 
         /// <summary>
@@ -105,7 +108,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static IEnumerable<SearchParamComponent> GetSearchParams<TFhirResource, TModelType>()
         {
-            var map = s_map.Map.FirstOrDefault(o => o.SourceType == typeof(TFhirResource));
+
+            var resourceType = typeof(TFhirResource).GetResourceType();
+            var map = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
             
             if (map == null) return s_defaultParameters;
             else
@@ -114,7 +119,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     Name = o.FhirQuery,
                     Type = MapFhirParameterType<TModelType>(o.FhirType, o.ModelQuery),
                     Documentation = new Markdown(o.Description),
-                    Definition = $"/Profile/SanteDB#search-{map.SourceType.Name}.{o.FhirQuery}"
+                    Definition = $"/Profile/SanteDB#search-{map.Resource}.{o.FhirQuery}"
                 }).Union(s_defaultParameters);
 
         }
@@ -124,10 +129,11 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static void AddSearchParam<TFhirResource>(String fhirQueryParameter, String hdsiQueryParmeter, QueryParameterRewriteType type)
         {
-            var mapConfig = s_map.Map.FirstOrDefault(o => o.SourceType == typeof(TFhirResource));
+            var resourceType = typeof(TFhirResource).GetResourceType();
+            var mapConfig = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
             if(mapConfig == null)
             {
-                mapConfig = new QueryParameterType() { SourceType = typeof(TFhirResource) };
+                mapConfig = new QueryParameterType() { Resource = resourceType.Value, ResourceSpecified = resourceType.HasValue };
                 s_map.Map.Add(mapConfig);
             }
 
@@ -163,7 +169,8 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static void RemoveParamConfig<TFhirResource>(String fhirQuery)
         {
-            var mapConfig = s_map.Map.FirstOrDefault(o => o.SourceType == typeof(TFhirResource));
+            var resourceType = typeof(TFhirResource).GetResourceType();
+            var mapConfig = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
             if(mapConfig == null)
             {
                 mapConfig.Map.RemoveAll(o => o.FhirQuery == fhirQuery);
@@ -252,7 +259,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Re-writes the FHIR query parameter to HDSI query parameter format
         /// </summary>
         /// <returns></returns>
-        public static FhirQuery RewriteFhirQuery(Type resourceType, Type modelType, System.Collections.Specialized.NameValueCollection fhirQuery, out NameValueCollection hdsiQuery)
+        public static FhirQuery RewriteFhirQuery(Type fhirType, Type modelType, System.Collections.Specialized.NameValueCollection fhirQuery, out NameValueCollection hdsiQuery)
         {
             // Try parse
             if (fhirQuery == null) throw new ArgumentNullException(nameof(fhirQuery));
@@ -286,7 +293,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
             hdsiQuery = new NameValueCollection();
 
-            var map = s_map.Map.FirstOrDefault(o => o.SourceType == resourceType);
+            var resourceType = fhirType.GetResourceType();
+            var map = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
 
             foreach (var kv in fhirQuery.AllKeys)
             {
