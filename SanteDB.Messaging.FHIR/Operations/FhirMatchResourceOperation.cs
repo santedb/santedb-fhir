@@ -107,7 +107,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             try
             {
                 // First we want to get the handler, as this will tell us the SanteDB CDR type 
-                if(!resource.TryDeriveResourceType(out ResourceType rt))
+                if (!resource.TryDeriveResourceType(out ResourceType rt))
                 {
                     throw new InvalidOperationException($"Operation on {resource.TypeName} not supported");
                 }
@@ -150,26 +150,27 @@ namespace SanteDB.Messaging.FHIR.Operations
                 if (onlyCertainMatches?.Value == true)
                     results = results.Where(o => o.Classification == RecordMatchClassification.Match);
 
+
+                // Iterate through the resources and convert them to FHIR
+                // Grouping by the ID of the candidate and selecting the highest rated match
+                var distinctResults = results.GroupBy(o => o.Record.Key).Select(o => o.OrderByDescending(m => m.Strength).First());
+
+
                 // Next we want to convert to FHIR
                 var retVal = new Bundle()
                 {
                     Id = $"urn:uuid:{Guid.NewGuid()}",
+                    Entry = distinctResults.Take((int?)count.Value ?? 10).Select(o => this.ConvertMatchResult(o, handler)).ToList(),
                     Meta = new Meta()
                     {
                         LastUpdated = DateTimeOffset.Now
                     },
                     Type = Bundle.BundleType.Searchset,
-                    Total = results.Count(),
+                    Total = distinctResults.Count(),
                 };
-
-                // Iterate through the resources and convert them to FHIR
-                // Grouping by the ID of the candidate and selecting the highest rated match
-                retVal.Entry = results.GroupBy(o => o.Record.Key).Select(o => o.OrderByDescending(m => m.Score).First())
-                    .Select(o => this.ConvertMatchResult(o, handler)).ToList();
-
                 return retVal;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 this.m_tracer.TraceError($"Error running match on {resource.TypeName} - {e}");
                 throw new Exception($"Error running match operation on {resource.TypeName}", e);
