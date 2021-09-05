@@ -1,4 +1,24 @@
-﻿using Hl7.Fhir.Model;
+﻿/*
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you 
+ * may not use this file except in compliance with the License. You may 
+ * obtain a copy of the License at 
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
+ * License for the specific language governing permissions and limitations under 
+ * the License.
+ * 
+ * User: fyfej
+ * Date: 2021-8-5
+ */
+using Hl7.Fhir.Model;
 using SanteDB.Core.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
@@ -57,47 +77,57 @@ namespace SanteDB.Messaging.FHIR.Operations
             var retVal = new OperationOutcome();
 
             // Get the profile handler for the specified profile, if no profile then just perform a profile mode
-            var hdlr = FhirResourceHandlerUtil.GetResourceHandler(resource.Resource.ResourceType);
-            if (hdlr == null)
+            if(!resource.Resource.TryDeriveResourceType(out ResourceType rt))
+            {
                 retVal.Issue.Add(new OperationOutcome.IssueComponent()
                 {
                     Code = OperationOutcome.IssueType.NotSupported,
                     Severity = OperationOutcome.IssueSeverity.Fatal,
-                    Diagnostics = $"Resource {resource.Resource.ResourceType} not supported"
+                    Diagnostics = $"Resource {resource.Resource.TypeName} not supported"
                 });
-            else
-            {
-                // Find all profiles and validate
-                if (profile?.Value != null)
-                    retVal.Issue = ExtensionUtil.ProfileHandlers.Where(o => (profile.Value as FhirUri).Value == o.ProfileUri.ToString()).Select(o => o.Validate(resource.Resource))
-                        .SelectMany(i => i.Select(o => DataTypeConverter.ToIssue(o))).ToList();
-                
-                try
-                {
-
-                    // Instruct the handler to perform an update with 
-                    hdlr.Update(resource.Resource.Id, resource.Resource, Core.Services.TransactionMode.Rollback);
+            }
+            else { 
+                var hdlr = FhirResourceHandlerUtil.GetResourceHandler(rt);
+                if (hdlr == null)
                     retVal.Issue.Add(new OperationOutcome.IssueComponent()
                     {
-                        Diagnostics = "Resource Valid",
-                        Severity = OperationOutcome.IssueSeverity.Information,
-                        Code = OperationOutcome.IssueType.Unknown
+                        Code = OperationOutcome.IssueType.NotSupported,
+                        Severity = OperationOutcome.IssueSeverity.Fatal,
+                        Diagnostics = $"Resource {resource.Resource.TypeName} not supported"
                     });
-                }
-                catch (DetectedIssueException e)
+                else
                 {
-                    retVal.Issue.AddRange(e.Issues.Select(o => DataTypeConverter.ToIssue(o)));
-                }
-                catch (Exception e)
-                {
-                    retVal.Issue.Add(new OperationOutcome.IssueComponent()
-                    {
-                        Severity = OperationOutcome.IssueSeverity.Error,
-                        Code = OperationOutcome.IssueType.NoStore,
-                        Diagnostics = e.Message
-                    });
-                }
+                    // Find all profiles and validate
+                    if (profile?.Value != null)
+                        retVal.Issue = ExtensionUtil.ProfileHandlers.Where(o => (profile.Value as FhirUri).Value == o.ProfileUri.ToString()).Select(o => o.Validate(resource.Resource))
+                            .SelectMany(i => i.Select(o => DataTypeConverter.ToIssue(o))).ToList();
 
+                    try
+                    {
+
+                        // Instruct the handler to perform an update with 
+                        hdlr.Update(resource.Resource.Id, resource.Resource, Core.Services.TransactionMode.Rollback);
+                        retVal.Issue.Add(new OperationOutcome.IssueComponent()
+                        {
+                            Diagnostics = "Resource Valid",
+                            Severity = OperationOutcome.IssueSeverity.Information,
+                            Code = OperationOutcome.IssueType.Unknown
+                        });
+                    }
+                    catch (DetectedIssueException e)
+                    {
+                        retVal.Issue.AddRange(e.Issues.Select(o => DataTypeConverter.ToIssue(o)));
+                    }
+                    catch (Exception e)
+                    {
+                        retVal.Issue.Add(new OperationOutcome.IssueComponent()
+                        {
+                            Severity = OperationOutcome.IssueSeverity.Error,
+                            Code = OperationOutcome.IssueType.NoStore,
+                            Diagnostics = e.Message
+                        });
+                    }
+                }
             }
             return retVal;
 

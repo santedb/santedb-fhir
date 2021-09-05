@@ -1,7 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <!--
- - Portions Copyright (C) 2019 - 2020, Fyfe Software Inc. and the SanteSuite Contributors (See NOTICE.md)
- - 
+ - Copyright 2021-2021 SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ - Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ - Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  - 
  - Licensed under the Apache License, Version 2.0 (the "License"); you 
  - may not use this file except in compliance with the License. You may 
@@ -15,16 +16,16 @@
  - License for the specific language governing permissions and limitations under 
  - the License.
  - 
- - User: fyfej (Justin Fyfe)
- - Date: 2019-11-27
+ - User: fyfej
+ - Date: 2021-8-5
  -->
 <QueryParameterMap xmlns="http://santedb.org/model/fhir">
 
-  <type model="Hl7.Fhir.Model.Resource, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type>
     <map fhir="_id" model="id"/>
     <map fhir="_lastModified" model="modifiedOn"/>
   </type>
-  <type model="Hl7.Fhir.Model.ImmunizationRecommendation, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="ImmunizationRecommendation">
     <map fhir="vaccine-type" model="participation[Product].player.typeConcept" type="concept"/>
     <map fhir="dose-number" model="doseSequence"/>
     <map fhir="date" model="creationTime"/>
@@ -34,7 +35,7 @@
     <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth"/>
   </type>
   
-  <type model="Hl7.Fhir.Model.Immunization, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="Immunization">
     <map fhir="vaccine-code" model="participation[Consumable].player@ManufacturedMaterial.typeConcept" type="concept"/>
     <map fhir="dose-sequence" model="doseSequence"/>
     <map fhir="date" model="actTime"/>
@@ -51,7 +52,7 @@
     <map fhir="location.identifier" model="participation[Location].player@Place.identifier" type="identifier"/>
   </type>
 
-  <type model="Hl7.Fhir.Model.Patient, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="Patient">
     <map fhir="active" model="statusConcept.mnemonic=ACTIVE" type="indicator" />
     <map fhir="telecom" model="telecom.value" />
     <map fhir="name" model="name.component.value"/>
@@ -82,7 +83,7 @@
     <map fhir="date" model="creationTime" />
   </type>
 
-  <type model="Hl7.Fhir.Model.Observation, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="Observation">
     <map fhir="category" model="typeConcept" type="concept"/>
     <map fhir="code" model="typeConcept" type="concept"/>
     <map fhir="value-concept" model="value" type="concept"/>
@@ -104,7 +105,7 @@
     <map fhir="location.name" model="participation[Location].player.name.component.value" />
   </type>
 
-  <type model="Hl7.Fhir.Model.AdverseEvent, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="AdverseEvent">
     <map fhir="date" model="relationship[HasSubject].target.actTime"/>
     <map fhir="location" model="participation[Location].player" type="reference"/>
     <map fhir="location.identifier" model="participation[Location].player.identifier" type="identifier"/>
@@ -132,7 +133,7 @@
     <map fhir="substance.type" model="relationship[RefersTo].target.participation[Product|Consumable].player.typeConcept" type="concept"/>
   </type>
 
-  <type model="Hl7.Fhir.Model.AllergyIntolerance, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="AllergyIntolerance">
     <map fhir="asserter" model="participation[Authorororiginator].player" type="reference"/>
     <map fhir="asserter.identifier" model="participation[Authorororiginator].player.identifier" type="identifier"/>
     <map fhir="asserter.name" model="participation[Authorororiginator].player.name.component.value"/>
@@ -157,7 +158,7 @@
 
   </type>
 
-  <type model="Hl7.Fhir.Model.Condition, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="Condition">
     <map fhir="asserted-date" model="creationTime"/>
     <map fhir="asserter" model="participation[Authorororiginator].player" type="reference"/>
     <map fhir="asserter.identifier" model="participation[Authorororiginator].player.identifier" type="identifier"/>
@@ -175,7 +176,7 @@
     <map fhir="severity" model="relationship[HasComponent].target[ObservationType-Severity].value"/>
   </type>
 
-  <type model="Hl7.Fhir.Model.MedicationAdministration, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="MedicationAdministration">
     <map fhir="code" model="participation[Product].player.typeConcept" type="concept"/>
     <map fhir="effective-time" model="actTime"/>
     <map fhir="date" model="actTime"/>
@@ -197,7 +198,7 @@
     
   </type>
 
-  <type model="Hl7.Fhir.Model.Encounter, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="Encounter">
     <map fhir="date" model="actTime"/>
     <map fhir="identifier" model="identifier" type="token"/>
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
@@ -214,7 +215,7 @@
   </type>
 
 
-  <type model="Hl7.Fhir.Model.Location, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="Location">
     <map fhir="address" model="address.component.value"/>
     <map fhir="address-city" model="address.component[City].value"/>
     <map fhir="address-country" model="address.component[Country].value"/>
@@ -225,7 +226,7 @@
     <map fhir="type" model="typeConcept" type="concept"/>
   </type>
 
-  <type model="Hl7.Fhir.Model.Medication, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="Medication">
     <map fhir="code" model="typeConcept" type="concept"/>
     <map fhir="form" model="formConcept" type="concept"/>
     <map fhir="manufacturer" model="relationship[WarrantedProduct].source" type="reference"/>
@@ -235,14 +236,14 @@
     <map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/medication-status"/>
   </type>
 
-  <type model="Hl7.Fhir.Model.Substance, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="Substance">
     <map fhir="code" model="typeConcept" type="concept"/>
     <map fhir="expiry" model="expireDate"/>
     <map fhir="identifier" model="identifier" type="identifier"/>
     <map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/substance-status"/>
   </type>
 
-  <type model="Hl7.Fhir.Model.RelatedPerson, Hl7.Fhir.R4.Core, Version=1.4.0.0">
+  <type resource="RelatedPerson">
     <map fhir="name" model="target@Person.name.component.value"/>
     <map fhir="family" model="target@Person.name.component[Family].value"/>
     <map fhir="given" model="target@Person.name.component[Given].value"/>

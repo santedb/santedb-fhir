@@ -1,4 +1,24 @@
-﻿using Hl7.Fhir.Model;
+﻿/*
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you 
+ * may not use this file except in compliance with the License. You may 
+ * obtain a copy of the License at 
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
+ * License for the specific language governing permissions and limitations under 
+ * the License.
+ * 
+ * User: fyfej
+ * Date: 2021-8-5
+ */
+using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
@@ -87,9 +107,16 @@ namespace SanteDB.Messaging.FHIR.Operations
             try
             {
                 // First we want to get the handler, as this will tell us the SanteDB CDR type 
-                var handler = FhirResourceHandlerUtil.GetResourceHandler(resource.ResourceType) as IFhirResourceMapper;
+                if (!resource.TryDeriveResourceType(out ResourceType rt))
+                {
+                    throw new InvalidOperationException($"Operation on {resource.TypeName} not supported");
+                }
+
+                var handler = FhirResourceHandlerUtil.GetResourceHandler(rt) as IFhirResourceMapper;
                 if (handler == null)
-                    throw new NotSupportedException($"Operation on {resource.ResourceType} not supported");
+                {
+                    throw new NotSupportedException($"Operation on {rt} not supported");
+                }
 
                 var matchService = ApplicationServiceContext.Current.GetService<IRecordMatchingService>();
                 if (matchService == null)
@@ -100,7 +127,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 this.m_tracer.TraceInfo("Will execute match on {0}", modelInstance);
 
                 // Next run the match
-                var configurationName = RestOperationContext.Current.IncomingRequest.QueryString["_configurationName"] ?? "org.santedb.matcher.example";
+                var configurationName = RestOperationContext.Current.IncomingRequest.QueryString["_configurationName"];
                 IEnumerable<IRecordMatchResult> results = null;
                 var mergeService = ApplicationServiceContext.Current.GetService(typeof(IRecordMergingService<>).MakeGenericType(handler.CanonicalType)) as IRecordMergingService;
 
@@ -110,7 +137,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 }
                 else // use the configured option
                 {
-                    var configBase = this.m_configuration.ResourceTypes.FirstOrDefault(o => o.ResourceType == modelInstance.GetType());
+                    var configBase = this.m_configuration.ResourceTypes.FirstOrDefault(o => o.ResourceType.Type == modelInstance.GetType());
                     if (configBase == null)
                     {
                         throw new InvalidOperationException($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceMergeConfigurationSection to your configuration file");
@@ -123,29 +150,30 @@ namespace SanteDB.Messaging.FHIR.Operations
                 if (onlyCertainMatches?.Value == true)
                     results = results.Where(o => o.Classification == RecordMatchClassification.Match);
 
+
+                // Iterate through the resources and convert them to FHIR
+                // Grouping by the ID of the candidate and selecting the highest rated match
+                var distinctResults = results.GroupBy(o => o.Record.Key).Select(o => o.OrderByDescending(m => m.Strength).First());
+
+
                 // Next we want to convert to FHIR
                 var retVal = new Bundle()
                 {
                     Id = $"urn:uuid:{Guid.NewGuid()}",
+                    Entry = distinctResults.Take((int?)count.Value ?? 10).Select(o => this.ConvertMatchResult(o, handler)).ToList(),
                     Meta = new Meta()
                     {
                         LastUpdated = DateTimeOffset.Now
                     },
                     Type = Bundle.BundleType.Searchset,
-                    Total = results.Count(),
+                    Total = distinctResults.Count(),
                 };
-
-                // Iterate through the resources and convert them to FHIR
-                // Grouping by the ID of the candidate and selecting the highest rated match
-                retVal.Entry = results.GroupBy(o => o.Record.Key).Select(o => o.OrderByDescending(m => m.Score).First())
-                    .Select(o => this.ConvertMatchResult(o, handler)).ToList();
-
                 return retVal;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                this.m_tracer.TraceError($"Error running match on {resource.ResourceType} - {e}");
-                throw new Exception($"Error running match operation on {resource.ResourceType}", e);
+                this.m_tracer.TraceError($"Error running match on {resource.TypeName} - {e}");
+                throw new Exception($"Error running match operation on {resource.TypeName}", e);
             }
         }
 
@@ -165,7 +193,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             // Now publish search data
             return new Bundle.EntryComponent()
             {
-                FullUrl = $"{MessageUtil.GetBaseUri()}/{result.ResourceType}/{result.Id}/_history/{result.VersionId}",
+                FullUrl = $"{MessageUtil.GetBaseUri()}/{result.TypeName}/{result.Id}/_history/{result.VersionId}",
                 Resource = result,
                 Search = new Bundle.SearchComponent()
                 {
