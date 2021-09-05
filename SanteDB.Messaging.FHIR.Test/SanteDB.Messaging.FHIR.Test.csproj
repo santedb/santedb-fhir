@@ -63,6 +63,8 @@
     <When Condition="$(SolutionName.Contains('-ext'))">
       <ItemGroup>
         <ProjectReference Include="..\..\santedb-cache-memory\SanteDB.Caching.Memory\SanteDB.Caching.Memory.csproj">
+          <Project>{8553ABC7-ABFA-4A21-B0E8-68B7DE76129D}</Project>
+          <Name>SanteDB.Caching.Memory</Name>
         </ProjectReference>
         <ProjectReference Include="..\..\santedb-api\SanteDB.Core.Api\SanteDB.Core.Api.csproj">
           <Project>{3A45F695-47A2-464C-ACE6-BDABBFA39FBC}</Project>
@@ -110,6 +112,8 @@
       <Name>SanteDB.Persistence.Data</Name>
     </ProjectReference>
     <ProjectReference Include="..\SanteDB.Messaging.FHIR\SanteDB.Messaging.FHIR.csproj">
+      <Project>{33836324-C699-4139-AB9C-7524570A04D5}</Project>
+      <Name>SanteDB.Messaging.FHIR</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

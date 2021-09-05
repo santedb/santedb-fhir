@@ -51,6 +51,7 @@ namespace SanteDB.Messaging.FHIR.Test
             // Create the test harness device / application
             var securityDevService = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityDevice>>();
             var securityAppService = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityApplication>>();
+            var securityPipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
             var metadataService = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
 
             using (AuthenticationContext.EnterSystemContext())
@@ -64,8 +65,8 @@ namespace SanteDB.Messaging.FHIR.Test
                         DeviceSecret = BitConverter.ToString(deviceSecret).Replace("-", ""),
                         Name = $"{applicationName}|TEST"
                     };
-                    device.AddPolicy(PermissionPolicyIdentifiers.LoginAsService);
                     device = securityDevService.Insert(device);
+                    securityPipService.AddPolicies(device, PolicyGrantType.Grant, AuthenticationContext.Current.Principal, PermissionPolicyIdentifiers.LoginAsService);
                 }
 
                 // Application
@@ -77,10 +78,8 @@ namespace SanteDB.Messaging.FHIR.Test
                         Name = applicationName,
                         ApplicationSecret = BitConverter.ToString(deviceSecret).Replace("-", "")
                     };
-                    app.AddPolicy(PermissionPolicyIdentifiers.LoginAsService);
-                    app.AddPolicy(PermissionPolicyIdentifiers.UnrestrictedClinicalData);
-                    app.AddPolicy(PermissionPolicyIdentifiers.ReadMetadata);
                     app = securityAppService.Insert(app);
+                    securityPipService.AddPolicies(app, PolicyGrantType.Grant, AuthenticationContext.Current.Principal, PermissionPolicyIdentifiers.LoginAsService, PermissionPolicyIdentifiers.UnrestrictedClinicalData, PermissionPolicyIdentifiers.ReadMetadata);
                 }
 
                 // Create AA
