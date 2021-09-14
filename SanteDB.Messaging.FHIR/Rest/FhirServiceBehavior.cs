@@ -49,7 +49,7 @@ namespace SanteDB.Messaging.FHIR.Rest
     /// HL7 Fast Health Interoperability Resources (FHIR) R4
     /// </summary>
     /// <remarks>SanteSB Server implementation of the HL7 FHIR R4 Contract</remarks>
-    [ServiceBehavior(Name = "FHIR", InstanceMode = ServiceInstanceMode.PerCall)]
+    [ServiceBehavior(Name = "FHIR", InstanceMode = ServiceInstanceMode.Singleton)]
     public class FhirServiceBehavior : IFhirServiceContract, IServiceBehaviorMetadataProvider
     {
 
