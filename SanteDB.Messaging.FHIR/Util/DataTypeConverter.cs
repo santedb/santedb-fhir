@@ -215,7 +215,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         if (configuration.SourceInformation?.EnterpriseDeviceKey != null) {
                             m_sourceDevice = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityDevice>>()?.Get(configuration.SourceInformation.EnterpriseDeviceKey);
                         }
-                        else
+                        if(m_sourceDevice == null)
                         {
                             m_sourceDevice = ApplicationServiceContext.Current.GetService<ISecurityRepositoryService>()?.GetDevice(Environment.MachineName);
                             if (m_sourceDevice == null)
