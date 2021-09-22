@@ -24,6 +24,7 @@ using SanteDB.Core;
 using SanteDB.Core.Matching;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
+using SanteDB.Core.Matching;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Persistence.MDM;
 using System;
@@ -36,10 +37,10 @@ using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Operations
 {
-	/// <summary>
-	/// Represents a FHIR MDM query links operation.
-	/// </summary>
-	public class FhirMdmQueryLinksOperation : IFhirOperationHandler
+    /// <summary>
+    /// Represents a FHIR MDM query links operation.
+    /// </summary>
+    public class FhirMdmQueryLinksOperation : IFhirOperationHandler
 	{
 		/// <summary>
 		/// Gets the name of the operation.
