@@ -21,21 +21,17 @@
 using Hl7.Fhir.Model;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Extensions
 {
-    /// <summary>
-    /// Represents an extension point 
-    /// </summary>
-    /// <remarks>
-    /// This interface is used to extend the FHIR interface for FHIR operations (like $validate, $match, etc.)
-    /// and allows plugins to add behaviors to the API layer.
-    /// </remarks>
-    public interface IFhirOperationHandler
+	/// <summary>
+	/// Represents an extension point 
+	/// </summary>
+	/// <remarks>
+	/// This interface is used to extend the FHIR interface for FHIR operations (like $validate, $match, etc.)
+	/// and allows plugins to add behaviors to the API layer.
+	/// </remarks>
+	public interface IFhirOperationHandler
     {
 
         /// <summary>

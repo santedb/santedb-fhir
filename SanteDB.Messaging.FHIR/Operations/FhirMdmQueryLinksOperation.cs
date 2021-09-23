@@ -21,9 +21,9 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Matching;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
-using SanteDB.Core.Matching;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Persistence.MDM;
 using System;
@@ -36,10 +36,10 @@ using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Operations
 {
-    /// <summary>
-    /// Represents a FHIR MDM query links operation.
-    /// </summary>
-    public class FhirMdmQueryLinksOperation : IFhirOperationHandler
+	/// <summary>
+	/// Represents a FHIR MDM query links operation.
+	/// </summary>
+	public class FhirMdmQueryLinksOperation : IFhirOperationHandler
 	{
 		/// <summary>
 		/// Gets the name of the operation.
@@ -151,14 +151,15 @@ namespace SanteDB.Messaging.FHIR.Operations
 
 			var entityRelationshipService = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
 			var patientService = ApplicationServiceContext.Current.GetService<IRepositoryService<Patient>>();
+			var cacheService = ApplicationServiceContext.Current.GetService<IAdhocCacheService>();
 
 			Expression<Func<EntityRelationship, bool>> queryExpression = c => c.ObsoleteVersionSequenceId == null;
 
 			// add the match result filter
 			if (string.IsNullOrEmpty(matchResult))
 			{
-				queryExpression = c => (c.RelationshipTypeKey == MdmConstants.MasterRecordRelationship || 
-													c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship || 
+				queryExpression = c => (c.RelationshipTypeKey == MdmConstants.MasterRecordRelationship ||
+													c.RelationshipTypeKey == MdmConstants.CandidateLocalRelationship ||
 													c.RelationshipTypeKey == MdmConstants.IgnoreCandidateRelationship) && c.ObsoleteVersionSequenceId == null;
 			}
 			else if (!string.IsNullOrEmpty(matchResult) && matchResultMap.TryGetValue(matchResult, out var matchResultKey))
@@ -248,7 +249,16 @@ namespace SanteDB.Messaging.FHIR.Operations
 			// build the result set
 			foreach (var entityRelationship in relationships)
 			{
-				var classificationResult = matchingService.Classify(patientService.Get(entityRelationship.TargetEntityKey.Value), new List<Patient>
+				var patient = entityRelationship.TargetEntity as Patient ?? cacheService?.Get<Patient>(entityRelationship.TargetEntityKey.ToString());
+
+				if (patient == null)
+				{
+					patient = patientService.Get(entityRelationship.TargetEntityKey.Value);
+				}
+
+				cacheService?.Add(entityRelationship.TargetEntityKey.ToString(), patient);
+
+				var classificationResult = matchingService.Classify(patient, new List<Patient>
 				{
 					new Patient
 					{
