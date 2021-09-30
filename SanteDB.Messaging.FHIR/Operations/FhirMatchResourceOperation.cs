@@ -132,7 +132,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 var configBase = this.m_matchConfigurationService.Configurations.Where(c=>c.AppliesTo.Contains(modelInstance.GetType()) && c.Metadata.State == MatchConfigurationStatus.Active);
                 if (!configBase.Any())
                 {
-                    throw new InvalidOperationException($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceMergeConfigurationSection to your configuration file");
+                    throw new InvalidOperationException($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceManagementConfigurationSection to your configuration file");
                 }
 
                 var results = configBase.SelectMany(o => matchService.Match(modelInstance, o.Id, mergeService?.GetIgnoredKeys(modelInstance.Key.Value))).ToArray();
