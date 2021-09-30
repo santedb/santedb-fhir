@@ -11,7 +11,7 @@
     <add type="SanteDB.Persistence.Data.ADO.Configuration.AdoPersistenceConfigurationSection, SanteDB.Persistence.Data.ADO" />
     <add type="SanteDB.OrmLite.Configuration.OrmConfigurationSection, SanteDB.OrmLite" />
     <add type="SanteDB.Core.Configuration.Data.DataConfigurationSection, SanteDB.Core.Api"/>
-    <add type="SanteDB.Core.Configuration.ResourceMergeConfigurationSection, SanteDB.Core.Api"/>
+    <add type="SanteDB.Core.Configuration.ResourceManagementConfigurationSection, SanteDB.Core.Api"/>
     <add type="SanteDB.Server.Core.Configuration.SecurityConfigurationSection, SanteDB.Server.Core" />
   </sections>
   <section xsi:type="MemoryCacheConfigurationSection" autoSubscribe="true" maxSize="10000" maxAge="3600" maxQueryAge="3600" />
@@ -40,7 +40,7 @@
     <!-- To Configure X509 Signatures -->
     <!--<signing alg="rsa" findType="FindByThumbprint" storeName="My" storeLocation="CurrentUser" findValue="value" />-->
   </section>
-  <section xsi:type="ResourceMergeConfigurationSection">
+  <section xsi:type="ResourceManagementConfigurationSection">
     <resources>
       <add type="Patient" />
     </resources>
@@ -66,7 +66,7 @@
     </resources>
     -->
   </section>
-  <section xsi:type="ApplicationServiceContextConfigurationSection" threadPoolSize="4">
+  <section xsi:type="ApplicationServiceContextConfigurationSection" allowUnsignedAssemblies="true" threadPoolSize="4">
     <serviceProviders>
       <add type="SanteDB.Persistence.Data.ADO.Services.AdoPersistenceService, SanteDB.Persistence.Data.ADO" />
       <add type="SanteDB.Persistence.Data.ADO.Services.AdoPolicyInformationService, SanteDB.Persistence.Data.ADO" />
