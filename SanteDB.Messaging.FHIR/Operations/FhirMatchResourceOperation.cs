@@ -47,12 +47,16 @@ namespace SanteDB.Messaging.FHIR.Operations
         // Configuration
         private IRecordMatchingConfigurationService m_matchConfigurationService;
 
+        // Localization service
+        private ILocalizationService m_localizationService;
+
         /// <summary>
         /// Configurations for the merge configuration
         /// </summary>
         public FhirMatchResourceOperation()
         {
             this.m_matchConfigurationService = ApplicationServiceContext.Current.GetService<IRecordMatchingConfigurationService>();
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>
@@ -102,26 +106,37 @@ namespace SanteDB.Messaging.FHIR.Operations
             var count = parameters.Parameter.FirstOrDefault(o => o.Name == "count")?.Value as Integer;
 
             if (resource == null)
-                throw new ArgumentNullException("Missing resource parameter");
+            {
+                this.m_tracer.TraceError("Missing resource parameter");
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException.userMessage"));
+            }
+
 
             // Execute the logic
             try
+
             {
                 // First we want to get the handler, as this will tell us the SanteDB CDR type 
                 if (!resource.TryDeriveResourceType(out ResourceType rt))
                 {
-                    throw new InvalidOperationException($"Operation on {resource.TypeName} not supported");
+                    this.m_tracer.TraceError($"Operation on {resource.TypeName} not supported");
+                    throw new InvalidOperationException(this.m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
                 }
 
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(rt) as IFhirResourceMapper;
                 if (handler == null)
                 {
-                    throw new NotSupportedException($"Operation on {rt} not supported");
+                    this.m_tracer.TraceError($"Operation on {rt} not supported");
+                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
                 }
 
                 var matchService = ApplicationServiceContext.Current.GetService<IRecordMatchingService>();
                 if (matchService == null)
-                    throw new NotSupportedException($"No match service is registered on this CDR");
+                {
+                    this.m_tracer.TraceError("No match service is registered on this CDR");
+                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
+                }
+
 
                 // Now we want to map the from FHIR to our CDR model
                 var modelInstance = handler.MapToModel(resource);
@@ -132,7 +147,8 @@ namespace SanteDB.Messaging.FHIR.Operations
                 var configBase = this.m_matchConfigurationService.Configurations.Where(c=>c.AppliesTo.Contains(modelInstance.GetType()) && c.Metadata.State == MatchConfigurationStatus.Active);
                 if (!configBase.Any())
                 {
-                    throw new InvalidOperationException($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceManagementConfigurationSection to your configuration file");
+                    this.m_tracer.TraceError($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceManagementConfigurationSection to your configuration file");
+                    throw new InvalidOperationException(this.m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
                 }
 
                 var results = configBase.SelectMany(o => matchService.Match(modelInstance, o.Id, mergeService?.GetIgnoredKeys(modelInstance.Key.Value))).ToArray();
@@ -164,7 +180,11 @@ namespace SanteDB.Messaging.FHIR.Operations
             catch (Exception e)
             {
                 this.m_tracer.TraceError($"Error running match on {resource.TypeName} - {e}");
-                throw new Exception($"Error running match operation on {resource.TypeName}", e);
+                throw new Exception(this.m_localizationService.FormatString("error.messaging.fhir.match.operation", new
+                {
+                    param = resource.TypeName
+                }), e);
+
             }
         }
 
