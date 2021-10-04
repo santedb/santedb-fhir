@@ -29,6 +29,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
+using SanteDB.Core.Services;
 
 namespace SanteDB.Messaging.FHIR.Operations
 {
@@ -37,6 +40,10 @@ namespace SanteDB.Messaging.FHIR.Operations
     /// </summary>
     public class FhirProcessMessageOperation : IFhirOperationHandler
     {
+
+        // Tracer
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirProcessMessageOperation));
+
         /// <summary>
         /// Get the name of the operation
         /// </summary>
@@ -71,24 +78,28 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// </summary>
         public Resource Invoke(Parameters parameters)
         {
+            var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
             // Extract the parameters
             var contentParameter = parameters.Parameter.Find(o => o.Name == "content")?.Resource as Bundle;
             var asyncParameter = parameters.Parameter.Find(o => o.Name == "async")?.Value as FhirBoolean;
-            if(contentParameter == null)
+            if (contentParameter == null)
             {
-                throw new ArgumentNullException("Missing content parameter");
-            }    
-            else if(asyncParameter?.Value.GetValueOrDefault() == true)
+                this.m_tracer.TraceError("Missing content parameter");
+                throw new ArgumentNullException(localizationService.GetString("error.type.ArgumentNullException"));
+            }
+            else if (asyncParameter?.Value.GetValueOrDefault() == true)
             {
-                throw new InvalidOperationException("Asynchronous messaging is not supported by this repository");
+                this.m_tracer.TraceError("Asynchronous messaging is not supported by this repository");
+                throw new InvalidOperationException(localizationService.GetString("error.type.NotSupportedException"));
             }
 
             // Message must have a message header
             var messageHeader = contentParameter.Entry.Find(o => o.Resource.TryDeriveResourceType(out ResourceType rt) && rt == ResourceType.MessageHeader)?.Resource as MessageHeader;
             if (messageHeader == null)
             {
-                throw new ArgumentException("Message bundle does not contain a MessageHeader");
+                this.m_tracer.TraceError("Message bundle does not contain a MessageHeader");
+                throw new ArgumentException(localizationService.GetString("error.type.ArgumentNullException"));
             }
 
             // Determine the appropriate action handler
@@ -97,7 +108,8 @@ namespace SanteDB.Messaging.FHIR.Operations
                 var handler = ExtensionUtil.GetMessageOperationHandler(new Uri(eventUri.Value));
                 if (handler == null)
                 {
-                    throw new NotSupportedException($"There is no message handler for event {eventUri}");
+                    this.m_tracer.TraceError($"There is no message handler for event {eventUri}");
+                    throw new NotSupportedException(localizationService.GetString("error.type.NotSupportedException"));
                 }
 
                 var retVal = new Bundle(); // Return for operation
@@ -117,7 +129,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         FullUrl = $"urn:uuid:{uuid}",
                         Resource = new MessageHeader()
                         {
-			                Id = uuid.ToString(),
+                            Id = uuid.ToString(),
                             Response = new MessageHeader.ResponseComponent()
                             {
                                 Code = MessageHeader.ResponseType.Ok,
@@ -134,7 +146,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         Resource = opReturn
                     });
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     var outcome = DataTypeConverter.CreateErrorResult(e);
                     outcome.Id = Guid.NewGuid().ToString();
@@ -143,7 +155,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         FullUrl = $"urn:uuid:{uuid}",
                         Resource = new MessageHeader()
                         {
-			                Id = uuid.ToString(),
+                            Id = uuid.ToString(),
                             Response = new MessageHeader.ResponseComponent()
                             {
                                 Code = MessageHeader.ResponseType.FatalError,
@@ -151,7 +163,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                             }
                         }
                     });
-                    
+
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
                         FullUrl = $"urn:uuid:{outcome.Id}",
@@ -166,11 +178,12 @@ namespace SanteDB.Messaging.FHIR.Operations
                     retVal.Timestamp = DateTime.Now;
                     retVal.Type = Bundle.BundleType.Message;
                 }
-		return retVal;
+                return retVal;
             }
             else
             {
-                throw new InvalidOperationException($"Currently message headers with EventCoding are not supported");
+                this.m_tracer.TraceError("Currently message headers with EventCoding are not supported");
+                throw new InvalidOperationException(localizationService.GetString("error.type.NotSupportedException.userMessage"));
             }
         }
     }
