@@ -29,6 +29,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -42,6 +43,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         // Applicable type concepts
         private List<Guid> m_typeConcepts;
 
+        // Localization Service
+        private readonly ILocalizationService m_localizationService;
+
         /// <summary>
         /// Type concepts
         /// </summary>
@@ -49,6 +53,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
 
             this.m_typeConcepts = conceptRepo.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>
@@ -64,7 +69,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
 		protected override AllergyIntolerance MapToFhir(CodedObservation model)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -72,7 +77,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
 		protected override CodedObservation MapToModel(AllergyIntolerance resource)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -100,7 +105,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -108,7 +113,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
     }
 }
