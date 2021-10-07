@@ -20,6 +20,7 @@
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
+using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -38,12 +39,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class LocationResourceHandler : RepositoryResourceHandlerBase<Location, Place>
     {
+        private readonly ILocalizationService m_localizationService;
 
         /// <summary>
 		/// Create new resource handler
 		/// </summary>
         public LocationResourceHandler(IRepositoryService<Place> repo) : base(repo)
         {
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
         }
 
@@ -107,7 +110,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns></returns>
 		protected override Place MapToModel(Location resource)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -130,7 +133,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Place resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -138,7 +141,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(Place resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
     }
 }
