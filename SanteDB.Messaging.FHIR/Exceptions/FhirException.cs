@@ -61,7 +61,8 @@ namespace SanteDB.Messaging.FHIR.Exceptions
         /// Creates a new FHIR exception with specified code
         /// </summary>
         /// <param name="statusCode">The HTTP status code</param>
-        public FhirException(HttpStatusCode statusCode, Resource responseResource, Exception innerException) : base("Error Executing FHIR Operation", innerException)
+        /// <param name="diagnostics">The diagnostic text</param>
+        public FhirException(HttpStatusCode statusCode, Resource responseResource, String diagnostics, Exception innerException) : base(diagnostics, innerException)
         {
             this.Status = statusCode;
             this.Resource = responseResource;
