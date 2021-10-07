@@ -21,6 +21,7 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -42,13 +43,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ConditionResourceHandler : RepositoryResourceHandlerBase<Condition, CodedObservation>
 	{
+		// Localization service
+		private ILocalizationService m_localizationService;
 
 		/// <summary>
 		/// Create new resource handler
 		/// </summary>
 		public ConditionResourceHandler(IRepositoryService<CodedObservation> repo) : base(repo)
 		{
-			
+			this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 		}
 
 		/// <summary>
@@ -134,7 +137,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>The constructed model instance</returns>
 		protected override CodedObservation MapToModel(Condition resource)
 		{
-			throw new NotImplementedException();
+			throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
 		}
 
 		/// <summary>
@@ -168,7 +171,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
         protected override IEnumerable<Resource> GetIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
 		/// <summary>
@@ -176,7 +179,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
     }
 }
