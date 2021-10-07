@@ -21,6 +21,7 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -43,13 +44,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private readonly Guid INITIAL_IMMUNIZATION = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
         private readonly Guid IMMUNIZATION = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
         private readonly Guid BOOSTER_IMMUNIZATION = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
+        private readonly ILocalizationService m_localizationService;
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ImmunizationResourceHandler));
+        
 
         /// <summary>
         /// Create a new resource handler
         /// </summary>
         public ImmunizationResourceHandler(IRepositoryService<SubstanceAdministration> repo) : base(repo)
         {
-
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>
@@ -172,8 +176,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Is the subject a uuid
                 if (resource.Patient.Reference.StartsWith("urn:uuid:"))
                     substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Patient.Reference.Substring(9))));
-                else throw new NotSupportedException("Only UUID references are supported");
-            }
+                else
+                {
+                    this.m_tracer.TraceError("Only UUID references are supported");
+                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedExeption.paramOnlySupported", new
+                    {
+                        param = "UUID"
+                    }));
+                }
+
+                }
 
             // Encounter
             if (resource.Encounter != null)
@@ -184,7 +196,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         SourceEntityKey = Guid.Parse(resource.Encounter.Reference.Substring(9))
                     });
-                else throw new NotSupportedException("Only UUID references are supported");
+                else
+                {
+                    this.m_tracer.TraceError("Only UUID references are supported");
+                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedExeption.paramOnlySupported", new
+                    {
+                        param ="UUID"
+                    } ));
+                }
             }
 
             // Find the material that was issued
@@ -277,7 +296,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -285,7 +304,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+
         }
     }
 }
