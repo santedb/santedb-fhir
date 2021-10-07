@@ -20,6 +20,8 @@
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
+using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -41,12 +43,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ObservationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Observation, Core.Model.Acts.Observation>
     {
+        private readonly ILocalizationService m_localService;
+
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ObservationResourceHandler));
 
         /// <summary>
 		/// Create new resource handler
 		/// </summary>
 		public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo) : base(repo)
         {
+            this.m_localService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
         }
 
@@ -131,7 +137,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Core.Model.Acts.Observation MapToModel(Hl7.Fhir.Model.Observation resource)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -155,8 +161,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public override Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
         {
             if (parameters == null)
-                throw new ArgumentNullException(nameof(parameters));
-
+            {
+                this.m_tracer.TraceError(nameof(parameters));
+                throw new ArgumentNullException(nameof(parameters), m_localService.GetString("error.type.ArgumentNullException"));
+            }
+                
             Core.Model.Query.NameValueCollection hdsiQuery = null;
             FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Hl7.Fhir.Model.Observation), typeof(Core.Model.Acts.Observation), parameters, out hdsiQuery);
 
@@ -220,7 +229,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -228,7 +237,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localService.GetString("error.type.NotImplementedException"));
         }
     }
 }
