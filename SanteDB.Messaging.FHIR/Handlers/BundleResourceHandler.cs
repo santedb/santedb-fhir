@@ -192,9 +192,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             if (!(modelInstance is Core.Model.Collection.Bundle sdbBundle))
             {
+                this.m_tracer.TraceError("Instance must be a bundle");
                 throw new ArgumentException(nameof(modelInstance), this.m_localizationService.FormatString("error.type.ArgumentException", new
                     {
-                        param = "Argument must be a bundle"
+                        param = "bundle"
                     }));
             }
 
@@ -227,9 +228,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Resource instance validation and convert
             if (!(resourceInstance is Hl7.Fhir.Model.Bundle fhirBundle))
             {
+                this.m_tracer.TraceError("Argument must be a bundle");
                 throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
                     {
-                        param = "Instance must be a bundle"
+                        param = "bundle"
                     }));
             }
 
