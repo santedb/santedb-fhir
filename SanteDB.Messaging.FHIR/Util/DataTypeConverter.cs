@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
@@ -65,14 +66,17 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         private static readonly Tracer traceSource = new Tracer(FhirConstants.TraceSourceName);
 
+        // Source device
         private static SecurityDevice m_sourceDevice;
+
+        // CX Devices
+        private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?");
 
         /// <summary>
         /// Convert the audit data to a security audit
         /// </summary>
         public static AuditEvent ToSecurityAudit(AuditData audit)
         {
-
             var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
             var retVal = new AuditEvent()
@@ -102,18 +106,21 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
 
-            // Outcome 
+            // Outcome
             switch (audit.Outcome)
             {
                 case OutcomeIndicator.EpicFail:
                     retVal.Outcome = AuditEvent.AuditEventOutcome.N12;
                     break;
+
                 case OutcomeIndicator.SeriousFail:
                     retVal.Outcome = AuditEvent.AuditEventOutcome.N8;
                     break;
+
                 case OutcomeIndicator.MinorFail:
                     retVal.Outcome = AuditEvent.AuditEventOutcome.N4;
                     break;
+
                 case OutcomeIndicator.Success:
                     retVal.Outcome = AuditEvent.AuditEventOutcome.N0;
                     break;
@@ -125,15 +132,19 @@ namespace SanteDB.Messaging.FHIR.Util
                 case ActionType.Create:
                     retVal.Action = AuditEvent.AuditEventAction.C;
                     break;
+
                 case ActionType.Delete:
                     retVal.Action = AuditEvent.AuditEventAction.D;
                     break;
+
                 case ActionType.Execute:
                     retVal.Action = AuditEvent.AuditEventAction.E;
                     break;
+
                 case ActionType.Read:
                     retVal.Action = AuditEvent.AuditEventAction.R;
                     break;
+
                 case ActionType.Update:
                     retVal.Action = AuditEvent.AuditEventAction.U;
                     break;
@@ -155,17 +166,19 @@ namespace SanteDB.Messaging.FHIR.Util
                     case NetworkAccessPointType.IPAddress:
                         ntype = AuditEvent.AuditEventAgentNetworkType.N2;
                         break;
+
                     case NetworkAccessPointType.MachineName:
                         ntype = AuditEvent.AuditEventAgentNetworkType.N1;
                         break;
+
                     case NetworkAccessPointType.TelephoneNumber:
                         ntype = AuditEvent.AuditEventAgentNetworkType.N3;
                         break;
+
                     default:
                         ntype = AuditEvent.AuditEventAgentNetworkType.N5;
                         break;
                 }
-
 
                 retVal.Agent.Add(new AuditEvent.AgentComponent()
                 {
@@ -198,7 +211,6 @@ namespace SanteDB.Messaging.FHIR.Util
                     sourceTypeEnum = AuditSourceType.Other;
                 }
 
-
                 retVal.Source = new AuditEvent.SourceComponent()
                 {
                     Observer = CreateNonVersionedReference<Device>(originalSource),
@@ -207,15 +219,16 @@ namespace SanteDB.Messaging.FHIR.Util
             }
             else
             {
-
                 if (m_sourceDevice == null)
                 {
-                    using (AuthenticationContext.EnterSystemContext()) {
+                    using (AuthenticationContext.EnterSystemContext())
+                    {
                         var configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<AuditAccountabilityConfigurationSection>();
-                        if (configuration.SourceInformation?.EnterpriseDeviceKey != null) {
+                        if (configuration.SourceInformation?.EnterpriseDeviceKey != null)
+                        {
                             m_sourceDevice = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityDevice>>()?.Get(configuration.SourceInformation.EnterpriseDeviceKey);
                         }
-                        if(m_sourceDevice == null)
+                        if (m_sourceDevice == null)
                         {
                             m_sourceDevice = ApplicationServiceContext.Current.GetService<ISecurityRepositoryService>()?.GetDevice(Environment.MachineName);
                             if (m_sourceDevice == null)
@@ -228,7 +241,6 @@ namespace SanteDB.Messaging.FHIR.Util
                                 };
                                 m_sourceDevice = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityDevice>>().Insert(m_sourceDevice);
                             }
-
                         }
                     }
                 }
@@ -271,46 +283,80 @@ namespace SanteDB.Messaging.FHIR.Util
                     });
                 }
 
-                var isUuid = Guid.TryParse(itm.ObjectId?.Replace("urn:uuid:",""), out Guid objectIdKey);
-                
-                if (itm.IDTypeCode.HasValue)
+                if (!String.IsNullOrEmpty(itm.ObjectId))
                 {
-                    switch (itm.IDTypeCode)
+                    var objectId = itm.ObjectId;
+                    var cxMatch = m_cxDevice.Match(objectId);
+                    if (cxMatch.Success)
                     {
-                        case AuditableObjectIdType.PatientNumber:
-                            add.What = CreateNonVersionedReference<Patient>(objectIdKey);
-                            break;
-                        case AuditableObjectIdType.UserIdentifier:
-                            add.What = CreateNonVersionedReference<Practitioner>(objectIdKey);
-                            break;
-                        case AuditableObjectIdType.EncounterNumber:
-                            add.What = CreateNonVersionedReference<Encounter>(objectIdKey);
-                            break;
-                        default:
-                            add.What = new ResourceReference()
-                            {
-                                Identifier = new Identifier(null, isUuid ? $"urn:uuid:{objectIdKey}" : itm.ObjectId)
+                        objectId = cxMatch.Groups[1].Value;
+                    }
+
+                    var isUuid = Guid.TryParse(objectId?.Replace("urn:uuid:", ""), out Guid objectIdKey);
+
+                    if (itm.IDTypeCode.HasValue)
+                    {
+                        switch (itm.IDTypeCode)
+                        {
+                            case AuditableObjectIdType.PatientNumber:
+
+                                if (isUuid)
                                 {
-                                    Type = new CodeableConcept()
+                                    add.What = CreateNonVersionedReference<Patient>(objectIdKey);
+                                }
+                                else
+                                {
+                                    goto default; // HACK: Fallthrough to default case
+                                }
+                                break;
+
+                            case AuditableObjectIdType.UserIdentifier:
+                                if (isUuid)
+                                {
+                                    add.What = CreateNonVersionedReference<Practitioner>(objectIdKey);
+                                }
+                                else
+                                {
+                                    goto default; // HACK: Fallthrough to default case
+                                }
+                                break;
+
+                            case AuditableObjectIdType.EncounterNumber:
+                                if (isUuid)
+                                {
+                                    add.What = CreateNonVersionedReference<Encounter>(objectIdKey);
+                                }
+                                else
+                                {
+                                    goto default; // HACK: Fallthrough to default case
+                                }
+                                break;
+
+                            default:
+                                add.What = new ResourceReference()
+                                {
+                                    Identifier = new Identifier(null, isUuid ? $"urn:uuid:{objectIdKey}" : itm.ObjectId)
                                     {
-                                        Text = itm.CustomIdTypeCode?.DisplayName,
-                                        Coding = itm.IDTypeCode == AuditableObjectIdType.Custom ? new List<Coding>()
+                                        Type = new CodeableConcept()
+                                        {
+                                            Text = itm.CustomIdTypeCode?.DisplayName,
+                                            Coding = itm.IDTypeCode == AuditableObjectIdType.Custom ? new List<Coding>()
                                         {
                                             new Coding(itm.CustomIdTypeCode.CodeSystem, itm.CustomIdTypeCode.Code)
                                         } : new List<Coding>()
                                         {
                                             new Coding("http://santedb.org/conceptset/audit-idtype-code", ((int)itm.IDTypeCode).ToString())
                                         }
-                                    },
-                                    Value = itm.ObjectId
-                                }
-                            };
-                            break;
-
+                                        },
+                                        System = cxMatch.Success && cxMatch.Groups.Count > 3 ? $"urn:oid:{cxMatch.Groups[3].Value}" : null,
+                                        Value = cxMatch.Success && cxMatch.Groups.Count > 3 ? cxMatch.Groups[1].Value : itm.ObjectId
+                                    }
+                                };
+                                break;
+                        }
                     }
                 }
                 retVal.Entity.Add(add);
-
             }
 
             return retVal;
@@ -357,7 +403,6 @@ namespace SanteDB.Messaging.FHIR.Util
             if (targetEntity == null)
                 throw new ArgumentNullException(nameof(targetEntity));
 
-
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
             var refer = new ResourceReference($"{fhirType}/{targetEntity.Key}");
@@ -374,7 +419,6 @@ namespace SanteDB.Messaging.FHIR.Util
 
             refer.Display = targetEntity.ToDisplay();
             return refer;
-
         }
 
         /// <summary>
@@ -407,11 +451,10 @@ namespace SanteDB.Messaging.FHIR.Util
             var refer = new ResourceReference($"#{targetEntity.Key}");
             refer.Display = targetEntity.ToDisplay();
             return refer;
-
         }
 
         /// <summary>
-        /// To quantity 
+        /// To quantity
         /// </summary>
         public static Quantity ToQuantity(decimal? quantity, Concept unitConcept)
         {
@@ -448,8 +491,6 @@ namespace SanteDB.Messaging.FHIR.Util
             }
             else
             {
-
-
                 // Construct an error result
                 var errorResult = new OperationOutcome()
                 {
@@ -458,7 +499,6 @@ namespace SanteDB.Messaging.FHIR.Util
 
                 while (error != null)
                 {
-                    
                     if (error is DetectedIssueException dte)
                     {
                         errorResult.Issue.AddRange(dte.Issues.Select(iss => new OperationOutcome.IssueComponent()
@@ -480,13 +520,10 @@ namespace SanteDB.Messaging.FHIR.Util
                                 Code = ClassifyExceptionCode(error)
                             }
                         );
-
                     }
                     error = error.InnerException;
-
                 }
                 return errorResult;
-
             }
         }
 
@@ -503,27 +540,27 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 return IssueType.BusinessRule;
             }
-            else if(typeKey == DetectedIssueKeys.CodificationIssue)
+            else if (typeKey == DetectedIssueKeys.CodificationIssue)
             {
                 return IssueType.CodeInvalid;
             }
-            else if(typeKey == DetectedIssueKeys.FormalConstraintIssue)
+            else if (typeKey == DetectedIssueKeys.FormalConstraintIssue)
             {
                 return IssueType.Required;
             }
-            else if(typeKey == DetectedIssueKeys.InvalidDataIssue)
+            else if (typeKey == DetectedIssueKeys.InvalidDataIssue)
             {
                 return IssueType.Required;
             }
-            else if(typeKey == DetectedIssueKeys.OtherIssue)
+            else if (typeKey == DetectedIssueKeys.OtherIssue)
             {
                 return IssueType.Unknown;
             }
-            else if(typeKey == DetectedIssueKeys.PrivacyIssue || typeKey == DetectedIssueKeys.SecurityIssue)
+            else if (typeKey == DetectedIssueKeys.PrivacyIssue || typeKey == DetectedIssueKeys.SecurityIssue)
             {
                 return IssueType.Security;
             }
-            else if(typeKey == DetectedIssueKeys.SafetyConcernIssue)
+            else if (typeKey == DetectedIssueKeys.SafetyConcernIssue)
             {
                 return IssueType.Unknown;
             }
@@ -540,12 +577,12 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var retVal = IssueType.Exception;
 
-            if(error is SecurityException || error is AuthenticationException ||
+            if (error is SecurityException || error is AuthenticationException ||
                 error is PolicyViolationException)
             {
                 return IssueType.Security;
             }
-            else if( error is ConstraintException )
+            else if (error is ConstraintException)
             {
                 return IssueType.BusinessRule;
             }
@@ -572,11 +609,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns a reference instance.</returns>
         public static ResourceReference CreateNonVersionedReference<TResource>(Guid? targetKey) where TResource : DomainResource, new()
         {
-
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
             var refer = new ResourceReference($"{fhirType}/{targetKey}");
             return refer;
-
         }
 
         /// <summary>
@@ -600,7 +635,7 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var retVal = new TResource();
 
-            // Add annotations 
+            // Add annotations
             retVal.Id = resource.Key.ToString();
 
             // metadata
@@ -611,7 +646,6 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (resource is ITaggable taggable)
             {
-
                 retVal.Meta.Tag = taggable.Tags.Where(o => !o.TagKey.StartsWith("$fhir")).Select(tag => new Coding("http://santedb.org/fhir/tags", $"{tag.TagKey}:{tag.Value}")).ToList();
                 foreach (var tag in taggable.Tags)
                 {
@@ -624,7 +658,6 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 retVal.Meta.Security = securable?.Policies?.Where(o => o.GrantType == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding("http://santedb.org/security/policy", o.Policy.Oid)).ToList();
                 retVal.Meta.Security.Add(new Coding("http://santedb.org/security/policy", PermissionPolicyIdentifiers.ReadClinicalData));
-
             }
 
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
@@ -708,7 +741,7 @@ namespace SanteDB.Messaging.FHIR.Util
             //    extension.ExtensionValueXml = (fhirExtension.Value as FhirBase64Binary).Value;
             else
                 throw new NotImplementedException($"Extension type is not understood");
-            // Now will 
+            // Now will
             return extension;
         }
 
@@ -752,7 +785,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 else
                     throw new NotImplementedException($"Extension type is not understood");
 
-                // Now will 
+                // Now will
                 return extension;
             }
             return null;
@@ -836,7 +869,6 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static AssigningAuthority ToAssigningAuthority(String fhirSystem)
         {
-
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping assigning authority");
 
             var oidRegistrar = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
@@ -873,7 +905,6 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static Extension ToExtension(IModelExtension ext)
         {
-
             var extensionTypeService = ApplicationServiceContext.Current.GetService<IExtensionTypeRepository>();
             var eType = extensionTypeService.Get(ext.ExtensionTypeKey);
 
@@ -937,7 +968,6 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static Concept ToConcept(String code, String system)
         {
-
             var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
             if (system == null)
@@ -1136,7 +1166,6 @@ namespace SanteDB.Messaging.FHIR.Util
                         throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.Authority.Url ?? identifier.Authority.Oid}");
                     }
                 }
-
             }
             else if (!String.IsNullOrEmpty(resourceRef.Reference))
             {
@@ -1155,7 +1184,6 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
 
                     retVal = (TEntity)mapper.MapToModel(contained);
-
                 }
                 else
                 {
@@ -1177,7 +1205,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     if (retVal == null)
                     {
                         // HACK: We don't care about the absoluteness of a URL
-                        // Attempt to resolve the reference 
+                        // Attempt to resolve the reference
                         var refRegex = new Regex("^(urn:uuid:.{36}|\\/?(\\w*?)/(.{36}))$");
                         var match = refRegex.Match(resourceRef.Reference);
                         if (!match.Success)
@@ -1187,7 +1215,6 @@ namespace SanteDB.Messaging.FHIR.Util
                             retVal = repo.Get(relUuid); // Allow any triggers to fire
                         else if (Guid.TryParse(match.Groups[1].Value, out Guid absRef))
                             retVal = repo.Get(absRef);
-
                     }
                 }
             }
@@ -1221,7 +1248,6 @@ namespace SanteDB.Messaging.FHIR.Util
                 RelationshipRoleKey = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault())?.Key,
             };
 
-
             retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());
             if (patientContact.Organization != null)
             {
@@ -1245,7 +1271,6 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             return retVal;
-
         }
 
         /// <summary>
@@ -1401,7 +1426,6 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = new HumanName
             {
                 Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.LoadProperty<Concept>(nameof(EntityName.NameUse)), "http://hl7.org/fhir/name-use")
-
             };
 
             // Process components
@@ -1468,7 +1492,6 @@ namespace SanteDB.Messaging.FHIR.Util
                 };
 
             return retVal;
-
         }
 
         /// <summary>
@@ -1487,6 +1510,5 @@ namespace SanteDB.Messaging.FHIR.Util
                 Value = telecomAddress.IETFValue
             };
         }
-
     }
 }
