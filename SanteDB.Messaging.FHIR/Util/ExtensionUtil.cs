@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
@@ -26,7 +27,9 @@ using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions;
+
 using SanteDB.Messaging.FHIR.Extensions;
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -41,7 +44,6 @@ namespace SanteDB.Messaging.FHIR.Util
     /// </summary>
     public static class ExtensionUtil
     {
-
         // Handlers
         private static ICollection<IFhirExtensionHandler> s_extensionHandlers;
 
@@ -64,7 +66,7 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
 
-            if(configuration.BehaviorModifiers?.Any() == true)
+            if (configuration.BehaviorModifiers?.Any() == true)
             {
                 s_behaviorModifiers = configuration.BehaviorModifiers.Select(t => svcManager.CreateInjected(t.Type))
                    .OfType<IFhirRestBehaviorModifier>()
@@ -83,7 +85,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 s_extensionHandlers = svcManager.CreateInjectedOfAll<IFhirExtensionHandler>()
                     .Where(o => configuration.Extensions.Contains(o.Uri.ToString()))
                     .ToList();
-            else 
+            else
                 s_extensionHandlers = svcManager
                     .CreateInjectedOfAll<IFhirExtensionHandler>()
                     .ToList();
@@ -96,7 +98,7 @@ namespace SanteDB.Messaging.FHIR.Util
             else if (configuration.Operations?.Any() == true)
                 s_operationHandlers = svcManager
                     .CreateInjectedOfAll<IFhirOperationHandler>()
-                    .Where(o=>configuration.Operations.Contains(o.Uri.ToString()) || configuration.Operations.Contains(o.Name))
+                    .Where(o => configuration.Operations.Contains(o.Uri.ToString()) || configuration.Operations.Contains(o.Name))
                     .ToList();
             else
                 s_operationHandlers = svcManager
@@ -104,13 +106,13 @@ namespace SanteDB.Messaging.FHIR.Util
                     .ToList();
 
             if (configuration.ProfileHandlers?.Any() == true)
-                s_profileHandlers = configuration.ProfileHandlers.Select(t=>svcManager.CreateInjected(t.Type))
+                s_profileHandlers = configuration.ProfileHandlers.Select(t => svcManager.CreateInjected(t.Type))
                     .OfType<IFhirProfileValidationHandler>()
                     .ToList();
             else if (configuration.Profiles?.Any() == true)
                 s_profileHandlers = svcManager
                     .CreateInjectedOfAll<IFhirProfileValidationHandler>()
-                    .Where(o=>configuration.Profiles.Contains(o.ProfileUri.ToString()))
+                    .Where(o => configuration.Profiles.Contains(o.ProfileUri.ToString()))
                     .ToList();
             else
                 s_profileHandlers = svcManager
@@ -143,7 +145,7 @@ namespace SanteDB.Messaging.FHIR.Util
         internal static void InitializeHandlers(IEnumerable<TypeReferenceConfiguration> extensions)
         {
             var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-            foreach (var ext in extensions.Where(o=>o.Type != null))
+            foreach (var ext in extensions.Where(o => o.Type != null))
             {
                 if (typeof(IFhirExtensionHandler).IsAssignableFrom(ext.Type))
                 {
@@ -163,7 +165,6 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
         }
-
 
         /// <summary>
         /// Operation Handlers
@@ -193,7 +194,7 @@ namespace SanteDB.Messaging.FHIR.Util
         public static IEnumerable<Extension> CreateExtensions(this IIdentifiedEntity me, ResourceType applyTo, out IEnumerable<IFhirExtensionHandler> appliedExtensions)
         {
             appliedExtensions = s_extensionHandlers.Where(o => o.AppliesTo == null || o.AppliesTo == applyTo);
-            return appliedExtensions.Select(o => o.Construct(me));
+            return appliedExtensions.SelectMany(o => o.Construct(me));
         }
 
         /// <summary>
@@ -201,7 +202,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static bool TryApplyExtension(this Extension me, IdentifiedData applyTo)
         {
-            return s_extensionHandlers.Where(o => o.Uri.ToString() == me.Url).Select(r => r.Parse(me, applyTo)).Any(o=>o);
+            return s_extensionHandlers.Where(o => o.Uri.ToString() == me.Url).Select(r => r.Parse(me, applyTo)).Any(o => o);
         }
 
         /// <summary>
