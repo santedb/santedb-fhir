@@ -20,6 +20,8 @@
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
+using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -35,18 +37,24 @@ using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
+
     /// <summary>
     /// Encounter resource handler for loading and disclosing of patient encounters
     /// </summary>
     public class EncounterResourceHandler : RepositoryResourceHandlerBase<Encounter, PatientEncounter>
     {
+        // Tracer
+        private Tracer m_tracer = Tracer.GetTracer(typeof(EncounterResourceHandler));
+
+        // Localization service
+        private ILocalizationService m_localizationService;
 
         /// <summary>
 		/// Create new resource handler
 		/// </summary>
 		public EncounterResourceHandler(IRepositoryService<PatientEncounter> repo) : base(repo)
         {
-
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>
@@ -54,7 +62,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(PatientEncounter resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
 
@@ -78,7 +86,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(PatientEncounter resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -194,7 +202,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Is the subject a uuid
                 if (resource.Subject.Reference.StartsWith("urn:uuid:"))
                     retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
-                else throw new NotSupportedException("Only UUID references are supported");
+                else 
+                {
+                    this.m_tracer.TraceError("Only UUID references are supported");
+                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
+                    { 
+                        param = "UUID"
+                    }));
+                }
+                
             }
 
             // Attempt to resolve organiztaion
@@ -203,7 +219,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Is the subject a uuid
                 if (resource.ServiceProvider.Reference.StartsWith("urn:uuid:"))
                     retVal.Participations.Add(new ActParticipation(ActParticipationKey.Custodian, Guid.Parse(resource.ServiceProvider.Reference.Substring(9))));
-                else throw new NotSupportedException("Only UUID references are supported");
+                else
+                {
+                    this.m_tracer.TraceError("Only UUID references are supported");
+                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
+                    { 
+                        param = "UUID"
+                    }));
+                }
             }
 
             // TODO : Other Participations

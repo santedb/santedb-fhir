@@ -21,6 +21,7 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -49,6 +50,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         // ER repository
         private IRepositoryService<EntityRelationship> m_erRepository;
         private List<Guid> m_relatedPersons;
+        private readonly ILocalizationService m_localizationService;
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(PatientResourceHandler));
 
         /// <summary>
         /// Resource handler subscription
@@ -59,6 +62,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var relTypes = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"));
             this.m_relatedPersons = relTypes.Select(c => c.Key.Value).ToList();
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
         }
 
@@ -391,7 +395,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     var referenceKey = DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(r, resource) as Entity ??
                         DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(r, resource);
                     if (referenceKey == null)
-                        throw new KeyNotFoundException("Can't locate a registered general practitioner");
+                    {
+                        this.m_tracer.TraceError("Can't locate a registered general practitioner");
+                        throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.cannotLocateRegistered", new
+                        {
+                            param = "general practitioner"
+                        }));
+
+                    }
                     return new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey);
                 }));
             }
@@ -399,7 +410,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 var referenceKey = DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.ManagingOrganization, resource);
                 if (referenceKey == null)
-                    throw new KeyNotFoundException("Can't locate a registered managing organization");
+                {
+                    this.m_tracer.TraceError("Can't locate a registered managing organization");
+                    throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.cannotLocateRegistered", new
+                    {
+                        param = "managing organization"
+                    }));
+                }
                 else
                 {
                     patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Scoper, referenceKey));
@@ -430,7 +447,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             // Find the victim
                             var replacee = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(lnk.Other, resource);
                             if (replacee == null)
-                                throw new KeyNotFoundException($"Cannot locate patient referenced by {lnk.Type} relationship");
+                            {
+                                this.m_tracer.TraceError($"Cannot locate patient referenced by {lnk.Type} relationship");
+                                throw new KeyNotFoundException(m_localizationService.FormatString("error.messaging.fhir.patientResource.cannotLocatePatient", new
+                                {
+                                    param = lnk.Type
+                                }));
+                            }
                             replacee.StatusConceptKey = StatusKeys.Obsolete;
                             patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, replacee));
                             break;
@@ -440,7 +463,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             // Find the new
                             var replacer = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(lnk.Other, resource) as Core.Model.Roles.Patient;
                             if (replacer == null)
-                                throw new KeyNotFoundException($"Cannot locate patient referenced by {lnk.Type} relationship");
+                            {
+                                this.m_tracer.TraceError($"Cannot locate patient referenced by {lnk.Type} relationship");
+                                throw new KeyNotFoundException(m_localizationService.FormatString("error.messaging.fhir.patientResource.cannotLocatePatient", new
+                                {
+                                    param = lnk.Type
+                                }));
+
+                            }
                             patient.StatusConceptKey = StatusKeys.Obsolete;
                             patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, patient)
                             {
@@ -478,7 +508,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             if (referee.GetTag("$mdm.type") == "M") // HACK: MDM User is attempting to point this at another Master (note: THE MDM LAYER WON'T LIKE THIS)
                                 patient.Relationships.Add(new EntityRelationship(MDM_MASTER_LINK, referee));
                             else
-                                throw new NotSupportedException($"Setting refer relationships to source of truth is not supported");
+                            {
+                                this.m_tracer.TraceError($"Setting refer relationships to source of truth is not supported");
+                                throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
+                            }
 
                             break; // TODO: These are special cases of references
                         }
@@ -533,7 +566,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Roles.Provider)
                                         .Select(o => rpHandler.MapToFhir(o.TargetEntity));
                                 default:
-                                    throw new InvalidOperationException($"Cannot determine how to include {includeInstruction}");
+                                    this.m_tracer.TraceError($"Cannot determine how to include {includeInstruction}");
+                                    throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidOperation.cannotDetermine", new
+                                    {
+                                        param = includeInstruction
+                                    }));
                             }
                         }
                     case ResourceType.Organization:
@@ -556,11 +593,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
                                         .Select(o => rpHandler.MapToFhir(o.TargetEntity));
                                 default:
-                                    throw new InvalidOperationException($"Cannot determine how to include {includeInstruction}");
+                                    this.m_tracer.TraceError($"Cannot determine how to include {includeInstruction}");
+                                    throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidOperation.cannotDetermine", new
+                                    {
+                                        param = includeInstruction
+                                    }));
                             }
                         }
                     default:
-                        throw new InvalidOperationException($"{includeInstruction.Type} is not supported reverse include");
+                        this.m_tracer.TraceError($"{includeInstruction.Type} is not supported reverse include");
+                        throw new InvalidOperationException(this.m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
                 }
             });
         }
@@ -583,7 +625,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                 this.m_relatedPersons.Contains(o.RelationshipTypeKey.Value))
                             .Select(o => rpHandler.MapToFhir(o));
                     default:
-                        throw new InvalidOperationException($"{includeInstruction.Type} is not supported reverse include");
+                        this.m_tracer.TraceError($"{includeInstruction.Type} is not supported reverse include");
+                        throw new InvalidOperationException(this.m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
                 }
             });
         }

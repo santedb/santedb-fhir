@@ -158,7 +158,6 @@
         <PackageReference Include="SanteDB.Core.Model" Version="$(VersionNumber)" />
         <PackageReference Include="SanteDB.Rest.Common" Version="$(VersionNumber)" />
         <PackageReference Include="SanteDB.Docker.Core" Version="$(VersionNumber)" />
-        <PackageReference Include="SanteDB.Persistence.MDM" Version="$(VersionNumber)" />
       </ItemGroup>
     </Otherwise>
   </Choose>

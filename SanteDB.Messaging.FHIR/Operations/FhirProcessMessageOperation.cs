@@ -170,7 +170,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         Resource = outcome
                     });
 
-                    throw new FhirException((System.Net.HttpStatusCode)FhirErrorEndpointBehavior.ClassifyErrorCode(e), retVal, e);
+                    throw new FhirException((System.Net.HttpStatusCode)FhirErrorEndpointBehavior.ClassifyErrorCode(e), retVal, localizationService.GetString("error.type.FhirException"), e);
 
                 }
                 finally

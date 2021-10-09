@@ -25,6 +25,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Hl7.Fhir.Model;
 using RestSrvr;
+using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -35,17 +37,22 @@ using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
+    
     /// <summary>
     /// Organization resource provider
     /// </summary>
     public class OrganizationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Organization, SanteDB.Core.Model.Entities.Organization>
     {
+        private readonly ILocalizationService m_localizationService;
+
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(OrganizationResourceHandler));
 
         /// <summary>
         /// Create a new resource handler
         /// </summary>
         public OrganizationResourceHandler(IRepositoryService<SanteDB.Core.Model.Entities.Organization> repo) : base(repo)
         {
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
         }
 
@@ -55,7 +62,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Entities.Organization resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -75,7 +82,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Entities.Organization resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -148,7 +155,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var reference = DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.PartOf, resource);
                 if(reference == null)
                 {
-                    throw new KeyNotFoundException($"Could not resolve {resource.PartOf.Reference}");
+                    this.m_tracer.TraceError($"Could not resolve {resource.PartOf.Reference}");
+                    throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.couldNotResolve", new { 
+                        param = resource.PartOf.Reference
+                    }));
+                   
                 }
                 retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference as Entity));
             } 
