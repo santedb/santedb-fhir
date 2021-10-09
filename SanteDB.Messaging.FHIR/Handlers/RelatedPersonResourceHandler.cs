@@ -19,6 +19,8 @@
  * Date: 2021-8-5
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -47,6 +49,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private IRepositoryService<Core.Model.Roles.Patient> m_patientRepository;
 
         private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
+
+        private readonly ILocalizationService m_localizationService;
+
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(RelatedPersonResourceHandler));
         /// <summary>
         /// Create related person resource handler
         /// </summary>
@@ -55,6 +61,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(c => c.Key.Value).ToList();
             this.m_patientRepository = patientRepository;
             this.m_personRepository = personRepo;
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>
@@ -68,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Entities.EntityRelationship resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -90,7 +97,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Entities.EntityRelationship resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -109,7 +116,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (!(relModel is Core.Model.Entities.Person person))
             {
-                throw new InvalidOperationException("Cannot create unless source and target are Person");
+                m_tracer.TraceError("Cannot create unless source and target are Person");
+                throw new InvalidOperationException(m_localizationService.FormatString("error.type.InvalidOperation.cannotCreate", new
+                {
+                    param = "Person"
+
+                }));
             }
 
             // Create the relative object
@@ -178,10 +190,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // patient to which this person is related
             if (resource.Patient == null)
-                throw new ArgumentException("RelatedPerson requires Patient relationship");
+            {
+                this.m_tracer.TraceError("RelatedPerson requires Patient relationship");
+                throw new ArgumentException(this.m_localizationService.GetString("error.messaging.fhir.relatedPerson.patientRelationship"));
+            }
+              
             else if (relationshipTypes.Count(o => o != null) != 1)
-                throw new ArgumentException("RelatedPerson nust have EXACTLY ONE relationship type");
+            {
+                this.m_tracer.TraceError("RelatedPerson nust have EXACTLY ONE relationship type");
+                throw new ArgumentException(this.m_localizationService.GetString("error.messaging.fhir.relatedPerson.oneRelationshipType"));
 
+            }
+ 
             EntityRelationship relationship = null;
             // Attempt to find the existing ER 
             if (Guid.TryParse(resource.Id, out Guid key))
@@ -221,7 +241,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             Entity sourceEntity = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Patient, resource);
             if (sourceEntity == null)
             {
-                throw new KeyNotFoundException($"Could not resolve {resource.Patient.Reference}");
+                this.m_tracer.TraceError($"Could not resolve {resource.Patient.Reference}");
+                throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.couldNotResolve", new
+                {
+                    param = resource.Patient.Reference
+                }));
+
             }
 
             // Relationship not found
@@ -242,7 +267,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // HACK: Is there a relationship that exists between the existing source entity and the purported source entity (like an MDM or replaces?)
                 if (!this.m_repository.Find(o => o.TargetEntityKey == sourceEntity.Key && o.SourceEntityKey == relationship.SourceEntityKey).Any())
                 {
-                    throw new InvalidOperationException($"Cannot change the source of relationship from {relationship.SourceEntityKey} to {sourceEntity.Key}");
+                    this.m_tracer.TraceError($"Cannot change the source of relationship from {relationship.SourceEntityKey} to {sourceEntity.Key}");
+
+                    throw new InvalidOperationException(m_localizationService.FormatString("error.type.InvalidOperation.cannotChange", new
+                    {
+                        param =  relationship.SourceEntityKey,
+                        param2 = sourceEntity.Key
+                    }));
+                    
                 }
             }
 

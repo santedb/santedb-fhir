@@ -78,7 +78,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 				var parsed = queryInstruction.Split(':');
 				if(parsed.Length != 2)
                 {
-					throw new ArgumentOutOfRangeException($"{queryInstruction} is not a valid include instruction");
+                    var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+					var tracer = Tracer.GetTracer(typeof(ResourceHandlerBase<TFhirResource, TModel>));
+
+					tracer.TraceError($"{queryInstruction} is not a valid include instruction");
+                    throw new ArgumentOutOfRangeException(localizationService.get("error.type.InvalidDataException.userMessage", new
+                    {
+						param = "include instruction"
+                    }));
                 }
 
 				this.Type = EnumUtility.ParseLiteral<ResourceType>(parsed[0]).Value;
@@ -106,15 +113,29 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
 		protected Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
-		/// <summary>
+
+        /// <summary>
+        /// The localization service.
+        /// </summary>
+        private readonly ILocalizationService m_localizationService;
+
+
+        /// <summary>
 		/// Creates the resource handler
 		/// </summary>
         public ResourceHandlerBase()
         {
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>(); 
 			// Get the string name of the resource
 			var typeAttribute = typeof(TFhirResource).GetCustomAttribute<FhirTypeAttribute>();
-			if (typeAttribute == null || !typeAttribute.IsResource || !Enum.TryParse<ResourceType>(typeAttribute.Name, out ResourceType resourceType))
-				throw new InvalidOperationException($"Type of {typeof(TFhirResource)} is not a resource");
+            if (typeAttribute == null || !typeAttribute.IsResource || !Enum.TryParse<ResourceType>(typeAttribute.Name, out ResourceType resourceType))
+            {
+                this.m_traceSource.TraceError($"Type of {typeof(TFhirResource)} is not a resource");
+                throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                    {
+                        param = "resource"
+                    }));
+            }
 			this.ResourceType = resourceType;
         }
 
@@ -148,17 +169,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
 			this.m_traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceType, target);
 
-			if (target == null)
-				throw new ArgumentNullException(nameof(target));
+            if (target == null)
+            {
+				this.m_traceSource.TraceError($"Argument {nameof(target)} null or empty");
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+
+            }
 			else if (!(target is TFhirResource))
-				throw new InvalidDataException();
+				throw new InvalidDataException(this.m_localizationService.GetString("error.type.InvalidDataException"));
 
 			target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Create, this.ResourceType, target);
 			
 			// We want to map from TFhirResource to TModel
 			var modelInstance = this.MapToModel(target as TFhirResource);
 			if (modelInstance == null)
-				throw new ArgumentException("Model invalid");
+				throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                {
+					param = "Model"
+                }));
 
 			var result = this.Create(modelInstance, mode);
 
@@ -178,14 +206,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Resource Delete(string id, TransactionMode mode)
         {
             if (String.IsNullOrEmpty(id))
-                throw new ArgumentNullException(nameof(id));
+            {
+				this.m_traceSource.TraceError($"Argument {nameof(id)} is null or empty");
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+            }
+                
 
             this.m_traceSource.TraceInfo("Deleting resource {0}/{1}", this.ResourceType, id);
 
             // Delete
             var guidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException("Invalid id");
+                throw new ArgumentException(m_localizationService.FormatString("error.type.ArgumentException", new
+                {
+					param = "id"
+                }));
 
             // Do the deletion
             var result = this.Delete(guidId);
@@ -238,8 +273,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <exception cref="System.ArgumentNullException">parameters</exception>
         public virtual Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
 		{
-			if (parameters == null)
-				throw new ArgumentNullException(nameof(parameters));
+            if (parameters == null)
+            {
+				this.m_traceSource.TraceError($"Argument {nameof(parameters)} null or empty");
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+            }
 
 			Core.Model.Query.NameValueCollection hdsiQuery = null;
 			FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(TFhirResource), typeof(TModel), parameters, out hdsiQuery);
@@ -310,18 +348,31 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.Collections.Generic.KeyNotFoundException"></exception>
 		public Resource Read(string id, string versionId)
 		{
-			if (String.IsNullOrEmpty(id))
-				throw new ArgumentNullException(nameof(id));
+            if (String.IsNullOrEmpty(id))
+            {
+                this.m_traceSource.TraceError($"Argument {nameof(id)} null or empty");
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+            }
 
 			Guid guidId = Guid.Empty, versionGuidId = Guid.Empty;
 			if (!Guid.TryParse(id, out guidId))
-				throw new ArgumentException("Invalid id");
+                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+                {
+                    param = "id"
+                }));
 			if (!String.IsNullOrEmpty(versionId) && !Guid.TryParse(versionId, out versionGuidId))
-				throw new ArgumentException("Invalid versionId");
+                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+                {
+                    param = "versionId"
+                }));
 
 			var result = this.Read(guidId, versionGuidId);
-			if (result == null)
-				throw new KeyNotFoundException($"{this.ResourceType}/{id} not found");
+            if (result == null)
+            {
+                this.m_traceSource.TraceError($"{this.ResourceType}/{id} not found");
+                throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
+            }
+				
 
             // FHIR Operation result
             var retVal = this.MapToFhir(result);
@@ -345,10 +396,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		{
 			this.m_traceSource.TraceInfo("Updating resource {0}/{1} ({2})", this.ResourceType, id, target);
 
-			if (target == null)
-				throw new ArgumentNullException(nameof(target));
+            if (target == null)
+            {
+				this.m_traceSource.TraceError($"Argument {nameof(target)} is null or empty");
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+            }
+				
 			else if (!(target is TFhirResource))
-				throw new InvalidDataException();
+				throw new InvalidDataException(this.m_localizationService.GetString("error.type.InvalidDataException"));
 
 			target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Update, this.ResourceType, target);
 
@@ -356,16 +411,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
             target.Id = id;
 			var modelInstance = this.MapToModel(target as TFhirResource);
 			if (modelInstance == null)
-				throw new ArgumentException("Invalid Request");
+                throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                {
+                    param = "Request"
+                }));
 
 			// Guid identifier
 			var guidId = Guid.Empty;
 			if (!Guid.TryParse(id, out guidId))
-				throw new ArgumentException("Invalid identifier");
+                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+                {
+                    param = "id"
+                }));
 
 			// Model instance key does not equal path
 			if (modelInstance.Key != Guid.Empty && modelInstance.Key != guidId)
-				throw new InvalidCastException("Target's key does not equal key on path");
+				throw new InvalidCastException(this.m_localizationService.GetString("error.messaging.fhir.resourceBase.key"));
 			else if (modelInstance.Key == Guid.Empty)
 				modelInstance.Key = guidId;
 
@@ -451,15 +512,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Bundle History(string id)
         {
             if (String.IsNullOrEmpty(id))
-                throw new ArgumentNullException(nameof(id));
+            {
+                this.m_traceSource.TraceError($"Argument {nameof(id)} null or empty");
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+            }
+
 
             Guid guidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException("Invalid id");
+                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new 
+                {
+					param = "id"
+                }));
 
             var result = this.Read(guidId, Guid.Empty);
             if (result == null)
-                throw new KeyNotFoundException();
+                throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
 
             // Results
             List<TModel> results = new List<TModel>() { result };

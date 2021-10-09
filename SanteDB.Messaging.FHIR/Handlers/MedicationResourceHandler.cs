@@ -20,6 +20,7 @@
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
+using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -38,12 +39,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class MedicationResourceHandler : RepositoryResourceHandlerBase<Medication, ManufacturedMaterial>
 	{
+		private readonly ILocalizationService m_localizationService;
 
 		/// <summary>
 		/// Create new resource handler
 		/// </summary>
 		public MedicationResourceHandler(IRepositoryService<ManufacturedMaterial> repo) : base(repo)
 		{
+			this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
 		}
 
@@ -95,7 +98,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>The converted <see cref="ManufacturedMaterial"/></returns>
 		protected override ManufacturedMaterial MapToModel(Medication resource )
 		{
-			throw new NotImplementedException();
+			throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
 		}
 
         /// <summary>
@@ -118,15 +121,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
         protected override IEnumerable<Resource> GetIncludes(ManufacturedMaterial resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
-        }
+			throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+		}
 
 		/// <summary>
 		/// Get reverse included resources
 		/// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(ManufacturedMaterial resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
-        }
+			throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+		}
     }
 }

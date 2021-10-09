@@ -19,6 +19,8 @@
  * Date: 2021-8-5
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -32,7 +34,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// Represents the default StructureDefinition handler
     /// </summary>
     public class StructureDefinitionHandler : IFhirResourceHandler
-    {
+    {       
+        // Localization service
+        private ILocalizationService m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+
         /// <summary>
         /// Gets the resource name
         /// </summary>
@@ -43,7 +48,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Create(Resource target, Core.Services.TransactionMode mode)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
         }
 
         /// <summary>
@@ -51,7 +56,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Delete(string id, Core.Services.TransactionMode mode)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
         }
 
         /// <summary>
@@ -99,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Bundle History(string id)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
         }
 
         /// <summary>
@@ -107,7 +112,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Bundle Query(NameValueCollection parameters)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
         }
 
         /// <summary>
@@ -115,7 +120,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Read(string id, string versionId)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
         }
 
         /// <summary>
@@ -123,7 +128,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Update(string id, Resource target, Core.Services.TransactionMode mode)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
         }
     }
 }

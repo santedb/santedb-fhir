@@ -40,12 +40,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     public class SubstanceResourceHandler : RepositoryResourceHandlerBase<Substance, Material>
 	{
 
+		//Localization Service
+        private readonly ILocalizationService m_localizationService;
+
 		/// <summary>
 		/// Create new resource handler
 		/// </summary>
         public SubstanceResourceHandler(IRepositoryService<Material> repo) : base(repo)
         {
-
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
 		/// <summary>
@@ -113,8 +116,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>The mapped material</returns>
 		protected override Material MapToModel(Substance resource)
 		{
-			throw new NotImplementedException();
-		}
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));
+        }
 
         /// <summary>
         /// Get interactions
@@ -133,12 +136,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         protected override IEnumerable<Resource> GetIncludes(Material resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));
         }
 
         protected override IEnumerable<Resource> GetReverseIncludes(Material resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));
         }
     }
 }
