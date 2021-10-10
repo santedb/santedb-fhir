@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using SanteDB.Core;
@@ -40,7 +41,7 @@ using System.Threading.Tasks;
 namespace SanteDB.Messaging.FHIR.PubSub
 {
     /// <summary>
-    /// Represents a pub/sub dispatcher that creates dispatchers which has 
+    /// Represents a pub/sub dispatcher that creates dispatchers which has
     /// the ability to send messagess
     /// </summary>
     public class FhirPubSubMessageDispatcherFactory : IPubSubDispatcherFactory
@@ -55,7 +56,6 @@ namespace SanteDB.Messaging.FHIR.PubSub
         /// </summary>
         private class Dispatcher : IPubSubDispatcher
         {
-
             /// <summary>
             /// Tracer
             /// </summary>
@@ -84,7 +84,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 this.m_configuration = configManager.GetSection<FhirDispatcherConfigurationSection>()?.Targets.Find(o => o.Endpoint == endpoint.ToString());
 
                 settings.TryGetValue("Content-Type", out string contentType);
-              
+
                 // The client for this object
                 this.m_client = new FhirClient(this.Endpoint, new FhirClientSettings()
                 {
@@ -178,7 +178,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                                 {
                                     Endpoint = this.m_fhirConfiguration.ResourceBaseUri,
                                     Name = Environment.MachineName,
-                                    Software = $"SanteDB v.{Assembly.GetExecutingAssembly().GetName().Version}"
+                                    Software = $"SanteDB v.{Assembly.GetEntryAssembly().GetName().Version}"
                                 },
                                 Destination = new List<MessageHeader.MessageDestinationComponent>()
                                 {
@@ -256,11 +256,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     {
                         var fhirModel = this.ConvertToResource(o);
 
-                        // HACK: FHIR is not very well suited to developing generic handlers for resources 
-                        // in this way. Each resource is its own structure with its own different way of 
+                        // HACK: FHIR is not very well suited to developing generic handlers for resources
+                        // in this way. Each resource is its own structure with its own different way of
                         // expressing replacement, its own way of linking between data - it makes the code
                         // look horrible but whatever.
-                        if (fhirModel is Patient patient )
+                        if (fhirModel is Patient patient)
                         {
                             patient.Link.Clear();
                             patient.Link.Add(new Patient.LinkComponent()
