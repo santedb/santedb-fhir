@@ -20,6 +20,7 @@
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
+using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -39,12 +40,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ImmunizationRecommendationResourceHandler : ResourceHandlerBase<ImmunizationRecommendation, SubstanceAdministration>
 	{
+		private readonly ILocalizationService m_localizationService;
 		
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ImmunizationRecommendationResourceHandler"/> class.
 		/// </summary>
 		public ImmunizationRecommendationResourceHandler()
 		{
+			this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 		}
 
 		/// <summary>
@@ -57,7 +60,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.NotImplementedException"></exception>
 		protected override SubstanceAdministration Create(SubstanceAdministration modelInstance, TransactionMode mode)
 		{
-			throw new NotSupportedException();
+			throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
 		}
 
 		/// <summary>
@@ -69,7 +72,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.NotImplementedException"></exception>
 		protected override SubstanceAdministration Delete(Guid modelId)
 		{
-			throw new NotSupportedException();
+			throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
 		}
 
 		/// <summary>
@@ -132,7 +135,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.NotImplementedException"></exception>
 		protected override SubstanceAdministration MapToModel(ImmunizationRecommendation resource)
 		{
-			throw new NotImplementedException();
+			throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
 		}
 
 		/// <summary>
@@ -163,7 +166,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.NotImplementedException"></exception>
 		protected override SubstanceAdministration Read(Guid id, Guid versionId)
 		{
-			throw new NotImplementedException();
+			throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
 		}
 
 		/// <summary>
@@ -176,7 +179,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <exception cref="System.NotImplementedException"></exception>
 		protected override SubstanceAdministration Update(SubstanceAdministration model, TransactionMode mode)
 		{
-			throw new NotSupportedException();
+			throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
 		}
 
         /// <summary>
@@ -196,15 +199,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// </summary>
         protected override IEnumerable<Resource> GetIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
-        }
+			throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+		}
 
 		/// <summary>
 		/// Get reverse includes
 		/// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
-        }
+			throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+		}
     }
 }

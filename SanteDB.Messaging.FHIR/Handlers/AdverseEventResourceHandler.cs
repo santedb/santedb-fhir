@@ -31,6 +31,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
+using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -42,12 +43,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     public class AdverseEventResourceHandler : RepositoryResourceHandlerBase<AdverseEvent, Act>
     {
 
+        //Localization service
+        private readonly ILocalizationService m_localizationService;
+
         /// <summary>
         /// Adverse event repo
         /// </summary>
         public AdverseEventResourceHandler(IRepositoryService<Act> repo) : base(repo)
         {
-
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>
@@ -71,7 +75,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Main topic of the concern
             var subject = model.LoadCollection<ActRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasSubject)?.LoadProperty<Act>("TargetAct");
-            if (subject == null) throw new InvalidOperationException("This act does not appear to be an adverse event");
+            if (subject == null)
+            {
+                throw new InvalidOperationException(this.m_localizationService.GetString("error.messaging.fhir.adverseEvent.act"));
+            }
+
             retVal.DateElement = new FhirDateTime(subject.ActTime.DateTime);
 
             // Reactions = HasManifestation
@@ -128,7 +136,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Act MapToModel(AdverseEvent resource)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -161,12 +169,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException();
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
     }
 }

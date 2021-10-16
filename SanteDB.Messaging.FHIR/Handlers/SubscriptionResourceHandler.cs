@@ -33,6 +33,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
+using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -52,6 +53,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         // Trace source
         private Tracer m_tracer = Tracer.GetTracer(typeof(SubscriptionResourceHandler));
 
+        //Localization service
+        private readonly ILocalizationService m_localizationService;
+
         /// <summary>
         /// Create a new subscription resource handler
         /// </summary>
@@ -59,6 +63,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             this.m_pubSubManager = manager;
             this.m_configurationManager = configManager;
+            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>
@@ -75,15 +80,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Check type
             if (!(target is Subscription subscription))
             {
-                throw new ArgumentOutOfRangeException("Subscription registration requires a subscription body");
+                this.m_tracer.TraceError("Subscription registration requires a subscription body");
+                throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                {
+                    param = "subscription body"
+                }));
             }
             else if (String.IsNullOrEmpty(target.Id))
             {
-                throw new ArgumentNullException($"Subscription requires an ID");
+                this.m_tracer.TraceError("Subscription requires an ID");
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException.userMessage"));
             }
             else if (this.m_pubSubManager.GetSubscriptionByName(target.Id) != null)
             {
-                throw new InvalidOperationException($"Subscription {target.Id} already registered");
+                this.m_tracer.TraceError($"Subscription {target.Id} already registered");
+                throw new InvalidOperationException(this.m_localizationService.GetString("error.type.InvalidOperation"));
             }
 
             this.m_tracer.TraceInfo("Will create a new subscription {0}...", target.Id);
@@ -93,7 +104,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var cdrType = FhirResourceHandlerUtil.GetResourceHandler(enumType.Value) as IFhirResourceMapper;
             if (cdrType == null)
             {
-                throw new NotSupportedException($"Resource type {enumType.Value} is not supported by this service");
+                this.m_tracer.TraceError($"Resource type {enumType.Value} is not supported by this service");
+                throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
             }
 
             var hdsiQuery = new NameValueCollection();
@@ -120,7 +132,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var key = this.m_pubSubManager.GetSubscriptionByName(id)?.Key;
             if (key == null)
-                throw new KeyNotFoundException($"Subscription {id} not found");
+            {
+                this.m_tracer.TraceError($"Subscription {id} not found");
+                throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
+            }
+                
 
             PubSubSubscriptionDefinition retVal = null;
             if (mode == TransactionMode.Commit)
@@ -170,7 +186,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Bundle History(string id)
         {
-            throw new NotSupportedException("Versioning is not supported on this object");
+            this.m_tracer.TraceError("Versioning is not supported on this object");
+            throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
         }
 
         /// <summary>
@@ -179,7 +196,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
         {
             if (parameters == null)
-                throw new ArgumentNullException(nameof(parameters));
+                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
 
             Core.Model.Query.NameValueCollection hdsiQuery = null;
             FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Subscription), typeof(PubSubSubscriptionDefinition), parameters, out hdsiQuery);
@@ -228,12 +245,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
             
             if (!(target is Subscription subscription))
             {
-                throw new ArgumentException("Payload must be a subscription resource");
+                throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                {
+                    param = "subscription resource"
+                }));
             }
             var key = this.m_pubSubManager.GetSubscriptionByName(id)?.Key;
             if(key == null)
             {
-                throw new KeyNotFoundException($"Subscription {id} not found");
+                this.m_tracer.TraceError($"Subscription {id} not found");
+                throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
             }
 
             // Now update the data
@@ -244,7 +265,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var cdrType = FhirResourceHandlerUtil.GetResourceHandler(enumType.Value) as IFhirResourceMapper;
             if (cdrType == null)
             {
-                throw new NotSupportedException($"Resource type {enumType.Value} is not supported by this service");
+                this.m_tracer.TraceError($"Resource type {enumType.Value} is not supported by this service");
+                throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
             }
 
             QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, NameValueCollection.ParseQueryString(queryObject.Query.Substring(1)).ToNameValueCollection(), out NameValueCollection hdsiQuery);
@@ -319,7 +341,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     // TODO: E-mail dispatcher
                     if (!fhirChannel.Endpoint.StartsWith("mailto:"))
                     {
-                        throw new ArgumentOutOfRangeException("Scheme of the endpoint for e-mail subscriptions is mailto:");
+                        throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.messaging.fhir.subscription.emailScheme", new
+                        {
+                            param = "mailto:"
+                        }));
                     }
                     if (mode == TransactionMode.Commit) // Actually register the channel
                     {
@@ -330,7 +355,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     // TODO: E-mail dispatcher
                     if (!fhirChannel.Endpoint.StartsWith("sms:"))
                     {
-                        throw new ArgumentOutOfRangeException("Scheme of the endpoint for e-mail subscriptions is sms:");
+                        throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.messaging.fhir.subscription.emailScheme", new
+                        {
+                            param = "sms:"
+                        }));
                     }
                     if (mode == TransactionMode.Commit) // Actually register the channel
                     {
@@ -350,7 +378,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                     break;
                 default:
-                    throw new NotSupportedException($"Resource channel type {fhirChannel.Type} not supported ");
+                    this.m_tracer.TraceError($"Resource channel type {fhirChannel.Type} not supported ");
+                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
             }
 
             return channel;
