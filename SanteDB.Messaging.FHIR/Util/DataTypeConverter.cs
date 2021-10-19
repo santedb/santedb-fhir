@@ -1100,6 +1100,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 if (fhirId.Period.EndElement != null)
                     retVal.ExpiryDate = fhirId.Period.EndElement.ToDateTimeOffset().DateTime;
             }
+
             // TODO: Fill in use
             return retVal;
         }

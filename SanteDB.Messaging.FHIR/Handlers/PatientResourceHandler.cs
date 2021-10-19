@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
@@ -42,13 +43,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class PatientResourceHandler : RepositoryResourceHandlerBase<Patient, Core.Model.Roles.Patient>
     {
-
-
         // IDs of family members
         private readonly Guid MDM_MASTER_LINK = Guid.Parse("97730a52-7e30-4dcd-94cd-fd532d111578");
 
         // ER repository
         private IRepositoryService<EntityRelationship> m_erRepository;
+
         private List<Guid> m_relatedPersons;
         private readonly ILocalizationService m_localizationService;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(PatientResourceHandler));
@@ -63,7 +63,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var relTypes = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"));
             this.m_relatedPersons = relTypes.Select(c => c.Key.Value).ToList();
             this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-
         }
 
         /// <summary>
@@ -74,9 +73,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>Returns the mapped FHIR resource.</returns>
         protected override Patient MapToFhir(Core.Model.Roles.Patient model)
         {
-
             // If the model is being constructed as part of a bundle, then the caller
-            // should have included the bundle so we can add any related resources 
+            // should have included the bundle so we can add any related resources
             var partOfBundle = model.GetAnnotations<Bundle>().FirstOrDefault();
 
             var retVal = DataTypeConverter.CreateResource<Patient>(model);
@@ -88,9 +86,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     case DatePrecision.Day:
                         retVal.BirthDate = model.DateOfBirth.Value.ToString("yyyy-MM-dd");
                         break;
+
                     case DatePrecision.Month:
                         retVal.BirthDate = model.DateOfBirth.Value.ToString("yyyy-MM");
                         break;
+
                     case DatePrecision.Year:
                         retVal.BirthDate = model.DateOfBirth.Value.ToString("yyyy");
                         break;
@@ -110,12 +110,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         case DatePrecision.Day:
                             retVal.Deceased = new Date(model.DeceasedDate.Value.Year, model.DeceasedDate.Value.Month, model.DeceasedDate.Value.Day);
                             break;
+
                         case DatePrecision.Month:
                             retVal.Deceased = new Date(model.DeceasedDate.Value.Year, model.DeceasedDate.Value.Month);
                             break;
+
                         case DatePrecision.Year:
                             retVal.Deceased = new Date(model.DeceasedDate.Value.Year);
                             break;
+
                         default:
                             retVal.Deceased = new FhirDateTime(model.DeceasedDate.Value);
                             break;
@@ -164,15 +167,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         };
 
                         var scoper = person.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper);
-                        if(scoper != null)
+                        if (scoper != null)
                         {
-                            contact.Organization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(scoper.LoadProperty(o=>o.TargetEntity));
+                            contact.Organization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(scoper.LoadProperty(o => o.TargetEntity));
                         }
                         DataTypeConverter.AddExtensions(person, contact);
                         retVal.Contact.Add(contact);
-
                     }
-                    else if(relEntity is Core.Model.Entities.Organization org) // it *IS* an organization
+                    else if (relEntity is Core.Model.Entities.Organization org) // it *IS* an organization
                     {
                         var contact = new Patient.ContactComponent()
                         {
@@ -229,10 +231,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
                 else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
-                else if (partOfBundle != null) // This is part of a bundle and we need to include it 
+                else if (partOfBundle != null) // This is part of a bundle and we need to include it
                 {
                     // HACK: This piece of code is used to add any RelatedPersons to the container bundle if it is part of a bundle
-                    if(m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
+                    if (m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
                     {
                         var relative = FhirResourceHandlerUtil.GetMapperForInstance(rel).MapToFhir(rel);
                         partOfBundle.Entry.Add(new Bundle.EntryComponent()
@@ -267,16 +269,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Was this record replaced?
-            if (!retVal.Active.GetValueOrDefault()) {
+            if (!retVal.Active.GetValueOrDefault())
+            {
                 var replacedRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && o.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && o.ObsoleteVersionSequenceId == null);
-                foreach(var repl in replacedRelationships)
+                foreach (var repl in replacedRelationships)
                 {
                     retVal.Link.Add(new Patient.LinkComponent()
                     {
                         Type = Patient.LinkType.ReplacedBy,
-                        Other = DataTypeConverter.CreateNonVersionedReference<Patient>(repl.LoadProperty(o=>o.TargetEntity)),
+                        Other = DataTypeConverter.CreateNonVersionedReference<Patient>(repl.LoadProperty(o => o.TargetEntity)),
                     });
-
                 }
             }
             var photo = model.LoadCollection(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
@@ -401,7 +403,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             param = "general practitioner"
                         }));
-
                     }
                     return new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey);
                 }));
@@ -434,7 +435,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 // Now add rels to me
                 patient.Relationships.Add(er);
-
             }
 
             // Links
@@ -469,7 +469,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                 {
                                     param = lnk.Type
                                 }));
-
                             }
                             patient.StatusConceptKey = StatusKeys.Obsolete;
                             patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, patient)
@@ -553,7 +552,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 switch (includeInstruction.Type)
                 {
-
                     case ResourceType.Practitioner:
                         {
                             var rpHandler = FhirResourceHandlerUtil.GetMappersFor(ResourceType.Practitioner).FirstOrDefault();
@@ -565,6 +563,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Roles.Provider)
                                         .Select(o => rpHandler.MapToFhir(o.TargetEntity));
+
                                 default:
                                     this.m_tracer.TraceError($"Cannot determine how to include {includeInstruction}");
                                     throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidOperation.cannotDetermine", new
@@ -586,12 +585,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
                                         .Select(o => rpHandler.MapToFhir(o.TargetEntity));
+
                                 case "generalPractitioner":
                                     return resource.LoadCollection(o => o.Relationships)
                                         .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
                                         .Select(o => rpHandler.MapToFhir(o.TargetEntity));
+
                                 default:
                                     this.m_tracer.TraceError($"Cannot determine how to include {includeInstruction}");
                                     throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidOperation.cannotDetermine", new
@@ -624,6 +625,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                 o.RelationshipRoleKey == null &&
                                 this.m_relatedPersons.Contains(o.RelationshipTypeKey.Value))
                             .Select(o => rpHandler.MapToFhir(o));
+
                     default:
                         this.m_tracer.TraceError($"{includeInstruction.Type} is not supported reverse include");
                         throw new InvalidOperationException(this.m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
