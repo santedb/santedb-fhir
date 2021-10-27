@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core.Diagnostics;
@@ -43,7 +44,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class SubscriptionResourceHandler : IFhirResourceHandler
     {
-
         // Pub-Sub Manager
         private IPubSubManagerService m_pubSubManager;
 
@@ -76,7 +76,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Create(Resource target, TransactionMode mode)
         {
-
             // Check type
             if (!(target is Subscription subscription))
             {
@@ -129,14 +128,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Delete(string id, TransactionMode mode)
         {
-
             var key = this.m_pubSubManager.GetSubscriptionByName(id)?.Key;
             if (key == null)
             {
                 this.m_tracer.TraceError($"Subscription {id} not found");
                 throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
             }
-                
 
             PubSubSubscriptionDefinition retVal = null;
             if (mode == TransactionMode.Commit)
@@ -213,7 +210,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Results = hdsiResults.AsParallel().Select(o =>
                 {
-                    using(AuthenticationContext.EnterContext(auth))
+                    using (AuthenticationContext.EnterContext(auth))
                     {
                         return new Bundle.EntryComponent()
                         {
@@ -242,7 +239,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Update(string id, Resource target, TransactionMode mode)
         {
-            
             if (!(target is Subscription subscription))
             {
                 throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
@@ -251,7 +247,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }));
             }
             var key = this.m_pubSubManager.GetSubscriptionByName(id)?.Key;
-            if(key == null)
+            if (key == null)
             {
                 this.m_tracer.TraceError($"Subscription {id} not found");
                 throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
@@ -285,7 +281,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Map the model pub-sub description to FHIR
         private Subscription MapToFhir(PubSubSubscriptionDefinition model, RestOperationContext restOperationContext)
         {
-
             // Construct the return subscription
             var retVal = DataTypeConverter.CreateResource<Subscription>(model);
 
@@ -307,9 +302,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Map channel information
             retVal.Channel = new Subscription.ChannelComponent()
             {
-                Type = channel.Endpoint.Scheme == "sms" ? Subscription.SubscriptionChannelType.Sms :
-                    channel.Endpoint.Scheme == "mailto" ? Subscription.SubscriptionChannelType.Email :
-                   typeof(FhirPubSubMessageDispatcherFactory ) == channel.DispatcherFactoryType ? Subscription.SubscriptionChannelType.Message :
+                Type = new Uri(channel.Endpoint).Scheme == "sms" ? Subscription.SubscriptionChannelType.Sms :
+                    new Uri(channel.Endpoint).Scheme == "mailto" ? Subscription.SubscriptionChannelType.Email :
+                   typeof(FhirPubSubMessageDispatcherFactory) == channel.DispatcherFactoryType ? Subscription.SubscriptionChannelType.Message :
                    Subscription.SubscriptionChannelType.RestHook,
                 Endpoint = channel.Endpoint.ToString(),
                 Header = channel.Settings.Where(o => !o.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)).Select(o => $"{o.Name}: {o.Value}"),
@@ -351,6 +346,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         channel = this.m_pubSubManager.RegisterChannel(name, new Uri(fhirChannel.Endpoint), settings);
                     }
                     break;
+
                 case Subscription.SubscriptionChannelType.Sms:
                     // TODO: E-mail dispatcher
                     if (!fhirChannel.Endpoint.StartsWith("sms:"))
@@ -365,18 +361,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         channel = this.m_pubSubManager.RegisterChannel(name, new Uri(fhirChannel.Endpoint), settings);
                     }
                     break;
+
                 case Subscription.SubscriptionChannelType.RestHook:
                     if (mode == TransactionMode.Commit) // Actually register the channel
                     {
                         channel = this.m_pubSubManager.RegisterChannel(name, typeof(FhirPubSubRestHookDispatcherFactory), new Uri(fhirChannel.Endpoint), settings);
                     }
                     break;
+
                 case Subscription.SubscriptionChannelType.Message:
-                    if(mode == TransactionMode.Commit)
+                    if (mode == TransactionMode.Commit)
                     {
                         channel = this.m_pubSubManager.RegisterChannel(name, typeof(FhirPubSubMessageDispatcherFactory), new Uri(fhirChannel.Endpoint), settings);
                     }
                     break;
+
                 default:
                     this.m_tracer.TraceError($"Resource channel type {fhirChannel.Type} not supported ");
                     throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
@@ -384,6 +383,5 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             return channel;
         }
-
     }
 }
