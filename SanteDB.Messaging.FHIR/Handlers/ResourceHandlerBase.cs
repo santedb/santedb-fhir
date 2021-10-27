@@ -51,7 +51,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <typeparam name="TFhirResource">The type of the t FHIR resource.</typeparam>
     /// <typeparam name="TModel">The type of the t model.</typeparam>
     /// <seealso cref="SanteDB.Messaging.FHIR.Handlers.IFhirResourceHandler" />
-    public abstract class ResourceHandlerBase<TFhirResource, TModel> : IFhirResourceHandler, IFhirResourceMapper
+    public abstract class ResourceHandlerBase<TFhirResource, TModel> : IFhirResourceHandler, IFhirResourceMapper, IServiceImplementation
         where TFhirResource : Resource, new()
         where TModel : IdentifiedData, new()
 
@@ -152,6 +152,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Gets the CLR type
         /// </summary>
         public Type ResourceClrType => typeof(TFhirResource);
+
+        /// <summary>
+        /// Get service name
+        /// </summary>
+        public string ServiceName => "Resource Handler Base";
 
         /// <summary>
         /// Create the specified resource.
