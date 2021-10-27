@@ -134,7 +134,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Core.Model.Acts.Observation MapToModel(Hl7.Fhir.Model.Observation resource)
         {
-            throw new NotImplementedException(m_localService.GetString("error.type.NotImplementedException"));
+            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -160,7 +160,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (parameters == null)
             {
                 this.m_tracer.TraceError(nameof(parameters));
-                throw new ArgumentNullException(nameof(parameters), m_localService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(nameof(parameters), this.m_localizationService.GetString("error.type.ArgumentNullException"));
             }
                 
             Core.Model.Query.NameValueCollection hdsiQuery = null;
@@ -226,7 +226,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException(m_localService.GetString("error.type.NotImplementedException"));
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -234,7 +234,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException(m_localService.GetString("error.type.NotImplementedException"));
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
     }
 }
