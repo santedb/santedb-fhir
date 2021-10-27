@@ -39,7 +39,7 @@ namespace SanteDB.Messaging.FHIR.Operations
     /// <summary>
     /// A FHIR operation handler which executs the matching logic of the CDR
     /// </summary>
-    public class FhirMatchResourceOperation : IFhirOperationHandler
+    public class FhirMatchResourceOperation : IFhirOperationHandler,IServiceImplementation
     {
         // Tracer
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirMatchResourceOperation));
@@ -48,15 +48,15 @@ namespace SanteDB.Messaging.FHIR.Operations
         private IRecordMatchingConfigurationService m_matchConfigurationService;
 
         // Localization service
-        private ILocalizationService m_localizationService;
+        private readonly ILocalizationService m_localizationService;
 
         /// <summary>
         /// Configurations for the merge configuration
         /// </summary>
-        public FhirMatchResourceOperation()
+        public FhirMatchResourceOperation(ILocalizationService localizationService)
         {
             this.m_matchConfigurationService = ApplicationServiceContext.Current.GetService<IRecordMatchingConfigurationService>();
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+            this.m_localizationService = localizationService;
         }
 
         /// <summary>
@@ -93,6 +93,8 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// True if the operation is a get
         /// </summary>
         public bool IsGet => false;
+
+        public string ServiceName => "Fhir Match Resource Operation";
 
         /// <summary>
         /// Invoke the specified operation

@@ -43,15 +43,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
     public class AdverseEventResourceHandler : RepositoryResourceHandlerBase<AdverseEvent, Act>
     {
 
-        //Localization service
-        private readonly ILocalizationService m_localizationService;
-
         /// <summary>
         /// Adverse event repo
         /// </summary>
-        public AdverseEventResourceHandler(IRepositoryService<Act> repo) : base(repo)
+        public AdverseEventResourceHandler(IRepositoryService<Act> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>

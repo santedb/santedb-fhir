@@ -50,7 +50,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 		/// <summary>
 		/// CTOR
 		/// </summary>
-		public RepositoryResourceHandlerBase(IRepositoryService<TModel> repository)
+		public RepositoryResourceHandlerBase(IRepositoryService<TModel> repository, ILocalizationService localizationService) : base(localizationService)
 		{
 			this.m_repository = repository;
 			this.m_bundleRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Collection.Bundle>>();

@@ -43,16 +43,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class OrganizationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Organization, SanteDB.Core.Model.Entities.Organization>
     {
-        private readonly ILocalizationService m_localizationService;
 
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(OrganizationResourceHandler));
 
         /// <summary>
         /// Create a new resource handler
         /// </summary>
-        public OrganizationResourceHandler(IRepositoryService<SanteDB.Core.Model.Entities.Organization> repo) : base(repo)
+        public OrganizationResourceHandler(IRepositoryService<SanteDB.Core.Model.Entities.Organization> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
         }
 
