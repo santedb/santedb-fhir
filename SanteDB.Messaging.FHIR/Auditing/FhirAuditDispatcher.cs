@@ -19,24 +19,21 @@
  * Date: 2021-8-5
  */
 using Hl7.Fhir.Rest;
+using SanteDB.Core.Auditing;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Interfaces;
-using SanteDB.Core.Security.Services;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Rest;
 using SanteDB.Messaging.FHIR.Util;
 using System;
-using System.Collections.Generic;
-using System.Text;
-using SanteDB.Core.Auditing;
 
 namespace SanteDB.Messaging.FHIR.Auditing
 {
-    /// <summary>
-    /// Audit dispatch service which sends audits using HL7 FHIR
-    /// </summary>
-    public class FhirAuditDispatcher : IAuditDispatchService
+	/// <summary>
+	/// Audit dispatch service which sends audits using HL7 FHIR
+	/// </summary>
+	public class FhirAuditDispatcher : IAuditDispatchService
     {
 
         // Get tracer for the audit dispatcher
