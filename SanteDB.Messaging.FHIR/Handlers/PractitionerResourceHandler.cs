@@ -40,14 +40,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class PractitionerResourceHandler : RepositoryResourceHandlerBase<Practitioner, Provider>
     {
-        private readonly ILocalizationService m_localizationService;
 
         /// <summary>
         /// Create a new resource handler
         /// </summary>
-        public PractitionerResourceHandler(IRepositoryService<Provider> repo) : base(repo)
+        public PractitionerResourceHandler(IRepositoryService<Provider> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
         }
 

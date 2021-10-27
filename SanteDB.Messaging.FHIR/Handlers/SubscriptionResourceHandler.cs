@@ -42,7 +42,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Resource handler for Subscription management
     /// </summary>
-    public class SubscriptionResourceHandler : IFhirResourceHandler
+    public class SubscriptionResourceHandler : IFhirResourceHandler, IServiceImplementation
     {
         // Pub-Sub Manager
         private IPubSubManagerService m_pubSubManager;
@@ -59,17 +59,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Create a new subscription resource handler
         /// </summary>
-        public SubscriptionResourceHandler(IPubSubManagerService manager, IConfigurationManager configManager)
+        public SubscriptionResourceHandler(IPubSubManagerService manager, IConfigurationManager configManager, ILocalizationService localizationService)
         {
             this.m_pubSubManager = manager;
             this.m_configurationManager = configManager;
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+            this.m_localizationService = localizationService;
         }
 
         /// <summary>
         /// Gets the resource type
         /// </summary>
         public ResourceType ResourceType => ResourceType.Subscription;
+
+        /// <summary>
+        /// Get service name
+        /// </summary>
+        public string ServiceName => "Subscription Resource Handler";
 
         /// <summary>
         /// Create the specified resource target

@@ -50,18 +50,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
 
-        private readonly ILocalizationService m_localizationService;
-
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(RelatedPersonResourceHandler));
         /// <summary>
         /// Create related person resource handler
         /// </summary>
-        public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo, IRepositoryService<Core.Model.Roles.Patient> patientRepository, IRepositoryService<EntityRelationship> repo, IRepositoryService<Concept> conceptRepository) : base(repo)
+        public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo, IRepositoryService<Core.Model.Roles.Patient> patientRepository, IRepositoryService<EntityRelationship> repo, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService) : base(repo, localizationService)
         {
             this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(c => c.Key.Value).ToList();
             this.m_patientRepository = patientRepository;
             this.m_personRepository = personRepo;
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>

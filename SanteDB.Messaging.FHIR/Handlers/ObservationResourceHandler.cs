@@ -43,16 +43,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ObservationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Observation, Core.Model.Acts.Observation>
     {
-        private readonly ILocalizationService m_localService;
-
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ObservationResourceHandler));
 
         /// <summary>
 		/// Create new resource handler
 		/// </summary>
-		public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo) : base(repo)
+		public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
-            this.m_localService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
         }
 

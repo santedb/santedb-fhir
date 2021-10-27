@@ -116,14 +116,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// The localization service.
         /// </summary>
-        private readonly ILocalizationService m_localizationService;
+        protected readonly ILocalizationService m_localizationService;
 
         /// <summary>
 		/// Creates the resource handler
 		/// </summary>
-        public ResourceHandlerBase()
+        public ResourceHandlerBase(ILocalizationService localizationService)
         {
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+            this.m_localizationService = localizationService;
             // Get the string name of the resource
             var typeAttribute = typeof(TFhirResource).GetCustomAttribute<FhirTypeAttribute>();
             if (typeAttribute == null || !typeAttribute.IsResource || !Enum.TryParse<ResourceType>(typeAttribute.Name, out ResourceType resourceType))

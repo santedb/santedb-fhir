@@ -33,15 +33,29 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Represents the default StructureDefinition handler
     /// </summary>
-    public class StructureDefinitionHandler : IFhirResourceHandler
-    {       
+    public class StructureDefinitionHandler : IFhirResourceHandler, IServiceImplementation
+    {
         // Localization service
-        private ILocalizationService m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+        private ILocalizationService m_localizationService;
 
         /// <summary>
         /// Gets the resource name
         /// </summary>
         public ResourceType ResourceType => ResourceType.StructureDefinition;
+
+        /// <summary>
+        /// Get service name
+        /// </summary>
+        public string ServiceName => "Structure Definition Handler";
+
+        /// <summary>
+        /// Initializes the structure definition handler
+        /// </summary>
+        /// <param name="localizationService"></param>
+        public StructureDefinitionHandler(ILocalizationService localizationService)
+        {
+            this.m_localizationService = localizationService;
+        }
 
         /// <summary>
         /// Create the specified definition
