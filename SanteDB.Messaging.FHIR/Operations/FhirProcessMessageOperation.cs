@@ -38,11 +38,23 @@ namespace SanteDB.Messaging.FHIR.Operations
     /// <summary>
     /// Process a FHIR message operation
     /// </summary>
-    public class FhirProcessMessageOperation : IFhirOperationHandler
+    public class FhirProcessMessageOperation : IFhirOperationHandler, IServiceImplementation
     {
 
         // Tracer
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirProcessMessageOperation));
+
+        // Localization service
+        private readonly ILocalizationService m_localizationService;
+
+        /// <summary>
+        /// DI constructor
+        /// </summary>
+        /// <param name="localizationService"></param>
+        public FhirProcessMessageOperation(ILocalizationService localizationService)
+        {
+            this.m_localizationService = localizationService;
+        }
 
         /// <summary>
         /// Get the name of the operation
@@ -73,25 +85,25 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// </summary>
         public bool IsGet => false;
 
+        public string ServiceName => "Fhir Process Message Operation";
+
         /// <summary>
         /// Invoke the process message operation
         /// </summary>
         public Resource Invoke(Parameters parameters)
         {
-            var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-
             // Extract the parameters
             var contentParameter = parameters.Parameter.Find(o => o.Name == "content")?.Resource as Bundle;
             var asyncParameter = parameters.Parameter.Find(o => o.Name == "async")?.Value as FhirBoolean;
             if (contentParameter == null)
             {
                 this.m_tracer.TraceError("Missing content parameter");
-                throw new ArgumentNullException(localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(m_localizationService.GetString("error.type.ArgumentNullException"));
             }
             else if (asyncParameter?.Value.GetValueOrDefault() == true)
             {
                 this.m_tracer.TraceError("Asynchronous messaging is not supported by this repository");
-                throw new InvalidOperationException(localizationService.GetString("error.type.NotSupportedException"));
+                throw new InvalidOperationException(m_localizationService.GetString("error.type.NotSupportedException"));
             }
 
             // Message must have a message header
@@ -99,7 +111,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             if (messageHeader == null)
             {
                 this.m_tracer.TraceError("Message bundle does not contain a MessageHeader");
-                throw new ArgumentException(localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentException(m_localizationService.GetString("error.type.ArgumentNullException"));
             }
 
             // Determine the appropriate action handler
@@ -109,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 if (handler == null)
                 {
                     this.m_tracer.TraceError($"There is no message handler for event {eventUri}");
-                    throw new NotSupportedException(localizationService.GetString("error.type.NotSupportedException"));
+                    throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
                 }
 
                 var retVal = new Bundle(); // Return for operation
@@ -170,7 +182,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         Resource = outcome
                     });
 
-                    throw new FhirException((System.Net.HttpStatusCode)FhirErrorEndpointBehavior.ClassifyErrorCode(e), retVal, localizationService.GetString("error.type.FhirException"), e);
+                    throw new FhirException((System.Net.HttpStatusCode)FhirErrorEndpointBehavior.ClassifyErrorCode(e), retVal, m_localizationService.GetString("error.type.FhirException"), e);
 
                 }
                 finally
@@ -183,7 +195,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             else
             {
                 this.m_tracer.TraceError("Currently message headers with EventCoding are not supported");
-                throw new InvalidOperationException(localizationService.GetString("error.type.NotSupportedException.userMessage"));
+                throw new InvalidOperationException(m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
             }
         }
     }
