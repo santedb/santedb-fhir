@@ -44,31 +44,30 @@ namespace SanteDB.Messaging.FHIR.Test
             this.m_personRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Entities.Person>>();
             this.m_relationshipRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Entities.EntityRelationship>>();
 
-            //var testConfiguration = new SanteDB.Messaging.FHIR.Configuration.FhirServiceConfigurationSection()
-            //{
-            //    Resources = new System.Collections.Generic.List<string>()
-            //    {
-            //        "Patient",
-            //        "RelatedPerson",
-            //        "Bundle"
-            //    },
-            //    OperationHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-            //    ExtensionHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-            //    ProfileHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-            //    MessageHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>
-            //    {
-            //        new TypeReferenceConfiguration(typeof(PatientResourceHandler)),
-            //        new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
-            //        new TypeReferenceConfiguration(typeof(RelatedPersonResourceHandler))
-            //    }
-            //};
+            var testConfiguration = new SanteDB.Messaging.FHIR.Configuration.FhirServiceConfigurationSection()
+            {
+                Resources = new System.Collections.Generic.List<string>()
+                {
+                    "Patient",
+                    "RelatedPerson",
+                    "Bundle"
+                },
+                OperationHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
+                ExtensionHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
+                ProfileHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
+                MessageHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>
+                {
+                    new TypeReferenceConfiguration(typeof(PatientResourceHandler)),
+                    new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
+                    new TypeReferenceConfiguration(typeof(RelatedPersonResourceHandler))
+                }
+            };
 
-            //using (AuthenticationContext.EnterSystemContext())
-            //{
-            //    FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-            //    ExtensionUtil.Initialize(testConfiguration);
-            //}
-
+            using (AuthenticationContext.EnterSystemContext())
+            {
+                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
+                ExtensionUtil.Initialize(testConfiguration);
+            }
         }
 
         /// <summary>
@@ -166,7 +165,6 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestPersistComplexPatientPatientRelationship()
         {
-
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
             {

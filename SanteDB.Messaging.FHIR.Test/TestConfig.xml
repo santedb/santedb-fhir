@@ -11,7 +11,6 @@
     <add type="SanteDB.Core.Configuration.Data.DataConfigurationSection, SanteDB.Core.Api"/>
     <add type="SanteDB.Core.Configuration.ResourceManagementConfigurationSection, SanteDB.Core.Api"/>
     <add type="SanteDB.Server.Core.Configuration.SecurityConfigurationSection, SanteDB.Server.Core" />
-    <add type="SanteDB.Messaging.FHIR.Configuration.FhirServiceConfigurationSection, SanteDB.Messaging.FHIR" />
     <add type="SanteDB.Server.Core.Configuration.AppletConfigurationSection, SanteDB.Server.Core" />
   </sections>
   <section xsi:type="MemoryCacheConfigurationSection" autoSubscribe="true" maxSize="10000" maxAge="3600" maxQueryAge="3600" />
@@ -85,35 +84,12 @@
       <add type="SanteDB.Persistence.Data.ADO.Services.AdoRoleProvider, SanteDB.Persistence.Data.ADO" />
       <add type="SanteDB.Core.Security.Privacy.DataPolicyFilterService, SanteDB.Core.Api" />
       <add type="SanteDB.Server.Core.Services.Impl.DefaultNetworkInformationService, SanteDB.Server.Core"/>
-      <add type="SanteDB.Persistence.MDM.Services.MdmDataManagementService, SanteDB.Persistence.MDM"/>
+      <!--<add type="SanteDB.Matcher.Matchers.WeightedRecordMatchingService, SanteDB.Matcher" />-->
+      <!--<add type="SanteDB.Persistence.MDM.Services.MdmDataManagementService, SanteDB.Persistence.MDM"/>-->
       <add type="SanteDB.Core.Applets.Services.Impl.AppletLocalizationService, SanteDB.Core.Applets"/>
-      <add type="SanteDB.Matcher.Matchers.WeightedRecordMatchingService, SanteDB.Matcher" />
-      <add type="SanteDB.Matcher.Services.FileMatchConfigurationProvider, SanteDB.Matcher" />
       <add type="SanteDB.Server.Core.Services.Impl.LocalAppletManagerService, SanteDB.Server.Core" />
-      <add type="SanteDB.Persistence.Data.ADO.Services.AdoServiceFactory, SanteDB.Persistence.Data.ADO, Version=2.1.91.0, Culture=neutral, PublicKeyToken=null" />
+      <add type="SanteDB.Persistence.Data.ADO.Services.AdoServiceFactory, SanteDB.Persistence.Data.ADO" />
     </serviceProviders>
-  </section>
-  <!-- Configures the FHIR service-->
-  <section xsi:type="FhirServiceConfigurationSection" restEndpoint="FHIR" index="value">
-	  <resourceHandlers>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.EncounterResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.AdverseEventResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.AllergyIntoleranceResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.ConditionResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.LocationResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.MedicationResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.ObservationResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.SubstanceResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.PatientResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.ImmunizationRecommendationResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.ImmunizationResourceHandler, SanteDB.Messaging.FHIR"/>
-		  <add type="SanteDB.Messaging.FHIR.Handlers.SubscriptionResourceHandler, SanteDB.Messaging.FHIR" />
-		  <add type="SanteDB.Messaging.FHIR.Handlers.BundleResourceHandler, SanteDB.Messaging.FHIR" />
-		  <add type="SanteDB.Messaging.FHIR.Handlers.OrganizationResourceHandler, SanteDB.Messaging.FHIR" />
-		  <add type="SanteDB.Messaging.FHIR.Handlers.RelatedPersonResourceHandler, SanteDB.Messaging.FHIR" />
-	  </resourceHandlers>
-	  <!-- Sets the base path for reverse proxies -->
-	  <base>http://localhost:8080/fhir</base>
   </section>
   <section xsi:type="AppletConfigurationSection" appletDirectory=".\applets" allowUnsignedApplets="true">
 	  <trustedPublishers>

@@ -109,10 +109,6 @@
     <Copy SourceFiles="$(SolutionDir)\Solution Items\santedb_test.fdb" DestinationFolder="$(TargetDir)" />
   </Target>
   <ItemGroup>
-    <ProjectReference Include="..\..\santedb-match\SanteDB.Matcher\SanteDB.Matcher.csproj">
-      <Project>{a37bb496-739d-440e-ab64-e2939a759898}</Project>
-      <Name>SanteDB.Matcher</Name>
-    </ProjectReference>
     <ProjectReference Include="..\SanteDB.Messaging.FHIR\SanteDB.Messaging.FHIR.csproj">
     </ProjectReference>
   </ItemGroup>
@@ -125,5 +121,4 @@
     <Compile Include="TestComplexRelationships.cs" />
     <Compile Include="TestUtil.cs" />
   </ItemGroup>
-  <ItemGroup />
 </Project>
