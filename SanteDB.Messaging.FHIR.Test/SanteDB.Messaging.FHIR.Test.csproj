@@ -121,5 +121,4 @@
     <Compile Include="TestComplexRelationships.cs" />
     <Compile Include="TestUtil.cs" />
   </ItemGroup>
-  <ItemGroup />
 </Project>
