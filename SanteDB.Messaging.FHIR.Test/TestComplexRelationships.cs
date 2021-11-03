@@ -16,7 +16,7 @@ using System.Linq;
 namespace SanteDB.Messaging.FHIR.Test
 {
     /// <summary>
-    /// Test comple relationships
+    /// Test complex relationships
     /// </summary>
     public class TestComplexRelationships : DataTest
     {
