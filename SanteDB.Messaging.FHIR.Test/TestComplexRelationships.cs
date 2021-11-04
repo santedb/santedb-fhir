@@ -16,7 +16,7 @@ using System.Linq;
 namespace SanteDB.Messaging.FHIR.Test
 {
     /// <summary>
-    /// Test comple relationships
+    /// Test complex relationships
     /// </summary>
     public class TestComplexRelationships : DataTest
     {
@@ -94,7 +94,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is Hl7.Fhir.Model.Patient));
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is RelatedPerson));
                 var createdFhirPatient = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
-                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
+                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "RelatedPerson").Resource;
 
                 // Ensure that the message is saved correctly
                 var sdbPatient = this.m_patientRespository.Get(Guid.Parse(createdFhirPatient.Id));
@@ -186,7 +186,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is RelatedPerson));
 
                 var createdFhirPatient = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
-                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
+                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "RelatedPerson").Resource;
                 var createdFhirRelatedPatient = bresult.Entry.LastOrDefault(o => o.Resource.TypeName == "Patient").Resource;
 
                 // Ensure focal patient was created
