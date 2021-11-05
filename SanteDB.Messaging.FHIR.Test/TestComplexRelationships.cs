@@ -1,23 +1,22 @@
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
+using SanteDB.Core.Configuration;
 using SanteDB.Core.Interfaces;
-using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Model.Roles;
+using SanteDB.Core.Model;
+using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
-using SanteDB.Core.Model;
 using System;
 using System.Linq;
-using SanteDB.Core.Model.Constants;
-using SanteDB.Core.Security;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
     /// <summary>
-    /// Test comple relationships
+    /// Test complex relationships
     /// </summary>
     public class TestComplexRelationships : DataTest
     {
@@ -56,7 +55,12 @@ namespace SanteDB.Messaging.FHIR.Test
                 OperationHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
                 ExtensionHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
                 ProfileHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                MessageHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>()
+                MessageHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>
+                {
+                    new TypeReferenceConfiguration(typeof(PatientResourceHandler)),
+                    new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
+                    new TypeReferenceConfiguration(typeof(RelatedPersonResourceHandler))
+                }
             };
 
             using (AuthenticationContext.EnterSystemContext())
@@ -64,7 +68,6 @@ namespace SanteDB.Messaging.FHIR.Test
                 FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
                 ExtensionUtil.Initialize(testConfiguration);
             }
-
         }
 
         /// <summary>
@@ -91,7 +94,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is Hl7.Fhir.Model.Patient));
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is RelatedPerson));
                 var createdFhirPatient = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
-                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
+                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "RelatedPerson").Resource;
 
                 // Ensure that the message is saved correctly
                 var sdbPatient = this.m_patientRespository.Get(Guid.Parse(createdFhirPatient.Id));
@@ -162,7 +165,6 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestPersistComplexPatientPatientRelationship()
         {
-
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
             {
@@ -184,7 +186,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(1, bresult.Entry.Count(o => o.Resource is RelatedPerson));
 
                 var createdFhirPatient = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
-                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource;
+                var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "RelatedPerson").Resource;
                 var createdFhirRelatedPatient = bresult.Entry.LastOrDefault(o => o.Resource.TypeName == "Patient").Resource;
 
                 // Ensure focal patient was created
