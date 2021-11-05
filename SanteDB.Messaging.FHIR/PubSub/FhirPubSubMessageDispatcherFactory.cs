@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
 
                 if (this.m_configuration?.Authenticator != null)
                 {
-                    var authenticator = ApplicationServiceContext.Current.GetService<IServiceManager>().CreateInjected(this.m_configuration.Authenticator.Type) as IFhirClientAuthenticator;
+                    var authenticator = this.m_configuration.Authenticator.Type.CreateInjected() as IFhirClientAuthenticator;
                     authenticator.AttachClient(this.m_client, this.m_configuration, settings);
                 }
             }
