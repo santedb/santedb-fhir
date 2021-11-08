@@ -88,7 +88,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             else
             {
                 s_tracer.TraceError($"Resource type {resourceType} is invalid");
-                throw new KeyNotFoundException(s_localizationService.FormatString("error.messaging.fhir.handlers.invalidResourceType", new { param = resourceType }));
+                throw new KeyNotFoundException(s_localizationService.GetString("error.messaging.fhir.handlers.invalidResourceType", new { param = resourceType }));
             }
         }
 
@@ -100,7 +100,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!s_messageProcessors.TryGetValue(resourceType, out IFhirResourceHandler retVal))
             {
                 s_tracer.TraceError($"No handler registered for {resourceType}");
-                throw new NotSupportedException(s_localizationService.FormatString("error.messaging.fhir.handlers.noRegisteredHandler", new { param = resourceType }));
+                throw new NotSupportedException(s_localizationService.GetString("error.messaging.fhir.handlers.noRegisteredHandler", new { param = resourceType }));
             }
             return retVal;
         }

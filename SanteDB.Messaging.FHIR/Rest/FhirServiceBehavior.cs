@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using RestSrvr.Attributes;
@@ -52,8 +53,7 @@ namespace SanteDB.Messaging.FHIR.Rest
     [ServiceBehavior(Name = "FHIR", InstanceMode = ServiceInstanceMode.Singleton)]
     public class FhirServiceBehavior : IFhirServiceContract, IServiceBehaviorMetadataProvider
     {
-
-        private Tracer m_tracer = new Tracer(FhirConstants.TraceSourceName);
+        private readonly Tracer m_tracer = new Tracer(FhirConstants.TraceSourceName);
 
         #region IFhirServiceContract Members
 
@@ -122,7 +122,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
             try
             {
-
                 // Setup outgoing content
                 var result = this.PerformRead(resourceType, id, null);
                 String baseUri = RestOperationContext.Current.IncomingRequest.Url.AbsoluteUri;
@@ -165,7 +164,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
             try
             {
-
                 // Setup outgoing content/
 
                 // Create or update?
@@ -183,7 +181,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 RestOperationContext.Current.OutgoingResponse.SetETag($"W/\"{result.VersionId}\"");
 
                 return result;
-
             }
             catch (Exception e)
             {
@@ -202,7 +199,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
             try
             {
-
                 // Setup outgoing content/
                 RestOperationContext.Current.OutgoingResponse.StatusCode = (int)HttpStatusCode.NoContent;
 
@@ -215,7 +211,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 this.AuditDataAction(TypeRestfulInteraction.Delete, OutcomeIndicator.Success, result);
                 return null;
-
             }
             catch (Exception e)
             {
@@ -233,7 +228,6 @@ namespace SanteDB.Messaging.FHIR.Rest
             this.ThrowIfNotReady();
             try
             {
-
                 // Setup outgoing content
 
                 // Create or update?
@@ -243,7 +237,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 var result = handler.Create(target, TransactionMode.Commit);
                 RestOperationContext.Current.OutgoingResponse.StatusCode = (int)HttpStatusCode.Created;
-
 
                 this.AuditDataAction(TypeRestfulInteraction.Create, OutcomeIndicator.Success, result);
 
@@ -256,7 +249,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 }
 
                 return result;
-
             }
             catch (Exception e)
             {
@@ -274,7 +266,6 @@ namespace SanteDB.Messaging.FHIR.Rest
             this.ThrowIfNotReady();
             try
             {
-
                 // Setup outgoing content
 
                 // Create or update?
@@ -306,7 +297,7 @@ namespace SanteDB.Messaging.FHIR.Rest
         }
 
         /// <summary>
-        /// Searches a resource from the client registry datastore 
+        /// Searches a resource from the client registry datastore
         /// </summary>
         public Bundle SearchResource(string resourceType)
         {
@@ -314,7 +305,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
             try
             {
-
                 // Get query parameters
                 var queryParameters = RestOperationContext.Current.IncomingRequest.Url;
                 var resourceProcessor = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
@@ -329,10 +319,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Process incoming request
                 var result = resourceProcessor.Query(RestOperationContext.Current.IncomingRequest.QueryString);
 
-                this.AuditDataAction(TypeRestfulInteraction.SearchType, OutcomeIndicator.Success, result.Entry.Select(o=>o.Resource).ToArray());
+                this.AuditDataAction(TypeRestfulInteraction.SearchType, OutcomeIndicator.Success, result.Entry.Select(o => o.Resource).ToArray());
                 // Create the Atom feed
                 return result;
-
             }
             catch (Exception e)
             {
@@ -340,7 +329,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 this.AuditDataAction(TypeRestfulInteraction.SearchType, OutcomeIndicator.MinorFail);
                 throw;
             }
-
         }
 
         /// <summary>
@@ -350,18 +338,20 @@ namespace SanteDB.Messaging.FHIR.Rest
         {
             AuditEventData audit = new AuditEventData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(type), "http://hl7.org/fhir/ValueSet/type-restful-interaction"));
             AuditableObjectLifecycle lifecycle = AuditableObjectLifecycle.NotSet;
-            switch(type)
+            switch (type)
             {
                 case TypeRestfulInteraction.Create:
                     audit.ActionCode = ActionType.Create;
                     audit.EventIdentifier = EventIdentifierType.Import;
                     lifecycle = AuditableObjectLifecycle.Creation;
                     break;
+
                 case TypeRestfulInteraction.Delete:
                     audit.ActionCode = ActionType.Delete;
                     audit.EventIdentifier = EventIdentifierType.Import;
                     lifecycle = AuditableObjectLifecycle.LogicalDeletion;
                     break;
+
                 case TypeRestfulInteraction.HistoryInstance:
                 case TypeRestfulInteraction.HistoryType:
                 case TypeRestfulInteraction.SearchType:
@@ -373,15 +363,17 @@ namespace SanteDB.Messaging.FHIR.Rest
                         QueryData = RestOperationContext.Current?.IncomingRequest.Url.ToString(),
                         Role = AuditableObjectRole.Query,
                         Type = AuditableObjectType.SystemObject,
-                        ObjectData = RestOperationContext.Current?.IncomingRequest.Headers.AllKeys.Where(o=>o.Equals("accept", StringComparison.OrdinalIgnoreCase)).Select(o=>new ObjectDataExtension(o, RestOperationContext.Current.IncomingRequest.Headers.Get(o))).ToList()
+                        ObjectData = RestOperationContext.Current?.IncomingRequest.Headers.AllKeys.Where(o => o.Equals("accept", StringComparison.OrdinalIgnoreCase)).Select(o => new ObjectDataExtension(o, RestOperationContext.Current.IncomingRequest.Headers.Get(o))).ToList()
                     });
                     break;
+
                 case TypeRestfulInteraction.Update:
                 case TypeRestfulInteraction.Patch:
                     audit.ActionCode = ActionType.Update;
                     audit.EventIdentifier = EventIdentifierType.Import;
                     lifecycle = AuditableObjectLifecycle.Amendment;
                     break;
+
                 case TypeRestfulInteraction.Vread:
                 case TypeRestfulInteraction.Read:
                     audit.ActionCode = ActionType.Read;
@@ -400,7 +392,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             AuditUtil.AddLocalDeviceActor(audit);
             AuditUtil.AddUserActor(audit);
 
-            audit.AuditableObjects.AddRange(objects.SelectMany(o=>this.CreateAuditObjects(o,lifecycle)));
+            audit.AuditableObjects.AddRange(objects.SelectMany(o => this.CreateAuditObjects(o, lifecycle)));
 
             AuditUtil.SendAudit(audit);
         }
@@ -434,7 +426,6 @@ namespace SanteDB.Messaging.FHIR.Rest
             // Stuff for auditing and exception handling
             try
             {
-
                 // Get query parameters
                 var queryParameters = RestOperationContext.Current.IncomingRequest.QueryString;
                 var resourceProcessor = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
@@ -450,7 +441,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Create the result
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated?.DateTime ?? DateTime.Now);
                 return result;
-
             }
             catch (Exception e)
             {
@@ -468,7 +458,6 @@ namespace SanteDB.Messaging.FHIR.Rest
             this.ThrowIfNotReady();
 
             throw new NotSupportedException("For security reasons resource history is not supported");
-
         }
 
         /// <summary>
@@ -481,7 +470,6 @@ namespace SanteDB.Messaging.FHIR.Rest
             throw new NotSupportedException("For security reasons system history is not supported");
         }
 
-
         /// <summary>
         /// Perform a read against the underlying IFhirResourceHandler
         /// </summary>
@@ -493,7 +481,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
             try
             {
-
                 // Get query parameters
                 var queryParameters = RestOperationContext.Current.IncomingRequest.QueryString;
                 var resourceProcessor = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
@@ -512,7 +499,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 RestOperationContext.Current.OutgoingResponse.SetETag($"W/\"{result.VersionId}\"");
 
                 return result;
-
             }
             catch (Exception e)
             {
@@ -538,7 +524,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             return DateTime.Now;
         }
 
-        #endregion
+        #endregion IFhirServiceContract Members
 
         /// <summary>
         /// Create or update
@@ -563,7 +549,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         {
             if (!ApplicationServiceContext.Current.IsRunning)
                 throw new DomainStateException();
-
         }
 
         /// <summary>
@@ -579,7 +564,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
             try
             {
-
                 // Get the operation handler
                 var handler = ExtensionUtil.GetOperation(resourceType, operationName);
 
@@ -590,7 +574,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 var result = handler.Invoke(parameters);
                 this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.Success, result);
                 return result;
-
             }
             catch (Exception e)
             {
@@ -598,7 +581,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.MinorFail);
                 throw;
             }
-
         }
 
         /// <summary>
@@ -613,7 +595,6 @@ namespace SanteDB.Messaging.FHIR.Rest
 
             try
             {
-
                 // Get the operation handler
                 var handler = ExtensionUtil.GetOperation(resourceType, operationName);
 
@@ -625,7 +606,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.Success, result);
 
                 return result;
-
             }
             catch (Exception e)
             {
@@ -633,7 +613,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.MinorFail);
                 throw;
             }
-
         }
 
         /// <summary>
@@ -656,10 +635,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 Role = AuditableObjectRole.Job,
                 Type = AuditableObjectType.SystemObject
             });
-                
-            audit.AuditableObjects.AddRange(objects.SelectMany(o=>this.CreateAuditObjects(o, AuditableObjectLifecycle.NotSet)));
-            AuditUtil.SendAudit(audit);
 
+            audit.AuditableObjects.AddRange(objects.SelectMany(o => this.CreateAuditObjects(o, AuditableObjectLifecycle.NotSet)));
+            AuditUtil.SendAudit(audit);
         }
 
         /// <summary>
@@ -684,6 +662,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                         obj.IDTypeCode = AuditableObjectIdType.PatientNumber;
                         obj.ObjectId = resource.Id;
                         return new AuditableObject[] { obj };
+
                     case ResourceType.Organization:
                         obj.Type = AuditableObjectType.Organization;
                         obj.Role = AuditableObjectRole.Resource;
@@ -693,8 +672,10 @@ namespace SanteDB.Messaging.FHIR.Rest
                         obj.Type = AuditableObjectType.Person;
                         obj.Role = AuditableObjectRole.Provider;
                         return new AuditableObject[] { obj };
+
                     case ResourceType.Bundle:
                         return (resource as Bundle).Entry.SelectMany(o => CreateAuditObjects(o.Resource, lifecycle));
+
                     default:
                         return new AuditableObject[0];
                 }
@@ -703,7 +684,6 @@ namespace SanteDB.Messaging.FHIR.Rest
             {
                 return new AuditableObject[0];
             }
-
         }
 
         /// <summary>
@@ -713,7 +693,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         {
             return this.ExecuteOperationPost(null, operationName, parameters);
         }
-
 
         /// <summary>
         /// Get the description of the service
@@ -729,7 +708,6 @@ namespace SanteDB.Messaging.FHIR.Rest
                 {
                     foreach (var op in def.Interaction)
                     {
-
                         ServiceOperationDescription operationDescription = null;
                         switch (op.Code.Value)
                         {
@@ -738,11 +716,13 @@ namespace SanteDB.Messaging.FHIR.Rest
                                 operationDescription.Responses.Add(HttpStatusCode.Created, def.Type.Value.CreateDescription());
                                 operationDescription.Parameters.Add(new OperationParameterDescription("body", def.Type.Value.CreateDescription(), OperationParameterLocation.Body));
                                 break;
+
                             case CapabilityStatement.TypeRestfulInteraction.Delete:
                                 operationDescription = new ServiceOperationDescription("DELETE", $"/{def.Type.Value}/{{id}}", acceptProduces, true);
                                 operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                                 operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
                                 break;
+
                             case CapabilityStatement.TypeRestfulInteraction.HistoryInstance:
                                 operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}/{{id}}/_history", acceptProduces, true);
                                 operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
@@ -750,12 +730,14 @@ namespace SanteDB.Messaging.FHIR.Rest
                                 operationDescription.Parameters.Add(new OperationParameterDescription("_pretty", typeof(bool), OperationParameterLocation.Query));
                                 operationDescription.Parameters.Add(new OperationParameterDescription("_summary", typeof(String), OperationParameterLocation.Query));
                                 break;
+
                             case CapabilityStatement.TypeRestfulInteraction.HistoryType:
                                 operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}/_history", acceptProduces, true);
                                 operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
                                 operationDescription.Parameters.Add(new OperationParameterDescription("_pretty", typeof(bool), OperationParameterLocation.Query));
                                 operationDescription.Parameters.Add(new OperationParameterDescription("_summary", typeof(String), OperationParameterLocation.Query));
                                 break;
+
                             case CapabilityStatement.TypeRestfulInteraction.Read:
                                 operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}/{{id}}", acceptProduces, true);
                                 operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
@@ -763,6 +745,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                                 operationDescription.Parameters.Add(new OperationParameterDescription("_summary", typeof(String), OperationParameterLocation.Query));
                                 operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                                 break;
+
                             case CapabilityStatement.TypeRestfulInteraction.SearchType:
                                 operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}", acceptProduces, true);
                                 operationDescription.Responses.Add(HttpStatusCode.OK, ResourceType.Bundle.CreateDescription());
@@ -771,14 +754,15 @@ namespace SanteDB.Messaging.FHIR.Rest
                                     var parmType = typeof(Object);
                                     switch (itm.Type.Value)
                                     {
-
                                         case SearchParamType.Date:
                                             parmType = typeof(DateTime);
                                             break;
+
                                         case SearchParamType.Number:
                                         case SearchParamType.Quantity:
                                             parmType = typeof(Int32);
                                             break;
+
                                         case SearchParamType.Reference:
                                         case SearchParamType.String:
                                         case SearchParamType.Composite:
@@ -790,12 +774,14 @@ namespace SanteDB.Messaging.FHIR.Rest
                                     operationDescription.Parameters.Add(new OperationParameterDescription(itm.Name, parmType, OperationParameterLocation.Query));
                                 }
                                 break;
+
                             case CapabilityStatement.TypeRestfulInteraction.Update:
                                 operationDescription = new ServiceOperationDescription("PUT", $"/{def.Type.Value}/{{id}}", acceptProduces, true);
                                 operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
                                 operationDescription.Parameters.Add(new OperationParameterDescription("body", def.Type.Value.CreateDescription(), OperationParameterLocation.Body));
                                 operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                                 break;
+
                             case CapabilityStatement.TypeRestfulInteraction.Vread:
                                 operationDescription = new ServiceOperationDescription("GET", $"/{def.Type.Value}/{{id}}/_history/{{versionId}}", acceptProduces, true);
                                 operationDescription.Parameters.Add(new OperationParameterDescription("id", typeof(String), OperationParameterLocation.Path));
@@ -810,7 +796,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                     }
 
                     // Add operation handlers
-                    foreach(var op in ExtensionUtil.OperationHandlers.Where(o=> o.AppliesTo?.Contains(def.Type.Value) == true))
+                    foreach (var op in ExtensionUtil.OperationHandlers.Where(o => o.AppliesTo?.Contains(def.Type.Value) == true))
                     {
                         var operationDescription = new ServiceOperationDescription(op.IsGet ? "GET" : "POST", $"/{def.Type.Value}/${op.Name}", acceptProduces, true);
 
@@ -821,16 +807,15 @@ namespace SanteDB.Messaging.FHIR.Rest
                         operationDescription.Responses.Add(HttpStatusCode.OK, def.Type.Value.CreateDescription());
                         operationDescription.Tags.Add(def.Type.ToString());
                         operationDescription.Responses.Add(HttpStatusCode.InternalServerError, ResourceType.OperationOutcome.CreateDescription());
-                        
-                        if(op.IsGet)
+
+                        if (op.IsGet)
                         {
-                            foreach(var i in op.Parameters)
+                            foreach (var i in op.Parameters)
                             {
                                 operationDescription.Parameters.Add(new OperationParameterDescription(i.Key, typeof(String), OperationParameterLocation.Query));
                             }
                         }
                         retVal.Operations.Add(operationDescription);
-
                     }
                 }
 
@@ -855,5 +840,4 @@ namespace SanteDB.Messaging.FHIR.Rest
             }
         }
     }
-
 }

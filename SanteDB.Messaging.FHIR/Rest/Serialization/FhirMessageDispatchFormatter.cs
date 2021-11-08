@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using Hl7.Fhir.Serialization;
@@ -49,13 +50,12 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
     /// <summary>
     /// Represents a dispatch message formatter which uses the JSON.NET serialization
     /// </summary>
-    /// <remarks>This serialization is used because the SanteDB FHIR resources have extra features not contained in the pure HL7 API provided by HL7 International (such as operators to/from primitiives, generation of text, etc.). This 
+    /// <remarks>This serialization is used because the SanteDB FHIR resources have extra features not contained in the pure HL7 API provided by HL7 International (such as operators to/from primitiives, generation of text, etc.). This
     /// dispatch formatter is responsible for the serialization and de-serialization of FHIR objects to/from JSON and XML using the SanteDB classes for FHIR resources.</remarks>
     public class FhirMessageDispatchFormatter : IDispatchMessageFormatter
     {
-
         // Trace source
-        private Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
+        private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         // Default settings
         private ParserSettings m_settings = new ParserSettings()
@@ -82,7 +82,6 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
         /// </summary>
         public void DeserializeRequest(EndpointOperation operation, RestRequestMessage request, object[] parameters)
         {
-
             try
             {
                 var httpRequest = RestOperationContext.Current.IncomingRequest;
@@ -119,7 +118,6 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 this.m_traceSource.TraceEvent(EventLevel.Error, e.ToString());
                 throw;
             }
-
         }
 
         /// <summary>
@@ -145,7 +143,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 contentType = accepts ?? contentType ?? formatParm;
 
                 // No specified content type
-                if(String.IsNullOrEmpty(contentType))
+                if (String.IsNullOrEmpty(contentType))
                 {
                     contentType = this.m_configuration.DefaultResponseFormat == FhirResponseFormatConfiguration.Json ? "application/fhir+json" : "application/fhir+xml";
                 }
@@ -160,12 +158,14 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                     switch (format)
                     {
                         case "application/fhir+xml":
-                            using (var xw = XmlWriter.Create(ms, new XmlWriterSettings() { 
+                            using (var xw = XmlWriter.Create(ms, new XmlWriterSettings()
+                            {
                                 Encoding = new UTF8Encoding(false),
                                 Indent = isOutputPretty
                             }))
                                 new FhirXmlSerializer().Serialize(baseObject, xw, summaryType.Value);
                             break;
+
                         case "application/fhir+json":
                             using (var sw = new StreamWriter(ms, new UTF8Encoding(false), 1024, true))
                             using (var jw = new JsonTextWriter(sw)
@@ -178,6 +178,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                                     Pretty = isOutputPretty
                                 }).Serialize(baseObject, jw);
                             break;
+
                         default:
                             throw new FhirException((HttpStatusCode)406, OperationOutcome.IssueType.NotSupported, $"{contentType} not supported");
                     }

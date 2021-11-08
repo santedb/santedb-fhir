@@ -114,7 +114,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!(relModel is Core.Model.Entities.Person person))
             {
                 m_tracer.TraceError("Cannot create unless source and target are Person");
-                throw new InvalidOperationException(m_localizationService.FormatString("error.type.InvalidOperation.cannotCreate", new
+                throw new InvalidOperationException(m_localizationService.GetString("error.type.InvalidOperation.cannotCreate", new
                 {
                     param = "Person"
 
@@ -239,7 +239,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (sourceEntity == null)
             {
                 this.m_tracer.TraceError($"Could not resolve {resource.Patient.Reference}");
-                throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.couldNotResolve", new
+                throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.couldNotResolve", new
                 {
                     param = resource.Patient.Reference
                 }));
@@ -266,7 +266,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     this.m_tracer.TraceError($"Cannot change the source of relationship from {relationship.SourceEntityKey} to {sourceEntity.Key}");
 
-                    throw new InvalidOperationException(m_localizationService.FormatString("error.type.InvalidOperation.cannotChange", new
+                    throw new InvalidOperationException(m_localizationService.GetString("error.type.InvalidOperation.cannotChange", new
                     {
                         param =  relationship.SourceEntityKey,
                         param2 = sourceEntity.Key

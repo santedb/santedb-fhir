@@ -2,27 +2,30 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using SanteDB.Core.Services;
 using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Interop;
+
 using SanteDB.Core.Services;
+
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Rest;
@@ -47,7 +50,6 @@ namespace SanteDB.Messaging.FHIR
     [ApiServiceProvider("HL7 FHIR R4 API Endpoint", typeof(FhirServiceBehavior), configurationType: typeof(FhirServiceConfigurationSection))]
     public class FhirMessageHandler : IDaemonService, IApiEndpointProvider
     {
-
         /// <summary>
         /// Gets the service name
         /// </summary>
@@ -60,7 +62,7 @@ namespace SanteDB.Messaging.FHIR
 
         #region IMessageHandlerService Members
 
-        private Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
+        private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         // Configuration
         private FhirServiceConfigurationSection m_configuration;
@@ -75,14 +77,17 @@ namespace SanteDB.Messaging.FHIR
         /// Fired when the FHIR message handler is starting
         /// </summary>
         public event EventHandler Starting;
+
         /// <summary>
         /// Fired when the FHIR message handler is stopping
         /// </summary>
         public event EventHandler Stopping;
+
         /// <summary>
-        /// Fired when the FHIR message handler has started 
+        /// Fired when the FHIR message handler has started
         /// </summary>
         public event EventHandler Started;
+
         /// <summary>
         /// Fired when the FHIR message handler has stopped
         /// </summary>
@@ -110,7 +115,6 @@ namespace SanteDB.Messaging.FHIR
             {
                 try
                 {
-
                     using (AuthenticationContext.EnterSystemContext())
                     {
                         this.m_webHost = ApplicationServiceContext.Current.GetService<IRestServiceFactory>().CreateService(typeof(FhirServiceBehavior));
@@ -130,7 +134,6 @@ namespace SanteDB.Messaging.FHIR
 
                         this.m_traceSource.TraceInfo("FHIR On: {0}", this.m_webHost.Endpoints.First().Description.ListenUri);
                     }
-
                 }
                 catch (Exception e)
                 {
@@ -162,7 +165,7 @@ namespace SanteDB.Messaging.FHIR
             return true;
         }
 
-        #endregion
+        #endregion IMessageHandlerService Members
 
         /// <summary>
         /// True if the FHIR message handler is active and running
@@ -181,12 +184,12 @@ namespace SanteDB.Messaging.FHIR
         public ServiceEndpointType ApiType => ServiceEndpointType.Hl7FhirInterface;
 
         /// <summary>
-        /// Url 
+        /// Url
         /// </summary>
-        public string[] Url => this.m_webHost.Endpoints.Select(o=>o.Description.ListenUri.ToString()).ToArray();
+        public string[] Url => this.m_webHost.Endpoints.Select(o => o.Description.ListenUri.ToString()).ToArray();
 
         /// <summary>
-        /// Capabilities 
+        /// Capabilities
         /// </summary>
         public ServiceEndpointCapabilities Capabilities
         {
@@ -195,6 +198,5 @@ namespace SanteDB.Messaging.FHIR
                 return (ServiceEndpointCapabilities)ApplicationServiceContext.Current.GetService<IRestServiceFactory>().GetServiceCapabilities(this.m_webHost);
             }
         }
-
     }
 }

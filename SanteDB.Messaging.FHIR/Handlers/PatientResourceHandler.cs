@@ -61,7 +61,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var relTypes = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"));
             this.m_relatedPersons = relTypes.Select(c => c.Key.Value).ToList();
-            this.m_localizationService = localizationService;
         }
 
         /// <summary>
@@ -398,7 +397,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     if (referenceKey == null)
                     {
                         this.m_tracer.TraceError("Can't locate a registered general practitioner");
-                        throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.cannotLocateRegistered", new
+                        throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.cannotLocateRegistered", new
                         {
                             param = "general practitioner"
                         }));
@@ -412,7 +411,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 if (referenceKey == null)
                 {
                     this.m_tracer.TraceError("Can't locate a registered managing organization");
-                    throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.cannotLocateRegistered", new
+                    throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.cannotLocateRegistered", new
                     {
                         param = "managing organization"
                     }));
@@ -448,7 +447,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             if (replacee == null)
                             {
                                 this.m_tracer.TraceError($"Cannot locate patient referenced by {lnk.Type} relationship");
-                                throw new KeyNotFoundException(m_localizationService.FormatString("error.messaging.fhir.patientResource.cannotLocatePatient", new
+                                throw new KeyNotFoundException(m_localizationService.GetString("error.messaging.fhir.patientResource.cannotLocatePatient", new
                                 {
                                     param = lnk.Type
                                 }));
@@ -464,7 +463,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             if (replacer == null)
                             {
                                 this.m_tracer.TraceError($"Cannot locate patient referenced by {lnk.Type} relationship");
-                                throw new KeyNotFoundException(m_localizationService.FormatString("error.messaging.fhir.patientResource.cannotLocatePatient", new
+                                throw new KeyNotFoundException(m_localizationService.GetString("error.messaging.fhir.patientResource.cannotLocatePatient", new
                                 {
                                     param = lnk.Type
                                 }));
@@ -565,7 +564,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                                 default:
                                     this.m_tracer.TraceError($"Cannot determine how to include {includeInstruction}");
-                                    throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidOperation.cannotDetermine", new
+                                    throw new InvalidOperationException(this.m_localizationService.GetString("error.type.InvalidOperation.cannotDetermine", new
                                     {
                                         param = includeInstruction
                                     }));
@@ -594,7 +593,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                                 default:
                                     this.m_tracer.TraceError($"Cannot determine how to include {includeInstruction}");
-                                    throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidOperation.cannotDetermine", new
+                                    throw new InvalidOperationException(this.m_localizationService.GetString("error.type.InvalidOperation.cannotDetermine", new
                                     {
                                         param = includeInstruction
                                     }));

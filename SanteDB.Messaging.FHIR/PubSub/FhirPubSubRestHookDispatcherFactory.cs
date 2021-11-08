@@ -56,7 +56,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Tracer
             /// </summary>
-            private Tracer m_tracer = Tracer.GetTracer(typeof(Dispatcher));
+            private readonly Tracer m_tracer = Tracer.GetTracer(typeof(Dispatcher));
 
             // Client for FHIR
             private FhirClient m_client;

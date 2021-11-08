@@ -177,7 +177,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else
                 {
                     this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedExeption.paramOnlySupported", new
+                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedExeption.paramOnlySupported", new
                     {
                         param = "UUID"
                     }));
@@ -197,7 +197,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else
                 {
                     this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedExeption.paramOnlySupported", new
+                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedExeption.paramOnlySupported", new
                     {
                         param ="UUID"
                     } ));

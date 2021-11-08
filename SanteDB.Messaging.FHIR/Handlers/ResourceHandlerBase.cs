@@ -82,7 +82,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     var tracer = Tracer.GetTracer(typeof(ResourceHandlerBase<TFhirResource, TModel>));
 
                     tracer.TraceError($"{queryInstruction} is not a valid include instruction");
-                    throw new ArgumentOutOfRangeException(localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                    throw new ArgumentOutOfRangeException(localizationService.GetString("error.type.InvalidDataException.userMessage", new
                     {
                         param = "include instruction"
                     }));
@@ -111,7 +111,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// The trace source instance.
         /// </summary>
-        protected Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
+        protected readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         /// <summary>
         /// The localization service.
@@ -129,7 +129,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (typeAttribute == null || !typeAttribute.IsResource || !Enum.TryParse<ResourceType>(typeAttribute.Name, out ResourceType resourceType))
             {
                 this.m_traceSource.TraceError($"Type of {typeof(TFhirResource)} is not a resource");
-                throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                throw new InvalidOperationException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "resource"
                 }));
@@ -184,7 +184,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // We want to map from TFhirResource to TModel
             var modelInstance = this.MapToModel(target as TFhirResource);
             if (modelInstance == null)
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "Model"
                 }));
@@ -217,7 +217,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Delete
             var guidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException(m_localizationService.FormatString("error.type.ArgumentException", new
+                throw new ArgumentException(m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "id"
                 }));
@@ -358,12 +358,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             Guid guidId = Guid.Empty, versionGuidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "id"
                 }));
             if (!String.IsNullOrEmpty(versionId) && !Guid.TryParse(versionId, out versionGuidId))
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "versionId"
                 }));
@@ -411,7 +411,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             target.Id = id;
             var modelInstance = this.MapToModel(target as TFhirResource);
             if (modelInstance == null)
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "Request"
                 }));
@@ -419,7 +419,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Guid identifier
             var guidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "id"
                 }));
@@ -519,7 +519,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             Guid guidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "id"
                 }));

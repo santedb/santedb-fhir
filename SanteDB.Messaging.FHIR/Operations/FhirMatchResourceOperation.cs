@@ -182,7 +182,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             catch (Exception e)
             {
                 this.m_tracer.TraceError($"Error running match on {resource.TypeName} - {e}");
-                throw new Exception(this.m_localizationService.FormatString("error.messaging.fhir.match.operation", new
+                throw new Exception(this.m_localizationService.GetString("error.messaging.fhir.match.operation", new
                 {
                     param = resource.TypeName
                 }), e);

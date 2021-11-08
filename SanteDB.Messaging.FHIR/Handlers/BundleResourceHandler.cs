@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Collection;
 using SanteDB.Messaging.FHIR.Util;
@@ -29,7 +30,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
+
 using System.Reflection;
+
 using SanteDB.Core.Diagnostics;
 using RestSrvr;
 using static Hl7.Fhir.Model.CapabilityStatement;
@@ -47,9 +50,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class BundleResourceHandler : IServiceImplementation, IFhirResourceHandler, IFhirResourceMapper
     {
-
         // Tracer
-        private Tracer m_tracer = Tracer.GetTracer(typeof(BundleResourceHandler));
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(BundleResourceHandler));
 
         //Localization service
         private ILocalizationService m_localizationService;
@@ -105,8 +107,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 case Hl7.Fhir.Model.Bundle.BundleType.Transaction:
                     {
-
-
                         var sdbResult = this.m_bundleRepository.Insert(this.MapToModel(target) as Core.Model.Collection.Bundle);
                         var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
                         retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;
@@ -115,7 +115,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     };
                 case Hl7.Fhir.Model.Bundle.BundleType.Message:
                     {
-
                         var processMessageHandler = ExtensionUtil.GetOperation(null, "process-message");
                         return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, processMessageHandler.Invoke(new Parameters()
                         {
@@ -198,10 +197,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!(modelInstance is Core.Model.Collection.Bundle sdbBundle))
             {
                 this.m_tracer.TraceError("Instance must be a bundle");
-                throw new ArgumentException(nameof(modelInstance), this.m_localizationService.FormatString("error.type.ArgumentException", new
-                    {
-                        param = "bundle"
-                    }));
+                throw new ArgumentException(nameof(modelInstance), this.m_localizationService.GetString("error.type.ArgumentException", new
+                {
+                    param = "bundle"
+                }));
             }
 
             var retVal = new Hl7.Fhir.Model.Bundle()
@@ -234,10 +233,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!(resourceInstance is Hl7.Fhir.Model.Bundle fhirBundle))
             {
                 this.m_tracer.TraceError("Argument must be a bundle");
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
-                    {
-                        param = "bundle"
-                    }));
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
+                {
+                    param = "bundle"
+                }));
             }
 
             var sdbBundle = new Core.Model.Collection.Bundle();
@@ -270,7 +269,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
                     taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
-
                 }
 
                 if (entry.Request != null)
@@ -284,7 +282,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Query 
+        /// Query
         /// </summary>
         public Hl7.Fhir.Model.Bundle Query(NameValueCollection parameters)
         {
@@ -300,7 +298,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Update 
+        /// Update
         /// </summary>
         public Resource Update(string id, Resource target, TransactionMode mode)
         {

@@ -51,7 +51,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private IConfigurationManager m_configurationManager;
 
         // Trace source
-        private Tracer m_tracer = Tracer.GetTracer(typeof(SubscriptionResourceHandler));
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(SubscriptionResourceHandler));
 
         //Localization service
         private readonly ILocalizationService m_localizationService;
@@ -85,7 +85,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!(target is Subscription subscription))
             {
                 this.m_tracer.TraceError("Subscription registration requires a subscription body");
-                throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                throw new ArgumentOutOfRangeException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "subscription body"
                 }));
@@ -246,7 +246,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             if (!(target is Subscription subscription))
             {
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "subscription resource"
                 }));
@@ -341,7 +341,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     // TODO: E-mail dispatcher
                     if (!fhirChannel.Endpoint.StartsWith("mailto:"))
                     {
-                        throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.messaging.fhir.subscription.emailScheme", new
+                        throw new ArgumentOutOfRangeException(this.m_localizationService.GetString("error.messaging.fhir.subscription.emailScheme", new
                         {
                             param = "mailto:"
                         }));
@@ -356,7 +356,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     // TODO: E-mail dispatcher
                     if (!fhirChannel.Endpoint.StartsWith("sms:"))
                     {
-                        throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.messaging.fhir.subscription.emailScheme", new
+                        throw new ArgumentOutOfRangeException(this.m_localizationService.GetString("error.messaging.fhir.subscription.emailScheme", new
                         {
                             param = "sms:"
                         }));
