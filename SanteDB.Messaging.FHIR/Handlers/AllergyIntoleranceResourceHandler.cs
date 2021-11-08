@@ -43,17 +43,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
         // Applicable type concepts
         private List<Guid> m_typeConcepts;
 
-        // Localization Service
-        private readonly ILocalizationService m_localizationService;
-
         /// <summary>
         /// Type concepts
         /// </summary>
-        public AllergyIntoleranceResourceHandler(IRepositoryService<CodedObservation> repo, IRepositoryService<Concept> conceptRepo) : base(repo)
+        public AllergyIntoleranceResourceHandler(IRepositoryService<CodedObservation> repo, IRepositoryService<Concept> conceptRepo, ILocalizationService localizationService) : base(repo, localizationService)
         {
 
             this.m_typeConcepts = conceptRepo.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>

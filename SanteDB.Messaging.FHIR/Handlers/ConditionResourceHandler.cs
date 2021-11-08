@@ -43,15 +43,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ConditionResourceHandler : RepositoryResourceHandlerBase<Condition, CodedObservation>
 	{
-		// Localization service
-		private ILocalizationService m_localizationService;
 
 		/// <summary>
 		/// Create new resource handler
 		/// </summary>
-		public ConditionResourceHandler(IRepositoryService<CodedObservation> repo) : base(repo)
+		public ConditionResourceHandler(IRepositoryService<CodedObservation> repo, ILocalizationService localizationService) : base(repo, localizationService)
 		{
-			this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 		}
 
 		/// <summary>

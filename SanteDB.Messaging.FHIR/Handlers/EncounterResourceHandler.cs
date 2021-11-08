@@ -46,15 +46,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         // Tracer
         private Tracer m_tracer = Tracer.GetTracer(typeof(EncounterResourceHandler));
 
-        // Localization service
-        private ILocalizationService m_localizationService;
-
         /// <summary>
 		/// Create new resource handler
 		/// </summary>
-		public EncounterResourceHandler(IRepositoryService<PatientEncounter> repo) : base(repo)
+		public EncounterResourceHandler(IRepositoryService<PatientEncounter> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>

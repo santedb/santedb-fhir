@@ -40,14 +40,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class ImmunizationRecommendationResourceHandler : ResourceHandlerBase<ImmunizationRecommendation, SubstanceAdministration>
 	{
-		private readonly ILocalizationService m_localizationService;
 		
 		/// <summary>
 		/// Initializes a new instance of the <see cref="ImmunizationRecommendationResourceHandler"/> class.
 		/// </summary>
-		public ImmunizationRecommendationResourceHandler()
+		public ImmunizationRecommendationResourceHandler(ILocalizationService localizationService) : base(localizationService)
 		{
-			this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 		}
 
 		/// <summary>
