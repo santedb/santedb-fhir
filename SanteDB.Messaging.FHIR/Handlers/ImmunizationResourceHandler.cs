@@ -44,16 +44,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private readonly Guid INITIAL_IMMUNIZATION = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
         private readonly Guid IMMUNIZATION = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
         private readonly Guid BOOSTER_IMMUNIZATION = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
-        private readonly ILocalizationService m_localizationService;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ImmunizationResourceHandler));
         
 
         /// <summary>
         /// Create a new resource handler
         /// </summary>
-        public ImmunizationResourceHandler(IRepositoryService<SubstanceAdministration> repo) : base(repo)
+        public ImmunizationResourceHandler(IRepositoryService<SubstanceAdministration> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         }
 
         /// <summary>

@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Newtonsoft.Json;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Model.Attributes;
@@ -37,7 +38,6 @@ namespace SanteDB.Messaging.FHIR.Configuration
     [XmlType(nameof(FhirServiceConfigurationSection), Namespace = "http://santedb.org/configuration")]
     public class FhirServiceConfigurationSection : IConfigurationSection
     {
-
         /// <summary>
         /// Creates a new instance of the WcfEndpoint
         /// </summary>
@@ -55,14 +55,14 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// The landing page file
         /// </summary>
         [Editor("System.Windows.Forms.Design.FileNameEditor, System.Design", "System.Drawing.Design.UITypeEditor, System.Drawing")]
-        [XmlAttribute("index"), JsonProperty("index"), DisplayName("Landing Page"), Description("If you would like the FHIR service to serve out an HTML page on root access instead of the default page, select it here") ]
+        [XmlAttribute("index"), JsonProperty("index"), DisplayName("Landing Page"), Description("If you would like the FHIR service to serve out an HTML page on root access instead of the default page, select it here")]
         public string LandingPage { get; set; }
 
         /// <summary>
         /// XML for resource handlers
         /// </summary>
         [XmlArray("resourceHandlers"), XmlArrayItem("add"), JsonProperty("resourceHandlers")]
-        [DisplayName("Custom Resources"), Description("If using a custom set of resource handlers (i.e. custom FHIR resource mapping) select the handlers here. If empty, all handlers will be loaded and used")]
+        [DisplayName("Resource Handlers"), Description("If using a custom set of resource handlers (i.e. custom FHIR resource mapping) select the handlers here. If empty, all handlers will be loaded and used")]
         [Editor("SanteDB.Configuration.Editors.TypeSelectorEditor, SanteDB.Configuration", "System.Drawing.Design.UITypeEditor, System.Drawing"), Binding(typeof(IFhirResourceHandler))]
         public List<TypeReferenceConfiguration> ResourceHandlers
         {
@@ -73,7 +73,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// XML for resource handlers
         /// </summary>
         [XmlArray("operationHandlers"), XmlArrayItem("add"), JsonProperty("operationHandlers")]
-        [DisplayName("Custom Operations"), Description("If using a custom set of operation handlers (i.e. custom FHIR $operations) select the handlers here. If empty, all handlers will be loaded and used")]
+        [DisplayName("Operation Handlers"), Description("If using a custom set of operation handlers (i.e. custom FHIR $operations) select the handlers here. If empty, all handlers will be loaded and used")]
         [Editor("SanteDB.Configuration.Editors.TypeSelectorEditor, SanteDB.Configuration", "System.Drawing.Design.UITypeEditor, System.Drawing"), Binding(typeof(IFhirOperationHandler))]
         public List<TypeReferenceConfiguration> OperationHandlers
         {
@@ -84,7 +84,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// XML for resource handlers
         /// </summary>
         [XmlArray("messageHandlers"), XmlArrayItem("add"), JsonProperty("messageHandlers")]
-        [DisplayName("Custom Messages"), Description("If using a custom set of message handlers (i.e. custom FHIR message events) select the handlers here. If empty, all handlers will be loaded and used")]
+        [DisplayName("Message Handlers"), Description("If using a custom set of message handlers (i.e. custom FHIR message events) select the handlers here. If empty, all handlers will be loaded and used")]
         [Editor("SanteDB.Configuration.Editors.TypeSelectorEditor, SanteDB.Configuration", "System.Drawing.Design.UITypeEditor, System.Drawing"), Binding(typeof(IFhirMessageOperation))]
         public List<TypeReferenceConfiguration> MessageHandlers
         {
@@ -95,7 +95,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// XML for resource handlers
         /// </summary>
         [XmlArray("extensionHandlers"), XmlArrayItem("add"), JsonProperty("extensionHandlers")]
-        [DisplayName("Custom Extensions"), Description("If using a custom set of FHIR extensions handlers (i.e. mapping extensions to RIM) select the handlers here. If empty, all handlers will be loaded and used")]
+        [DisplayName("Extension Handlers"), Description("If using a custom set of FHIR extensions handlers (i.e. mapping extensions to RIM) select the handlers here. If empty, all handlers will be loaded and used")]
         [Editor("SanteDB.Configuration.Editors.TypeSelectorEditor, SanteDB.Configuration", "System.Drawing.Design.UITypeEditor, System.Drawing"), Binding(typeof(IFhirExtensionHandler))]
         public List<TypeReferenceConfiguration> ExtensionHandlers
         {
@@ -106,7 +106,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// XML for resource handlers
         /// </summary>
         [XmlArray("profileHandlers"), XmlArrayItem("add"), JsonProperty("profileHandlers")]
-        [DisplayName("Custom Extensions"), Description("If using a custom set of FHIR profile validators (i.e. custom validation rules) select the validators here. If empty, all validators will be loaded and used")]
+        [DisplayName("Profile Handlers"), Description("If using a custom set of FHIR profile validators (i.e. custom validation rules) select the validators here. If empty, all validators will be loaded and used")]
         [Editor("SanteDB.Configuration.Editors.TypeSelectorEditor, SanteDB.Configuration", "System.Drawing.Design.UITypeEditor, System.Drawing"), Binding(typeof(IFhirProfileValidationHandler))]
         public List<TypeReferenceConfiguration> ProfileHandlers
         {
@@ -117,7 +117,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// XML for resource handlers
         /// </summary>
         [XmlArray("resources"), XmlArrayItem("add"), JsonProperty("resources")]
-        [DisplayName("Allowed Resources"), Description("List of resources which are permitted/exposed on this server (note: empty means all resources are permitted)")]
+        [Browsable(false)]
         public List<String> Resources
         {
             get; set;
@@ -127,7 +127,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// XML for resource handlers
         /// </summary>
         [XmlArray("profiles"), XmlArrayItem("add"), JsonProperty("profiles")]
-        [DisplayName("Allowed Profiles"), Description("List of profiles (urls) which are permitted/exposed on this server (note: empty means all profiles are permitted)")]
+        [Browsable(false)]
         public List<String> Profiles
         {
             get; set;
@@ -137,7 +137,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// XML for resource handlers
         /// </summary>
         [XmlArray("messages"), XmlArrayItem("add"), JsonProperty("messages")]
-        [DisplayName("Allowed Message Events"), Description("List of message events (URI) which are permitted/exposed on this server (note: empty means all message events are permitted)")]
+        [Browsable(false)]
         public List<String> Messages
         {
             get; set;
@@ -147,7 +147,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// XML for resource handlers
         /// </summary>
         [XmlArray("operations"), XmlArrayItem("add"), JsonProperty("operations")]
-        [DisplayName("Allowed Operations"), Description("List of operation names which are permitted/exposed on this server (note: empty means all loaded operations are permitted)")]
+        [Browsable(false)]
         public List<String> Operations
         {
             get; set;
@@ -157,7 +157,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// Allows configuration of extensions which are active
         /// </summary>
         [XmlArray("extensions"), XmlArrayItem("add"), JsonProperty("extensions")]
-        [DisplayName("Allowed Extensions"), Description("List of extension URIs which are permitted/exposed on this server (note: empty means all loaded extensions are permitted)")]
+        [Browsable(false)]
         public List<String> Extensions
         {
             get; set;
@@ -184,7 +184,6 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [XmlAttribute("defaultContentType"), JsonProperty("defaultContentType")]
         [DisplayName("Default Format"), Description("The default format to use when the client does not specify a perferred format")]
         public FhirResponseFormatConfiguration DefaultResponseFormat { get; set; }
-
     }
 
     /// <summary>
@@ -195,6 +194,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
     {
         [XmlEnum("application/fhir+json")]
         Json,
+
         [XmlEnum("application/fhir+xml")]
         Xml
     }

@@ -45,7 +45,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Represents a FHIR resource handler for bundles
     /// </summary>
-    public class BundleResourceHandler : IFhirResourceHandler, IFhirResourceMapper
+    public class BundleResourceHandler : IServiceImplementation, IFhirResourceHandler, IFhirResourceMapper
     {
 
         // Tracer
@@ -60,10 +60,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Creates a new bundle resource handler
         /// </summary>
-        public BundleResourceHandler(IRepositoryService<Core.Model.Collection.Bundle> bundleRepository)
+        public BundleResourceHandler(IRepositoryService<Core.Model.Collection.Bundle> bundleRepository, ILocalizationService localizationService)
         {
             this.m_bundleRepository = bundleRepository;
-            this.m_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+            this.m_localizationService = localizationService;
         }
 
         /// <summary>
@@ -80,6 +80,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Get the CLR type
         /// </summary>
         public Type ResourceClrType => typeof(Hl7.Fhir.Model.Bundle);
+
+        /// <summary>
+        /// Get service name
+        /// </summary>
+        public string ServiceName => "Bundle Resource Handler";
 
         /// <summary>
         /// Can map an object

@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using SanteDB.Core;
@@ -38,7 +39,7 @@ using System.Threading.Tasks;
 namespace SanteDB.Messaging.FHIR.PubSub
 {
     /// <summary>
-    /// A pub-sub dispatch factory which can send rest hook 
+    /// A pub-sub dispatch factory which can send rest hook
     /// </summary>
     public class FhirPubSubRestHookDispatcherFactory : IPubSubDispatcherFactory
     {
@@ -52,7 +53,6 @@ namespace SanteDB.Messaging.FHIR.PubSub
         /// </summary>
         private class Dispatcher : IPubSubDispatcher
         {
-
             /// <summary>
             /// Tracer
             /// </summary>
@@ -94,10 +94,9 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
                     this.m_client.RequestHeaders.Add(kv.Key, kv.Value);
 
-
                 if (this.m_configuration?.Authenticator != null)
                 {
-                    var authenticator = ApplicationServiceContext.Current.GetService<IServiceManager>().CreateInjected(this.m_configuration.Authenticator.Type) as IFhirClientAuthenticator;
+                    var authenticator = this.m_configuration.Authenticator.Type.CreateInjected() as IFhirClientAuthenticator;
                     authenticator.AttachClient(this.m_client, this.m_configuration, settings);
                 }
             }
@@ -126,7 +125,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             private Resource ConvertToResource<TModel>(TModel data)
             {
                 var mapper = FhirResourceHandlerUtil.GetMapperForInstance(data);
-                if(mapper == null)
+                if (mapper == null)
                 {
                     throw new InvalidOperationException("Cannot determine how to convert resource for notification");
                 }
@@ -143,7 +142,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     var resource = this.ConvertToResource(data);
                     this.m_client.Create(resource);
                 }
-                catch(Exception e)
+                catch (Exception e)
                 {
                     this.m_tracer.TraceError("Could not send create to {0} for {1} - {2}", this.Endpoint, data, e);
                 }

@@ -25,6 +25,7 @@ using SanteDB.Core.Configuration;
 using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions;
 
