@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
@@ -42,89 +43,87 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// Represents a handler for condition observations
     /// </summary>
     public class ConditionResourceHandler : RepositoryResourceHandlerBase<Condition, CodedObservation>
-	{
+    {
+        /// <summary>
+        /// Create new resource handler
+        /// </summary>
+        public ConditionResourceHandler(IRepositoryService<CodedObservation> repo, ILocalizationService localizationService) : base(repo, localizationService)
+        {
+        }
 
-		/// <summary>
-		/// Create new resource handler
-		/// </summary>
-		public ConditionResourceHandler(IRepositoryService<CodedObservation> repo, ILocalizationService localizationService) : base(repo, localizationService)
-		{
-		}
+        /// <summary>
+        /// Can map
+        /// </summary>
+        public override bool CanMapObject(object instance) => instance is Condition ||
+            instance is CodedObservation cobs && cobs.TypeConceptKey == ObservationTypeKeys.Condition;
 
-		/// <summary>
-		/// Can map 
-		/// </summary>
-		public override bool CanMapObject(object instance) => instance is Condition ||
-			instance is CodedObservation cobs && cobs.TypeConceptKey == ObservationTypeKeys.Condition;
+        /// <summary>
+        /// Map to FHIR
+        /// </summary>
+        protected override Condition MapToFhir(CodedObservation model)
+        {
+            var retVal = DataTypeConverter.CreateResource<Condition>(model);
 
-		/// <summary>
-		/// Map to FHIR
-		/// </summary>
-		protected override Condition MapToFhir(CodedObservation model)
-		{
-			var retVal = DataTypeConverter.CreateResource<Condition>(model);
+            retVal.Identifier = model.LoadCollection<ActIdentifier>("Identifiers").Select(o => DataTypeConverter.ToFhirIdentifier<Act>(o)).ToList();
 
-			retVal.Identifier = model.LoadCollection<ActIdentifier>("Identifiers").Select(o => DataTypeConverter.ToFhirIdentifier<Act>(o)).ToList();
+            // Clinical status of the condition
+            if (model.StatusConceptKey == StatusKeys.Active)
+                retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "active");
+            else if (model.StatusConceptKey == StatusKeys.Completed)
+                retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "resolved");
+            else if (model.StatusConceptKey == StatusKeys.Nullified)
+                retVal.VerificationStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "entered-in-error");
+            else if (model.StatusConceptKey == StatusKeys.Obsolete)
+                retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "inactive");
 
-			// Clinical status of the condition
-			if (model.StatusConceptKey == StatusKeys.Active)
-				retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "active");
-			else if (model.StatusConceptKey == StatusKeys.Completed)
-				retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "resolved");
+            // Category
+            retVal.Category.Add(new CodeableConcept("http://hl7.org/fhir/condition-category", "encounter-diagnosis"));
 
-			else if (model.StatusConceptKey == StatusKeys.Nullified)
-				retVal.VerificationStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "entered-in-error");
-			else if (model.StatusConceptKey == StatusKeys.Obsolete)
-				retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "inactive");
+            // Severity?
+            var actRelationshipService = ApplicationServiceContext.Current.GetService<IDataPersistenceService<ActRelationship>>();
 
-			// Category
-			retVal.Category.Add(new CodeableConcept("http://hl7.org/fhir/condition-category", "encounter-diagnosis"));
+            var severity = actRelationshipService.Query(o => o.SourceEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal);
+            if (severity == null) // Perhaps we should get from neighbor if this is in an encounter
+            {
+                var contextAct = actRelationshipService.Query(o => o.TargetActKey == model.Key, AuthenticationContext.Current.Principal).FirstOrDefault();
+                if (contextAct != null)
+                    severity = actRelationshipService.Query(o => o.SourceEntityKey == contextAct.SourceEntityKey && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal);
+            }
 
-			// Severity?
-			var actRelationshipService = ApplicationServiceContext.Current.GetService<IDataPersistenceService<ActRelationship>>();
+            // Severity
+            if (severity != null)
+                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept((severity as CodedObservation).LoadProperty<Concept>("Value"));
 
-			var severity = actRelationshipService.Query(o => o.SourceEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal);
-			if (severity == null) // Perhaps we should get from neighbor if this is in an encounter
-			{
-				var contextAct = actRelationshipService.Query(o => o.TargetActKey == model.Key, AuthenticationContext.Current.Principal).FirstOrDefault();
-				if (contextAct != null)
-					severity = actRelationshipService.Query(o => o.SourceEntityKey == contextAct.SourceEntityKey && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal);
-			}
+            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("Value"));
 
-			// Severity
-			if (severity != null)
-				retVal.Severity = DataTypeConverter.ToFhirCodeableConcept((severity as CodedObservation).LoadProperty<Concept>("Value"));
+            // body sites?
+            var sites = actRelationshipService.Query(o => o.SourceEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.FindingSite, AuthenticationContext.Current.Principal).ToArray();
+            retVal.BodySite = sites.Select(o => DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<CodedObservation>("TargetAct").LoadProperty<Concept>("Value"))).ToList();
 
-			retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("Value"));
-
-			// body sites?
-			var sites = actRelationshipService.Query(o => o.SourceEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.FindingSite, AuthenticationContext.Current.Principal);
-			retVal.BodySite = sites.Select(o => DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<CodedObservation>("TargetAct").LoadProperty<Concept>("Value"))).ToList();
-
-			// Subject
-			var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
+            // Subject
+            var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
             if (recordTarget != null)
             {
                 this.m_traceSource.TraceInfo("RCT: {0}", recordTarget.PlayerEntityKey);
                 retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>("PlayerEntity"));
             }
-			// Onset
-			if (model.StartTime.HasValue || model.StopTime.HasValue)
-				retVal.Onset = new Period()
-				{
-					StartElement = model.StartTime.HasValue ? new FhirDateTime(model.StartTime.Value) : null,
-					EndElement = model.StopTime.HasValue ? new FhirDateTime(model.StopTime.Value) : null
-				};
-			else
-				retVal.Onset = new FhirDateTime(model.ActTime);
+            // Onset
+            if (model.StartTime.HasValue || model.StopTime.HasValue)
+                retVal.Onset = new Period()
+                {
+                    StartElement = model.StartTime.HasValue ? new FhirDateTime(model.StartTime.Value) : null,
+                    EndElement = model.StopTime.HasValue ? new FhirDateTime(model.StopTime.Value) : null
+                };
+            else
+                retVal.Onset = new FhirDateTime(model.ActTime);
 
-			retVal.RecordedDateElement = new FhirDateTime(model.CreationTime);
-			var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
-			if (author != null)
-				retVal.Asserter = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.LoadProperty<Entity>("PlayerEntity"));
+            retVal.RecordedDateElement = new FhirDateTime(model.CreationTime);
+            var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
+            if (author != null)
+                retVal.Asserter = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.LoadProperty<Entity>("PlayerEntity"));
 
-			return retVal;
-		}
+            return retVal;
+        }
 
         /// <summary>
         /// Maps a FHIR condition to a model
@@ -133,20 +132,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="restOperationContext">The REST operation context under which this method is called</param>
         /// <returns>The constructed model instance</returns>
 		protected override CodedObservation MapToModel(Condition resource)
-		{
-			throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
-		}
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+        }
 
-		/// <summary>
-		/// Query filter
-		/// </summary>
-		protected override IEnumerable<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query, Guid queryId, int offset, int count, out int totalResults)
-		{
-			var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]);
-			query = System.Linq.Expressions.Expression.Lambda<Func<CodedObservation, bool>>(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), query.Parameters);
+        /// <summary>
+        /// Query filter
+        /// </summary>
+        protected override IEnumerable<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        {
+            var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]);
+            query = System.Linq.Expressions.Expression.Lambda<Func<CodedObservation, bool>>(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), query.Parameters);
 
-			return base.Query(query, queryId, offset, count, out totalResults);
-		}
+            return base.Query(query, queryId, offset, count, out totalResults);
+        }
 
         /// <summary>
         /// Get interactions
@@ -163,17 +162,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
-		/// <summary>
-		/// Get included resources
-		/// </summary>
+        /// <summary>
+        /// Get included resources
+        /// </summary>
         protected override IEnumerable<Resource> GetIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-		/// <summary>
-		/// Get reverse includes
-		/// </summary>
+        /// <summary>
+        /// Get reverse includes
+        /// </summary>
         protected override IEnumerable<Resource> GetReverseIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
