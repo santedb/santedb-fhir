@@ -23,7 +23,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
         private readonly byte[] AUTH = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        private IRepositoryService<Core.Model.Roles.Patient> m_patientRespository;
+        private IRepositoryService<Core.Model.Roles.Patient> m_patientRepository;
 
         private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
 
@@ -40,7 +40,7 @@ namespace SanteDB.Messaging.FHIR.Test
             TestApplicationContext.TestAssembly = typeof(TestComplexRelationships).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-            this.m_patientRespository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>();
+            this.m_patientRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>();
             this.m_personRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Entities.Person>>();
             this.m_relationshipRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Entities.EntityRelationship>>();
 
@@ -97,7 +97,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var createdFhirRelatedPerson = bresult.Entry.FirstOrDefault(o => o.Resource.TypeName == "RelatedPerson").Resource;
 
                 // Ensure that the message is saved correctly
-                var sdbPatient = this.m_patientRespository.Get(Guid.Parse(createdFhirPatient.Id));
+                var sdbPatient = this.m_patientRepository.Get(Guid.Parse(createdFhirPatient.Id));
                 Assert.IsNotNull(sdbPatient);
 
                 // Ensure that the person is related correctly
@@ -190,11 +190,11 @@ namespace SanteDB.Messaging.FHIR.Test
                 var createdFhirRelatedPatient = bresult.Entry.LastOrDefault(o => o.Resource.TypeName == "Patient").Resource;
 
                 // Ensure focal patient was created
-                var sdbFocalPatient = this.m_patientRespository.Get(Guid.Parse(createdFhirPatient.Id));
+                var sdbFocalPatient = this.m_patientRepository.Get(Guid.Parse(createdFhirPatient.Id));
                 Assert.IsNotNull(sdbFocalPatient);
 
                 // Ensure related patient was created
-                var sdbRelatedPatient = this.m_patientRespository.Get(Guid.Parse(createdFhirRelatedPatient.Id));
+                var sdbRelatedPatient = this.m_patientRepository.Get(Guid.Parse(createdFhirRelatedPatient.Id));
                 Assert.IsNotNull(sdbRelatedPatient);
 
                 // Ensure that the focal <> related patient was created
