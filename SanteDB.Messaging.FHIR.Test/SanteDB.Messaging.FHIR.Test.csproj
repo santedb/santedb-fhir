@@ -118,7 +118,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestComplexRelationships.cs" />
+    <Compile Include="TestRelatedPersonResourceHandler.cs" />
     <Compile Include="TestPractitionerResourceHandler.cs" />
     <Compile Include="TestUtil.cs" />
   </ItemGroup>

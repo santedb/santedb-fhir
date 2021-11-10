@@ -18,7 +18,7 @@ namespace SanteDB.Messaging.FHIR.Test
     /// <summary>
     /// Test complex relationships
     /// </summary>
-    public class TestComplexRelationships : DataTest
+    public class TestRelatedPersonResourceHandler : DataTest
     {
 
         private readonly byte[] AUTH = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
@@ -37,7 +37,7 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             // Force load of the DLL
             var p = FirebirdSql.Data.FirebirdClient.FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestComplexRelationships).Assembly;
+            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_patientRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>();

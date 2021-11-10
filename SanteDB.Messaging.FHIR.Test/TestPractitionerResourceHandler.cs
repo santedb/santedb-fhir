@@ -1,15 +1,21 @@
-﻿using Hl7.Fhir.Model;
+﻿using FirebirdSql.Data.FirebirdClient;
+using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
+using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using Patient = SanteDB.Core.Model.Roles.Patient;
+using Person = SanteDB.Core.Model.Entities.Person;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -18,13 +24,13 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     public class TestPractitionerResourceHandler : DataTest
     {
-        private readonly byte[] AUTH = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
+        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
 
-        private IRepositoryService<Core.Model.Roles.Patient> m_patientRepository;
+        private IRepositoryService<Patient> m_patientRepository;
 
-        private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
+        private IRepositoryService<Person> m_personRepository;
 
-        private IRepositoryService<Core.Model.Entities.EntityRelationship> m_relationshipRepository;
+        private IRepositoryService<EntityRelationship> m_relationshipRepository;
 
         // Bundler 
         private IServiceManager m_serviceManager;
@@ -33,24 +39,24 @@ namespace SanteDB.Messaging.FHIR.Test
         public void Setup()
         {
             // Force load of the DLL
-            var p = FirebirdSql.Data.FirebirdClient.FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestComplexRelationships).Assembly;
+            var p = FbCharset.Ascii;
+            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-            this.m_patientRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>();
-            this.m_personRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Entities.Person>>();
-            this.m_relationshipRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Entities.EntityRelationship>>();
+            this.m_patientRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Patient>>();
+            this.m_personRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Person>>();
+            this.m_relationshipRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
 
-            var testConfiguration = new SanteDB.Messaging.FHIR.Configuration.FhirServiceConfigurationSection()
+            var testConfiguration = new FhirServiceConfigurationSection
             {
-                Resources = new System.Collections.Generic.List<string>()
+                Resources = new List<string>
                 {
                     "Practitioner"
                 },
-                OperationHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                ExtensionHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                ProfileHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                MessageHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>
+                OperationHandlers = new List<TypeReferenceConfiguration>(),
+                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
+                ProfileHandlers = new List<TypeReferenceConfiguration>(),
+                MessageHandlers = new List<TypeReferenceConfiguration>
                 {
                     new TypeReferenceConfiguration(typeof(PractitionerResourceHandler))
                 }
@@ -94,17 +100,20 @@ namespace SanteDB.Messaging.FHIR.Test
             Resource result;
 
             // 2. execute the operation under test
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
-                // create the practitioner
-                result = FhirResourceHandlerUtil.GetMappersFor(Hl7.Fhir.Model.ResourceType.Practitioner).First().Create(practitioner, Core.Services.TransactionMode.Commit);
-                var messageString = TestUtil.MessageToString(result);
+                // get the resource handler
+                var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
 
-                Console.WriteLine(messageString);
+                // create the practitioner using the resource handler
+                result = practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
+                //var messageString = TestUtil.MessageToString(result);
 
-                // retrieve the practitioner from the API
-                result = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner).Read(result.Id, result.VersionId);
+                //Console.WriteLine(messageString);
+
+                // retrieve the practitioner using the resource handler
+                result = practitionerResourceHandler.Read(result.Id, result.VersionId);
             }
 
             // 3. assert the results are correct
@@ -115,6 +124,20 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.AreEqual("Khan", actual.Name.Single().Family);
             Assert.AreEqual("Shihab", actual.Name.Single().Given.Single());
+        }
+
+        [Test]
+        public void TestCreateInvalidResource()
+        {
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                // get the resource handler
+                var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
+
+                // expect that the create method throws an InvalidDataException
+                Assert.Throws<InvalidDataException>(() => practitionerResourceHandler.Create(new Account(), TransactionMode.Commit));
+            }
         }
     }
 }
