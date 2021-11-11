@@ -75,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 var isoCode = cc.Coding.FirstOrDefault(o => o.System == "urn:iso:std:iso:3166:1" || o.System == "urn:oid:1.0.3166.1.2.3");
                 if (isoCode != null)
                 {
-                    var country = this.m_placeRepository.Find(o => o.Identifiers.Where(a => a.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode).Any(i => i.Value == isoCode.Code) && o.StatusConceptKey == StatusKeys.Active).SingleOrDefault();
+                    var country = this.m_placeRepository.Find(o => o.Identifiers.Where(a => a.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode).Any(i => i.Value == isoCode.Code) && StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value)).SingleOrDefault();
                     if (country != null && !patient.Relationships.Any(c => c.TargetEntityKey == country.Key))
                     {
                         patient.Relationships.Add(new Core.Model.Entities.EntityRelationship(EntityRelationshipTypeKeys.Citizen, country));

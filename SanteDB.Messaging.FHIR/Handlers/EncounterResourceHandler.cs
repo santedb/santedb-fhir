@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
@@ -37,7 +38,6 @@ using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
-
     /// <summary>
     /// Encounter resource handler for loading and disclosing of patient encounters
     /// </summary>
@@ -54,13 +54,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Get includes 
+        /// Get includes
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(PatientEncounter resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
-
 
         /// <summary>
         /// Get the interactions supported
@@ -96,29 +95,33 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Identifier = model.LoadCollection<ActIdentifier>("Identifiers").Select(o => DataTypeConverter.ToFhirIdentifier<Act>(o)).ToList();
 
             // Map status keys
-            switch(model.StatusConceptKey.ToString().ToUpper())
+            switch (model.StatusConceptKey.ToString().ToUpper())
             {
                 case StatusKeyStrings.Active:
                 case StatusKeyStrings.New:
-                    switch(model.MoodConceptKey.ToString().ToUpper())
+                    switch (model.MoodConceptKey.ToString().ToUpper())
                     {
                         case MoodConceptKeyStrings.Eventoccurrence:
                         case MoodConceptKeyStrings.Request:
                             retVal.Status = Encounter.EncounterStatus.InProgress;
                             break;
+
                         case MoodConceptKeyStrings.Intent:
                         case MoodConceptKeyStrings.Promise:
                             retVal.Status = Encounter.EncounterStatus.Planned;
                             break;
                     }
                     break;
+
                 case StatusKeyStrings.Cancelled:
                     retVal.Status = Encounter.EncounterStatus.Cancelled;
                     break;
+
                 case StatusKeyStrings.Nullified:
                     retVal.Status = Encounter.EncounterStatus.EnteredInError;
                     break;
                     break;
+
                 case StatusKeyStrings.Completed:
                     retVal.Status = Encounter.EncounterStatus.Finished;
                     break;
@@ -131,7 +134,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.ReasonCode = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("ReasonConcept")) };
             retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept")) };
-            
+
             // Map associated
             var associated = model.LoadCollection<ActParticipation>("Participations");
 
@@ -157,8 +160,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Individual = DataTypeConverter.CreateVersionedReference<Practitioner>(o.PlayerEntity)
             }).ToList();
 
-
-            return retVal; 
+            return retVal;
         }
 
         /// <summary>
@@ -180,16 +182,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 StatusConceptKey = status == Encounter.EncounterStatus.Finished ? StatusKeys.Completed :
                     status == Encounter.EncounterStatus.Cancelled ? StatusKeys.Cancelled :
                     status == Encounter.EncounterStatus.InProgress || status == Encounter.EncounterStatus.Arrived ? StatusKeys.Active :
-                    status == Encounter.EncounterStatus.Planned ? StatusKeys.New : StatusKeys.Obsolete,
+                    status == Encounter.EncounterStatus.Planned ? StatusKeys.New :
+                    status == Encounter.EncounterStatus.EnteredInError ? StatusKeys.Nullified : StatusKeys.Inactive,
                 MoodConceptKey = status == Encounter.EncounterStatus.Planned ? ActMoodKeys.Intent : ActMoodKeys.Eventoccurrence,
                 ReasonConcept = DataTypeConverter.ToConcept(resource.ReasonCode.FirstOrDefault())
             };
-            // Parse key
-            Guid key;
-            if (!Guid.TryParse(resource.Id, out key))
+
+            if (!Guid.TryParse(resource.Id, out Guid key))
             {
                 key = Guid.NewGuid();
             }
+
             retVal.Key = key;
 
             // Attempt to resolve relationships
@@ -198,15 +201,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Is the subject a uuid
                 if (resource.Subject.Reference.StartsWith("urn:uuid:"))
                     retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
-                else 
+                else
                 {
                     this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
-                    { 
+                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new
+                    {
                         param = "UUID"
                     }));
                 }
-                
             }
 
             // Attempt to resolve organiztaion
@@ -218,8 +220,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else
                 {
                     this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
-                    { 
+                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new
+                    {
                         param = "UUID"
                     }));
                 }

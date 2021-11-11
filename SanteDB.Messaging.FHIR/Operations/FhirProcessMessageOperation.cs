@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Messaging.FHIR.Exceptions;
@@ -40,7 +41,6 @@ namespace SanteDB.Messaging.FHIR.Operations
     /// </summary>
     public class FhirProcessMessageOperation : IFhirOperationHandler, IServiceImplementation
     {
-
         // Tracer
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirProcessMessageOperation));
 
@@ -132,9 +132,8 @@ namespace SanteDB.Messaging.FHIR.Operations
                 var uuid = Guid.NewGuid();
                 try
                 {
-                    // HACK: The .EndsWith is a total hack - FHIR wants .FullUrl to be absolute, but many senders will send relative references which is stupid AF
+                    // HACK: The .EndsWith is a total hack - FHIR wants .FullUrl to be absolute, but many senders will send relative references which
                     var opReturn = handler.Invoke(messageHeader, contentParameter.Entry.Where(o => messageHeader.Focus.Any(f => o.FullUrl == f.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == f.Reference)).ToArray());
-
 
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
@@ -150,7 +149,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         }
                     });
 
-                    // HACK: Another hack - FullUrl is assumed to be a UUID because I'm not turning an id of XXX and trying to derive a fullUrl for something that is in a 
+                    // HACK: Another hack - FullUrl is assumed to be a UUID because I'm not turning an id of XXX and trying to derive a fullUrl for something that is in a
                     // bundle anyways
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
@@ -183,7 +182,6 @@ namespace SanteDB.Messaging.FHIR.Operations
                     });
 
                     throw new FhirException((System.Net.HttpStatusCode)FhirErrorEndpointBehavior.ClassifyErrorCode(e), retVal, m_localizationService.GetString("error.type.FhirException"), e);
-
                 }
                 finally
                 {
