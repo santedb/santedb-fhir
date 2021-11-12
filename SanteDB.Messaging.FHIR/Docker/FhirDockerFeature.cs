@@ -29,16 +29,15 @@ using SanteDB.Rest.Common.Configuration;
 using SanteDB.Rest.Common.Security;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Security.AccessControl;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SanteDB.Messaging.FHIR.Docker
 {
     /// <summary>
     /// Exposes the FHIR service to the Docker container
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class FhirDockerFeature : IDockerFeature
     {
         /// <summary>
