@@ -1157,12 +1157,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.AuthorityKey && i.Value == identifier.Value)).FirstOrDefault();
                 if (retVal == null) // Not been processed in bundle
                 {
-                    retVal = repo.Find(o => o.Identifiers.Any(a => a.Authority.Key == identifier.AuthorityKey && a.Value == identifier.Value), 0, 1, out int tr).FirstOrDefault();
-                    if (tr > 1)
-                    {
-                        throw new InvalidOperationException($"Reference to {identifier} is ambiguous ({tr} records have this identity)");
-                    }
-                    else if (retVal == null)
+                    retVal = repo.Find(o => o.Identifiers.Any(a => a.Authority.Key == identifier.AuthorityKey && a.Value == identifier.Value)).SingleOrDefault();
+                    if (retVal == null)
                     {
                         throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.Authority.Url ?? identifier.Authority.Oid}");
                     }

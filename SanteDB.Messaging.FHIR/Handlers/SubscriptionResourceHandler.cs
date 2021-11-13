@@ -204,16 +204,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Subscription), typeof(PubSubSubscriptionDefinition), parameters, out hdsiQuery);
             hdsiQuery.Add("obsoletionTime", "null");
             // Do the query
-            int totalResults = 0;
             var predicate = QueryExpressionParser.BuildLinqExpression<PubSubSubscriptionDefinition>(hdsiQuery);
-            var hdsiResults = this.m_pubSubManager.FindSubscription(predicate, query.Start, query.Quantity, out totalResults);
+            IQueryResultSet hdsiResults = this.m_pubSubManager.FindSubscription(predicate);
+            var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<PubSubSubscriptionDefinition>();
+
             var restOperationContext = RestOperationContext.Current;
 
             var auth = AuthenticationContext.Current.Principal;
             // Return FHIR query result
             var retVal = new FhirQueryResult(nameof(Subscription))
             {
-                Results = hdsiResults.AsParallel().Select(o =>
+                Results = results.AsParallel().Select(o =>
                 {
                     using (AuthenticationContext.EnterContext(auth))
                     {

@@ -28,6 +28,7 @@ using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
@@ -139,12 +140,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query filter
         /// </summary>
-        protected override IEnumerable<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        protected override IQueryResultSet<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query)
         {
             var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]);
             query = System.Linq.Expressions.Expression.Lambda<Func<CodedObservation, bool>>(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), query.Parameters);
 
-            return base.Query(query, queryId, offset, count, out totalResults);
+            return base.Query(query);
         }
 
         /// <summary>

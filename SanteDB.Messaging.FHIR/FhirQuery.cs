@@ -2,22 +2,24 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
+using SanteDB.Core.Model.Query;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -34,7 +36,7 @@ namespace SanteDB.Messaging.FHIR
         /// </summary>
         public FhirQuery()
         {
-            this.ActualParameters = new NameValueCollection();
+            this.ActualParameters = new System.Collections.Specialized.NameValueCollection();
             this.QueryId = Guid.Empty;
             this.IncludeHistory = false;
             this.MinimumDegreeMatch = 1.0f;
@@ -45,7 +47,7 @@ namespace SanteDB.Messaging.FHIR
         /// <summary>
         /// Get the actual parameters that could be serviced
         /// </summary>
-        public NameValueCollection ActualParameters { get; set; }
+        public System.Collections.Specialized.NameValueCollection ActualParameters { get; set; }
 
         /// <summary>
         /// Identifies the query identifier
@@ -86,5 +88,34 @@ namespace SanteDB.Messaging.FHIR
         /// The resource type
         /// </summary>
         public String ResouceType { get; }
+
+        /// <summary>
+        /// True if exact total should be counted
+        /// </summary>
+        public bool ExactTotal { get; set; }
+
+        /// <summary>
+        /// Apply common query resuts to the specified <paramref name="hdsiResults"/>
+        /// </summary>
+        public IQueryResultSet ApplyCommonQueryControls(IQueryResultSet hdsiResults, out int totalResults)
+        {
+            // TODO: sorting
+
+            if (this.QueryId != Guid.Empty)
+            {
+                hdsiResults = hdsiResults.AsStateful(this.QueryId);
+                totalResults = hdsiResults.Count(); // it is a stateful query so we can just count them (no penalty to doing this)
+            }
+            else if (this.ExactTotal)
+            {
+                totalResults = hdsiResults.Count();
+            }
+            else
+            {
+                totalResults = hdsiResults.Skip(this.Start).Take(this.Quantity + 1).Count() + this.Start;
+            }
+
+            return hdsiResults.Skip(this.Start).Take(this.Quantity);
+        }
     }
 }

@@ -283,15 +283,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
             FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(TFhirResource), typeof(TModel), parameters, out hdsiQuery);
 
             // Do the query
-            int totalResults = 0;
             var predicate = QueryExpressionParser.BuildLinqExpression<TModel>(hdsiQuery);
-            var hdsiResults = this.Query(predicate, query.QueryId, query.Start, query.Quantity, out totalResults);
+
+            var hdsiResults = this.Query(predicate);
+            var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<TModel>();
 
             var auth = AuthenticationContext.Current;
             // Return FHIR query result
             var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
             {
-                Results = hdsiResults.AsParallel().Select(o =>
+                Results = results.AsParallel().AsOrdered().WithDegreeOfParallelism(2).Select(o =>
                 {
                     using (AuthenticationContext.EnterContext(auth.Principal))
                     {
@@ -482,12 +483,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Queries the specified query.
         /// </summary>
         /// <param name="query">The query.</param>
-        /// <param name="issues">The issues.</param>
-        /// <param name="offset">The offset.</param>
-        /// <param name="count">The count.</param>
-        /// <param name="totalResults">The total results.</param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected abstract IEnumerable<TModel> Query(Expression<Func<TModel, bool>> query, Guid queryId, int offset, int count, out int totalResults);
+        protected abstract IQueryResultSet<TModel> Query(Expression<Func<TModel, bool>> query);
 
         /// <summary>
         /// Reads the specified identifier.

@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core.Model;
@@ -33,16 +34,15 @@ using System.Linq;
 using System.Linq.Expressions;
 using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
+using SanteDB.Core.Model.Query;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
-
     /// <summary>
     /// Adverse event resource handler
     /// </summary>
     public class AdverseEventResourceHandler : RepositoryResourceHandlerBase<AdverseEvent, Act>
     {
-
         /// <summary>
         /// Adverse event repo
         /// </summary>
@@ -128,7 +128,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Map adverse events to the model 
+        /// Map adverse events to the model
         /// </summary>
         protected override Act MapToModel(AdverseEvent resource)
         {
@@ -136,16 +136,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Query for specified adverse event 
+        /// Query for specified adverse event
         /// </summary>
-        protected override IEnumerable<Act> Query(Expression<Func<Act, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        protected override IQueryResultSet<Act> Query(Expression<Func<Act, bool>> query)
         {
             var typeReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(Act).GetProperty(nameof(Act.ClassConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(ActClassKeys.Condition));
 
             var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.AdverseEventActs, query.Parameters[0]);
             query = System.Linq.Expressions.Expression.Lambda<Func<Act, bool>>(System.Linq.Expressions.Expression.AndAlso(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), typeReference), query.Parameters);
 
-            return base.Query(query, queryId, offset, count, out totalResults);
+            return base.Query(query);
         }
 
         /// <summary>
@@ -160,7 +160,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.SearchType,
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
-            }.Select(o=> new ResourceInteractionComponent() { Code = o });
+            }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
         protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
