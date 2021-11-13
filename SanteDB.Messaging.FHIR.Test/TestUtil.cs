@@ -76,6 +76,9 @@ namespace SanteDB.Messaging.FHIR.Test
                         Name = applicationName,
                         ApplicationSecret = BitConverter.ToString(deviceSecret).Replace("-", "")
                     };
+                    app.AddPolicy(PermissionPolicyIdentifiers.LoginAsService);
+                    app.AddPolicy(PermissionPolicyIdentifiers.UnrestrictedClinicalData);
+                    app.AddPolicy(PermissionPolicyIdentifiers.UnrestrictedMetadata);
                     app = securityAppService.Insert(app);
                     securityPipService.AddPolicies(app, PolicyGrantType.Grant, AuthenticationContext.Current.Principal, PermissionPolicyIdentifiers.LoginAsService, PermissionPolicyIdentifiers.UnrestrictedClinicalData, PermissionPolicyIdentifiers.ReadMetadata);
                 }

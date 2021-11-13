@@ -76,7 +76,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var partOfBundle = model.GetAnnotations<Bundle>().FirstOrDefault();
 
             var retVal = DataTypeConverter.CreateResource<Patient>(model);
-            retVal.Active = model.StatusConceptKey == StatusKeys.Active || model.StatusConceptKey == StatusKeys.New;
+            retVal.Active = StatusKeys.ActiveStates.Contains(model.StatusConceptKey.Value);
             retVal.Address = model.GetAddresses().Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             if (model.DateOfBirth.HasValue)
                 switch (model.DateOfBirthPrecision.GetValueOrDefault())
@@ -217,7 +217,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
+                {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
+                }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso));
                 else if (rel.RelationshipTypeKey == MDM_MASTER_LINK) // HACK: MDM Master Record
@@ -275,7 +277,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.Link.Add(new Patient.LinkComponent()
                     {
                         Type = Patient.LinkType.ReplacedBy,
-                        Other = DataTypeConverter.CreateNonVersionedReference<Patient>(repl.LoadProperty(o => o.TargetEntity)),
+                        Other = DataTypeConverter.CreateNonVersionedReference<Patient>(repl.LoadProperty(o => o.SourceEntity)),
                     });
                 }
             }
@@ -362,7 +364,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             patient.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
             patient.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
-            patient.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
+            patient.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
             patient.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
             patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
             patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).ToList();

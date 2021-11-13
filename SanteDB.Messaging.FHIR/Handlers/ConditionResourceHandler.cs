@@ -72,6 +72,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "active");
             else if (model.StatusConceptKey == StatusKeys.Completed)
                 retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "resolved");
+            else if (StatusKeys.InactiveStates.Contains(model.StatusConceptKey.Value))
+                retVal.ClinicalStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "inactive");
             else if (model.StatusConceptKey == StatusKeys.Nullified)
                 retVal.VerificationStatus = new CodeableConcept("http://terminology.hl7.org/CodeSystem/condition-clinical", "entered-in-error");
             else if (model.StatusConceptKey == StatusKeys.Obsolete)

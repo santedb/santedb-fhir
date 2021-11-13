@@ -182,16 +182,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 StatusConceptKey = status == Encounter.EncounterStatus.Finished ? StatusKeys.Completed :
                     status == Encounter.EncounterStatus.Cancelled ? StatusKeys.Cancelled :
                     status == Encounter.EncounterStatus.InProgress || status == Encounter.EncounterStatus.Arrived ? StatusKeys.Active :
-                    status == Encounter.EncounterStatus.Planned ? StatusKeys.New : StatusKeys.Obsolete,
+                    status == Encounter.EncounterStatus.Planned ? StatusKeys.New :
+                    status == Encounter.EncounterStatus.EnteredInError ? StatusKeys.Nullified : StatusKeys.Inactive,
                 MoodConceptKey = status == Encounter.EncounterStatus.Planned ? ActMoodKeys.Intent : ActMoodKeys.Eventoccurrence,
                 ReasonConcept = DataTypeConverter.ToConcept(resource.ReasonCode.FirstOrDefault())
             };
-            // Parse key
-            Guid key;
-            if (!Guid.TryParse(resource.Id, out key))
+
+            if (!Guid.TryParse(resource.Id, out Guid key))
             {
                 key = Guid.NewGuid();
             }
+
             retVal.Key = key;
 
             // Attempt to resolve relationships

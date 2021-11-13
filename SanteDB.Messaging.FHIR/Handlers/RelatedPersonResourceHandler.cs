@@ -124,6 +124,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Create the relative object
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
+            relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value);
             relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty(o => o.RelationshipType), new string[] { "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" }, false) };
             relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
@@ -327,7 +328,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 person.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
                 person.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
                 person.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
-                person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
+                person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
                 person.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
                 // Identity
                 person.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).ToList();

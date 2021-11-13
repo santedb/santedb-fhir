@@ -19,20 +19,20 @@
  * Date: 2021-8-5
  */
 using SanteDB.Core.Configuration;
-using SanteDB.Core.Exceptions;
 using SanteDB.Docker.Core;
 using SanteDB.Messaging.FHIR.Auditing;
 using SanteDB.Messaging.FHIR.Configuration;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Docker
 {
     /// <summary>
     /// A Docker feature flag which enables the FHIR audit dispatcher
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class FhirAuditDockerFeature : IDockerFeature
     {
         /// <summary>
