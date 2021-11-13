@@ -18,7 +18,6 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public static class TestUtil
     {
-
         /// <summary>
         /// Convert the <paramref name="message"/> to a string
         /// </summary>
@@ -76,11 +75,9 @@ namespace SanteDB.Messaging.FHIR.Test
                         Name = applicationName,
                         ApplicationSecret = BitConverter.ToString(deviceSecret).Replace("-", "")
                     };
-                    app.AddPolicy(PermissionPolicyIdentifiers.LoginAsService);
-                    app.AddPolicy(PermissionPolicyIdentifiers.UnrestrictedClinicalData);
-                    app.AddPolicy(PermissionPolicyIdentifiers.UnrestrictedMetadata);
+
                     app = securityAppService.Insert(app);
-                    securityPipService.AddPolicies(app, PolicyGrantType.Grant, AuthenticationContext.Current.Principal, PermissionPolicyIdentifiers.LoginAsService, PermissionPolicyIdentifiers.UnrestrictedClinicalData, PermissionPolicyIdentifiers.ReadMetadata);
+                    securityPipService.AddPolicies(app, PolicyGrantType.Grant, AuthenticationContext.Current.Principal, PermissionPolicyIdentifiers.LoginAsService, PermissionPolicyIdentifiers.UnrestrictedClinicalData, PermissionPolicyIdentifiers.UnrestrictedMetadata);
                 }
 
                 // Create AA
@@ -96,7 +93,6 @@ namespace SanteDB.Messaging.FHIR.Test
                     metadataService.Insert(aa);
                 }
             }
-
         }
 
         /// <summary>
@@ -111,6 +107,5 @@ namespace SanteDB.Messaging.FHIR.Test
             var session = sesPvdService.Establish(appPrincipal, "http://localhost", false, null, null, null);
             return AuthenticationContext.EnterContext(sesIdService.Authenticate(session));
         }
-
     }
 }
