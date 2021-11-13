@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
@@ -32,6 +33,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -40,12 +42,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// Resource handler for immunization classes.
     /// </summary>
     public class ImmunizationResourceHandler : RepositoryResourceHandlerBase<Immunization, SubstanceAdministration>
-	{
+    {
         private readonly Guid INITIAL_IMMUNIZATION = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
         private readonly Guid IMMUNIZATION = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
         private readonly Guid BOOSTER_IMMUNIZATION = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ImmunizationResourceHandler));
-        
 
         /// <summary>
         /// Create a new resource handler
@@ -67,53 +68,54 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="restOperationContext">The operation context in which this method is being called</param>
         /// <returns>Returns the mapped FHIR resource.</returns>
         protected override Immunization MapToFhir(SubstanceAdministration model)
-		{
-			var retVal = DataTypeConverter.CreateResource<Immunization>(model);
+        {
+            var retVal = DataTypeConverter.CreateResource<Immunization>(model);
 
             retVal.DoseQuantity = new Quantity()
             {
                 Unit = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.DoseUnit)), "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code,
-				Value = model.DoseQuantity
-			};
+                Value = model.DoseQuantity
+            };
             retVal.RecordedElement = new FhirDateTime(model.ActTime); // TODO: This is probably not the best place to put this?
-			retVal.Route = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.Route)));
-			retVal.Site = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.Site)));
+            retVal.Route = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.Route)));
+            retVal.Site = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.Site)));
             retVal.StatusReason = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.ReasonConcept)));
-            switch(model.StatusConceptKey?.ToString().ToUpper())
+            switch (model.StatusConceptKey?.ToString().ToUpper())
             {
                 case StatusKeyStrings.Completed:
                     if (model.IsNegated)
                         retVal.Status = Immunization.ImmunizationStatusCodes.NotDone;
-                    else 
+                    else
                         retVal.Status = Immunization.ImmunizationStatusCodes.Completed;
                     break;
+
                 case StatusKeyStrings.Nullified:
                     retVal.Status = Immunization.ImmunizationStatusCodes.EnteredInError;
                     break;
             }
 
-			// Material
-			var matPtcpt = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Consumable) ??
-				model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Product);
-			if (matPtcpt != null)
-			{
-				var matl = matPtcpt.LoadProperty<Material>(nameof(ActParticipation.PlayerEntity));
-				retVal.VaccineCode = DataTypeConverter.ToFhirCodeableConcept(matl.LoadProperty<Concept>(nameof(Act.TypeConcept)));
-				retVal.ExpirationDateElement = matl.ExpiryDate.HasValue ? DataTypeConverter.ToFhirDate(matl.ExpiryDate) : null;
-				retVal.LotNumber = (matl as ManufacturedMaterial)?.LotNumber;
-			}
-			else
-				retVal.ExpirationDate = null;
+            // Material
+            var matPtcpt = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Consumable) ??
+                model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Product);
+            if (matPtcpt != null)
+            {
+                var matl = matPtcpt.LoadProperty<Material>(nameof(ActParticipation.PlayerEntity));
+                retVal.VaccineCode = DataTypeConverter.ToFhirCodeableConcept(matl.LoadProperty<Concept>(nameof(Act.TypeConcept)));
+                retVal.ExpirationDateElement = matl.ExpiryDate.HasValue ? DataTypeConverter.ToFhirDate(matl.ExpiryDate) : null;
+                retVal.LotNumber = (matl as ManufacturedMaterial)?.LotNumber;
+            }
+            else
+                retVal.ExpirationDate = null;
 
-			// RCT
-			var rct = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
-			if (rct != null)
-			{
-				retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
-			}
+            // RCT
+            var rct = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
+            if (rct != null)
+            {
+                retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
+            }
 
-			// Performer
-			var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer || o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
+            // Performer
+            var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer || o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
             if (prf != null)
                 retVal.Performer = prf.Select(o =>
                     new Immunization.PerformerComponent()
@@ -121,31 +123,29 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
                     }).ToList();
 
-			// Protocol
-			foreach (var itm in model.Protocols)
-			{
-				Immunization.ProtocolAppliedComponent protocol = new Immunization.ProtocolAppliedComponent();
-				var dbProtocol = itm.LoadProperty<Protocol>(nameof(ActProtocol.Protocol));
-				protocol.DoseNumber = new Integer(model.SequenceId);
+            // Protocol
+            foreach (var itm in model.Protocols)
+            {
+                Immunization.ProtocolAppliedComponent protocol = new Immunization.ProtocolAppliedComponent();
+                var dbProtocol = itm.LoadProperty<Protocol>(nameof(ActProtocol.Protocol));
+                protocol.DoseNumber = new Integer(model.SequenceId);
 
-				// Protocol lookup
-				protocol.Series = dbProtocol?.Name;
-				retVal.ProtocolApplied.Add(protocol);
-			}
+                // Protocol lookup
+                protocol.Series = dbProtocol?.Name;
+                retVal.ProtocolApplied.Add(protocol);
+            }
 
+            return retVal;
+        }
 
-
-			return retVal;
-		}
-
-		/// <summary>
-		/// Map an immunization FHIR resource to a substance administration.
-		/// </summary>
-		/// <param name="resource">The resource.</param>
+        /// <summary>
+        /// Map an immunization FHIR resource to a substance administration.
+        /// </summary>
+        /// <param name="resource">The resource.</param>
         /// <param name="restOperationContext">The operation context in which this method is being called</param>
-		/// <returns>Returns the mapped model.</returns>
-		protected override SubstanceAdministration MapToModel(Immunization resource)
-		{
+        /// <returns>Returns the mapped model.</returns>
+        protected override SubstanceAdministration MapToModel(Immunization resource)
+        {
             var substanceAdministration = new SubstanceAdministration
             {
                 ActTime = resource.RecordedElement.ToDateTimeOffset(),
@@ -160,7 +160,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 RouteKey = DataTypeConverter.ToConcept(resource.Route)?.Key,
                 SiteKey = DataTypeConverter.ToConcept(resource.Site)?.Key,
             };
-
 
             Guid key;
             if (Guid.TryParse(resource.Id, out key))
@@ -182,8 +181,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         param = "UUID"
                     }));
                 }
-
-                }
+            }
 
             // Encounter
             if (resource.Encounter != null)
@@ -199,8 +197,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     this.m_tracer.TraceError("Only UUID references are supported");
                     throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedExeption.paramOnlySupported", new
                     {
-                        param ="UUID"
-                    } ));
+                        param = "UUID"
+                    }));
                 }
             }
 
@@ -213,7 +211,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     this.m_traceSource.TraceWarning("Ignoring administration {0} don't have concept mapped", resource.VaccineCode);
                     return null;
                 }
-                // Get the material 
+                // Get the material
                 int t = 0;
                 var material = ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>().Find(m => m.TypeConceptKey == concept.Key, 0, 1, out t).FirstOrDefault();
                 if (material == null)
@@ -243,34 +241,45 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return substanceAdministration;
         }
 
-		/// <summary>
-		/// Query for substance administrations.
-		/// </summary>
-		/// <param name="query">The query to be executed</param>
-		/// <param name="offset">The offset to the first result</param>
-		/// <param name="count">The count of results in the current result set</param>
-		/// <param name="totalResults">The total results</param>
+        /// <summary>
+        /// Query for substance administrations.
+        /// </summary>
+        /// <param name="query">The query to be executed</param>
+        /// <param name="offset">The offset to the first result</param>
+        /// <param name="count">The count of results in the current result set</param>
+        /// <param name="totalResults">The total results</param>
         /// <param name="queryId">The unique query state identifier</param>
-		/// <returns>Returns the list of models which match the given parameters.</returns>
-		protected override IEnumerable<SubstanceAdministration> Query(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, Guid queryId, int offset, int count, out int totalResults)
-		{
-			
-			var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(StatusKeys.Completed));
-			var typeReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Or,
-				System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Or,
-					System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(INITIAL_IMMUNIZATION)),
-					System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(IMMUNIZATION))
-				),
-				System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(BOOSTER_IMMUNIZATION))
-			);
+        /// <returns>Returns the list of models which match the given parameters.</returns>
+        protected override IEnumerable<SubstanceAdministration> Query(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        {
+            BinaryExpression obsoletionReference = null;
+            foreach (var itm in StatusKeys.ActiveStates)
+            {
+                var expr = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(itm));
+                if (obsoletionReference == null)
+                {
+                    obsoletionReference = expr;
+                }
+                else
+                {
+                    obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.OrElse, obsoletionReference, expr);
+                }
+            }
+            var typeReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.OrElse,
+                System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.OrElse,
+                    System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(INITIAL_IMMUNIZATION)),
+                    System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(IMMUNIZATION))
+                ),
+                System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(BOOSTER_IMMUNIZATION))
+            );
 
-			query = System.Linq.Expressions.Expression.Lambda<Func<SubstanceAdministration, bool>>(System.Linq.Expressions.Expression.AndAlso(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), typeReference), query.Parameters);
+            query = System.Linq.Expressions.Expression.Lambda<Func<SubstanceAdministration, bool>>(System.Linq.Expressions.Expression.AndAlso(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), typeReference), query.Parameters);
 
-			if (queryId == Guid.Empty)
-				return this.m_repository.Find(query, offset, count, out totalResults);
-			else
-				return (this.m_repository as IPersistableQueryRepositoryService<SubstanceAdministration>).Find(query, offset, count, out totalResults, queryId);
-		}
+            if (queryId == Guid.Empty)
+                return this.m_repository.Find(query, offset, count, out totalResults);
+            else
+                return (this.m_repository as IPersistableQueryRepositoryService<SubstanceAdministration>).Find(query, offset, count, out totalResults, queryId);
+        }
 
         /// <summary>
         /// Get interactions
@@ -303,7 +312,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
-
         }
     }
 }

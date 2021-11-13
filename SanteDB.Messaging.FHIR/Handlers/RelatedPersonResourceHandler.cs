@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
@@ -38,7 +39,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class RelatedPersonResourceHandler : RepositoryResourceHandlerBase<RelatedPerson, Core.Model.Entities.EntityRelationship>
     {
-
         // MDM MAster key
         private readonly Guid MDM_MASTER_CLASS_KEY = Guid.Parse("49328452-7e30-4dcd-94cd-fd532d111578");
 
@@ -51,6 +51,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
 
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(RelatedPersonResourceHandler));
+
         /// <summary>
         /// Create related person resource handler
         /// </summary>
@@ -76,7 +77,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <returns></returns>
         protected override IEnumerable<CapabilityStatement.ResourceInteractionComponent> GetInteractions() =>
@@ -108,7 +109,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (relModel.ClassConceptKey == MDM_MASTER_CLASS_KEY) // Is the target a MASTER record?
             {
                 relModel = this.m_patientRepository.Get(relModel.Key.Value) ??
-                    this.m_personRepository.Get(relModel.Key.Value); 
+                    this.m_personRepository.Get(relModel.Key.Value);
             }
 
             if (!(relModel is Core.Model.Entities.Person person))
@@ -117,12 +118,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 throw new InvalidOperationException(m_localizationService.FormatString("error.type.InvalidOperation.cannotCreate", new
                 {
                     param = "Person"
-
                 }));
             }
 
             // Create the relative object
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
+            relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value);
             relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty(o => o.RelationshipType), new string[] { "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" }, false) };
             relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
@@ -145,7 +146,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>Returns the list of models which match the given parameters.</returns>
         protected override IEnumerable<EntityRelationship> Query(System.Linq.Expressions.Expression<Func<EntityRelationship, bool>> query, Guid queryId, int offset, int count, out int totalResults)
         {
-
             System.Linq.Expressions.Expression typeReference = null;
             System.Linq.Expressions.Expression typeProperty = System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(EntityRelationship).GetProperty(nameof(EntityRelationship.RelationshipTypeKey)));
             foreach (var tr in this.m_relatedPersons)
@@ -182,7 +182,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Core.Model.Entities.EntityRelationship MapToModel(RelatedPerson resource)
         {
-
             var relationshipTypes = resource.Relationship.Select(o => DataTypeConverter.ToConcept(o)).Select(o => o?.Key).Distinct();
 
             // patient to which this person is related
@@ -191,16 +190,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 this.m_tracer.TraceError("RelatedPerson requires Patient relationship");
                 throw new ArgumentException(this.m_localizationService.GetString("error.messaging.fhir.relatedPerson.patientRelationship"));
             }
-              
             else if (relationshipTypes.Count(o => o != null) != 1)
             {
                 this.m_tracer.TraceError("RelatedPerson nust have EXACTLY ONE relationship type");
                 throw new ArgumentException(this.m_localizationService.GetString("error.messaging.fhir.relatedPerson.oneRelationshipType"));
-
             }
- 
+
             EntityRelationship relationship = null;
-            // Attempt to find the existing ER 
+            // Attempt to find the existing ER
             if (Guid.TryParse(resource.Id, out Guid key))
             {
                 relationship = this.m_repository.Get(key);
@@ -215,16 +212,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 //      RelatedPerson/2 -> Mother for Patient/2
                 //      Patient/3 -> Mother Patient which links to RelatedPerson/1 and RelatedPerson/2
                 // Here, FHIR is indicating RelatedPerson/1 and RelatedPerson/2 are two different relationships, even though they're the same freaking person
-                // which is why RelatedPerson is evil. 
-                // 
+                // which is why RelatedPerson is evil.
+                //
                 // SanteDB, when disclosing the ID of a RelatedPerson will always use the key of the relationship , but for an initial registration it depends whatever
-                // random identifiers the sender uses and how the sender views the world. 
+                // random identifiers the sender uses and how the sender views the world.
                 // </rant>
                 // <tldr>RelatedPerson is evil and this is a total hack to overcome FHIR's hacking of RelatedPerson</tldr>
-                if(relationship == null)
+                if (relationship == null)
                 {
                     var lookupPerson = this.m_personRepository.Get(key);
-                    if(lookupPerson != null) {
+                    if (lookupPerson != null)
+                    {
                         relationship = new EntityRelationship()
                         {
                             Key = Guid.NewGuid(),
@@ -243,7 +241,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     param = resource.Patient.Reference
                 }));
-
             }
 
             // Relationship not found
@@ -255,7 +252,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     SourceEntityKey = sourceEntity.Key
                 };
             }
-            else if(!relationship.SourceEntityKey.HasValue) // no source entity
+            else if (!relationship.SourceEntityKey.HasValue) // no source entity
             {
                 relationship.SourceEntityKey = sourceEntity.Key;
             }
@@ -268,10 +265,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                     throw new InvalidOperationException(m_localizationService.FormatString("error.type.InvalidOperation.cannotChange", new
                     {
-                        param =  relationship.SourceEntityKey,
+                        param = relationship.SourceEntityKey,
                         param2 = sourceEntity.Key
                     }));
-                    
                 }
             }
 
@@ -289,7 +285,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             relationship.ClassificationKey = RelationshipClassKeys.ReferencedObjectLink;
             relationship.RelationshipTypeKey = relationshipTypes.First();
 
-            Core.Model.Entities.Person person = relationship.LoadProperty(o=>o.TargetEntity) as Core.Model.Entities.Person;
+            Core.Model.Entities.Person person = relationship.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person;
             if (person == null && resource.Identifier?.Count > 0)
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
@@ -314,14 +310,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     Key = Guid.NewGuid()
                 };
             }
-            
+
             // HACK: Try to figure out what tf the client is trying to convey and map it into our worldview
             // <rant>
             // If you needed further evidence of how RelatedPerson is evil, this bit of code shows it - basically some clients (and examples)
             // will send RelatedPerson as a combo of Person+Relationship, however other clients (and examples) use RelatedPerson as only a Relationship
             // so we have to handle both cases. Basically, if the client sent us a RelatedPerson with only an identifier and relationship type then we
             // treat it as *only* a relationship indicator (i.e. the client is relying on us to reference or resolve an existing person to relate) , however
-            // if the client sends us name, address, or telecom, we can assume the client is attempting to create (or perhaps update, who really knows?) 
+            // if the client sends us name, address, or telecom, we can assume the client is attempting to create (or perhaps update, who really knows?)
             // the person to which the relationship points to.
             // </rant>
             // <tldr>RelatedPerson is evil - it could be a person + relationship or just a relationship and we have to handle both cases which is why this ugly code is here</tldr>
@@ -333,12 +329,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 person.DateOfBirthXml = resource.BirthDate;
                 // TODO: See DSM-42 Correction
                 person.GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
-             
+
                 // TODO: Cross reference via identifiers
                 person.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
                 person.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
                 person.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
-                person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
+                person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
                 person.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
                 // Identity
                 person.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).ToList();
@@ -351,7 +347,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             relationship.TargetEntity = person;
             return relationship;
-
         }
     }
 }
