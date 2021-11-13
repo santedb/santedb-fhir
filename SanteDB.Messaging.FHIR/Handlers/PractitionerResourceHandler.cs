@@ -2,22 +2,23 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
@@ -40,13 +41,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class PractitionerResourceHandler : RepositoryResourceHandlerBase<Practitioner, Provider>
     {
-
         /// <summary>
         /// Create a new resource handler
         /// </summary>
         public PractitionerResourceHandler(IRepositoryService<Provider> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
-
         }
 
         /// <summary>
@@ -88,26 +87,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override Practitioner MapToFhir(Provider model)
         {
             // Is there a provider that matches this user?
-            var provider = model.LoadCollection(o=>o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.AssignedEntity)?.LoadProperty(o=>o.TargetEntity) as Provider;
+            var provider = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.AssignedEntity)?.LoadProperty(o => o.TargetEntity) as Provider;
             model = provider ?? model;
 
             var retVal = DataTypeConverter.CreateResource<Practitioner>(model);
 
-
             // Identifiers
-            retVal.Identifier = model.LoadCollection(o=>o.Identifiers)?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
+            retVal.Identifier = model.LoadCollection(o => o.Identifiers)?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
 
             // ACtive
-            retVal.Active = model.StatusConceptKey == StatusKeys.Active;
+            retVal.Active = StatusKeys.ActiveStates.Contains(model.StatusConceptKey.Value);
 
             // Names
-            retVal.Name = model.LoadCollection(o=>o.Names)?.Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
+            retVal.Name = model.LoadCollection(o => o.Names)?.Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
 
             // Telecoms
-            retVal.Telecom = model.LoadCollection(o=>o.Telecoms)?.Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+            retVal.Telecom = model.LoadCollection(o => o.Telecoms)?.Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
 
             // Address
-            retVal.Address = model.LoadCollection(p=>p.Addresses)?.Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
+            retVal.Address = model.LoadCollection(p => p.Addresses)?.Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
 
             // Birthdate
             retVal.BirthDateElement = DataTypeConverter.ToFhirDate(provider?.DateOfBirth ?? model.DateOfBirth);
@@ -124,12 +122,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Load the koala-fication
             var qual = provider.LoadProperty(o => o.ProviderSpecialty);
-            if (qual != null) {
+            if (qual != null)
+            {
                 retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(qual) } };
             }
 
             // Language of communication
-            retVal.Communication = model.LoadCollection(o=>o.LanguageCommunication)?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();
+            retVal.Communication = model.LoadCollection(o => o.LanguageCommunication)?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();
 
             return retVal;
         }
@@ -139,7 +138,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Provider MapToModel(Practitioner resource)
         {
-
             Provider retVal = null;
             if (Guid.TryParse(resource.Id, out Guid key))
             {
@@ -172,7 +170,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // TODO: Extensions
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             retVal.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
-            retVal.StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Obsolete;
+            retVal.StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
             retVal.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
             retVal.GenderConceptKey = resource.Gender == null ? NullReasonKeys.Unknown : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
