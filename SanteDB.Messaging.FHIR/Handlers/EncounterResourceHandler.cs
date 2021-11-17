@@ -120,6 +120,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case StatusKeyStrings.Nullified:
                     retVal.Status = Encounter.EncounterStatus.EnteredInError;
                     break;
+
+                case StatusKeyStrings.Obsolete:
+                    retVal.Status = Encounter.EncounterStatus.Unknown;
                     break;
 
                 case StatusKeyStrings.Completed:

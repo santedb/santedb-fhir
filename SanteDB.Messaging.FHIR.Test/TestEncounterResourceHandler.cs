@@ -242,7 +242,9 @@ namespace SanteDB.Messaging.FHIR.Test
                 var result = encounterResourceHandler.Delete(actualEncounter.Id, TransactionMode.Commit);
 
                 var test = encounterResourceHandler.Read(result.Id, null);
-                ;
+
+                var obsoletedEncounter = (Encounter)test;
+                Assert.AreEqual(Encounter.EncounterStatus.Unknown, obsoletedEncounter.Status);
             }
 
         }
