@@ -807,6 +807,16 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Convert to language of communication
         /// </summary>
+        public static PersonLanguageCommunication ToLanguageCommunication(CodeableConcept lang, bool preferred)
+        {
+            if (!lang.Coding.Any())
+                throw new InvalidOperationException("Codeable concept must contain a language code");
+            return new PersonLanguageCommunication(lang.Coding.First().Code, preferred);
+        }
+
+        /// <summary>
+        /// Convert to language of communication
+        /// </summary>
         public static Patient.CommunicationComponent ToFhirCommunicationComponent(PersonLanguageCommunication lang)
         {
             return new Patient.CommunicationComponent()
