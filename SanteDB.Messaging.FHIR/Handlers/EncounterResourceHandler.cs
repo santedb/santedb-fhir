@@ -172,7 +172,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var status = resource.Status.Value;
             var retVal = new PatientEncounter()
             {
-                TypeConcept = DataTypeConverter.ToConcept(resource.Class, "http://openiz.org/conceptset/v3-ActEncounterCode"),
+                TypeConcept = DataTypeConverter.ToConcept(resource.Class, "http://santedb.org/conceptset/v3-ActEncounterCode"),
                 StartTime = resource.Period?.StartElement?.ToDateTimeOffset(),
                 StopTime = resource.Period?.EndElement?.ToDateTimeOffset(),
                 // TODO: Extensions

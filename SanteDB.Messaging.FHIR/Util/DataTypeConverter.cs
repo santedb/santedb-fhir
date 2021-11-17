@@ -20,8 +20,8 @@
  */
 
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Auditing;
 using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
@@ -32,6 +32,7 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Model.Security;
 using SanteDB.Core.Security;
 using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Services;
@@ -41,18 +42,14 @@ using SanteDB.Messaging.FHIR.Handlers;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
+using System.Data.Common;
 using System.Diagnostics.Tracing;
+using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
-using static Hl7.Fhir.Model.OperationOutcome;
-using SanteDB.Core.Auditing;
-using SanteDB.Core.Model.Security;
-using System.Xml;
 using System.Security;
 using System.Security.Authentication;
-using System.Data.Common;
-using System.IO;
+using System.Text.RegularExpressions;
+using static Hl7.Fhir.Model.OperationOutcome;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -935,10 +932,22 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns a concept.</returns>
         public static Concept ToConcept(CodeableConcept codeableConcept)
         {
+            // if there is no concept to map
+            // we want to exit
+            if (codeableConcept == null)
+            {
+                return null;
+            }
+
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping codeable concept");
+
             var retVal = codeableConcept?.Coding.Select(o => DataTypeConverter.ToConcept(o)).FirstOrDefault(o => o != null);
+
             if (retVal == null)
-                throw new ConstraintException($"Can't find any reference term mappings from '{codeableConcept.Coding.FirstOrDefault().Code}' in {codeableConcept.Coding.FirstOrDefault().System} to a Concept");
+            {
+                throw new ConstraintException($"Can't find any reference term mappings from '{codeableConcept.Coding?.FirstOrDefault()?.Code}' in {codeableConcept.Coding?.FirstOrDefault()?.System} to a Concept");
+            }
+                
             return retVal;
         }
 

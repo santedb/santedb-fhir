@@ -35,6 +35,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
+using Observation = SanteDB.Core.Model.Acts.Observation;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -134,7 +135,149 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Core.Model.Acts.Observation MapToModel(Hl7.Fhir.Model.Observation resource)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+
+            //value type and value
+            Observation retVal;
+            switch (resource.Value)
+            {
+                case CodeableConcept codeableConcept:
+                    retVal = new CodedObservation
+                    {
+                        ValueType = "CD",
+                        Value = DataTypeConverter.ToConcept(codeableConcept)
+           
+                    };
+                    break;
+                case Quantity quantity:
+                    retVal = new QuantityObservation()
+                    {
+                        ValueType = "PQ",
+                        Value = quantity.Value.Value,
+                        UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, "http://hl7.org/fhir/sid/ucum")
+                    };
+                    break;
+                case FhirString fhirString:
+                    retVal = new TextObservation()
+                    {
+                        ValueType = "ST",
+                        Value = fhirString.Value
+                    };
+                    break;
+                default:
+                    retVal = new Observation();
+                    break;
+            }
+            // Observation
+            var status = resource.Status.Value;
+
+
+            retVal.Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>()
+                .ToList();
+            retVal.Identifiers = resource.Identifier.Select(o => DataTypeConverter.ToActIdentifier(o)).ToList();
+            //retVal.Key = Guid.NewGuid();
+
+            
+            //status concept key
+            switch (status)
+            {
+                case(ObservationStatus.Preliminary):
+                    retVal.StatusConceptKey = StatusKeys.Active;  
+                    break;
+                case(ObservationStatus.Cancelled):
+                    retVal.StatusConceptKey = StatusKeys.Cancelled;
+                    break;
+                case(ObservationStatus.EnteredInError):
+                    retVal.StatusConceptKey = StatusKeys.Nullified;
+                    break;
+                case(ObservationStatus.Final):
+                    retVal.StatusConceptKey = StatusKeys.Completed;
+                    break;
+                case(ObservationStatus.Amended):
+                    retVal.StatusConceptKey = StatusKeys.Completed;
+                    break;
+                case(ObservationStatus.Unknown):
+                    retVal.StatusConceptKey = StatusKeys.Obsolete;
+                    break;
+            }
+
+            //Effective 
+       
+            switch (resource.Effective)
+            {
+                case Period period:
+                    retVal.StartTime = period.StartElement.ToDateTimeOffset();  
+                    retVal.StopTime = period.EndElement.ToDateTimeOffset();
+                    break;
+                case FhirDateTime fhirDateTime:
+                    retVal.ActTime = fhirDateTime.ToDateTimeOffset();
+                    break;
+            }
+        
+
+            retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Code);
+
+            
+            //issued
+            if (resource.Issued.HasValue)
+            {
+                retVal.CreationTime = (DateTimeOffset)resource.Issued;
+            }
+
+            //interpretation 
+            if (resource.Interpretation.Any())
+            {
+                
+                retVal.InterpretationConcept = DataTypeConverter.ToConcept(resource.Interpretation.First());
+            }
+
+           
+            //subject
+
+            if (resource.Subject != null)
+            {
+                // Is the subject a uuid
+                if (resource.Subject.Reference.StartsWith("urn:uuid:"))
+                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
+                else 
+                {
+                    this.m_tracer.TraceError("Only UUID references are supported");
+                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
+                    { 
+                        param = "UUID"
+                    }));
+                }
+                
+            }
+
+            //performer
+            if (resource.Performer.Any())
+            {
+               
+                foreach (var res in resource.Performer)
+                {
+                    if (res.Reference.StartsWith("urn:uuid:"))
+                    {
+                        retVal.Participations.Add(new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))));
+                    }
+                    else 
+                    {
+                        this.m_tracer.TraceError("Only UUID references are supported");
+                        throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
+                        { 
+                            param = "UUID"
+                        }));
+                    }
+
+                }
+                
+            }
+
+            // to bypass constraint at function 'CK_IS_CD_SET_MEM' 
+
+            retVal.MoodConceptKey = ActMoodKeys.Eventoccurrence; 
+
+            return retVal;
+
         }
 
         /// <summary>
