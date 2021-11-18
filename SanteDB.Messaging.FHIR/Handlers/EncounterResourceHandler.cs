@@ -204,9 +204,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Is the subject a uuid
                 if (resource.Subject.Reference.StartsWith("urn:uuid:"))
                     retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
+                else if(resource.Subject.Reference.StartsWith("Patient/"))
+                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(8, 36))));
                 else
                 {
-                    this.m_tracer.TraceError("Only UUID references are supported");
+                    this.m_tracer.TraceError("Only UUID or Patient references are supported");
                     throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new
                     {
                         param = "UUID"

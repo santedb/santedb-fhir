@@ -175,7 +175,8 @@ namespace SanteDB.Messaging.FHIR.Test
                     {
                         Given = new List<string>
                         {
-                            "Jordan"
+                            "Jordan",
+                            "Final"
                         },
                         Family = "Webber"
                     }
@@ -331,7 +332,6 @@ namespace SanteDB.Messaging.FHIR.Test
 
             retrievedEncounter.Status = Encounter.EncounterStatus.Cancelled;
             retrievedEncounter.Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH");
-            retrievedEncounter.Subject = new ResourceReference($"urn:uuid:{patient.Id}");
 
 
             Resource updatedEncounter;
