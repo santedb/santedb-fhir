@@ -47,6 +47,7 @@
     <None Remove="Resources\ComplexPatientPatientRelationship.json" />
     <None Remove="Resources\EntireFamilyRelationship.json" />
     <None Remove="TestConfig.xml" />
+    <EmbeddedResource Include="Resources\CreateEncounterBundle.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />

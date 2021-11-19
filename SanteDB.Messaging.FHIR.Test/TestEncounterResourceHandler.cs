@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -75,43 +76,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCreateEncounter()
         {
-            var bundle = new Bundle
-            {
-                Type = Bundle.BundleType.Transaction
-            };
-
-            var patient = new Hl7.Fhir.Model.Patient
-            {
-                Id = Guid.NewGuid().ToString(),
-                Name = new List<HumanName>
-                {
-                    new HumanName
-                    {
-                        Given = new List<string>
-                        {
-                            "Nityan"
-                        },
-                        Family = "Khanna"
-                    }
-                }
-            };
-
-            var encounter = new Encounter()
-            {
-                Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH"),
-                Status = Encounter.EncounterStatus.Finished,
-                Subject = new ResourceReference($"urn:uuid:{patient.Id}")
-            };
-
-            bundle.Entry.Add(new Bundle.EntryComponent
-            {
-                Resource = patient
-            });
-
-            bundle.Entry.Add(new Bundle.EntryComponent
-            {
-                Resource = encounter
-            });
+            var bundle = TestUtil.GetFhirMessage("CreateEncounterBundle");
 
             Resource actual;
 
@@ -158,6 +123,10 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual(createdEncounter.Status, actualEncounter.Status);
         }
 
+        /// <summary>
+        /// Tests the create functionality of the <see cref="EncounterResourceHandler"/> class.
+        /// add additional descriptions here
+        /// </summary>
         [Test]
         public void TestDeleteEncounter()
         {
