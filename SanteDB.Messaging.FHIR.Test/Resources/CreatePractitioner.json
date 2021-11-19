@@ -1,0 +1,58 @@
+﻿{
+  "resourceType": "Practitioner",
+  "extension": [
+    {
+      "url": "http://santedb.org/extensions/core/jpegPhoto",
+      "valueBase64Binary": "AQIDBAU="
+    },
+    {
+      "url": "http://santedb.org/extensions/core/detectedIssue",
+      "valueBase64Binary": "AQIDBAU="
+    }
+  ],
+  "identifier": [
+    {
+      "system": "http://santedb.org/fhir/test",
+      "value": "6324"
+    }
+  ],
+  "name": [
+    {
+      "family": "Practitioner",
+      "given": [
+        "Test"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "fax",
+      "value": "905 555 1234",
+      "use": "work"
+    }
+  ],
+  "birthDate": "1980-12-01",
+  "photo": [
+    {
+      "data": "AQIDBAU="
+    }
+  ],
+  "communication": [
+    {
+      "coding": [
+        {
+          "system": "http://tools.ietf.org/html/bcp47",
+          "code": "en-US"
+        }
+      ]
+    },
+    {
+      "coding": [
+        {
+          "system": "http://tools.ietf.org/html/bcp47",
+          "code": "fr-CA"
+        }
+      ]
+    }
+  ]
+}

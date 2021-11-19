@@ -48,7 +48,12 @@
     <None Remove="Resources\EntireFamilyRelationship.json" />
     <None Remove="TestConfig.xml" />
     <EmbeddedResource Include="Resources\CreateEncounterBundle.json" />
+    <EmbeddedResource Include="Resources\DeletePractitioner.json" />
     <EmbeddedResource Include="Resources\Organization.json" />
+    <EmbeddedResource Include="Resources\CreatePractitioner.json" />
+    <EmbeddedResource Include="Resources\CreatePractitionerSameIdentifier.json" />
+    <EmbeddedResource Include="Resources\CreatePractitionerDifferentIdentifier.json" />
+    <EmbeddedResource Include="Resources\ReadPractitioner.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
