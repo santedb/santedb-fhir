@@ -120,7 +120,6 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
-<<<<<<< Updated upstream
     <Compile Include="TestEncounterResourceHandler.cs" />
     <Compile Include="TestObservationResourceHandler.cs" />
     <Compile Include="TestPatientResourceHandler.cs" />
