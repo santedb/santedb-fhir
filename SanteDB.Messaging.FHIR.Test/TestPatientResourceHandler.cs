@@ -47,6 +47,9 @@ namespace SanteDB.Messaging.FHIR.Test
         // Bundler 
         private IServiceManager m_serviceManager;
 
+        /// <summary>
+        /// Set up method for the test methods.
+        /// </summary>
         [SetUp]
         public void Setup()
         {
@@ -80,6 +83,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the create functionality in the <see cref="PatientResourceHandler"/>
+        /// </summary>
         [Test]
         public void TestCreatePatient()
         {
@@ -113,7 +119,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 // get the resource handler
                 var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
 
-                // create the practitioner using the resource handler
+                // create the patient using the resource handler
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
                 // retrieve the patient using the resource handler
@@ -130,6 +136,9 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Canada", actual.Address.Single().Country);
         }
 
+        /// <summary>
+        /// Tests the create functionality with an invalid resource in the <see cref="PatientResourceHandler"/>
+        /// </summary>
         [Test]
         public void TestCreatePatientInvalidResource()
         {
@@ -144,6 +153,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the delete functionality in the <see cref="PatientResourceHandler"/>
+        /// </summary>
         [Test]
         public void TestDeletePatient()
         {
@@ -177,7 +189,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 // create the patient using the resource handler
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
-                // retrieve the practitioner using the resource handler
+                // retrieve the patient using the resource handler
                 result = patientResourceHandler.Read(result.Id, result.VersionId);
 
                 Assert.NotNull(result);
@@ -191,6 +203,58 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Test deleting a patient with an invalid guid in <see cref="PatientResourceHandler"/>
+        /// </summary>
+        [Test]
+        public void TestDeletePatientInvalidGuid()
+        {
+            var patient = new Patient();
+
+            patient.Name.Add(new HumanName
+            {
+                Given = new List<string>
+                {
+                    "John"
+                },
+                Family = "Smith"
+            });
+
+            patient.Telecom = new List<ContactPoint>
+            {
+                new ContactPoint(ContactPoint.ContactPointSystem.Phone, ContactPoint.ContactPointUse.Home,
+                    "905 555 1212")
+            };
+
+            patient.Gender = AdministrativeGender.Male;
+
+            Resource result;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                // get the resource handler
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                // create the patient using the resource handler
+                result = patientResourceHandler.Create(patient, TransactionMode.Commit);
+
+                // retrieve the patient using the resource handler
+                result = patientResourceHandler.Read(result.Id, result.VersionId);
+
+                Assert.NotNull(result);
+                Assert.IsInstanceOf<Patient>(result);
+
+                var actual = (Patient)result;
+
+                Assert.Throws<KeyNotFoundException>(() => patientResourceHandler.Delete(Guid.NewGuid().ToString(), TransactionMode.Commit));
+
+            }
+        }
+
+        /// <summary>
+        /// Tests the query functionality in the <see cref="PatientResourceHandler"/>
+        /// </summary>
         [Test]
         public void TestQueryPatient()
         {
@@ -239,6 +303,9 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(actual?.Telecom.First());
         }
 
+        /// <summary>
+        /// Tests the update functionality in the <see cref="PatientResourceHandler"/>
+        /// </summary>
         [Test]
         public void TestUpdatePatient()
         {
@@ -272,7 +339,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 // create the patient using the resource handler
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
-                // retrieve the practitioner using the resource handler
+                // retrieve the patient using the resource handler
                 result = patientResourceHandler.Read(result.Id, result.VersionId);
             }
 
@@ -296,7 +363,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 // create the patient using the resource handler
                 result = patientResourceHandler.Update(actual.Id, actual, TransactionMode.Commit);
 
-                // retrieve the practitioner using the resource handler
+                // retrieve the patient using the resource handler
                 result = patientResourceHandler.Read(result.Id, result.VersionId);
             }
 
@@ -307,6 +374,68 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.AreEqual(AdministrativeGender.Male, actual.Gender);
             Assert.IsFalse(actual.Active);
+        }
+
+        /// <summary>
+        /// Test update functionality with an invalid resource in <see cref="PatientResourceHandler"/>
+        /// </summary>
+        [Test]
+        public void TestUpdatePatientInvalidResource()
+        {
+            var patient = new Patient();
+
+            patient.Name.Add(new HumanName
+            {
+                Given = new List<string>
+                {
+                    "Jessica"
+                },
+                Family = "Comeau"
+            });
+
+            patient.Gender = AdministrativeGender.Female;
+            patient.BirthDate = DateTime.Now.ToString("yyyy-MM-dd");
+            patient.Active = true;
+            patient.Telecom = new List<ContactPoint>
+            {
+                new ContactPoint(ContactPoint.ContactPointSystem.Sms, ContactPoint.ContactPointUse.Mobile, "123 123 1234")
+            };
+
+            Resource result;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                // get the resource handler
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                // create the patient using the resource handler
+                result = patientResourceHandler.Create(patient, TransactionMode.Commit);
+
+                // retrieve the patient using the resource handler
+                result = patientResourceHandler.Read(result.Id, result.VersionId);
+            }
+
+            Assert.NotNull(result);
+            Assert.IsInstanceOf<Patient>(result);
+
+            var actual = (Patient)result;
+
+            Assert.AreEqual("Jessica", actual.Name.Single().Given.Single());
+            Assert.AreEqual(AdministrativeGender.Female, actual.Gender);
+            Assert.IsTrue(actual.Active);
+
+            actual.Gender = AdministrativeGender.Male;
+            actual.Active = false;
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                // get the resource handler
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                // create the patient using the resource handler
+                Assert.Throws<InvalidDataException>(() => patientResourceHandler.Update(actual.Id, new Practitioner(), TransactionMode.Commit));
+            }
         }
     }
 }
