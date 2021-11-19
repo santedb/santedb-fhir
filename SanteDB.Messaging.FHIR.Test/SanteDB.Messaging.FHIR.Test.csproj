@@ -47,6 +47,7 @@
     <None Remove="Resources\ComplexPatientPatientRelationship.json" />
     <None Remove="Resources\EntireFamilyRelationship.json" />
     <None Remove="TestConfig.xml" />
+    <EmbeddedResource Include="Resources\Organization.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
@@ -118,9 +119,13 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+<<<<<<< Updated upstream
     <Compile Include="TestEncounterResourceHandler.cs" />
     <Compile Include="TestObservationResourceHandler.cs" />
     <Compile Include="TestPatientResourceHandler.cs" />
+=======
+    <Compile Include="TestOrganizationResourceHandler.cs" />
+>>>>>>> Stashed changes
     <Compile Include="TestRelatedPersonResourceHandler.cs" />
     <Compile Include="TestPractitionerResourceHandler.cs" />
     <Compile Include="TestUtil.cs" />
