@@ -32,6 +32,7 @@ using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 
@@ -289,18 +290,21 @@ namespace SanteDB.Messaging.FHIR.Test
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
                 // retrieve the patient using the resource handler
-                result = patientResourceHandler.Read(result.Id, null);
+                var queryResult = patientResourceHandler.Query(new NameValueCollection
+                {
+                    { "id", result.Id }
+                });
+
+                var queriedPatient = queryResult.Entry.Select(c => c.Resource).OfType<Patient>().FirstOrDefault();
+
+                Assert.NotNull(queriedPatient);
+                Assert.IsInstanceOf<Patient>(queriedPatient);
+
+                Assert.AreEqual("Smith", queriedPatient?.Name.First().Family);
+                Assert.AreEqual("Matthew", queriedPatient?.Name.First().Given.First());
+                Assert.AreEqual(AdministrativeGender.Male, queriedPatient?.Gender);
+                Assert.NotNull(queriedPatient?.Telecom.First());
             }
-
-            Assert.NotNull(result);
-            Assert.IsInstanceOf<Patient>(result);
-
-            var actual = (Patient)result;
-
-            Assert.AreEqual("Smith", actual?.Name.First().Family);
-            Assert.AreEqual("Matthew", actual?.Name.First().Given.First());
-            Assert.AreEqual(AdministrativeGender.Male, actual?.Gender);
-            Assert.NotNull(actual?.Telecom.First());
         }
 
         /// <summary>
