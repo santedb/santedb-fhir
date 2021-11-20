@@ -23,6 +23,7 @@ using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.Exceptions;
 using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.PubSub;
@@ -239,13 +240,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 catch (Exception e)
                 {
                     this.m_tracer.TraceError("Could not send create to {0} for {1} - {2}", this.Endpoint, data, e);
+                    throw new DataDispatchException($"Error sending create notification to {this.Endpoint}", e);
                 }
             }
 
             /// <summary>
             /// Notify object was merged
             /// </summary>
-            public void NotifyMerged<TModel>(TModel survivor, TModel[] subsumed) where TModel : IdentifiedData
+            public void NotifyMerged<TModel>(TModel survivor, IEnumerable<TModel> subsumed) where TModel : IdentifiedData
             {
                 try
                 {
@@ -292,6 +294,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 catch (Exception e)
                 {
                     this.m_tracer.TraceError("Could not send merge to {0} for {1} - {2}", this.Endpoint, survivor, e);
+                    throw new DataDispatchException($"Error sending merge notification to {this.Endpoint}", e);
                 }
             }
 
@@ -326,13 +329,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 catch (Exception e)
                 {
                     this.m_tracer.TraceError("Could not send delete to {0} for {1} - {2}", this.Endpoint, data, e);
+                    throw new DataDispatchException($"Error sending delete notification to {this.Endpoint}", e);
                 }
             }
 
             /// <summary>
             /// Notify unmerged
             /// </summary>
-            public void NotifyUnMerged<TModel>(TModel primary, TModel[] unMerged) where TModel : IdentifiedData
+            public void NotifyUnMerged<TModel>(TModel primary, IEnumerable<TModel> unMerged) where TModel : IdentifiedData
             {
                 this.m_tracer.TraceWarning("TODO: Implement notification");
             }
@@ -377,6 +381,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 catch (Exception e)
                 {
                     this.m_tracer.TraceError("Could not send create to {0} for {1} - {2}", this.Endpoint, data, e);
+                    throw new DataDispatchException($"Error sending obsolete notification to {this.Endpoint}", e);
                 }
             }
         }
