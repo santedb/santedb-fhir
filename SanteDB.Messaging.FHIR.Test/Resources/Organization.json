@@ -1,0 +1,26 @@
+﻿{
+  "resourceType": "Organization",
+  "name": "Hamilton Health Sciences",
+  "alias": [
+    "hhs"
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "905 521 2100",
+      "use": "work"
+    }
+  ],
+  "address": [
+    {
+      "text": "237 Barton St E",
+      "city": "Hamilton",
+      "postalCode": "L8L 2X2"
+    },
+    {
+      "text": "169 Main Street East",
+      "city": "Grimsby",
+      "postalCode": "L3M 1P3"
+    }
+  ]
+}
