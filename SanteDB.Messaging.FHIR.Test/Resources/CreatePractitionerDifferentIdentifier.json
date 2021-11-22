@@ -1,0 +1,26 @@
+﻿{
+  "resourceType": "Practitioner",
+  "identifier": [
+    {
+      "system": "http://santedb.org/fhir/test",
+      "value": "2222"
+    }
+  ],
+  "name": [
+    {
+      "family": "PracTwo",
+      "given": [
+        "Second"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "fax",
+      "value": "905 555 1234",
+      "use": "work"
+    }
+  ],
+  "gender": "male",
+  "birthDate": "2021-11-19"
+}

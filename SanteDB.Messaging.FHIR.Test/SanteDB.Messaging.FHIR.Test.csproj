@@ -47,6 +47,13 @@
     <None Remove="Resources\ComplexPatientPatientRelationship.json" />
     <None Remove="Resources\EntireFamilyRelationship.json" />
     <None Remove="TestConfig.xml" />
+    <EmbeddedResource Include="Resources\CreateEncounterBundle.json" />
+    <EmbeddedResource Include="Resources\DeletePractitioner.json" />
+    <EmbeddedResource Include="Resources\Organization.json" />
+    <EmbeddedResource Include="Resources\CreatePractitioner.json" />
+    <EmbeddedResource Include="Resources\CreatePractitionerSameIdentifier.json" />
+    <EmbeddedResource Include="Resources\CreatePractitionerDifferentIdentifier.json" />
+    <EmbeddedResource Include="Resources\ReadPractitioner.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
@@ -118,7 +125,10 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestEncounterResourceHandler.cs" />
     <Compile Include="TestObservationResourceHandler.cs" />
+    <Compile Include="TestPatientResourceHandler.cs" />
+    <Compile Include="TestOrganizationResourceHandler.cs" />
     <Compile Include="TestRelatedPersonResourceHandler.cs" />
     <Compile Include="TestPractitionerResourceHandler.cs" />
     <Compile Include="TestUtil.cs" />
