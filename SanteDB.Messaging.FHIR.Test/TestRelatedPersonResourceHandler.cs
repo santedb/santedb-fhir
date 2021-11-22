@@ -156,6 +156,22 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(1, queryResult.Total);
                 messageString = TestUtil.MessageToString(queryResult);
                 Assert.AreEqual(afterRelatedPerson.Id, queryResult.Entry.First().Resource.Id);
+
+                // Attempt to delete the related person
+                var deletedRelatedPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Delete(sourceRelatedPerson.Id, TransactionMode.Commit);
+                Assert.NotNull(deletedRelatedPerson);
+                Assert.IsInstanceOf<RelatedPerson>(deletedRelatedPerson);
+                var actual = (RelatedPerson)deletedRelatedPerson;
+                // ensure the related person is NOT active
+                Assert.IsFalse(actual.Active);
+
+                // read the related person
+                var readPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Read(sourceRelatedPerson.Id, sourceRelatedPerson.VersionId);
+                Assert.NotNull(readPerson);
+                Assert.IsInstanceOf<RelatedPerson>(readPerson);
+                var readRelatedPerson = (RelatedPerson)readPerson;
+                // ensure the related person is NOT active
+                Assert.IsFalse(readRelatedPerson.Active);
             }
         }
 
