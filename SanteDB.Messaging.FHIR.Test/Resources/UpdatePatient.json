@@ -1,0 +1,21 @@
+﻿{
+  "resourceType": "Patient",
+  "active": true,
+  "name": [
+    {
+      "family": "Comeau",
+      "given": [
+        "Jessica"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "sms",
+      "value": "123 123 1234",
+      "use": "mobile"
+    }
+  ],
+  "gender": "female",
+  "birthDate": "2021-11-23"
+}
