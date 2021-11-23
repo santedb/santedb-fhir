@@ -11,13 +11,15 @@ using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
     /// <summary>
     /// Test complex relationships
-    /// </summary>
+    /// </summary
+    [ExcludeFromCodeCoverage]
     public class TestRelatedPersonResourceHandler : DataTest
     {
 

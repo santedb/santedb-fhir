@@ -33,6 +33,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 
@@ -41,6 +42,7 @@ namespace SanteDB.Messaging.FHIR.Test
     /// <summary>
     /// Tests the <see cref="PatientResourceHandler"/> class.
     /// </summary>
+    [ExcludeFromCodeCoverage]
     internal class TestPatientResourceHandler : DataTest
     {
         private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};

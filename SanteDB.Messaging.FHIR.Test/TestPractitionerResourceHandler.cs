@@ -31,6 +31,7 @@ using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -41,6 +42,7 @@ namespace SanteDB.Messaging.FHIR.Test
     /// <summary>
     /// Tests the <see cref="PractitionerResourceHandler"/> class.
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class TestPractitionerResourceHandler : DataTest
     {
         private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
