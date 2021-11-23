@@ -54,6 +54,9 @@
     <EmbeddedResource Include="Resources\CreatePractitionerSameIdentifier.json" />
     <EmbeddedResource Include="Resources\CreatePractitionerDifferentIdentifier.json" />
     <EmbeddedResource Include="Resources\ReadPractitioner.json" />
+    <EmbeddedResource Include="Resources\CreateObservation.json" />
+    <EmbeddedResource Include="Resources\ObservationPerformer.json" />
+    <EmbeddedResource Include="Resources\ObservationSubject.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
