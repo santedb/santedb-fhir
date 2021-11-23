@@ -133,6 +133,7 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestEncounterResourceHandler.cs" />
+    <Compile Include="TestFhirResourceHandlerUtil.cs" />
     <Compile Include="TestObservationResourceHandler.cs" />
     <Compile Include="TestPatientResourceHandler.cs" />
     <Compile Include="TestOrganizationResourceHandler.cs" />
