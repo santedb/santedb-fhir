@@ -1,0 +1,37 @@
+﻿{
+  "resourceType": "Observation",
+  "identifier": [
+    {
+      "system": "http://santedb.org/fhir/test",
+      "value": "6324"
+    }
+  ],
+  "status": "registered",
+  "code": {
+    "coding": [
+      {
+        "system": "http://santedb.org/conceptset/v3-ActClassClinicalDocument",
+        "code": "DOCCLIN"
+      }
+    ],
+    "text": "Clinical Document"
+  },
+  "effectiveInstant": "2021-10-01T08:06:32+01:00",
+  "issued": "2021-08-01T08:06:32+01:00",
+  "valueQuantity": {
+    "value": 12,
+    "unit": "mmHg",
+    "system": "http://unitsofmeasure.org",
+    "code": "mmHg"
+  },
+  "interpretation": [
+    {
+      "coding": [
+        {
+          "system": "http://hl7.org/fhir/v3/ObservationInterpretation",
+          "code": "HH"
+        }
+      ]
+    }
+  ]
+}

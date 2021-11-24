@@ -19,12 +19,10 @@
  * Date: 2021-11-15
  */
 
-using System;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
-using SanteDB.Core.Configuration;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
@@ -35,19 +33,13 @@ using Observation = Hl7.Fhir.Model.Observation;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    [ExcludeFromCodeCoverage]
     public class TestObservationResourceHandler : DataTest
     {
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-
         // Bundler 
         private IServiceManager m_serviceManager;
-
-        //Assigning authority service
-        private IAssigningAuthorityRepositoryService m_assigningAuthorityService;
-
-        //concept service
-        private IConceptRepositoryService m_conceptRepositoryService;
 
         private Practitioner m_practitioner;
 
@@ -61,9 +53,6 @@ namespace SanteDB.Messaging.FHIR.Test
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-            this.m_assigningAuthorityService = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
-            this.m_conceptRepositoryService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
-            
 
             var testConfiguration = new SanteDB.Messaging.FHIR.Configuration.FhirServiceConfigurationSection()
             {
@@ -72,16 +61,8 @@ namespace SanteDB.Messaging.FHIR.Test
                     "Patient",
                     "Practitioner",
                     "Observation",
-                    "Bundle"
                 },
-                OperationHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                ExtensionHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                ProfileHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                MessageHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(ObservationResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
-                }
+
             };
 
             using (AuthenticationContext.EnterSystemContext())
@@ -90,24 +71,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 ExtensionUtil.Initialize(testConfiguration);
 
 
-                //add practitioner for a participant
-                var practitioner = new Practitioner();
-
-                practitioner.Name.Add(new HumanName
-                {
-                    Given = new List<string>
-                    {
-                        "Test"
-                    },
-                    Family = "Physician"
-                });
-
-                practitioner.BirthDate = DateTime.Now.ToString("yyyy-MM-dd");
-                practitioner.Gender = AdministrativeGender.Male;
-                practitioner.Telecom = new List<ContactPoint>
-                {
-                    new ContactPoint(ContactPoint.ContactPointSystem.Fax, ContactPoint.ContactPointUse.Work, "905 555 1234")
-                };
+                //add practitioner to be used as performer
+                var practitioner = TestUtil.GetFhirMessage("ObservationPerformer") as Practitioner;
                 
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
 
@@ -115,46 +80,24 @@ namespace SanteDB.Messaging.FHIR.Test
                 m_practitioner = (Practitioner)practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
                 
 
-                //add patient for subject
-                var patient = new Patient();
-                patient.Name.Add(new HumanName
-                {
-                    Given = new List<string>
-                    {
-                        "Test"
-                    },
-                    Family = "Patient"
-                });
+                //add patient to be used subject
+                var patient = TestUtil.GetFhirMessage("ObservationSubject") as Patient;
 
-                patient.BirthDate = DateTime.Now.ToString("yyyy-MM-dd");
-                patient.Gender = AdministrativeGender.Male;
-                patient.Telecom = new List<ContactPoint>
-                {
-                    new ContactPoint(ContactPoint.ContactPointSystem.Fax, ContactPoint.ContactPointUse.Home, "905 545 1234")
-                };
-                
                 var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
 
                 // create the patient using the resource handler
                 m_patient = (Patient)patientResourceHandler.Create(patient, TransactionMode.Commit);
 
-
-
             }
         }
 
+        /// <summary>
+        /// Tests the create functionality in <see cref="ObservationResourceHandler"/> class.
+        /// </summary>
         [Test]
         public void TestCreateObservation()
         {
-
-            var observation = new Observation();
-
-            observation.Identifier.Add(new Identifier("http://santedb.org/fhir/test", "6324"));
-            //based on
-
-            //status element
-            observation.StatusElement = new Code<ObservationStatus>(ObservationStatus.Registered);
-
+            var observation = TestUtil.GetFhirMessage("CreateObservation") as Observation;
 
             //subject
             observation.Subject = new ResourceReference($"urn:uuid:{m_patient.Id}");
@@ -162,30 +105,6 @@ namespace SanteDB.Messaging.FHIR.Test
             //performer
             observation.Performer.Add(new ResourceReference($"urn:uuid:{m_practitioner.Id}"));
 
-
-            //effective
-            observation.Effective = new Instant(new DateTimeOffset(2021, 10, 1, 8, 6, 32, new TimeSpan(1, 0, 0)));
-
-            //issued at
-            observation.IssuedElement = new Instant(new DateTimeOffset(2021, 8, 1, 8, 6, 32, new TimeSpan(1, 0, 0)));
-
-            //interpretation
-            observation.Interpretation.Add(new CodeableConcept("http://hl7.org/fhir/v3/ObservationInterpretation", "HH"));
-
-            //value - fhirstring
-            //observation.Value = new FhirString("Test patient felt well today");
-
-            //value - concept
-            //observation.Value = new CodeableConcept("http://hl7.org/fhir/v3/ObservationInterpretation", "HH");
-
-            //value - quantity
-            observation.Value = new Quantity(12, "mmHg");
-
-
-            observation.Code = new CodeableConcept("http://santedb.org/conceptset/v3-ActClassClinicalDocument", "DOCCLIN",  "Clinical Document");
-
-
-            //  execute  test operations
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
 
             Resource createdResource, retrievedResource;
@@ -193,21 +112,16 @@ namespace SanteDB.Messaging.FHIR.Test
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
 
-               
                 // get the resource handler
                 var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
 
                 // create the observation using the resource handler
                 createdResource = observationResourceHandler.Create(observation, TransactionMode.Commit);
 
-         
                 // retrieve the observation using the resource handler
                 retrievedResource = observationResourceHandler.Read(createdResource.Id, createdResource.VersionId);
-
-
             }
 
-            // assert 
             Assert.NotNull(retrievedResource);
             Assert.IsInstanceOf<Observation>(retrievedResource);
 
@@ -217,8 +131,5 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
 
-        
-
-  
     }
 }

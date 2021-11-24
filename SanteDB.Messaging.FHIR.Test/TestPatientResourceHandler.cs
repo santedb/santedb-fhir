@@ -15,7 +15,7 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: webber
+ * User: Webber
  * Date: 2021-11-18
  */
 
@@ -33,6 +33,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 
@@ -41,6 +42,7 @@ namespace SanteDB.Messaging.FHIR.Test
     /// <summary>
     /// Tests the <see cref="PatientResourceHandler"/> class.
     /// </summary>
+    [ExcludeFromCodeCoverage]
     internal class TestPatientResourceHandler : DataTest
     {
         private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
@@ -85,32 +87,12 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Tests the create functionality in the <see cref="PatientResourceHandler"/>
+        /// Tests the create functionality in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
         public void TestCreatePatient()
         {
-            var patient = new Patient();
-
-            patient.Name.Add(new HumanName
-            {
-                Given = new List<string>
-                {
-                    "Jordan"
-                },
-                Family = "Webber"
-            });
-
-            patient.BirthDate = DateTime.Now.ToString("yyyy-MM-dd");
-            patient.Address = new List<Address>
-            {
-                new Address
-                {
-                    Country = "Canada",
-                    PostalCode = "L3D 1B4",
-                    City = "Hamilton"
-                }
-            };
+            var patient = TestUtil.GetFhirMessage("CreatePatient") as Patient;
 
             Resource result;
 
@@ -135,10 +117,11 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Webber", actual.Name.Single().Family);
             Assert.AreEqual("Jordan", actual.Name.Single().Given.Single());
             Assert.AreEqual("Canada", actual.Address.Single().Country);
+            Assert.AreEqual("mailto:Webber@gmail.com", actual.Telecom.First().Value);
         }
 
         /// <summary>
-        /// Tests the create functionality with an invalid resource in the <see cref="PatientResourceHandler"/>
+        /// Tests the create functionality with an invalid resource in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
         public void TestCreatePatientInvalidResource()
@@ -155,29 +138,12 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Tests the delete functionality in the <see cref="PatientResourceHandler"/>
+        /// Tests the delete functionality in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
         public void TestDeletePatient()
         {
-            var patient = new Patient();
-
-            patient.Name.Add(new HumanName
-            {
-                Given = new List<string>
-                {
-                    "John"
-                },
-                Family = "Smith"
-            });
-
-            patient.Telecom = new List<ContactPoint>
-            {
-                new ContactPoint(ContactPoint.ContactPointSystem.Phone, ContactPoint.ContactPointUse.Home,
-                    "905 555 1212")
-            };
-
-            patient.Gender = AdministrativeGender.Male;
+            var patient = TestUtil.GetFhirMessage("DeletePatient") as Patient;
 
             Resource result;
 
@@ -205,29 +171,12 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Test deleting a patient with an invalid guid in <see cref="PatientResourceHandler"/>
+        /// Test deleting a patient with an invalid guid in <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
         public void TestDeletePatientInvalidGuid()
         {
-            var patient = new Patient();
-
-            patient.Name.Add(new HumanName
-            {
-                Given = new List<string>
-                {
-                    "John"
-                },
-                Family = "Smith"
-            });
-
-            patient.Telecom = new List<ContactPoint>
-            {
-                new ContactPoint(ContactPoint.ContactPointSystem.Phone, ContactPoint.ContactPointUse.Home,
-                    "905 555 1212")
-            };
-
-            patient.Gender = AdministrativeGender.Male;
+            var patient = TestUtil.GetFhirMessage("DeletePatient") as Patient;
 
             Resource result;
 
@@ -249,34 +198,16 @@ namespace SanteDB.Messaging.FHIR.Test
                 var actual = (Patient)result;
 
                 Assert.Throws<KeyNotFoundException>(() => patientResourceHandler.Delete(Guid.NewGuid().ToString(), TransactionMode.Commit));
-
             }
         }
 
         /// <summary>
-        /// Tests the query functionality in the <see cref="PatientResourceHandler"/>
+        /// Tests the query functionality in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
         public void TestQueryPatient()
         {
-            var patient = new Patient();
-
-            patient.Name.Add(new HumanName
-            {
-                Given = new List<string>
-                {
-                    "Matthew"
-                },
-                Family = "Smith"
-            });
-
-            patient.Gender = AdministrativeGender.Male;
-            patient.BirthDate = DateTime.Now.ToString("yyyy-MM-dd");
-            patient.Active = true;
-            patient.Telecom = new List<ContactPoint>
-            {
-                new ContactPoint(ContactPoint.ContactPointSystem.Sms, ContactPoint.ContactPointUse.Mobile, "123 123 1234")
-            };
+            var patient = TestUtil.GetFhirMessage("QueryPatient") as Patient;
 
             Resource result;
 
@@ -290,12 +221,12 @@ namespace SanteDB.Messaging.FHIR.Test
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
                 // retrieve the patient using the resource handler
-                var queryResult = patientResourceHandler.Query(new NameValueCollection
-                {
-                    { "id", result.Id }
-                });
+                var queryResult = patientResourceHandler.Read(result.Id, null);
 
-                var queriedPatient = queryResult.Entry.Select(c => c.Resource).OfType<Patient>().FirstOrDefault();
+                Assert.NotNull(queryResult);
+                Assert.IsInstanceOf<Patient>(queryResult);
+
+                var queriedPatient = (Patient) queryResult;
 
                 Assert.NotNull(queriedPatient);
                 Assert.IsInstanceOf<Patient>(queriedPatient);
@@ -308,29 +239,12 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Tests the update functionality in the <see cref="PatientResourceHandler"/>
+        /// Tests the update functionality in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
         public void TestUpdatePatient()
         {
-            var patient = new Patient();
-
-            patient.Name.Add(new HumanName
-            {
-                Given = new List<string>
-                {
-                    "Jessica"
-                },
-                Family = "Comeau"
-            });
-
-            patient.Gender = AdministrativeGender.Female;
-            patient.BirthDate = DateTime.Now.ToString("yyyy-MM-dd");
-            patient.Active = true;
-            patient.Telecom = new List<ContactPoint>
-            {
-                new ContactPoint(ContactPoint.ContactPointSystem.Sms, ContactPoint.ContactPointUse.Mobile, "123 123 1234")
-            };
+            var patient = TestUtil.GetFhirMessage("UpdatePatient") as Patient;
 
             Resource result;
 
@@ -381,29 +295,12 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Test update functionality with an invalid resource in <see cref="PatientResourceHandler"/>
+        /// Test update functionality with an invalid resource in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
         public void TestUpdatePatientInvalidResource()
         {
-            var patient = new Patient();
-
-            patient.Name.Add(new HumanName
-            {
-                Given = new List<string>
-                {
-                    "Jessica"
-                },
-                Family = "Comeau"
-            });
-
-            patient.Gender = AdministrativeGender.Female;
-            patient.BirthDate = DateTime.Now.ToString("yyyy-MM-dd");
-            patient.Active = true;
-            patient.Telecom = new List<ContactPoint>
-            {
-                new ContactPoint(ContactPoint.ContactPointSystem.Sms, ContactPoint.ContactPointUse.Mobile, "123 123 1234")
-            };
+            var patient = TestUtil.GetFhirMessage("UpdatePatient") as Patient;
 
             Resource result;
 

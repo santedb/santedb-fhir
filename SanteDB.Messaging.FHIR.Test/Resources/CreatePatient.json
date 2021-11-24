@@ -1,0 +1,27 @@
+﻿{
+  "resourceType": "Patient",
+  "name": [
+    {
+      "family": "Webber",
+      "given": [
+        "Jordan"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "email",
+      "value": "Webber@gmail.com",
+      "use": "home"
+    }
+  ],
+  "gender": "male",
+  "birthDate": "2021-11-23",
+  "address": [
+    {
+      "city": "Hamilton",
+      "postalCode": "L3D 1B4",
+      "country": "Canada"
+    }
+  ]
+}
