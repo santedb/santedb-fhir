@@ -84,9 +84,7 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             // set up the test data
             var organization = TestUtil.GetFhirMessage("Organization") as Organization;
-
             Resource result;
-
             // execute the operation under test
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
@@ -103,6 +101,10 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Hamilton Health Sciences", actual.Name);
             Assert.IsTrue(actual.Alias.All(c=>c=="hhs"));
             Assert.True(actual.Address.Count == 2);
+            Assert.IsTrue(actual.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/detectedIssue"));
+            Assert.IsTrue(actual.Identifier.First().Value == "6324");
+            Assert.AreEqual("http://santedb.org/fhir/test", actual.Identifier.First().System);
+            Assert.IsTrue(actual.Identifier.Count == 1);
         }
 
         /// <summary>
@@ -152,6 +154,8 @@ namespace SanteDB.Messaging.FHIR.Test
             // update the organization
             organization.Name = "Hamilton Health Science";
             organization.Address.RemoveAt(1);
+            organization.Identifier.First().Value = "2021";
+            organization.Extension.RemoveAt(0);
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
@@ -165,7 +169,9 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsInstanceOf<Organization>(result);
             actual = (Organization)result;
             Assert.AreEqual("Hamilton Health Science", actual.Name);
-            Assert.True(actual.Address.Count == 1);
+            Assert.IsTrue(actual.Address.Count == 1);
+            Assert.IsFalse(actual.Extension.Any());
+            Assert.AreEqual("2021", actual.Identifier.First().Value);
         }
 
         /// <summary>
@@ -218,6 +224,9 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsTrue(readOrganization.Name == "Hamilton Health Sciences");
             Assert.AreEqual(2, readOrganization.Address.Count());
             Assert.AreEqual("hhs", readOrganization.Alias.First());
+            Assert.IsTrue(readOrganization.Identifier.First().Value == "6324");
+            Assert.AreEqual("http://santedb.org/fhir/test", readOrganization.Identifier.First().System);
+            Assert.IsTrue(readOrganization.Identifier.Count == 1);
 
             // read the organization
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
@@ -229,7 +238,6 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
             readOrganization = (Organization)result;
-
             // ensure the organization is NOT active
             Assert.IsFalse(readOrganization.Active);
         }
