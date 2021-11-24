@@ -20,6 +20,9 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public class TestFhirResourceHandlerUtil
     {
+        /// <summary>
+        /// Runs setup before each test execution.
+        /// </summary>
         [SetUp]
         public void Setup()
         {
@@ -30,6 +33,9 @@ namespace SanteDB.Messaging.FHIR.Test
             TestApplicationContext.Current.Start();
         }
 
+        /// <summary>
+        /// Tests the registration of a FHIR resource handler in the <see cref="FhirResourceHandlerUtil"/> class.
+        /// </summary>
         [Test]
         public void TestRegisterResourceHandler()
         {
@@ -39,6 +45,9 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsInstanceOf<DummyResourceHandler>(FhirResourceHandlerUtil.GetResourceHandler(ResourceType.DomainResource));
         }
 
+        /// <summary>
+        /// Test the un-registration of a FHIR resource handler in the <see cref="FhirResourceHandlerUtil"/> class.
+        /// </summary>
         [Test]
         public void TestUnRegisterResourceHandler()
         {
@@ -53,6 +62,10 @@ namespace SanteDB.Messaging.FHIR.Test
         }
     }
 
+    /// <summary>
+    /// Represents a dummy FHIR resource handler.
+    /// </summary>
+    [ExcludeFromCodeCoverage]
     public class DummyResourceHandler : IFhirResourceHandler
     {
         /// <summary>
