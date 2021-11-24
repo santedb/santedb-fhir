@@ -57,10 +57,10 @@
     <EmbeddedResource Include="Resources\CreateObservation.json" />
     <EmbeddedResource Include="Resources\ObservationPerformer.json" />
     <EmbeddedResource Include="Resources\ObservationSubject.json" />
-    <None Include="Resources\CreatePatient.json" />
-    <None Include="Resources\DeletePatient.json" />
-    <None Include="Resources\QueryPatient.json" />
-    <None Include="Resources\UpdatePatient.json" />
+    <EmbeddedResource Include="Resources\CreatePatient.json" />
+    <EmbeddedResource Include="Resources\DeletePatient.json" />
+    <EmbeddedResource Include="Resources\QueryPatient.json" />
+    <EmbeddedResource Include="Resources\UpdatePatient.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
@@ -133,6 +133,7 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestEncounterResourceHandler.cs" />
+    <Compile Include="TestFhirResourceHandlerUtil.cs" />
     <Compile Include="TestObservationResourceHandler.cs" />
     <Compile Include="TestPatientResourceHandler.cs" />
     <Compile Include="TestOrganizationResourceHandler.cs" />

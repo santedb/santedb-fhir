@@ -19,6 +19,7 @@
  * Date: 2021-11-15
  */
 
+using System.Diagnostics.CodeAnalysis;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
@@ -32,6 +33,7 @@ using Observation = Hl7.Fhir.Model.Observation;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    [ExcludeFromCodeCoverage]
     public class TestObservationResourceHandler : DataTest
     {
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };

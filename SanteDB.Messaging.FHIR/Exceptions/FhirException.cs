@@ -20,9 +20,8 @@
  */
 using Hl7.Fhir.Model;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Net;
-using System.Text;
 using static Hl7.Fhir.Model.OperationOutcome;
 
 namespace SanteDB.Messaging.FHIR.Exceptions
@@ -30,6 +29,7 @@ namespace SanteDB.Messaging.FHIR.Exceptions
     /// <summary>
     /// Represents an exception with a specific code and severity
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class FhirException : Exception
     {
 

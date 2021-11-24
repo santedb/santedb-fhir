@@ -21,6 +21,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using FirebirdSql.Data.FirebirdClient;
@@ -43,7 +44,8 @@ namespace SanteDB.Messaging.FHIR.Test
     /// <summary>
     /// Test class for <see cref="EncounterResourceHandler"/>
     /// </summary>
-    class TestEncounterResourceHandler : DataTest
+    [ExcludeFromCodeCoverage]
+    public class TestEncounterResourceHandler : DataTest
     {
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
