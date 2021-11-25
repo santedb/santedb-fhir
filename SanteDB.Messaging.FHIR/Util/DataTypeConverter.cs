@@ -21,7 +21,6 @@
 
 using Hl7.Fhir.Model;
 using SanteDB.Core;
-using SanteDB.Core.Auditing;
 using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
@@ -51,8 +50,11 @@ using System.Security.Authentication;
 using System.Text.RegularExpressions;
 using static Hl7.Fhir.Model.OperationOutcome;
 using SanteDB.Core.Model.Audit;
+
 using SanteDB.Core.Model.Security;
+
 using System.Xml;
+
 using System.Security;
 using System.Security.Authentication;
 using System.Data.Common;
@@ -964,7 +966,7 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 throw new ConstraintException($"Can't find any reference term mappings from '{codeableConcept.Coding?.FirstOrDefault()?.Code}' in {codeableConcept.Coding?.FirstOrDefault()?.System} to a Concept");
             }
-                
+
             return retVal;
         }
 
