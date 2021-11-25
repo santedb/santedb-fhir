@@ -94,7 +94,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Name = model.LoadCollection(o => o.Names).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.ToDisplay();
             retVal.Alias = model.LoadCollection(o => o.Names).Where(o => o.NameUseKey == NameUseKeys.Pseudonym).Select(o => o.ToDisplay());
 
-            var parent = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
+            var parent = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Child);
             if (parent != null)
             {
                 retVal.PartOf = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(parent.TargetEntityKey);
