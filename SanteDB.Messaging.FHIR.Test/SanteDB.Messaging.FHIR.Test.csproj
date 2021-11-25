@@ -61,6 +61,7 @@
     <EmbeddedResource Include="Resources\DeletePatient.json" />
     <EmbeddedResource Include="Resources\QueryPatient.json" />
     <EmbeddedResource Include="Resources\UpdatePatient.json" />
+    <EmbeddedResource Include="Resources\SetupObservation.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
