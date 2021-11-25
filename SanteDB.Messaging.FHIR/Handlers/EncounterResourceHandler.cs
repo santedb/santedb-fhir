@@ -207,7 +207,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
                 else
                 {
-                    this.m_tracer.TraceError("Only UUID or Patient references are supported");
+                    this.m_tracer.TraceError("Only UUID references are supported");
                     throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new
                     {
                         param = "UUID"
