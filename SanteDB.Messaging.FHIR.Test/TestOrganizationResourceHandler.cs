@@ -1,20 +1,16 @@
 ﻿using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
-using Hl7.Fhir.Serialization;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Model.Security;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
-using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -263,15 +259,14 @@ namespace SanteDB.Messaging.FHIR.Test
                 {
                     new ContactPoint(ContactPointSystem.Phone,ContactPointUse.Work,"905 525 9140")
                 }
-
             };
 
-            Resource baseResult;
+            Resource createdParentOrganization;
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
             {
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
-                baseResult = organizationResourceHandler.Create(parentOrganization, TransactionMode.Commit);
+                createdParentOrganization = organizationResourceHandler.Create(parentOrganization, TransactionMode.Commit);
             }
 
             var subOrganization = new Organization
@@ -293,22 +288,22 @@ namespace SanteDB.Messaging.FHIR.Test
                 }
             };
 
-            subOrganization.PartOf = new ResourceReference($"urn:uuid:{baseResult.Id}");
+            subOrganization.PartOf = new ResourceReference($"urn:uuid:{createdParentOrganization.Id}");
             Resource subResult;
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
             {
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
                 subResult = organizationResourceHandler.Create(subOrganization, TransactionMode.Commit);
-                subResult = organizationResourceHandler.Read(baseResult.Id, null);
+                subResult = organizationResourceHandler.Read(subResult.Id, null);
             }
 
             // assert create organization successfully
             Assert.NotNull(subResult);
             Assert.IsInstanceOf<Organization>(subResult);
             var actualSubOrganization = (Organization)subResult;
-            Assert.AreEqual("Hamilton Health Sciences", actualSubOrganization.Name);
-            Assert.IsTrue(actualSubOrganization.Alias.All(c => c == "hhs"));
+            Assert.AreEqual("McMaster University Medical School", actualSubOrganization.Name);
+            Assert.IsTrue(actualSubOrganization.Alias.Any(c => c == "hhs"));
             Assert.IsTrue(actualSubOrganization.Address.Count == 1);
             Assert.IsNotNull(actualSubOrganization.PartOf);
         }
