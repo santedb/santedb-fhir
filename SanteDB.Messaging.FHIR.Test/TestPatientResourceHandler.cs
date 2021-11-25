@@ -374,5 +374,28 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.IsNotNull(createdPatient.GeneralPractitioner.First());
         }
+
+        [Test]
+        public void TestCreateDeceasedPatient()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateDeceasedPatient") as Patient;
+
+            Resource actual;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                actual = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOf<Patient>(actual);
+
+            var createdPatient = (Patient)actual;
+
+            Assert.IsNotNull(createdPatient.Deceased);
+        }
     }
 }

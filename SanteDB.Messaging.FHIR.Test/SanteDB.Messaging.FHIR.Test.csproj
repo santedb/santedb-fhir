@@ -64,6 +64,7 @@
     <EmbeddedResource Include="Resources\SetupObservation.json" />
     <EmbeddedResource Include="Resources\CreatePatientWithGeneralPractitioner-Patient.json" />
     <EmbeddedResource Include="Resources\CreatePatientWithGeneralPractitioner-Practitioner.json" />
+    <EmbeddedResource Include="Resources\CreateDeceasedPatient.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
