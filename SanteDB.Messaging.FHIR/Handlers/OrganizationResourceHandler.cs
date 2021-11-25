@@ -157,7 +157,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         param = resource.PartOf.Reference
                     }));
                 }
-                retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference as Entity));
+                //when two organizations are related, the sub organization is added to the parent organization with the relationship of child. 
+                reference.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Child, retVal));
             }
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
             return retVal;
