@@ -36,6 +36,7 @@ using SanteDB.Messaging.FHIR.Util;
 using SanteDB.Rest.Common;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -50,6 +51,7 @@ namespace SanteDB.Messaging.FHIR.Rest
     /// HL7 Fast Health Interoperability Resources (FHIR) R4
     /// </summary>
     /// <remarks>SanteSB Server implementation of the HL7 FHIR R4 Contract</remarks>
+    [ExcludeFromCodeCoverage]
     [ServiceBehavior(Name = "FHIR", InstanceMode = ServiceInstanceMode.Singleton)]
     public class FhirServiceBehavior : IFhirServiceContract, IServiceBehaviorMetadataProvider
     {

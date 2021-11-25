@@ -1,0 +1,27 @@
+﻿{
+  "resourceType": "Patient",
+  "name": [
+    {
+      "family": "Smith",
+      "given": [
+        "John"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "905 555 1212",
+      "use": "home"
+    }
+  ],
+  "gender": "male",
+  "address": [
+    {
+      "city": "Milton",
+      "state": "Ontario",
+      "postalCode": "1A1B2B",
+      "country": "Canada"
+    }
+  ]
+}

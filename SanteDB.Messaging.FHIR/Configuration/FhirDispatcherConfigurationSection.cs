@@ -24,6 +24,7 @@ using SanteDB.Messaging.FHIR.Rest;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Xml.Serialization;
 
@@ -33,6 +34,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
     /// <summary>
     /// Get the dispatcher target configuration
     /// </summary>
+    [ExcludeFromCodeCoverage]
     [XmlType(nameof(FhirDispatcherTargetConfiguration), Namespace = "http://santedb.org/configuration")]
     public class FhirDispatcherTargetConfiguration
     {

@@ -120,6 +120,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case StatusKeyStrings.Nullified:
                     retVal.Status = Encounter.EncounterStatus.EnteredInError;
                     break;
+
+                case StatusKeyStrings.Obsolete:
+                    retVal.Status = Encounter.EncounterStatus.Unknown;
                     break;
 
                 case StatusKeyStrings.Completed:
@@ -172,7 +175,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var status = resource.Status.Value;
             var retVal = new PatientEncounter()
             {
-                TypeConcept = DataTypeConverter.ToConcept(resource.Class, "http://openiz.org/conceptset/v3-ActEncounterCode"),
+                TypeConcept = DataTypeConverter.ToConcept(resource.Class, "http://santedb.org/conceptset/v3-ActEncounterCode"),
                 StartTime = resource.Period?.StartElement?.ToDateTimeOffset(),
                 StopTime = resource.Period?.EndElement?.ToDateTimeOffset(),
                 // TODO: Extensions
@@ -201,6 +204,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Is the subject a uuid
                 if (resource.Subject.Reference.StartsWith("urn:uuid:"))
                     retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
+                else if(resource.Subject.Reference.StartsWith("Patient/"))
+                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(8, 36))));
                 else
                 {
                     this.m_tracer.TraceError("Only UUID references are supported");
