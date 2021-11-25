@@ -30,7 +30,6 @@ namespace SanteDB.Messaging.FHIR.Test
             var p = FirebirdSql.Data.FirebirdClient.FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestFhirResourceHandlerUtil).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            TestApplicationContext.Current.Start();
         }
 
         /// <summary>

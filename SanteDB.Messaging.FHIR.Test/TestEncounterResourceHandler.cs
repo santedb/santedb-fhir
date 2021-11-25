@@ -105,14 +105,9 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCreateEncounter()
         {
-            var bundle = new Bundle
-            {
-                Type = Bundle.BundleType.Transaction
-            };
 
             var patient = new Hl7.Fhir.Model.Patient
             {
-                Id = Guid.NewGuid().ToString(),
                 Name = new List<HumanName>
                 {
                     new HumanName
@@ -130,47 +125,45 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH"),
                 Status = Encounter.EncounterStatus.Finished,
-                Subject = new ResourceReference($"urn:uuid:{patient.Id}"),
-                Language = "English"
+                Length = new Duration
+                {
+                    Value = 25
+                },
+                Period = new Period
+                {
+                    StartElement = FhirDateTime.Now(),
+                    EndElement = FhirDateTime.Now()
+                }
             };
 
-            bundle.Entry.Add(new Bundle.EntryComponent
-            {
-                Resource = patient
-            });
-
-            bundle.Entry.Add(new Bundle.EntryComponent
-            {
-                Resource = encounter
-            });
-
-            Resource actual;
+            Resource actualPatient;
+            Resource actualEncounter;
 
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
             {
-                var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
 
-                actual = bundleResourceHandler.Create(bundle, TransactionMode.Commit);
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
             }
 
-            Assert.NotNull(actual);
+            Assert.NotNull(actualPatient);
+            Assert.NotNull(actualEncounter);
 
-            Assert.IsInstanceOf<Bundle>(actual);
+            Assert.IsInstanceOf<Hl7.Fhir.Model.Patient>(actualPatient);
+            Assert.IsInstanceOf<Encounter>(actualEncounter);
 
-            var actualBundle = (Bundle)actual;
-
-            Assert.AreEqual(2, actualBundle.Entry.Count);
-            Assert.AreEqual(1, actualBundle.Entry.Count(c => c.Resource is Hl7.Fhir.Model.Patient));
-            Assert.AreEqual(1, actualBundle.Entry.Count(c => c.Resource is Encounter));
-
-            var createdPatient = actualBundle.Entry.Select(c => c.Resource).OfType<Hl7.Fhir.Model.Patient>().FirstOrDefault();
+            var createdPatient = (Hl7.Fhir.Model.Patient)actualPatient;
+            var createdEncounter = (Encounter)actualEncounter;
 
             Assert.NotNull(createdPatient);
 
-            var createdEncounter = actualBundle.Entry.Select(c => c.Resource).OfType<Encounter>().FirstOrDefault();
-
             Assert.NotNull(createdEncounter);
+
+            Resource actual;
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
             {
@@ -183,11 +176,13 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.IsInstanceOf<Encounter>(actual);
 
-            var actualEncounter = (Encounter)actual;
+            var retrievedEncounter = (Encounter)actual;
 
-            Assert.AreEqual(createdEncounter.Id, actualEncounter.Id);
-            Assert.AreEqual(createdEncounter.Status, actualEncounter.Status);
-            Assert.AreEqual(createdEncounter.Language, actualEncounter.Language);
+            Assert.AreEqual(createdEncounter.Id, retrievedEncounter.Id);
+            Assert.AreEqual(createdEncounter.Status, retrievedEncounter.Status);
+            Assert.IsNotNull(retrievedEncounter.Subject);
+            Assert.AreEqual(createdEncounter.Period.Start, retrievedEncounter.Period.Start);
+            Assert.AreEqual(createdEncounter.Period.End, retrievedEncounter.Period.End);
         }
 
         /// <summary>
