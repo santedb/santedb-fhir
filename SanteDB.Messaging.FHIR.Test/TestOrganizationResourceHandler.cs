@@ -251,18 +251,18 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Name = "McMaster University Medical School",
                 Address = new List<Address>
-                            {
-                                new Address
-                                {
-                                    City = "Hamilton",
-                                    Text = "1280 Main Street West",
-                                    PostalCode = "L8S4L8 "
-                                }
-                            },
+                {
+                    new Address
+                    {
+                        City = "Hamilton",
+                        Text = "1280 Main Street West",
+                        PostalCode = "L8S4L8 "
+                    }
+                },
                 Telecom = new List<ContactPoint>
-                            {
-                                new ContactPoint(ContactPointSystem.Phone,ContactPointUse.Work,"905 525 9140")
-                            }
+                {
+                    new ContactPoint(ContactPointSystem.Phone,ContactPointUse.Work,"905 525 9140")
+                }
 
             };
 
@@ -278,19 +278,19 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Name = "Hamilton Health Sciences",
                 Address = new List<Address>
-                            {
-                                new Address
-                                {
-                                    Text = "237 Barton St E",
-                                    City = "Hamilton",
-                                    PostalCode = "L8L 2X2"
-                                }
-                            },
+                {
+                    new Address
+                    {
+                        Text = "237 Barton St E",
+                        City = "Hamilton",
+                        PostalCode = "L8L 2X2"
+                    }
+                },
 
                 Telecom = new List<ContactPoint>
-                            {
-                               new ContactPoint(ContactPointSystem.Phone,ContactPointUse.Work,"905 512 2100")
-                            }
+                {
+                   new ContactPoint(ContactPointSystem.Phone,ContactPointUse.Work,"905 512 2100")
+                }
             };
 
             subOrganization.PartOf = new ResourceReference($"urn:uuid:{baseResult.Id}");
