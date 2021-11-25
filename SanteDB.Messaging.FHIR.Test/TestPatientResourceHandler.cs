@@ -340,6 +340,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the creation of a patient with an associated general practitioner in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
         [Test]
         public void TestCreatePatientWithGeneralPractitioner()
         {
@@ -375,6 +378,9 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsNotNull(createdPatient.GeneralPractitioner.First());
         }
 
+        /// <summary>
+        /// Tests the creation of a deceased patient in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
         [Test]
         public void TestCreateDeceasedPatient()
         {
