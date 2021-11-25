@@ -1,0 +1,20 @@
+﻿{
+  "resourceType": "Patient",
+  "name": [
+    {
+      "family": "Patient",
+      "given": [
+        "Test"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "fax",
+      "value": "905 545 1234",
+      "use": "home"
+    }
+  ],
+  "gender": "male",
+  "birthDate": "2021-11-22"
+}

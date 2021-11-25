@@ -176,6 +176,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.GenderConceptKey = resource.Gender == null ? NullReasonKeys.Unknown : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             retVal.DateOfBirthXml = resource.BirthDate;
             retVal.DateOfBirthPrecision = DatePrecision.Day;
+            retVal.LanguageCommunication = resource.Communication.Select(c => DataTypeConverter.ToLanguageCommunication(c, false)).ToList();
 
             // TODO: Photo
             if (resource.Photo != null && resource.Photo.Any())

@@ -121,9 +121,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }));
             }
 
-            // Create the relative object
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
-            relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value);
+            relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value) && model.ObsoleteVersionSequenceId.HasValue == false;
             relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty(o => o.RelationshipType), new string[] { "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" }, false) };
             relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);

@@ -1,0 +1,31 @@
+﻿{
+  "resourceType": "Practitioner",
+  "identifier": [
+    {
+      "system": "http://santedb.org/fhir/test",
+      "value": "6324"
+    }
+  ],
+  "name": [
+    {
+      "family": "Practitioner",
+      "given": [
+        "Test"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "fax",
+      "value": "905 555 1234",
+      "use": "work"
+    }
+  ],
+  "address": [
+    {
+      "city": "Hamilton",
+      "country": "Canada"
+    }
+  ],
+  "birthDate": "2021-11-19"
+}
