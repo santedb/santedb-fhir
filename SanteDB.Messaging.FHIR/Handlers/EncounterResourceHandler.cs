@@ -201,21 +201,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Attempt to resolve relationships
             if (resource.Subject != null)
             {
-                DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource);
-                // Is the subject a uuid
-                if (resource.Subject.Reference.StartsWith("urn:uuid:"))
-                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
-                else
-                {
-                    this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new
-                    {
-                        param = "UUID"
-                    }));
-                }
+                // if the subject is a UUID then add the record target key
+                // otherwise attempt to resolve the reference
+                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ?
+                    new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : 
+                    new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
             }
 
-            // Attempt to resolve organiztaion
+            // Attempt to resolve organization
             if (resource.ServiceProvider != null)
             {
                 // Is the subject a uuid
