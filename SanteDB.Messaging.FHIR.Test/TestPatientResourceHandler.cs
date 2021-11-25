@@ -32,7 +32,6 @@ using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -67,7 +66,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 Resources = new List<string>
                 {
                     "Patient",
-                    "Bundle"
+                    "Bundle",
+                    "Practitioner"
                 },
                 OperationHandlers = new List<TypeReferenceConfiguration>(),
                 ExtensionHandlers = new List<TypeReferenceConfiguration>(),
@@ -75,7 +75,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 MessageHandlers = new List<TypeReferenceConfiguration>
                 {
                     new TypeReferenceConfiguration(typeof(PractitionerResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(BundleResourceHandler))
+                    new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
+                    new TypeReferenceConfiguration(typeof(PatientResourceHandler))
                 }
             };
 
@@ -337,6 +338,44 @@ namespace SanteDB.Messaging.FHIR.Test
                 // create the patient using the resource handler
                 Assert.Throws<InvalidDataException>(() => patientResourceHandler.Update(actual.Id, new Practitioner(), TransactionMode.Commit));
             }
+        }
+
+        [Test]
+        public void TestCreatePatientWithGeneralPractitioner()
+        {
+            var practitioner = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Practitioner") as Practitioner;
+
+            var patient = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Patient") as Patient;
+
+            Console.WriteLine(TestUtil.MessageToString(patient));
+            Console.WriteLine(TestUtil.MessageToString(practitioner));
+
+            Resource actualPatient;
+            Resource actualPractitioner;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
+
+                actualPractitioner = practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
+                patient.GeneralPractitioner = new List<ResourceReference>
+                {
+                    new ResourceReference($"urn:uuid:{actualPractitioner.Id}")
+                };
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.NotNull(actualPatient);
+            Assert.NotNull(actualPractitioner);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Practitioner>(actualPractitioner);
+
+            var createdPatient = (Patient)actualPatient;
+
+            Assert.IsNotNull(createdPatient.GeneralPractitioner.First());
         }
     }
 }

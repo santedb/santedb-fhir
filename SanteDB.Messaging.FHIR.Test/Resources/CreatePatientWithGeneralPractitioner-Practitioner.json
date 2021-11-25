@@ -1,0 +1,20 @@
+﻿{
+  "resourceType": "Practitioner",
+  "active": true,
+  "name": [
+    {
+      "family": "Bob",
+      "given": [
+        "Doug"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "905 555 1234",
+      "use": "work"
+    }
+  ],
+  "gender": "male"
+}
