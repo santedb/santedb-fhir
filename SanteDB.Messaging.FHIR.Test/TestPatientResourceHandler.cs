@@ -221,7 +221,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
                 // retrieve the patient using the resource handler
-                var queryResult = patientResourceHandler.Read(result.Id, null);
+                var queryResult = patientResourceHandler.Read(result.Id, result.VersionId);
 
                 Assert.NotNull(queryResult);
                 Assert.IsInstanceOf<Patient>(queryResult);
