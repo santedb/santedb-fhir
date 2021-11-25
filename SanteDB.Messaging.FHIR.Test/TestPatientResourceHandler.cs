@@ -347,9 +347,6 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var patient = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Patient") as Patient;
 
-            Console.WriteLine(TestUtil.MessageToString(patient));
-            Console.WriteLine(TestUtil.MessageToString(practitioner));
-
             Resource actualPatient;
             Resource actualPractitioner;
 
