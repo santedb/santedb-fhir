@@ -201,11 +201,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Attempt to resolve relationships
             if (resource.Subject != null)
             {
+                DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource);
                 // Is the subject a uuid
                 if (resource.Subject.Reference.StartsWith("urn:uuid:"))
                     retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
-                else if(resource.Subject.Reference.StartsWith("Patient/"))
-                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(8, 36))));
                 else
                 {
                     this.m_tracer.TraceError("Only UUID or Patient references are supported");
