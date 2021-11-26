@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
@@ -14,6 +15,7 @@ using SanteDB.Messaging.FHIR.Util;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    [ExcludeFromCodeCoverage]
     public class TestImmunizationResourceHandler : DataTest
     {
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };

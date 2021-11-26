@@ -148,7 +148,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var substanceAdministration = new SubstanceAdministration
             {
                 ActTime = resource.RecordedElement.ToDateTimeOffset(),
-                DoseQuantity = resource.DoseQuantity?.Value.Value ?? 0,
+                DoseQuantity = resource.DoseQuantity?.Value ?? 0,
                 DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, "http://hl7.org/fhir/sid/ucum") : null,
                 Extensions = resource.Extension?.Select(DataTypeConverter.ToActExtension).ToList(),
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToActIdentifier).ToList(),
