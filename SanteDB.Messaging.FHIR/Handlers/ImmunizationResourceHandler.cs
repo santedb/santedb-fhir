@@ -114,13 +114,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Performer
-            var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer);
-            if (prf != null)
-                retVal.Performer = prf.Select(o =>
-                    new Immunization.PerformerComponent()
-                    {
-                        Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
-                    }).ToList();
+            retVal.Performer.AddRange(model.Participations.Where(c => c.ParticipationRoleKey == ActParticipationKey.Performer).Select(c => new Immunization.PerformerComponent
+            {
+                Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(c.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
+            }));
 
             // Protocol
             foreach (var itm in model.Protocols)
