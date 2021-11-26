@@ -114,7 +114,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Performer
-            var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer || o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
+            var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer);
             if (prf != null)
                 retVal.Performer = prf.Select(o =>
                     new Immunization.PerformerComponent()
