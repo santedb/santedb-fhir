@@ -426,7 +426,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Model instance key does not equal path
             if (modelInstance.Key != Guid.Empty && modelInstance.Key != guidId)
-                throw new InvalidCastException(this.m_localizationService.GetString("error.messaging.fhir.resourceBase.key"));
+                throw new InvalidOperationException(this.m_localizationService.GetString("error.messaging.fhir.resourceBase.key"));
             else if (modelInstance.Key == Guid.Empty)
                 modelInstance.Key = guidId;
 
