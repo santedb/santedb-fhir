@@ -202,6 +202,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
+            substanceAdministration.Participations.AddRange(resource.Performer.Select(c => new ActParticipation(ActParticipationKey.Performer, Guid.Parse(c.Actor.Reference.Substring(9)))));
+
             // Find the material that was issued
             if (resource.VaccineCode != null)
             {
