@@ -47,7 +47,7 @@
     <None Remove="Resources\ComplexPatientPatientRelationship.json" />
     <None Remove="Resources\EntireFamilyRelationship.json" />
     <None Remove="TestConfig.xml" />
-    <EmbeddedResource Include="Resources\CreateEncounterBundle.json" />
+    <EmbeddedResource Include="Resources\CreateEncounter-Patient.json" />
     <EmbeddedResource Include="Resources\DeletePractitioner.json" />
     <EmbeddedResource Include="Resources\Organization.json" />
     <EmbeddedResource Include="Resources\CreatePractitioner.json" />
@@ -66,6 +66,11 @@
     <EmbeddedResource Include="Resources\CreatePatientWithGeneralPractitioner-Practitioner.json" />
     <EmbeddedResource Include="Resources\CreateDeceasedPatient.json" />
     <EmbeddedResource Include="Resources\OrganizationWithParent.json" />
+    <EmbeddedResource Include="Resources\CreateEncounter-Encounter.json" />
+    <EmbeddedResource Include="Resources\DeleteEncounter-Encounter.json" />
+    <EmbeddedResource Include="Resources\DeleteEncounter-Patient.json" />
+    <EmbeddedResource Include="Resources\UpdateEncounterInvalidResource-Patient.json" />
+    <EmbeddedResource Include="Resources\UpdateEncounterInvalidResource-Encounter.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
