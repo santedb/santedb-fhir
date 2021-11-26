@@ -144,6 +144,7 @@
     <Compile Include="TestOrganizationResourceHandler.cs" />
     <Compile Include="TestRelatedPersonResourceHandler.cs" />
     <Compile Include="TestPractitionerResourceHandler.cs" />
+    <Compile Include="TestImmunizationResourceHandler.cs" />
     <Compile Include="TestUtil.cs" />
   </ItemGroup>
 </Project>
