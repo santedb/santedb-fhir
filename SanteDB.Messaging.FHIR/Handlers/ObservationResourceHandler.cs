@@ -171,12 +171,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var status = resource.Status.Value;
 
 
-            retVal.Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>()
-                .ToList();
-            retVal.Identifiers = resource.Identifier.Select(o => DataTypeConverter.ToActIdentifier(o)).ToList();
-            //retVal.Key = Guid.NewGuid();
+            retVal.Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>().ToList();
+            retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
 
-            
+            retVal.Key = Guid.TryParse(resource.Id, out var id) ? id : Guid.NewGuid();
+
             //status concept key
             switch (status)
             {
@@ -235,17 +234,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (resource.Subject != null)
             {
-                // Is the subject a uuid
-                if (resource.Subject.Reference.StartsWith("urn:uuid:"))
-                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
-                else 
-                {
-                    this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
-                    { 
-                        param = "UUID"
-                    }));
-                }
+                // if the subject is a UUID then add the record target key
+                // otherwise attempt to resolve the reference
+                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ?
+                    new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) :
+                    new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                //else 
+                //{
+                //    this.m_tracer.TraceError("Only UUID references are supported");
+                //    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
+                //    { 
+                //        param = "UUID"
+                //    }));
+                //}
                 
             }
 
@@ -255,18 +256,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
                
                 foreach (var res in resource.Performer)
                 {
-                    if (res.Reference.StartsWith("urn:uuid:"))
-                    {
-                        retVal.Participations.Add(new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))));
-                    }
-                    else 
-                    {
-                        this.m_tracer.TraceError("Only UUID references are supported");
-                        throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
-                        { 
-                            param = "UUID"
-                        }));
-                    }
+                    retVal.Participations.Add(res.Reference.StartsWith("urn:uuid:") ?
+                        new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))) :
+                        new ActParticipation(ActParticipationKey.Performer, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(res, resource)));
+
+                    //if (res.Reference.StartsWith("urn:uuid:"))
+                    //{
+                    //    retVal.Participations.Add(new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))));
+                    //}
+                    //else 
+                    //{
+                    //    this.m_tracer.TraceError("Only UUID references are supported");
+                    //    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
+                    //    { 
+                    //        param = "UUID"
+                    //    }));
+                    //}
 
                 }
                 
