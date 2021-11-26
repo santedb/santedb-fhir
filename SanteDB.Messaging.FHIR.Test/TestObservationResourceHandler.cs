@@ -19,6 +19,7 @@
  * Date: 2021-11-15
  */
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -237,7 +238,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 // get the resource handler
                 var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
 
-                retrievedResource = observationResourceHandler.Read(this.m_observation.Id, this.m_observation.VersionId);
+                retrievedResource = observationResourceHandler.Read(this.m_observation.Id, null);
 
                 Assert.NotNull(retrievedResource);
                 Assert.IsInstanceOf<Observation>(retrievedResource);
@@ -248,8 +249,10 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 Assert.AreEqual(22, retrievedObservationValue.Value.Value);
 
+                Console.WriteLine(TestUtil.MessageToString(retrievedObservation));
+
                 //update observation
-                retrievedObservation.Value = new Quantity(10, "mmHG");
+                retrievedObservation.Value = new Quantity(10, "mmHg");
 
                 _ = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
 
