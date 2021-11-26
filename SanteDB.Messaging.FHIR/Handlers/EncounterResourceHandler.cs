@@ -191,7 +191,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 ReasonConcept = DataTypeConverter.ToConcept(resource.ReasonCode.FirstOrDefault())
             };
 
-            if (!Guid.TryParse(resource.Id, out Guid key))
+            if (!Guid.TryParse(resource.Id, out var key))
             {
                 key = Guid.NewGuid();
             }
