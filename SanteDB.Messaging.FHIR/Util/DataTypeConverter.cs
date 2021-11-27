@@ -820,7 +820,10 @@ namespace SanteDB.Messaging.FHIR.Util
         public static PersonLanguageCommunication ToLanguageCommunication(CodeableConcept lang, bool preferred)
         {
             if (!lang.Coding.Any())
+            {
                 throw new InvalidOperationException("Codeable concept must contain a language code");
+            }
+                
             return new PersonLanguageCommunication(lang.Coding.First().Code, preferred);
         }
 
@@ -866,19 +869,13 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Convert to assigning authority
+        /// Converts a <see cref="FhirUri"/> instance to an <see cref="AssigningAuthority"/> instance.
         /// </summary>
         /// <param name="fhirSystem">The FHIR system.</param>
-        /// <returns>AssigningAuthority.</returns>
-        /// <exception cref="System.InvalidOperationException">Unable to locate service</exception>
+        /// <returns>Returns the converted instance.</returns>
         public static AssigningAuthority ToAssigningAuthority(FhirUri fhirSystem)
         {
-            if (fhirSystem == null)
-            {
-                return null;
-            }
-
-            return DataTypeConverter.ToAssigningAuthority(fhirSystem.Value);
+            return fhirSystem == null ? null : ToAssigningAuthority(fhirSystem.Value);
         }
 
         /// <summary>
@@ -897,7 +894,7 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts a <see cref="ReferenceTerm"/> instance to a <see cref="FhirCoding"/> instance.
+        /// Converts a <see cref="ReferenceTerm"/> instance to a <see cref="Coding"/> instance.
         /// </summary>
         /// <param name="referenceTerm">The reference term.</param>
         /// <returns>Returns a FHIR coding instance.</returns>
