@@ -369,25 +369,27 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
             patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).ToList();
 
-            if (resource.Deceased is FhirDateTime dtValue && !String.IsNullOrEmpty(dtValue.Value))
+            switch (resource.Deceased)
             {
-                patient.DeceasedDate = DataTypeConverter.ToDateTimeOffset(dtValue.Value)?.DateTime;
-            }
-            else if (resource.Deceased is FhirBoolean boolValue && boolValue.Value.GetValueOrDefault())
-            {
-                // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
-                // should find a better way to do this
-                patient.DeceasedDate = DateTime.MinValue;
-                patient.DeceasedDatePrecision = DatePrecision.Year;
+                case FhirDateTime dtValue when !String.IsNullOrEmpty(dtValue.Value):
+                    patient.DeceasedDate = DataTypeConverter.ToDateTimeOffset(dtValue.Value)?.DateTime;
+                    break;
+                case FhirBoolean boolValue when boolValue.Value.GetValueOrDefault():
+                    // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
+                    // should find a better way to do this
+                    patient.DeceasedDate = DateTime.MinValue;
+                    patient.DeceasedDatePrecision = DatePrecision.Year;
+                    break;
             }
 
-            if (resource.MultipleBirth is FhirBoolean boolBirth && boolBirth.Value.GetValueOrDefault())
+            switch (resource.MultipleBirth)
             {
-                patient.MultipleBirthOrder = 0;
-            }
-            else if (resource.MultipleBirth is Integer intBirth)
-            {
-                patient.MultipleBirthOrder = intBirth.Value;
+                case FhirBoolean boolBirth when boolBirth.Value.GetValueOrDefault():
+                    patient.MultipleBirthOrder = 0;
+                    break;
+                case Integer intBirth:
+                    patient.MultipleBirthOrder = intBirth.Value;
+                    break;
             }
 
             if (resource.GeneralPractitioner != null)
