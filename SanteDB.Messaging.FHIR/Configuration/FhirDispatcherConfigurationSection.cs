@@ -25,7 +25,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using System.Xml.Serialization;
 
 namespace SanteDB.Messaging.FHIR.Configuration
@@ -78,9 +77,10 @@ namespace SanteDB.Messaging.FHIR.Configuration
 
     }
 
-    // <summary>
+    /// <summary>
     /// Configuration section for the dispatching of FHIR messages
     /// </summary>
+    [ExcludeFromCodeCoverage]
     [XmlType(nameof(FhirDispatcherConfigurationSection), Namespace = "http://santedb.org/configuration")]
     public class FhirDispatcherConfigurationSection : IConfigurationSection
     {
