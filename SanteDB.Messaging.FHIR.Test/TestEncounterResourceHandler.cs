@@ -287,7 +287,6 @@ namespace SanteDB.Messaging.FHIR.Test
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
 
                 actual = encounterResourceHandler.Update(createdEncounter.Id, createdEncounter, TransactionMode.Commit);
-
             }
 
             Assert.NotNull(actual);
@@ -303,7 +302,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// Tests the create method in <see cref="EncounterResourceHandler"/> confirming an invalid resource is not used.
         /// </summary>
         [Test]
-        public void TestCreateEnounterInvalidResource()
+        public void TestCreateEncounterInvalidResource()
         {
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
