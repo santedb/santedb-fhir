@@ -19,14 +19,7 @@
  * Date: 2021-8-5
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Hl7.Fhir.Model;
-using RestSrvr;
-using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
@@ -34,6 +27,9 @@ using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -66,6 +62,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override IEnumerable<ResourceInteractionComponent> GetInteractions() =>
             new TypeRestfulInteraction[]
             {
+                TypeRestfulInteraction.Create,
+                TypeRestfulInteraction.Delete,
+                TypeRestfulInteraction.Update,
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Read,
                 TypeRestfulInteraction.SearchType,
@@ -95,6 +94,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Alias = model.LoadCollection(o => o.Names).Where(o => o.NameUseKey == NameUseKeys.Pseudonym).Select(o => o.ToDisplay());
 
             var parent = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
+
             if (parent != null)
             {
                 retVal.PartOf = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(parent.TargetEntityKey);
@@ -157,7 +157,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         param = resource.PartOf.Reference
                     }));
                 }
-                retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference as Entity));
+
+                // point the child organization entity at the target organization entity with a relationship of parent 
+                retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
             }
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
             return retVal;

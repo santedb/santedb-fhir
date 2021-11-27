@@ -18,8 +18,8 @@
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
@@ -38,80 +38,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// Represents a resource handler that can handle substances
     /// </summary>
     public class SubstanceResourceHandler : RepositoryResourceHandlerBase<Substance, Material>
-	{
-
-		/// <summary>
-		/// Create new resource handler
-		/// </summary>
+    {
+        /// <summary>
+        /// Create new resource handler
+        /// </summary>
         public SubstanceResourceHandler(IRepositoryService<Material> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
         }
 
-		/// <summary>
-		/// Map the substance to FHIR
-		/// </summary>
-		protected override Substance MapToFhir(Material model)
-		{
-			var retVal = DataTypeConverter.CreateResource<Substance>(model);
-
-			// Identifiers
-			retVal.Identifier = model.Identifiers.Select(o => DataTypeConverter.ToFhirIdentifier<Entity>(o)).ToList();
-
-			// sTatus
-			switch(model.StatusConceptKey.ToString().ToUpper())
-            {
-				case StatusKeyStrings.New:
-				case StatusKeyStrings.Active:
-					retVal.Status = Substance.FHIRSubstanceStatus.Active;
-					break;
-				case StatusKeyStrings.Nullified:
-					retVal.Status = Substance.FHIRSubstanceStatus.EnteredInError;
-					break;
-				case StatusKeyStrings.Obsolete:
-					retVal.Status = Substance.FHIRSubstanceStatus.Inactive;
-					break;
-            }
-
-			// Category and code
-			retVal.Category = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Entity.TypeConcept)), "http://terminology.hl7.org/CodeSystem/substance-category", true) };
-			retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept"), "http://snomed.info/sct", true);
-
-			retVal.Description = model.LoadCollection<EntityName>("Names").FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Components")?.FirstOrDefault()?.Value;
-
-			// TODO: Instance or kind
-			if(model.DeterminerConceptKey == DeterminerKeys.Described)
-            {
-				retVal.Instance = model.GetRelationships().Where(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance).Select(s => s.LoadProperty<Material>(nameof(EntityRelationship.TargetEntity))).Select(m => new Substance.InstanceComponent()
-				{
-					ExpiryElement = new FhirDateTime(m.ExpiryDate.Value),
-					Identifier = DataTypeConverter.ToFhirIdentifier( m.GetIdentifiers().FirstOrDefault()),
-					Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.LoadProperty<Concept>(nameof(Material.QuantityConcept)))
-				}).ToList();
-            }
-			else if (model.DeterminerConceptKey == DeterminerKeys.Specific)
-			{
-				var conceptRepo = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
-				retVal.Instance = new List<Substance.InstanceComponent>()
-				{
-					new Substance.InstanceComponent()
-					{
-						ExpiryElement = new FhirDateTime(model.ExpiryDate.Value),
-						Quantity = DataTypeConverter.ToQuantity(model.Quantity, model.LoadProperty<Concept>(nameof(Material.QuantityConcept)))
-					}
-				};
-			}
-
-			return retVal;
-		}
-        
-        /// <summary>
-        /// Maps a FHIR based resource to a model based resource
-        /// </summary>
-        /// <param name="resource">The resource to be mapped</param>
-        /// <param name="restOperationContext">The operation context under which this method is being called</param>
-        /// <returns>The mapped material</returns>
-		protected override Material MapToModel(Substance resource)
-		{
+        protected override IEnumerable<Resource> GetIncludes(Material resource, IEnumerable<IncludeInstruction> includePaths)
+        {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));
         }
 
@@ -120,22 +56,90 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
         {
-            return new TypeRestfulInteraction[]
+            return new[]
             {
                 TypeRestfulInteraction.HistoryInstance,
                 TypeRestfulInteraction.Read,
                 TypeRestfulInteraction.SearchType,
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
-            }.Select(o => new ResourceInteractionComponent() { Code = o });
+            }.Select(o => new ResourceInteractionComponent
+                {Code = o});
         }
 
-        protected override IEnumerable<Resource> GetIncludes(Material resource, IEnumerable<IncludeInstruction> includePaths)
+        protected override IEnumerable<Resource> GetReverseIncludes(Material resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));
         }
 
-        protected override IEnumerable<Resource> GetReverseIncludes(Material resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        /// <summary>
+        /// Map the substance to FHIR
+        /// </summary>
+        protected override Substance MapToFhir(Material model)
+        {
+            var retVal = DataTypeConverter.CreateResource<Substance>(model);
+
+            // Identifiers
+            retVal.Identifier = model.Identifiers.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
+
+            // sTatus
+            switch (model.StatusConceptKey.ToString().ToUpper())
+            {
+                case StatusKeyStrings.New:
+                case StatusKeyStrings.Active:
+                    retVal.Status = Substance.FHIRSubstanceStatus.Active;
+                    break;
+                case StatusKeyStrings.Nullified:
+                    retVal.Status = Substance.FHIRSubstanceStatus.EnteredInError;
+                    break;
+                case StatusKeyStrings.Obsolete:
+                    retVal.Status = Substance.FHIRSubstanceStatus.Inactive;
+                    break;
+            }
+
+            // Category and code
+            retVal.Category = new List<CodeableConcept>
+            {
+                DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Entity.TypeConcept)), "http://terminology.hl7.org/CodeSystem/substance-category", true)
+            };
+
+            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept"), "http://snomed.info/sct", true);
+            retVal.Description = model.LoadCollection<EntityName>("Names").FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Components")?.FirstOrDefault()?.Value;
+
+            // TODO: Instance or kind
+            if (model.DeterminerConceptKey == DeterminerKeys.Described)
+            {
+                retVal.Instance = model.GetRelationships().Where(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance).Select(s => s.LoadProperty<Material>(nameof(EntityRelationship.TargetEntity))).Select(m => new Substance.InstanceComponent
+                {
+                    ExpiryElement = DataTypeConverter.ToFhirDateTime(model.ExpiryDate),
+                    Identifier = DataTypeConverter.ToFhirIdentifier(m.GetIdentifiers().FirstOrDefault()),
+                    Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.LoadProperty<Concept>(nameof(Material.QuantityConcept)))
+                }).ToList();
+            }
+            else if (model.DeterminerConceptKey == DeterminerKeys.Specific)
+            {
+                var conceptRepo = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
+
+                retVal.Instance = new List<Substance.InstanceComponent>
+                {
+                    new Substance.InstanceComponent
+                    {
+                        ExpiryElement = DataTypeConverter.ToFhirDateTime(model.ExpiryDate),
+                        Quantity = DataTypeConverter.ToQuantity(model.Quantity, model.LoadProperty<Concept>(nameof(Material.QuantityConcept)))
+                    }
+                };
+            }
+
+            return retVal;
+        }
+
+        /// <summary>
+        /// Maps a FHIR based resource to a model based resource
+        /// </summary>
+        /// <param name="resource">The resource to be mapped</param>
+        /// <param name="restOperationContext">The operation context under which this method is being called</param>
+        /// <returns>The mapped material</returns>
+        protected override Material MapToModel(Substance resource)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));
         }

@@ -97,7 +97,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     },
                     PreferredFormat = ContentType.GetResourceFormatFromFormatParam(contentType ?? "xml"),
                     PreferCompressedResponses = true,
-                    VerifyFhirVersion = false
+                    VerifyFhirVersion = false,
+                    Timeout = 5000
                 });
 
                 foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
