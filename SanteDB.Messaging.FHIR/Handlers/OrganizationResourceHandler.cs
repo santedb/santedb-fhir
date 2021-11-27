@@ -62,6 +62,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override IEnumerable<ResourceInteractionComponent> GetInteractions() =>
             new TypeRestfulInteraction[]
             {
+                TypeRestfulInteraction.Create,
+                TypeRestfulInteraction.Delete,
+                TypeRestfulInteraction.Update,
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Read,
                 TypeRestfulInteraction.SearchType,
