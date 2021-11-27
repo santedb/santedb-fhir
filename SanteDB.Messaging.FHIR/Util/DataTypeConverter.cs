@@ -685,8 +685,10 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// To FHIR date
+        /// Converts a <see cref="DateTime"/> instance to a <see cref="Date"/> instance.
         /// </summary>
+        /// <param name="date">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
         public static Date ToFhirDate(DateTime? date)
         {
             if (date.HasValue)
@@ -696,18 +698,25 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Converts a <see cref="DateTimeOffset"/> instance to a <see cref="FhirDateTime"/> instance.
+        /// </summary>
+        /// <param name="date">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
+        public static FhirDateTime ToFhirDateTime(DateTimeOffset? date)
+        {
+            return date.HasValue ? new FhirDateTime(date.Value) : null;
+        }
+
+        /// <summary>
         /// Convert two date ranges to a period
         /// </summary>
         public static Period ToPeriod(DateTimeOffset? startTime, DateTimeOffset? stopTime)
         {
-            return new Period(
-                startTime.HasValue ? new FhirDateTime(startTime.Value) : null,
-                stopTime.HasValue ? new FhirDateTime(stopTime.Value) : null
-                );
+            return new Period(startTime.HasValue ? new FhirDateTime(startTime.Value) : null, stopTime.HasValue ? new FhirDateTime(stopTime.Value) : null);
         }
 
         /// <summary>
-        /// Converts an <see cref="FhirExtension"/> instance to an <see cref="ActExtension"/> instance.
+        /// Converts a <see cref="Extension"/> instance to an <see cref="ActExtension"/> instance.
         /// </summary>
         /// <param name="fhirExtension">The FHIR extension.</param>
         /// <returns>Returns the converted act extension instance.</returns>
@@ -743,7 +752,7 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts an <see cref="FhirExtension"/> instance to an <see cref="ActExtension"/> instance.
+        /// Converts an <see cref="Extension"/> instance to an <see cref="ActExtension"/> instance.
         /// </summary>
         /// <param name="fhirExtension">The FHIR extension.</param>
         /// <returns>Returns the converted act extension instance.</returns>
@@ -785,6 +794,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 // Now will
                 return extension;
             }
+
             return null;
         }
 
@@ -844,7 +854,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (fhirIdentifier.System != null)
             {
-                retVal = new ActIdentifier(DataTypeConverter.ToAssigningAuthority(fhirIdentifier.System), fhirIdentifier.Value);
+                retVal = new ActIdentifier(ToAssigningAuthority(fhirIdentifier.System), fhirIdentifier.Value);
             }
             else
             {
