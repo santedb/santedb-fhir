@@ -66,10 +66,9 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestGetResourceType()
         {
-            var expected = ResourceType.Patient;
             var actual = typeof(Hl7.Fhir.Model.Patient).GetResourceType();
 
-            Assert.AreEqual(expected, actual);
+            Assert.AreEqual(ResourceType.Patient, actual);
         }
 
         /// <summary>
@@ -78,10 +77,9 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestGetResourceTypeNonResource()
         {
-            object expected = null;
             var actual = typeof(Hl7.Fhir.Model.Address).GetResourceType();
 
-            Assert.AreEqual(expected, actual);
+            Assert.IsNull(actual);
         }
     }
 }
