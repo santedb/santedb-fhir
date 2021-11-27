@@ -1037,6 +1037,40 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Converts a <see cref="FhirDateTime"/> instance to a <see cref="DateTimeOffset"/> instance.
+        /// </summary>
+        /// <param name="dateTimeOffset">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
+        public static DateTimeOffset? ToDateTimeOffset(string dateTimeOffset)
+        {
+            if (string.IsNullOrEmpty(dateTimeOffset) || string.IsNullOrWhiteSpace(dateTimeOffset))
+            {
+                return null;
+            }
+
+            DateTimeOffset? result = null;
+
+            if (DateTimeOffset.TryParse(dateTimeOffset, out var value))
+            {
+                result = value;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Converts a <see cref="FhirDateTime"/> instance to a <see cref="DateTimeOffset"/> instance.
+        /// </summary>
+        /// <param name="dateTimeOffset">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
+        public static DateTimeOffset? ToDateTimeOffset(FhirDateTime dateTimeOffset)
+        {
+            return ToDateTimeOffset(dateTimeOffset.Value);
+        }
+
+
+
+        /// <summary>
         /// Converts an <see cref="FhirAddress"/> instance to an <see cref="EntityAddress"/> instance.
         /// </summary>
         /// <param name="fhirAddress">The FHIR address.</param>
