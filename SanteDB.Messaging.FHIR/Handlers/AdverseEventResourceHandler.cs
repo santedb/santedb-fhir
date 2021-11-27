@@ -18,8 +18,8 @@
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -31,18 +31,16 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
+using Expression = System.Linq.Expressions.Expression;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
-
     /// <summary>
     /// Adverse event resource handler
     /// </summary>
     public class AdverseEventResourceHandler : RepositoryResourceHandlerBase<AdverseEvent, Act>
     {
-
         /// <summary>
         /// Adverse event repo
         /// </summary>
@@ -53,7 +51,36 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Can map this object
         /// </summary>
-        public override bool CanMapObject(object instance) => base.CanMapObject(instance);
+        public override bool CanMapObject(object instance)
+        {
+            return base.CanMapObject(instance);
+        }
+
+        protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+        }
+
+        /// <summary>
+        /// Get interactions
+        /// </summary>
+        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
+        {
+            return new[]
+            {
+                TypeRestfulInteraction.HistoryInstance,
+                TypeRestfulInteraction.Read,
+                TypeRestfulInteraction.SearchType,
+                TypeRestfulInteraction.Vread,
+                TypeRestfulInteraction.Delete
+            }.Select(o => new ResourceInteractionComponent
+                {Code = o});
+        }
+
+        protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+        }
 
         /// <summary>
         /// Maps the specified act to an adverse event
@@ -62,12 +89,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             var retVal = DataTypeConverter.CreateResource<AdverseEvent>(model);
 
-            retVal.Identifier = DataTypeConverter.ToFhirIdentifier<Act>(model.Identifiers.FirstOrDefault());
-            retVal.Category = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept")) };
+            retVal.Identifier = DataTypeConverter.ToFhirIdentifier(model.Identifiers.FirstOrDefault());
+            retVal.Category = new List<CodeableConcept>
+                {DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept"))};
 
             var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
             if (recordTarget != null)
+            {
                 retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>("PlayerEntity"));
+            }
 
             // Main topic of the concern
             var subject = model.LoadCollection<ActRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasSubject)?.LoadProperty<Act>("TargetAct");
@@ -94,35 +124,55 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Severity
             var severity = subject.LoadCollection<ActRelationship>("Relationships").First(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.LoadProperty<Act>("TargetAct").TypeConceptKey == ObservationTypeKeys.Severity);
             if (severity != null)
+            {
                 retVal.Seriousness = DataTypeConverter.ToFhirCodeableConcept(severity.LoadProperty<CodedObservation>("TargetAct").Value, "http://hl7.org/fhir/adverse-event-seriousness");
+            }
 
             // Did the patient die?
             var causeOfDeath = model.LoadCollection<ActRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.IsCauseOf && o.LoadProperty<Act>("TargetAct").TypeConceptKey == ObservationTypeKeys.ClinicalState && (o.TargetAct as CodedObservation)?.ValueKey == Guid.Parse("6df3720b-857f-4ba2-826f-b7f1d3c3adbb"));
             if (causeOfDeath != null)
+            {
                 retVal.Outcome = new CodeableConcept("http://hl7.org/fhir/adverse-event-outcome", "fatal");
+            }
             else if (model.StatusConceptKey == StatusKeys.Active)
+            {
                 retVal.Outcome = new CodeableConcept("http://hl7.org/fhir/adverse-event-outcome", "ongoing");
+            }
             else if (model.StatusConceptKey == StatusKeys.Completed)
+            {
                 retVal.Outcome = new CodeableConcept("http://hl7.org/fhir/adverse-event-outcome", "resolved");
+            }
 
             var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
             if (author != null)
+            {
                 retVal.Recorder = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.LoadProperty<Entity>("PlayerEntity"));
+            }
 
             // Suspect entities
-            var refersTo = model.LoadCollection<ActRelationship>("Relationships").Where(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.RefersTo);
-            if (refersTo.Count() > 0)
+            var refersTo = model.LoadCollection<ActRelationship>("Relationships").Where(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.RefersTo).ToArray();
+            if (refersTo.Any())
+            {
                 retVal.SuspectEntity = refersTo.Select(o => o.LoadProperty<Act>("TargetAct")).OfType<SubstanceAdministration>().Select(o =>
                 {
                     var consumable = o.LoadCollection<ActParticipation>("Participations").FirstOrDefault(x => x.ParticipationRoleKey == ActParticipationKey.Consumable)?.LoadProperty<ManufacturedMaterial>("PlayerEntity");
                     if (consumable == null)
                     {
                         var product = o.LoadCollection<ActParticipation>("Participations").FirstOrDefault(x => x.ParticipationRoleKey == ActParticipationKey.Product)?.LoadProperty<Material>("PlayerEntity");
-                        return new AdverseEvent.SuspectEntityComponent() { Instance = DataTypeConverter.CreateNonVersionedReference<Substance>(product) };
+
+                        return new AdverseEvent.SuspectEntityComponent
+                        {
+                            Instance = DataTypeConverter.CreateNonVersionedReference<Substance>(product)
+                        };
                     }
-                    else
-                        return new AdverseEvent.SuspectEntityComponent() { Instance = DataTypeConverter.CreateNonVersionedReference<Medication>(consumable) };
+
+                    return new AdverseEvent.SuspectEntityComponent
+                    {
+                        Instance = DataTypeConverter.CreateNonVersionedReference<Medication>(consumable)
+                    };
+
                 }).ToList();
+            }
 
             return retVal;
         }
@@ -132,7 +182,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override Act MapToModel(AdverseEvent resource)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
@@ -140,37 +190,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IEnumerable<Act> Query(Expression<Func<Act, bool>> query, Guid queryId, int offset, int count, out int totalResults)
         {
-            var typeReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(Act).GetProperty(nameof(Act.ClassConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(ActClassKeys.Condition));
+            var typeReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(Act).GetProperty(nameof(Act.ClassConceptKey))), typeof(Guid)), Expression.Constant(ActClassKeys.Condition));
 
-            var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.AdverseEventActs, query.Parameters[0]);
-            query = System.Linq.Expressions.Expression.Lambda<Func<Act, bool>>(System.Linq.Expressions.Expression.AndAlso(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), typeReference), query.Parameters);
+            var anyRef = this.CreateConceptSetFilter(ConceptSetKeys.AdverseEventActs, query.Parameters[0]);
+            query = Expression.Lambda<Func<Act, bool>>(Expression.AndAlso(Expression.AndAlso(query.Body, anyRef), typeReference), query.Parameters);
 
             return base.Query(query, queryId, offset, count, out totalResults);
-        }
-
-        /// <summary>
-        /// Get interactions
-        /// </summary>
-        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
-        {
-            return new TypeRestfulInteraction[]
-            {
-                TypeRestfulInteraction.HistoryInstance,
-                TypeRestfulInteraction.Read,
-                TypeRestfulInteraction.SearchType,
-                TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.Delete
-            }.Select(o=> new ResourceInteractionComponent() { Code = o });
-        }
-
-        protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
-        {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
-        }
-
-        protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
-        {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
     }
 }
