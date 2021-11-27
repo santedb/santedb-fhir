@@ -142,15 +142,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             retVal.ReasonCode = new List<CodeableConcept>
-                {DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("ReasonConcept"))};
-            retVal.Type = new List<CodeableConcept>
-                {DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept"))};
+            {
+                DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("ReasonConcept"))
+            };
+
+            //retVal.Type = new List<CodeableConcept>
+            //{
+            //    DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept"))
+            //};
+
+            retVal.Class = DataTypeConverter.ToCoding(model.LoadProperty<Concept>("TypeConcept").ReferenceTerms.FirstOrDefault()?.ReferenceTerm);
 
             // Map associated
-            var associated = model.LoadCollection<ActParticipation>("Participations");
+            var associated = model.LoadCollection<ActParticipation>("Participations").ToArray();
 
             // Subject of encounter
-            retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(associated.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget)?.LoadProperty<Entity>("PlayerEntity"));
+            retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(associated.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget)?.LoadProperty<Entity>("PlayerEntity"));
 
             // Locations
             retVal.Location = associated.Where(o => o.LoadProperty<Entity>("PlayerEntity") is Place).Select(o => new Encounter.LocationComponent
@@ -161,6 +168,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Service provider
             var cst = associated.FirstOrDefault(o => o.LoadProperty<Entity>("PlayerEntity") is Organization && o.ParticipationRoleKey == ActParticipationKey.Custodian);
+
             if (cst != null)
             {
                 retVal.ServiceProvider = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Organization>(cst.PlayerEntity);
