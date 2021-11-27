@@ -20,14 +20,11 @@
  */
 
 using Hl7.Fhir.Model;
-using RestSrvr;
-using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -76,8 +73,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var partOfBundle = model.GetAnnotations<Bundle>().FirstOrDefault();
 
             var retVal = DataTypeConverter.CreateResource<Patient>(model);
+
             retVal.Active = StatusKeys.ActiveStates.Contains(model.StatusConceptKey.Value);
-            retVal.Address = model.GetAddresses().Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
+            retVal.Address = model.GetAddresses().Select(DataTypeConverter.ToFhirAddress).ToList();
+
             if (model.DateOfBirth.HasValue)
                 switch (model.DateOfBirthPrecision.GetValueOrDefault())
                 {
@@ -118,7 +117,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             break;
 
                         default:
-                            retVal.Deceased = new FhirDateTime(model.DeceasedDate.Value);
+                            retVal.Deceased = DataTypeConverter.ToFhirDateTime(model.DeceasedDate);
                             break;
                     }
                 }
@@ -129,11 +128,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
             }
 
-            retVal.Identifier = model.Identifiers?.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
+            retVal.Identifier = model.Identifiers?.Select(DataTypeConverter.ToFhirIdentifier).ToList();
             retVal.MultipleBirth = model.MultipleBirthOrder == 0 ? (DataType)new FhirBoolean(true) : model.MultipleBirthOrder.HasValue ? new Integer(model.MultipleBirthOrder.Value) : null;
-            retVal.Name = model.GetNames().Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
-            retVal.Telecom = model.GetTelecoms().Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
-            retVal.Communication = model.GetPersonLanguages().Select(o => DataTypeConverter.ToFhirCommunicationComponent(o)).ToList();
+            retVal.Name = model.GetNames().Select(DataTypeConverter.ToFhirHumanName).ToList();
+            retVal.Telecom = model.GetTelecoms().Select(DataTypeConverter.ToFhirTelecom).ToList();
+            retVal.Communication = model.GetPersonLanguages().Select(DataTypeConverter.ToFhirCommunicationComponent).ToList();
+
             foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
             {
                 // Contact => Person
@@ -189,32 +189,28 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper)
                 {
                     var scoper = rel.LoadProperty(o => o.TargetEntity);
+
                     retVal.ManagingOrganization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(scoper);
 
                     // If this is part of a bundle, include it
-                    if (partOfBundle != null)
+                    partOfBundle?.Entry.Add(new Bundle.EntryComponent
                     {
-                        partOfBundle.Entry.Add(new Bundle.EntryComponent()
-                        {
-                            FullUrl = $"{MessageUtil.GetBaseUri()}/Organization/{scoper.Key}",
-                            Resource = FhirResourceHandlerUtil.GetMapperForInstance(scoper).MapToFhir(scoper)
-                        });
-                    }
+                        FullUrl = $"{MessageUtil.GetBaseUri()}/Organization/{scoper.Key}",
+                        Resource = FhirResourceHandlerUtil.GetMapperForInstance(scoper).MapToFhir(scoper)
+                    });
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
                 {
                     var practitioner = rel.LoadProperty(o => o.TargetEntity);
+
                     retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(practitioner));
 
                     // If this is part of a bundle, include it
-                    if (partOfBundle != null)
+                    partOfBundle?.Entry.Add(new Bundle.EntryComponent
                     {
-                        partOfBundle.Entry.Add(new Bundle.EntryComponent()
-                        {
-                            FullUrl = $"{MessageUtil.GetBaseUri()}/Practitioner/{practitioner.Key}",
-                            Resource = FhirResourceHandlerUtil.GetMapperForInstance(practitioner).MapToFhir(practitioner)
-                        });
-                    }
+                        FullUrl = $"{MessageUtil.GetBaseUri()}/Practitioner/{practitioner.Key}",
+                        Resource = FhirResourceHandlerUtil.GetMapperForInstance(practitioner).MapToFhir(practitioner)
+                    });
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
                 {
@@ -249,29 +245,28 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Reverse relationships of family member?
             var uuids = model.Relationships.Where(r => r.RelationshipTypeKey == MDM_MASTER_LINK).Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
             var reverseRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && o.RelationshipType.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember") && o.ObsoleteVersionSequenceId == null);
+
             foreach (var rrv in reverseRelationships)
             {
-                retVal.Link.Add(new Patient.LinkComponent()
+                retVal.Link.Add(new Patient.LinkComponent
                 {
                     Type = Patient.LinkType.Seealso,
                     Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rrv)
                 });
 
                 // If this is part of a bundle, include it
-                if (partOfBundle != null)
+                partOfBundle?.Entry.Add(new Bundle.EntryComponent
                 {
-                    partOfBundle.Entry.Add(new Bundle.EntryComponent()
-                    {
-                        FullUrl = $"{MessageUtil.GetBaseUri()}/RelatedPerson/{rrv.Key}",
-                        Resource = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rrv)
-                    });
-                }
+                    FullUrl = $"{MessageUtil.GetBaseUri()}/RelatedPerson/{rrv.Key}",
+                    Resource = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rrv)
+                });
             }
 
             // Was this record replaced?
             if (!retVal.Active.GetValueOrDefault())
             {
                 var replacedRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && o.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && o.ObsoleteVersionSequenceId == null);
+
                 foreach (var repl in replacedRelationships)
                 {
                     retVal.Link.Add(new Patient.LinkComponent()
@@ -281,15 +276,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     });
                 }
             }
+
             var photo = model.LoadCollection(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+
             if (photo != null)
-                retVal.Photo = new List<Attachment>() {
-                    new Attachment()
+            {
+                retVal.Photo = new List<Attachment>
+                {
+                    new Attachment
                     {
                         ContentType = "image/jpg",
                         Data = photo.ExtensionValueXml
                     }
                 };
+            }
 
             return retVal;
         }
@@ -320,13 +320,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Patient doesn't exist?
                 if (patient == null)
                 {
-                    patient = new Core.Model.Roles.Patient()
+                    patient = new Core.Model.Roles.Patient
                     {
                         Key = key
                     };
                 }
             }
-            else if (resource.Identifier?.Count > 0)
+            else if (resource.Identifier.Any())
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
@@ -342,7 +342,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 if (patient == null)
                 {
-                    patient = new Core.Model.Roles.Patient()
+                    patient = new Core.Model.Roles.Patient
                     {
                         Key = Guid.NewGuid()
                     };
@@ -350,7 +350,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else
             {
-                patient = new Core.Model.Roles.Patient()
+                patient = new Core.Model.Roles.Patient
                 {
                     Key = Guid.NewGuid()
                 };
@@ -369,33 +369,35 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
             patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).ToList();
 
-            if (resource.Deceased is FhirDateTime dtValue && !String.IsNullOrEmpty(dtValue.Value))
+            switch (resource.Deceased)
             {
-                patient.DeceasedDate = dtValue.ToDateTime();
-            }
-            else if (resource.Deceased is FhirBoolean boolValue && boolValue.Value.GetValueOrDefault() == true)
-            {
-                // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
-                // should find a better way to do this
-                patient.DeceasedDate = DateTime.MinValue;
-                patient.DeceasedDatePrecision = DatePrecision.Year;
+                case FhirDateTime dtValue when !String.IsNullOrEmpty(dtValue.Value):
+                    patient.DeceasedDate = DataTypeConverter.ToDateTimeOffset(dtValue.Value)?.DateTime;
+                    break;
+                case FhirBoolean boolValue when boolValue.Value.GetValueOrDefault():
+                    // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
+                    // should find a better way to do this
+                    patient.DeceasedDate = DateTime.MinValue;
+                    patient.DeceasedDatePrecision = DatePrecision.Year;
+                    break;
             }
 
-            if (resource.MultipleBirth is FhirBoolean boolBirth && boolBirth.Value.GetValueOrDefault() == true)
+            switch (resource.MultipleBirth)
             {
-                patient.MultipleBirthOrder = 0;
-            }
-            else if (resource.MultipleBirth is Integer intBirth)
-            {
-                patient.MultipleBirthOrder = intBirth.Value;
+                case FhirBoolean boolBirth when boolBirth.Value.GetValueOrDefault():
+                    patient.MultipleBirthOrder = 0;
+                    break;
+                case Integer intBirth:
+                    patient.MultipleBirthOrder = intBirth.Value;
+                    break;
             }
 
             if (resource.GeneralPractitioner != null)
             {
                 patient.Relationships.AddRange(resource.GeneralPractitioner.Select(r =>
                 {
-                    var referenceKey = DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(r, resource) as Entity ??
-                        DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(r, resource);
+                    var referenceKey = DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(r, resource) as Entity ?? DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(r, resource);
+
                     if (referenceKey == null)
                     {
                         this.m_tracer.TraceError("Can't locate a registered general practitioner");
@@ -404,24 +406,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             param = "general practitioner"
                         }));
                     }
+
                     return new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey);
                 }));
             }
             if (resource.ManagingOrganization != null)
             {
                 var referenceKey = DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.ManagingOrganization, resource);
+
                 if (referenceKey == null)
                 {
                     this.m_tracer.TraceError("Can't locate a registered managing organization");
+
                     throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.cannotLocateRegistered", new
                     {
                         param = "managing organization"
                     }));
                 }
-                else
-                {
-                    patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Scoper, referenceKey));
-                }
+
+                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Scoper, referenceKey));
             }
 
             // Process contained related persons
@@ -446,6 +449,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             // Find the victim
                             var replacee = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(lnk.Other, resource);
+
                             if (replacee == null)
                             {
                                 this.m_tracer.TraceError($"Cannot locate patient referenced by {lnk.Type} relationship");
@@ -454,6 +458,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     param = lnk.Type
                                 }));
                             }
+
                             replacee.StatusConceptKey = StatusKeys.Obsolete;
                             patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, replacee));
                             break;
@@ -461,7 +466,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     case Patient.LinkType.ReplacedBy:
                         {
                             // Find the new
-                            var replacer = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(lnk.Other, resource) as Core.Model.Roles.Patient;
+                            var replacer = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(lnk.Other, resource);
+
                             if (replacer == null)
                             {
                                 this.m_tracer.TraceError($"Cannot locate patient referenced by {lnk.Type} relationship");
@@ -470,6 +476,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     param = lnk.Type
                                 }));
                             }
+
                             patient.StatusConceptKey = StatusKeys.Obsolete;
                             patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, patient)
                             {
@@ -480,6 +487,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     case Patient.LinkType.Seealso:
                         {
                             var referee = DataTypeConverter.ResolveEntity<Entity>(lnk.Other, resource); // We use Entity here in lieu Patient since the code below can handle the MDM layer
+
                             // Is this a current MDM link?
                             if (referee.GetTag(FhirConstants.PlaceholderTag) == "true") // The referee wants us to become the data
                             {
@@ -517,12 +525,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
-            // TODO: Photo
             if (resource.Photo != null && resource.Photo.Any())
             {
                 patient.Extensions.RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
                 patient.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
             }
+
             return patient;
         }
 

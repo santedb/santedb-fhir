@@ -20,7 +20,6 @@
  */
 
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
@@ -115,13 +114,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Performer
-            var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer || o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
-            if (prf != null)
-                retVal.Performer = prf.Select(o =>
-                    new Immunization.PerformerComponent()
-                    {
-                        Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
-                    }).ToList();
+            retVal.Performer.AddRange(model.Participations.Where(c => c.ParticipationRoleKey == ActParticipationKey.Performer).Select(c => new Immunization.PerformerComponent
+            {
+                Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(c.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
+            }));
 
             // Protocol
             foreach (var itm in model.Protocols)
@@ -148,8 +144,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             var substanceAdministration = new SubstanceAdministration
             {
-                ActTime = resource.RecordedElement.ToDateTimeOffset(),
-                DoseQuantity = resource.DoseQuantity?.Value.Value ?? 0,
+                ActTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedElement).GetValueOrDefault(),
+                DoseQuantity = resource.DoseQuantity?.Value ?? 0,
                 DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, "http://hl7.org/fhir/sid/ucum") : null,
                 Extensions = resource.Extension?.Select(DataTypeConverter.ToActExtension).ToList(),
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToActIdentifier).ToList(),
@@ -202,39 +198,49 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
+            substanceAdministration.Participations.AddRange(resource.Performer.Select(c => new ActParticipation(ActParticipationKey.Performer, Guid.Parse(c.Actor.Reference.Substring(9)))));
+
             // Find the material that was issued
             if (resource.VaccineCode != null)
             {
                 var concept = DataTypeConverter.ToConcept(resource.VaccineCode);
+
                 if (concept == null)
                 {
                     this.m_traceSource.TraceWarning("Ignoring administration {0} don't have concept mapped", resource.VaccineCode);
                     return null;
                 }
+
                 // Get the material
-                int t = 0;
-                var material = ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>().Find(m => m.TypeConceptKey == concept.Key, 0, 1, out t).FirstOrDefault();
+                var material = ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>().Find(m => m.TypeConceptKey == concept.Key, 0, 1, out _).FirstOrDefault();
+
                 if (material == null)
                 {
                     this.m_traceSource.TraceWarning("Ignoring administration {0} don't have material registered for {1}", resource.VaccineCode, concept?.Mnemonic);
                     return null;
                 }
-                else
-                {
-                    substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKey.Product, material.Key));
-                    if (resource.LotNumber != null)
-                    {
-                        // TODO: Need to also find where the GTIN is kept
-                        var mmaterial = ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>().Find(o => o.LotNumber == resource.LotNumber && o.Relationships.Any(r => r.SourceEntityKey == material.Key && r.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance));
-                        substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKey.Consumable, material.Key) { Quantity = 1 });
-                    }
 
-                    // Get dose units
-                    if (substanceAdministration.DoseQuantity == 0)
+                substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKey.Product, material.Key));
+
+                if (resource.LotNumber != null)
+                {
+                    // TODO: Need to also find where the GTIN is kept
+                    var manufacturedMaterial = ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>()
+                        .Find(o => o.LotNumber == resource.LotNumber && o.Relationships.Any(r => r.SourceEntityKey == material.Key && r.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance))
+                        .FirstOrDefault();
+
+                    if (manufacturedMaterial != null)
                     {
-                        substanceAdministration.DoseQuantity = 1;
-                        substanceAdministration.DoseUnitKey = material.QuantityConceptKey;
+                        substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKey.Consumable, manufacturedMaterial.Key) { Quantity = 1 });
                     }
+                        
+                }
+
+                // Get dose units
+                if (substanceAdministration.DoseQuantity == 0)
+                {
+                    substanceAdministration.DoseQuantity = 1;
+                    substanceAdministration.DoseUnitKey = material.QuantityConceptKey;
                 }
             }
 

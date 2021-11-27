@@ -18,9 +18,8 @@
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
-using RestSrvr;
-using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
@@ -28,38 +27,71 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
+using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
-using Observation = SanteDB.Core.Model.Acts.Observation;
+using NameValueCollection = System.Collections.Specialized.NameValueCollection;
+using Observation = Hl7.Fhir.Model.Observation;
+using Patient = Hl7.Fhir.Model.Patient;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
     /// <summary>
     /// Observation handler
     /// </summary>
-    public class ObservationResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Observation, Core.Model.Acts.Observation>
+    public class ObservationResourceHandler : RepositoryResourceHandlerBase<Observation, Core.Model.Acts.Observation>
     {
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ObservationResourceHandler));
 
         /// <summary>
-		/// Create new resource handler
-		/// </summary>
-		public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo, ILocalizationService localizationService) : base(repo, localizationService)
+        /// Create new resource handler
+        /// </summary>
+        public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
+        }
 
+        /// <summary>
+        /// Get included resources
+        /// </summary>
+        protected override IEnumerable<Resource> GetIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+        }
+
+        /// <summary>
+        /// Get interactions
+        /// </summary>
+        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
+        {
+            return new[]
+            {
+                TypeRestfulInteraction.HistoryInstance,
+                TypeRestfulInteraction.Read,
+                TypeRestfulInteraction.SearchType,
+                TypeRestfulInteraction.Vread,
+                TypeRestfulInteraction.Delete
+            }.Select(o => new ResourceInteractionComponent
+                {Code = o});
+        }
+
+        /// <summary>
+        /// Get reverse includes
+        /// </summary>
+        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         /// <summary>
         /// Map to FHIR
         /// </summary>
-        protected override Hl7.Fhir.Model.Observation MapToFhir(Core.Model.Acts.Observation model)
+        protected override Observation MapToFhir(Core.Model.Acts.Observation model)
         {
-            var retVal = DataTypeConverter.CreateResource<Hl7.Fhir.Model.Observation>(model);
+            var retVal = DataTypeConverter.CreateResource<Observation>(model);
             retVal.Identifier = model.LoadCollection<ActIdentifier>(nameof(Act.Identifiers)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
 
             switch (model.StatusConceptKey.ToString().ToUpper())
@@ -76,9 +108,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
                 case StatusKeyStrings.Completed:
                     if (model.LoadCollection<ActRelationship>(nameof(Act.Relationships)).Any(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.Replaces)) // was amended
+                    {
                         retVal.Status = ObservationStatus.Amended;
+                    }
                     else
+                    {
                         retVal.Status = ObservationStatus.Final;
+                    }
+
                     break;
                 case StatusKeyStrings.Obsolete:
                     retVal.Status = ObservationStatus.Unknown;
@@ -86,25 +123,28 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             if (model.StartTime.HasValue || model.StopTime.HasValue)
+            {
                 retVal.Effective = DataTypeConverter.ToPeriod(model.StartTime, model.StopTime);
+            }
             else
+            {
                 retVal.Effective = DataTypeConverter.ToFhirDate(model.ActTime.DateTime);
+            }
 
             retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Act.TypeConcept)));
 
             // RCT
             var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
+
             if (rct != null)
             {
                 retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(rct.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)));
             }
 
             // Performer
-            var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer);
-            if (prf != null)
-            {
-                retVal.Performer = prf.Select(o=> DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))).ToList();
-            }
+            retVal.Performer = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer)
+                .Select(o => DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity))))
+                .ToList();
 
             retVal.Issued = model.CreationTime;
 
@@ -112,20 +152,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             switch (model.ValueType)
             {
                 case "CD":
-                    retVal.Value = DataTypeConverter.ToFhirCodeableConcept((model as Core.Model.Acts.CodedObservation).Value);
+                    retVal.Value = DataTypeConverter.ToFhirCodeableConcept((model as CodedObservation).Value);
                     break;
                 case "PQ":
-                    var qty = model as Core.Model.Acts.QuantityObservation;
+                    var qty = model as QuantityObservation;
                     retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.LoadProperty<Concept>(nameof(QuantityObservation.UnitOfMeasure)));
                     break;
                 case "ED":
                 case "ST":
-                    retVal.Value = new FhirString((model as Core.Model.Acts.TextObservation).Value);
+                    retVal.Value = new FhirString((model as TextObservation).Value);
                     break;
             }
 
             if (model.InterpretationConceptKey.HasValue)
-                retVal.Interpretation = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(QuantityObservation.InterpretationConcept))) };
+            {
+                retVal.Interpretation = new List<CodeableConcept>
+                {
+                    DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(QuantityObservation.InterpretationConcept)))
+                };
+            }
 
             return retVal;
         }
@@ -133,11 +178,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map to model
         /// </summary>
-        protected override Core.Model.Acts.Observation MapToModel(Hl7.Fhir.Model.Observation resource)
+        protected override Core.Model.Acts.Observation MapToModel(Observation resource)
         {
-
             //value type and value
-            Observation retVal;
+            Core.Model.Acts.Observation retVal;
             switch (resource.Value)
             {
                 case CodeableConcept codeableConcept:
@@ -145,11 +189,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         ValueType = "CD",
                         Value = DataTypeConverter.ToConcept(codeableConcept)
-           
                     };
                     break;
                 case Quantity quantity:
-                    retVal = new QuantityObservation()
+                    retVal = new QuantityObservation
                     {
                         ValueType = "PQ",
                         Value = quantity.Value.Value,
@@ -157,172 +200,156 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     };
                     break;
                 case FhirString fhirString:
-                    retVal = new TextObservation()
+                    retVal = new TextObservation
                     {
                         ValueType = "ST",
                         Value = fhirString.Value
                     };
                     break;
                 default:
-                    retVal = new Observation();
+                    retVal = new Core.Model.Acts.Observation();
                     break;
             }
+
+            retVal.Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).ToList();
+            retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
+
+            retVal.Key = Guid.TryParse(resource.Id, out var id) ? id : Guid.NewGuid();
+
             // Observation
-            var status = resource.Status.Value;
+            var status = resource.Status;
 
-
-            retVal.Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>()
-                .ToList();
-            retVal.Identifiers = resource.Identifier.Select(o => DataTypeConverter.ToActIdentifier(o)).ToList();
-            //retVal.Key = Guid.NewGuid();
-
-            
             //status concept key
+
             switch (status)
             {
-                case(ObservationStatus.Preliminary):
-                    retVal.StatusConceptKey = StatusKeys.Active;  
+                case ObservationStatus.Preliminary:
+                    retVal.StatusConceptKey = StatusKeys.Active;
                     break;
-                case(ObservationStatus.Cancelled):
+                case ObservationStatus.Cancelled:
                     retVal.StatusConceptKey = StatusKeys.Cancelled;
                     break;
-                case(ObservationStatus.EnteredInError):
+                case ObservationStatus.EnteredInError:
                     retVal.StatusConceptKey = StatusKeys.Nullified;
                     break;
-                case(ObservationStatus.Final):
+                case ObservationStatus.Final:
                     retVal.StatusConceptKey = StatusKeys.Completed;
                     break;
-                case(ObservationStatus.Amended):
+                case ObservationStatus.Amended:
                     retVal.StatusConceptKey = StatusKeys.Completed;
                     break;
-                case(ObservationStatus.Unknown):
+                case ObservationStatus.Unknown:
                     retVal.StatusConceptKey = StatusKeys.Obsolete;
                     break;
             }
 
             //Effective 
-       
+
             switch (resource.Effective)
             {
                 case Period period:
-                    retVal.StartTime = period.StartElement.ToDateTimeOffset();  
-                    retVal.StopTime = period.EndElement.ToDateTimeOffset();
+                    retVal.StartTime = DataTypeConverter.ToDateTimeOffset(period.Start);
+                    retVal.StopTime = DataTypeConverter.ToDateTimeOffset(period.End);
                     break;
                 case FhirDateTime fhirDateTime:
-                    retVal.ActTime = fhirDateTime.ToDateTimeOffset();
+                    retVal.ActTime = DataTypeConverter.ToDateTimeOffset(fhirDateTime) ?? DateTimeOffset.MinValue;
                     break;
             }
-        
+
 
             retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Code);
 
-            
+
             //issued
             if (resource.Issued.HasValue)
             {
-                retVal.CreationTime = (DateTimeOffset)resource.Issued;
+                retVal.CreationTime = (DateTimeOffset) resource.Issued;
             }
 
             //interpretation 
             if (resource.Interpretation.Any())
             {
-                
                 retVal.InterpretationConcept = DataTypeConverter.ToConcept(resource.Interpretation.First());
             }
 
-           
+
             //subject
 
             if (resource.Subject != null)
             {
-                // Is the subject a uuid
-                if (resource.Subject.Reference.StartsWith("urn:uuid:"))
-                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))));
-                else 
-                {
-                    this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
-                    { 
-                        param = "UUID"
-                    }));
-                }
-                
+                // if the subject is a UUID then add the record target key
+                // otherwise attempt to resolve the reference
+                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? 
+                    new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : 
+                    new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                //else 
+                //{
+                //    this.m_tracer.TraceError("Only UUID references are supported");
+                //    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
+                //    { 
+                //        param = "UUID"
+                //    }));
+                //}
             }
 
             //performer
             if (resource.Performer.Any())
             {
-               
                 foreach (var res in resource.Performer)
                 {
-                    if (res.Reference.StartsWith("urn:uuid:"))
-                    {
-                        retVal.Participations.Add(new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))));
-                    }
-                    else 
-                    {
-                        this.m_tracer.TraceError("Only UUID references are supported");
-                        throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
-                        { 
-                            param = "UUID"
-                        }));
-                    }
+                    retVal.Participations.Add(res.Reference.StartsWith("urn:uuid:") ?
+                        new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))) :
+                        new ActParticipation(ActParticipationKey.Performer, DataTypeConverter.ResolveEntity<Provider>(res, resource)));
 
+                    //if (res.Reference.StartsWith("urn:uuid:"))
+                    //{
+                    //    retVal.Participations.Add(new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))));
+                    //}
+                    //else 
+                    //{
+                    //    this.m_tracer.TraceError("Only UUID references are supported");
+                    //    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new 
+                    //    { 
+                    //        param = "UUID"
+                    //    }));
+                    //}
                 }
-                
             }
 
-            // to bypass constraint at function 'CK_IS_CD_SET_MEM' 
-
-            retVal.MoodConceptKey = ActMoodKeys.Eventoccurrence; 
+            // to bypass constraint at function 'CK_IS_CD_SET_MEM'
+            retVal.MoodConceptKey = ActMoodKeys.Eventoccurrence;
 
             return retVal;
-
         }
-
-        /// <summary>
-        /// Query
-        /// </summary>
-        protected override IEnumerable<Core.Model.Acts.Observation> Query(Expression<Func<Core.Model.Acts.Observation, bool>> query, Guid queryId, int offset, int count, out int totalResults)
-        {
-            //var anyRef = Expression.OrElse(base.CreateConceptSetFilter(ConceptSetKeys.VitalSigns, query.Parameters[0]), base.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]));
-            //query = Expression.Lambda<Func<Core.Model.Acts.Observation, bool>>(Expression.AndAlso(
-            //             query.Body, 
-            //             anyRef
-            //         ), query.Parameters);
-
-            return base.Query(query, queryId, offset, count, out totalResults);
-        }
-
 
         /// <summary>
         /// Parameters
         /// </summary>
-        public override Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
+        public override Bundle Query(NameValueCollection parameters)
         {
             if (parameters == null)
             {
                 this.m_tracer.TraceError(nameof(parameters));
                 throw new ArgumentNullException(nameof(parameters), this.m_localizationService.GetString("error.type.ArgumentNullException"));
             }
-                
+
             Core.Model.Query.NameValueCollection hdsiQuery = null;
-            FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Hl7.Fhir.Model.Observation), typeof(Core.Model.Acts.Observation), parameters, out hdsiQuery);
+            var query = QueryRewriter.RewriteFhirQuery(typeof(Observation), typeof(Core.Model.Acts.Observation), parameters, out hdsiQuery);
 
             // Do the query
-            int totalResults = 0;
+            var totalResults = 0;
 
             IEnumerable<Core.Model.Acts.Observation> hdsiResults = null;
 
             if (parameters["value-concept"] != null)
             {
-                var predicate = QueryExpressionParser.BuildLinqExpression<Core.Model.Acts.CodedObservation>(hdsiQuery);
-                hdsiResults = this.QueryEx<Core.Model.Acts.CodedObservation>(predicate, query.QueryId, query.Start, query.Quantity, out totalResults).OfType<Core.Model.Acts.Observation>();
+                var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiQuery);
+                hdsiResults = this.QueryEx(predicate, query.QueryId, query.Start, query.Quantity, out totalResults).OfType<Core.Model.Acts.Observation>();
             }
             else if (parameters["value-quantity"] != null)
             {
-                var predicate = QueryExpressionParser.BuildLinqExpression<Core.Model.Acts.QuantityObservation>(hdsiQuery);
-                hdsiResults = this.QueryEx<Core.Model.Acts.QuantityObservation>(predicate, query.QueryId, query.Start, query.Quantity, out totalResults).OfType<Core.Model.Acts.Observation>();
+                var predicate = QueryExpressionParser.BuildLinqExpression<QuantityObservation>(hdsiQuery);
+                hdsiResults = this.QueryEx(predicate, query.QueryId, query.Start, query.Quantity, out totalResults).OfType<Core.Model.Acts.Observation>();
             }
             else
             {
@@ -330,54 +357,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 hdsiResults = this.Query(predicate, query.QueryId, query.Start, query.Quantity, out totalResults);
             }
 
-
-            var restOperationContext = RestOperationContext.Current;
-
             // Return FHIR query result
             var retVal = new FhirQueryResult("Observation")
             {
-                Results = hdsiResults.Select(this.MapToFhir).Select(o=>new Bundle.EntryComponent()
+                Results = hdsiResults.Select(this.MapToFhir).Select(o => new Bundle.EntryComponent
                 {
                     Resource = o,
-                    Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match },
+                    Search = new Bundle.SearchComponent
+                        {Mode = Bundle.SearchEntryMode.Match}
                 }).ToList(),
                 Query = query,
                 TotalResults = totalResults
             };
 
             base.ProcessIncludes(hdsiResults, parameters, retVal);
+
             return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
-        }
-
-        /// <summary>
-        /// Get interactions
-        /// </summary>
-        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
-        {
-            return new TypeRestfulInteraction[]
-            {
-                TypeRestfulInteraction.HistoryInstance,
-                TypeRestfulInteraction.Read,
-                TypeRestfulInteraction.SearchType,
-                TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.Delete
-            }.Select(o => new ResourceInteractionComponent() { Code = o });
-        }
-
-        /// <summary>
-        /// Get included resources
-        /// </summary>
-        protected override IEnumerable<Resource> GetIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> includePaths)
-        {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
-        }
-
-        /// <summary>
-        /// Get reverse includes
-        /// </summary>
-        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
-        {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
     }
 }

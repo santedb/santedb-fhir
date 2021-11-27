@@ -19,10 +19,8 @@
  * Date: 2021-8-5
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Interfaces;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using System;
@@ -64,6 +62,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 s_tracer.TraceError("Handler is required");
                 throw new ArgumentNullException(nameof(handler), s_localizationService.GetString("error.messaging.fhir.handlers.handlerRequired"));
             }
+
             s_messageProcessors.TryAdd(handler.ResourceType, handler);
         }
 
@@ -80,16 +79,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public static IFhirResourceHandler GetResourceHandler(string resourceType)
         {
+            if (string.IsNullOrEmpty(resourceType))
+            {
+                throw new ArgumentNullException();
+            }
+
             var rtEnum = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(resourceType);
+
             if (rtEnum.HasValue)
             {
                 return GetResourceHandler(rtEnum.Value);
             }
-            else
-            {
-                s_tracer.TraceError($"Resource type {resourceType} is invalid");
-                throw new KeyNotFoundException(s_localizationService.FormatString("error.messaging.fhir.handlers.invalidResourceType", new { param = resourceType }));
-            }
+
+            s_tracer.TraceError($"Resource type {resourceType} is invalid");
+            throw new KeyNotFoundException(s_localizationService.FormatString("error.messaging.fhir.handlers.invalidResourceType", new { param = resourceType }));
         }
 
         /// <summary>
