@@ -19,12 +19,7 @@
  * Date: 2021-8-5
  */
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
@@ -35,6 +30,9 @@ using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 using NameValueCollection = System.Collections.Specialized.NameValueCollection;
 using Observation = Hl7.Fhir.Model.Observation;
@@ -137,17 +135,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // RCT
             var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
+
             if (rct != null)
             {
                 retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(rct.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)));
             }
 
             // Performer
-            var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer);
-            if (prf != null)
-            {
-                retVal.Performer = prf.Select(o => DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))).ToList();
-            }
+            retVal.Performer = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer)
+                .Select(o => DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity))))
+                .ToList();
 
             retVal.Issued = model.CreationTime;
 
@@ -170,7 +167,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (model.InterpretationConceptKey.HasValue)
             {
                 retVal.Interpretation = new List<CodeableConcept>
-                    {DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(QuantityObservation.InterpretationConcept)))};
+                {
+                    DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(QuantityObservation.InterpretationConcept)))
+                };
             }
 
             return retVal;
@@ -218,7 +217,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Key = Guid.TryParse(resource.Id, out var id) ? id : Guid.NewGuid();
 
             // Observation
-            var status = resource.Status.Value;
+            var status = resource.Status;
 
             //status concept key
 
@@ -280,7 +279,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 // if the subject is a UUID then add the record target key
                 // otherwise attempt to resolve the reference
-                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? 
+                    new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : 
+                    new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
                 //else 
                 //{
                 //    this.m_tracer.TraceError("Only UUID references are supported");
@@ -296,7 +297,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var res in resource.Performer)
                 {
-                    retVal.Participations.Add(res.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))) : new ActParticipation(ActParticipationKey.Performer, DataTypeConverter.ResolveEntity<Provider>(res, resource)));
+                    retVal.Participations.Add(res.Reference.StartsWith("urn:uuid:") ?
+                        new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))) :
+                        new ActParticipation(ActParticipationKey.Performer, DataTypeConverter.ResolveEntity<Provider>(res, resource)));
 
                     //if (res.Reference.StartsWith("urn:uuid:"))
                     //{
@@ -313,27 +316,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
-            // to bypass constraint at function 'CK_IS_CD_SET_MEM' 
-
+            // to bypass constraint at function 'CK_IS_CD_SET_MEM'
             retVal.MoodConceptKey = ActMoodKeys.Eventoccurrence;
 
             return retVal;
         }
-
-        /// <summary>
-        /// Query
-        /// </summary>
-        protected override IEnumerable<Core.Model.Acts.Observation> Query(Expression<Func<Core.Model.Acts.Observation, bool>> query, Guid queryId, int offset, int count, out int totalResults)
-        {
-            //var anyRef = Expression.OrElse(base.CreateConceptSetFilter(ConceptSetKeys.VitalSigns, query.Parameters[0]), base.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]));
-            //query = Expression.Lambda<Func<Core.Model.Acts.Observation, bool>>(Expression.AndAlso(
-            //             query.Body, 
-            //             anyRef
-            //         ), query.Parameters);
-
-            return base.Query(query, queryId, offset, count, out totalResults);
-        }
-
 
         /// <summary>
         /// Parameters
@@ -370,9 +357,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 hdsiResults = this.Query(predicate, query.QueryId, query.Start, query.Quantity, out totalResults);
             }
 
-
-            var restOperationContext = RestOperationContext.Current;
-
             // Return FHIR query result
             var retVal = new FhirQueryResult("Observation")
             {
@@ -387,6 +371,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             };
 
             base.ProcessIncludes(hdsiResults, parameters, retVal);
+
             return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
         }
     }
