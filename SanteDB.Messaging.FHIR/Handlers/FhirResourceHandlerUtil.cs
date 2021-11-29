@@ -18,11 +18,11 @@
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
-using RestSrvr;
+using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Interfaces;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using System;
@@ -37,12 +37,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public static class FhirResourceHandlerUtil
     {
-
         // Message processors
-        private static ConcurrentDictionary<ResourceType, IFhirResourceHandler> s_messageProcessors = new ConcurrentDictionary<ResourceType, IFhirResourceHandler>();
+        private static readonly ConcurrentDictionary<ResourceType, IFhirResourceHandler> s_messageProcessors = new ConcurrentDictionary<ResourceType, IFhirResourceHandler>();
 
         // Resource handler
-        private static Tracer s_tracer = Tracer.GetTracer(typeof(FhirResourceHandlerUtil));
+        private static readonly Tracer s_tracer = Tracer.GetTracer(typeof(FhirResourceHandlerUtil));
 
         // Localization Service
         private static readonly ILocalizationService s_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
@@ -55,60 +54,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Register resource handler
+        /// Get all resource handlers.
         /// </summary>
-        public static void RegisterResourceHandler(IFhirResourceHandler handler)
-        {
-            if(handler == null)
-            {
-                s_tracer.TraceError("Handler is required");
-                throw new ArgumentNullException(nameof(handler), s_localizationService.GetString("error.messaging.fhir.handlers.handlerRequired"));
-            }
-            s_messageProcessors.TryAdd(handler.ResourceType, handler);
-        }
+        public static IEnumerable<IFhirResourceHandler> ResourceHandlers => s_messageProcessors.Values;
 
-        /// <summary>
-        /// Register resource handler
-        /// </summary>
-        public static void UnRegisterResourceHandler(IFhirResourceHandler handler)
-        {
-            s_messageProcessors.TryRemove(handler.ResourceType, out _);
-        }
-
-        /// <summary>
-        /// Get the message processor type based on resource name
-        /// </summary>
-        public static IFhirResourceHandler GetResourceHandler(string resourceType)
-        {
-            var rtEnum = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(resourceType);
-            if (rtEnum.HasValue)
-            {
-                return GetResourceHandler(rtEnum.Value);
-            }
-            else
-            {
-                s_tracer.TraceError($"Resource type {resourceType} is invalid");
-                throw new KeyNotFoundException(s_localizationService.FormatString("error.messaging.fhir.handlers.invalidResourceType", new { param = resourceType }));
-            }
-        }
-
-        /// <summary>
-        /// Get the specified resource handler
-        /// </summary>
-        public static IFhirResourceHandler GetResourceHandler(ResourceType resourceType) {
-
-            if (!s_messageProcessors.TryGetValue(resourceType, out IFhirResourceHandler retVal))
-            {
-                s_tracer.TraceError($"No handler registered for {resourceType}");
-                throw new NotSupportedException(s_localizationService.FormatString("error.messaging.fhir.handlers.noRegisteredHandler", new { param = resourceType }));
-            }
-            return retVal;
-        }
-      
         /// <summary>
         /// Get mapper for the specified object
         /// </summary>
-        public static IFhirResourceMapper GetMapperForInstance(Object instance)
+        public static IFhirResourceMapper GetMapperForInstance(object instance)
         {
             return GetMappersFor(instance.GetType()).FirstOrDefault(o => o.CanMapObject(instance));
         }
@@ -133,11 +86,47 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
+        /// Get the message processor type based on resource name
+        /// </summary>
+        public static IFhirResourceHandler GetResourceHandler(string resourceType)
+        {
+            if (string.IsNullOrEmpty(resourceType))
+            {
+                throw new ArgumentNullException();
+            }
+
+            var rtEnum = EnumUtility.ParseLiteral<ResourceType>(resourceType);
+
+            if (rtEnum.HasValue)
+            {
+                return GetResourceHandler(rtEnum.Value);
+            }
+
+            s_tracer.TraceError($"Resource type {resourceType} is invalid");
+            throw new KeyNotFoundException(s_localizationService.FormatString("error.messaging.fhir.handlers.invalidResourceType", new {param = resourceType}));
+        }
+
+        /// <summary>
+        /// Get the specified resource handler
+        /// </summary>
+        public static IFhirResourceHandler GetResourceHandler(ResourceType resourceType)
+        {
+            if (!s_messageProcessors.TryGetValue(resourceType, out var retVal))
+            {
+                s_tracer.TraceError($"No handler registered for {resourceType}");
+                throw new NotSupportedException(s_localizationService.FormatString("error.messaging.fhir.handlers.noRegisteredHandler", new {param = resourceType}));
+            }
+
+            return retVal;
+        }
+
+        /// <summary>
         /// Get REST definition
         /// </summary>
         public static IEnumerable<CapabilityStatement.ResourceComponent> GetRestDefinition()
         {
-            return s_messageProcessors.Values.Select(o => {
+            return s_messageProcessors.Values.Select(o =>
+            {
                 var resourceDef = o.GetResourceDefinition();
                 var structureDef = o.GetStructureDefinition();
                 return resourceDef;
@@ -147,7 +136,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Initialize based on configuration
         /// </summary>
-        public static void Initialize(FhirServiceConfigurationSection m_configuration , IServiceManager serviceManager)
+        public static void Initialize(FhirServiceConfigurationSection m_configuration, IServiceManager serviceManager)
         {
             // Configuration 
             if (m_configuration.Resources?.Any() == true)
@@ -155,38 +144,50 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 foreach (var t in serviceManager.CreateInjectedOfAll<IFhirResourceHandler>())
                 {
                     if (m_configuration.Resources.Any(r => r == t.ResourceType.ToString()))
-                        FhirResourceHandlerUtil.RegisterResourceHandler(t);
+                    {
+                        RegisterResourceHandler(t);
+                    }
                     else if (t is IDisposable disp)
+                    {
                         disp.Dispose();
+                    }
                 }
             }
             else
             {
                 // Old configuration
-                foreach (Type t in m_configuration.ResourceHandlers.Select(o => o.Type))
+                foreach (var t in m_configuration.ResourceHandlers.Select(o => o.Type).Where(c => c != null))
                 {
-                    if (t != null)
+                    var rh = serviceManager.CreateInjected(t);
+
+                    if (rh is IFhirResourceHandler resourceHandler)
                     {
-                        var rh = serviceManager.CreateInjected(t);
-                        if (rh is IFhirResourceHandler resourceHandler)
-                        {
-                            FhirResourceHandlerUtil.RegisterResourceHandler(resourceHandler);
-                        }
+                        RegisterResourceHandler(resourceHandler);
                     }
                 }
             }
         }
 
         /// <summary>
-        /// Get all resource handlers
+        /// Register resource handler
         /// </summary>
-        public static IEnumerable<IFhirResourceHandler> ResourceHandlers
+        public static void RegisterResourceHandler(IFhirResourceHandler handler)
         {
-            get
+            if (handler == null)
             {
-                return s_messageProcessors.Values;
+                s_tracer.TraceError("Handler is required");
+                throw new ArgumentNullException(nameof(handler), s_localizationService.GetString("error.messaging.fhir.handlers.handlerRequired"));
             }
+
+            s_messageProcessors.TryAdd(handler.ResourceType, handler);
         }
 
+        /// <summary>
+        /// Register resource handler
+        /// </summary>
+        public static void UnRegisterResourceHandler(IFhirResourceHandler handler)
+        {
+            s_messageProcessors.TryRemove(handler.ResourceType, out _);
+        }
     }
 }

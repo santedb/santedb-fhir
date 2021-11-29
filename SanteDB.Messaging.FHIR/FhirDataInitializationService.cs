@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 using Newtonsoft.Json;
@@ -28,10 +29,9 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
-using System.Text;
 using System.Xml;
 
 namespace SanteDB.Messaging.FHIR
@@ -39,11 +39,11 @@ namespace SanteDB.Messaging.FHIR
     /// <summary>
     /// FHIR based data initialization service
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class FhirDataInitializationService : IDaemonService, IReportProgressChanged
     {
-
         // Trace source
-        private Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
+        private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         /// <summary>
         /// True if the service is running
@@ -51,38 +51,64 @@ namespace SanteDB.Messaging.FHIR
         public bool IsRunning => false;
 
         /// <summary>
-        /// Name of the service
-        /// </summary>
-        public string ServiceName => "FHIR Based DataSet Initialization Service";
-
-        /// <summary>
         /// Fired when progress has changed
         /// </summary>
         public event EventHandler<ProgressChangedEventArgs> ProgressChanged;
 
         /// <summary>
-        /// Service is starting
+        /// Name of the service
         /// </summary>
-        public event EventHandler Starting;
+        public string ServiceName => "FHIR Based DataSet Initialization Service";
+
+        /// <summary>
+        /// Start the service
+        /// </summary>
+        public bool Start()
+        {
+            this.Starting?.Invoke(this, EventArgs.Empty);
+            if (ApplicationServiceContext.Current.HostType == SanteDBHostType.Server)
+            {
+                ApplicationServiceContext.Current.Started += this.InstallDataset;
+            }
+
+            return true;
+        }
+
         /// <summary>
         /// Service has started
         /// </summary>
         public event EventHandler Started;
+
         /// <summary>
-        /// Service is stopping
+        /// Service is starting
         /// </summary>
-        public event EventHandler Stopping;
+        public event EventHandler Starting;
+
+        /// <summary>
+        /// Stop the service
+        /// </summary>
+        public bool Stop()
+        {
+            this.Stopping?.Invoke(this, EventArgs.Empty);
+            this.Stopped?.Invoke(this, EventArgs.Empty);
+            return true;
+        }
+
         /// <summary>
         /// Service has stopped
         /// </summary>
         public event EventHandler Stopped;
 
         /// <summary>
+        /// Service is stopping
+        /// </summary>
+        public event EventHandler Stopping;
+
+        /// <summary>
         /// Install dataset using FHIR services
         /// </summary>
         public void InstallDataset(object sender, EventArgs e)
         {
-
             using (AuthenticationContext.EnterSystemContext())
             {
                 // Data directory
@@ -113,6 +139,7 @@ namespace SanteDB.Messaging.FHIR
                                 {
                                     fhirResource = fhirJsonParser.Parse(jr) as Resource;
                                 }
+
                                 break;
                             case ".xml":
                                 using (var fs = File.OpenRead(f))
@@ -120,6 +147,7 @@ namespace SanteDB.Messaging.FHIR
                                 {
                                     fhirResource = fhirXmlParser.Parse(xr) as Resource;
                                 }
+
                                 break;
                             case ".completed":
                             case ".response":
@@ -133,10 +161,11 @@ namespace SanteDB.Messaging.FHIR
                         }
 
                         // Process the resource
-                        if(!fhirResource.TryDeriveResourceType(out ResourceType rt))
+                        if (!fhirResource.TryDeriveResourceType(out var rt))
                         {
                             throw new InvalidOperationException($"FHIR API doesn't support {fhirResource.TypeName}");
                         }
+
                         var handler = FhirResourceHandlerUtil.GetResourceHandler(rt);
                         if (handler == null)
                         {
@@ -167,12 +196,14 @@ namespace SanteDB.Messaging.FHIR
                                     {
                                         new FhirJsonSerializer().Serialize(fhirResult, jw);
                                     }
+
                                     break;
                                 case ".xml":
                                     using (var xw = XmlWriter.Create(fs))
                                     {
                                         new FhirXmlSerializer().Serialize(fhirResult, xw);
                                     }
+
                                     break;
                             }
                         }
@@ -184,29 +215,6 @@ namespace SanteDB.Messaging.FHIR
                     }
                 }
             }
-        }
-
-        /// <summary>
-        /// Start the service
-        /// </summary>
-        public bool Start()
-        {
-            this.Starting?.Invoke(this, EventArgs.Empty);
-            if (ApplicationServiceContext.Current.HostType == SanteDBHostType.Server)
-            {
-                ApplicationServiceContext.Current.Started += this.InstallDataset;
-            }
-            return true;
-        }
-
-        /// <summary>
-        /// Stop the service
-        /// </summary>
-        public bool Stop()
-        {
-            this.Stopping?.Invoke(this, EventArgs.Empty);
-            this.Stopped?.Invoke(this, EventArgs.Empty);
-            return true;
         }
     }
 }

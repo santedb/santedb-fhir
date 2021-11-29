@@ -19,23 +19,21 @@
  * Date: 2021-11-18
  */
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
-using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using Patient = Hl7.Fhir.Model.Patient;
 
 namespace SanteDB.Messaging.FHIR.Test
@@ -144,8 +142,8 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual(createdEncounter.Id, retrievedEncounter.Id);
             Assert.AreEqual(createdEncounter.Status, retrievedEncounter.Status);
             Assert.IsNotNull(retrievedEncounter.Subject);
-            Assert.IsNotNull(retrievedEncounter.Period.Start);
-            Assert.IsNotNull(retrievedEncounter.Period.End);
+            Assert.AreEqual(DateTimeOffset.Parse(createdEncounter.Period.Start), DateTimeOffset.Parse(retrievedEncounter.Period.Start));
+            Assert.AreEqual(DateTimeOffset.Parse(createdEncounter.Period.End), DateTimeOffset.Parse(retrievedEncounter.Period.End));
         }
 
         /// <summary>
@@ -289,7 +287,6 @@ namespace SanteDB.Messaging.FHIR.Test
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
 
                 actual = encounterResourceHandler.Update(createdEncounter.Id, createdEncounter, TransactionMode.Commit);
-
             }
 
             Assert.NotNull(actual);
@@ -305,7 +302,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// Tests the create method in <see cref="EncounterResourceHandler"/> confirming an invalid resource is not used.
         /// </summary>
         [Test]
-        public void TestCreateEnounterInvalidResource()
+        public void TestCreateEncounterInvalidResource()
         {
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))

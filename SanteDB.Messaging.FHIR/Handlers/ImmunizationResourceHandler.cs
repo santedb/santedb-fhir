@@ -114,13 +114,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Performer
-            var prf = model.Participations.Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer);
-            if (prf != null)
-                retVal.Performer = prf.Select(o =>
-                    new Immunization.PerformerComponent()
-                    {
-                        Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
-                    }).ToList();
+            retVal.Performer.AddRange(model.Participations.Where(c => c.ParticipationRoleKey == ActParticipationKey.Performer).Select(c => new Immunization.PerformerComponent
+            {
+                Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(c.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
+            }));
 
             // Protocol
             foreach (var itm in model.Protocols)
@@ -147,7 +144,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             var substanceAdministration = new SubstanceAdministration
             {
-                ActTime = resource.RecordedElement.ToDateTimeOffset(),
+                ActTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedElement).GetValueOrDefault(),
                 DoseQuantity = resource.DoseQuantity?.Value ?? 0,
                 DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, "http://hl7.org/fhir/sid/ucum") : null,
                 Extensions = resource.Extension?.Select(DataTypeConverter.ToActExtension).ToList(),

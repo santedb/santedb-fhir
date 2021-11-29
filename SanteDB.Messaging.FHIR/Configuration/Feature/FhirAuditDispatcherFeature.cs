@@ -1,17 +1,17 @@
 ﻿using SanteDB.Core.Configuration;
-using SanteDB.Core.Configuration.Features;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Auditing;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Configuration.Feature
 {
     /// <summary>
     /// FHIR audit dispatcher feature
     /// </summary>
+    [ExcludeFromCodeCoverage]
     public class FhirAuditDispatcherFeature : IFeature
     {
 
@@ -98,6 +98,7 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
     }
 
 
+    [ExcludeFromCodeCoverage]
     internal class UninstallFhirAuditDispatcher : IConfigurationTask
     {
         private FhirDispatcherTargetConfiguration m_configuration;
@@ -159,6 +160,7 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
     /// <summary>
     /// Install the FHIR dispatcher configured in this service
     /// </summary>
+    [ExcludeFromCodeCoverage]
     internal class InstallFhirAuditDispatcher : IConfigurationTask
     {
         private FhirDispatcherTargetConfiguration m_configuration;

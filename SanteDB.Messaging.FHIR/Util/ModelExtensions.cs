@@ -22,11 +22,8 @@ using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Interop.Description;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -48,15 +45,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns></returns>
         public static ResourceType? GetResourceType(this Type me)
         {
-            var fhirType = me.GetCustomAttribute<FhirTypeAttribute>()?.Name;
-            if (String.IsNullOrEmpty(fhirType))
-            {
-                return null;
-            }
-            else
-            {
-                return Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(fhirType);
-            }
+            var fhirType = me.GetCustomAttribute<FhirTypeAttribute>();
+
+            return fhirType?.IsResource == true && string.IsNullOrEmpty(fhirType.Name) ? null : Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(fhirType?.Name);
         }
 
         /// <summary>

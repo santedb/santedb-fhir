@@ -685,8 +685,10 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// To FHIR date
+        /// Converts a <see cref="DateTime"/> instance to a <see cref="Date"/> instance.
         /// </summary>
+        /// <param name="date">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
         public static Date ToFhirDate(DateTime? date)
         {
             if (date.HasValue)
@@ -696,18 +698,25 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Converts a <see cref="DateTimeOffset"/> instance to a <see cref="FhirDateTime"/> instance.
+        /// </summary>
+        /// <param name="date">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
+        public static FhirDateTime ToFhirDateTime(DateTimeOffset? date)
+        {
+            return date.HasValue ? new FhirDateTime(date.Value) : null;
+        }
+
+        /// <summary>
         /// Convert two date ranges to a period
         /// </summary>
         public static Period ToPeriod(DateTimeOffset? startTime, DateTimeOffset? stopTime)
         {
-            return new Period(
-                startTime.HasValue ? new FhirDateTime(startTime.Value) : null,
-                stopTime.HasValue ? new FhirDateTime(stopTime.Value) : null
-                );
+            return new Period(startTime.HasValue ? new FhirDateTime(startTime.Value) : null, stopTime.HasValue ? new FhirDateTime(stopTime.Value) : null);
         }
 
         /// <summary>
-        /// Converts an <see cref="FhirExtension"/> instance to an <see cref="ActExtension"/> instance.
+        /// Converts a <see cref="Extension"/> instance to an <see cref="ActExtension"/> instance.
         /// </summary>
         /// <param name="fhirExtension">The FHIR extension.</param>
         /// <returns>Returns the converted act extension instance.</returns>
@@ -743,7 +752,7 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts an <see cref="FhirExtension"/> instance to an <see cref="ActExtension"/> instance.
+        /// Converts an <see cref="Extension"/> instance to an <see cref="ActExtension"/> instance.
         /// </summary>
         /// <param name="fhirExtension">The FHIR extension.</param>
         /// <returns>Returns the converted act extension instance.</returns>
@@ -785,6 +794,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 // Now will
                 return extension;
             }
+
             return null;
         }
 
@@ -810,7 +820,10 @@ namespace SanteDB.Messaging.FHIR.Util
         public static PersonLanguageCommunication ToLanguageCommunication(CodeableConcept lang, bool preferred)
         {
             if (!lang.Coding.Any())
+            {
                 throw new InvalidOperationException("Codeable concept must contain a language code");
+            }
+                
             return new PersonLanguageCommunication(lang.Coding.First().Code, preferred);
         }
 
@@ -844,7 +857,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (fhirIdentifier.System != null)
             {
-                retVal = new ActIdentifier(DataTypeConverter.ToAssigningAuthority(fhirIdentifier.System), fhirIdentifier.Value);
+                retVal = new ActIdentifier(ToAssigningAuthority(fhirIdentifier.System), fhirIdentifier.Value);
             }
             else
             {
@@ -856,19 +869,13 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Convert to assigning authority
+        /// Converts a <see cref="FhirUri"/> instance to an <see cref="AssigningAuthority"/> instance.
         /// </summary>
         /// <param name="fhirSystem">The FHIR system.</param>
-        /// <returns>AssigningAuthority.</returns>
-        /// <exception cref="System.InvalidOperationException">Unable to locate service</exception>
+        /// <returns>Returns the converted instance.</returns>
         public static AssigningAuthority ToAssigningAuthority(FhirUri fhirSystem)
         {
-            if (fhirSystem == null)
-            {
-                return null;
-            }
-
-            return DataTypeConverter.ToAssigningAuthority(fhirSystem.Value);
+            return fhirSystem == null ? null : ToAssigningAuthority(fhirSystem.Value);
         }
 
         /// <summary>
@@ -887,7 +894,7 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts a <see cref="ReferenceTerm"/> instance to a <see cref="FhirCoding"/> instance.
+        /// Converts a <see cref="ReferenceTerm"/> instance to a <see cref="Coding"/> instance.
         /// </summary>
         /// <param name="referenceTerm">The reference term.</param>
         /// <returns>Returns a FHIR coding instance.</returns>
@@ -1035,6 +1042,40 @@ namespace SanteDB.Messaging.FHIR.Util
                 throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not find concept with reference term '{code}' in {system}");
             return retVal;
         }
+
+        /// <summary>
+        /// Converts a <see cref="FhirDateTime"/> instance to a <see cref="DateTimeOffset"/> instance.
+        /// </summary>
+        /// <param name="dateTimeOffset">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
+        public static DateTimeOffset? ToDateTimeOffset(string dateTimeOffset)
+        {
+            if (string.IsNullOrEmpty(dateTimeOffset) || string.IsNullOrWhiteSpace(dateTimeOffset))
+            {
+                return null;
+            }
+
+            DateTimeOffset? result = null;
+
+            if (DateTimeOffset.TryParse(dateTimeOffset, out var value))
+            {
+                result = value;
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Converts a <see cref="FhirDateTime"/> instance to a <see cref="DateTimeOffset"/> instance.
+        /// </summary>
+        /// <param name="dateTimeOffset">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
+        public static DateTimeOffset? ToDateTimeOffset(FhirDateTime dateTimeOffset)
+        {
+            return ToDateTimeOffset(dateTimeOffset.Value);
+        }
+
+
 
         /// <summary>
         /// Converts an <see cref="FhirAddress"/> instance to an <see cref="EntityAddress"/> instance.
