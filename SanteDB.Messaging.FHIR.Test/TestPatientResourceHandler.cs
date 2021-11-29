@@ -217,6 +217,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var actualPatient = (Patient)updatedPatient;
 
+            // HACK: the FHIR Boolean equivalent doesn't implement value equality with the corresponding value type :/
             Assert.IsTrue(((FhirBoolean)actualPatient.MultipleBirth).Value);
         }
 
