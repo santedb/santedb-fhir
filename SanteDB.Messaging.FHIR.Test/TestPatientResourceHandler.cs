@@ -66,7 +66,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Resources = new List<string>
                 {
                     "Patient",
-                    "Bundle",
+                    "Organization",
                     "Practitioner"
                 },
                 OperationHandlers = new List<TypeReferenceConfiguration>(),
@@ -145,7 +145,11 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Jordan", actual.Name.Single().Given.Single());
             Assert.AreEqual("Canada", actual.Address.Single().Country);
             Assert.AreEqual("mailto:Webber@gmail.com", actual.Telecom.First().Value);
+<<<<<<< HEAD
+            Assert.IsNotNull(actual.Photo.First().Data);
+=======
             Assert.AreEqual(patient.BirthDate, actual.BirthDate);
+>>>>>>> 6c123072b518ff0fdfe41ebb1b4768cd8eb6cc0f
         }
 
         /// <summary>
@@ -406,5 +410,147 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.Throws<InvalidDataException>(() => patientResourceHandler.Update(actual.Id, new Practitioner(), TransactionMode.Commit));
             }
         }
+<<<<<<< HEAD
+
+        /// <summary>
+        /// Tests the creation of a patient with an associated general practitioner in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreatePatientWithGeneralPractitioner()
+        {
+            var practitioner = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Practitioner") as Practitioner;
+
+            var patient = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Patient") as Patient;
+
+            Resource actualPatient;
+            Resource actualPractitioner;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
+
+                actualPractitioner = practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
+                patient.GeneralPractitioner = new List<ResourceReference>
+                {
+                    new ResourceReference($"urn:uuid:{actualPractitioner.Id}")
+                };
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.NotNull(actualPatient);
+            Assert.NotNull(actualPractitioner);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Practitioner>(actualPractitioner);
+
+            var createdPatient = (Patient)actualPatient;
+
+            Assert.IsNotNull(createdPatient.GeneralPractitioner.First());
+        }
+
+        /// <summary>
+        /// Tests the creation of a deceased patient in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateDeceasedPatient()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateDeceasedPatient") as Patient;
+
+            Resource actual;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                actual = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOf<Patient>(actual);
+
+            var createdPatient = (Patient)actual;
+
+            Assert.IsNotNull(createdPatient.Deceased);
+        }
+
+        [Test]
+        public void TestCreatePatientMultipleBirth()
+        {
+            var patient = new Patient
+            {
+                Name = new List<HumanName>
+                {
+                    new HumanName
+                    {
+                        Given = new List<string>
+                        {
+                            "David",
+                        },
+                        Family = "Melnyk"
+                    }
+                },
+                MultipleBirth = new FhirDecimal(3),
+                Active = true,
+                BirthDate = FhirDateTime.Now().ToString(),
+                Gender = AdministrativeGender.Male,
+                Telecom = new List<ContactPoint>
+                {
+                    new ContactPoint(ContactPoint.ContactPointSystem.Email, ContactPoint.ContactPointUse.Work, "David@gmail.com")
+                }
+            };
+
+            Console.WriteLine(TestUtil.MessageToString(patient));
+
+            Resource actual;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                actual = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOf<Patient>(actual);
+
+            var createdPatient = (Patient)actual;
+
+            Assert.AreEqual(3, createdPatient.MultipleBirth);
+        }
+
+        [Test]
+        public void TestCreatePatientWithOrganization()
+        {
+            var patient = TestUtil.GetFhirMessage("CreatePatient") as Patient;
+
+            var organization = TestUtil.GetFhirMessage("CreatePatientWithOrganization-Organization") as Organization;
+
+            Resource actualPatient;
+            Resource actualOrganization;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
+
+                actualOrganization = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+                patient.ManagingOrganization = new ResourceReference($"urn:uuid:{actualOrganization.Id}");
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+
+                Assert.IsNotNull(actualPatient);
+                Assert.IsInstanceOf<Patient>(actualPatient);
+
+                var createdPatient = (Patient)actualPatient;
+
+                Assert.IsNotNull(patient.ManagingOrganization);
+            }
+        }
+=======
+>>>>>>> 6c123072b518ff0fdfe41ebb1b4768cd8eb6cc0f
     }
 }
