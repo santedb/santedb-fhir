@@ -21,6 +21,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -363,12 +364,16 @@ namespace SanteDB.Messaging.FHIR.Test
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
                 // retrieve the patient using the resource handler
-                var queryResult = patientResourceHandler.Read(result.Id, result.VersionId);
+                var queryResult = patientResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", result.Id },
+                    { "versionId", result.VersionId }
+                });
 
                 Assert.NotNull(queryResult);
-                Assert.IsInstanceOf<Patient>(queryResult);
+                Assert.IsInstanceOf<Bundle>(queryResult);
 
-                var queriedPatient = (Patient) queryResult;
+                var queriedPatient = (Patient) queryResult.Entry.Single().Resource;
 
                 Assert.NotNull(queriedPatient);
                 Assert.IsInstanceOf<Patient>(queriedPatient);
