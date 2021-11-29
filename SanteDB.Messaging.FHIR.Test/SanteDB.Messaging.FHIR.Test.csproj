@@ -151,6 +151,7 @@
     <Compile Include="TestRelatedPersonResourceHandler.cs" />
     <Compile Include="TestPractitionerResourceHandler.cs" />
     <Compile Include="TestImmunizationResourceHandler.cs" />
+    <Compile Include="TestStructureDefinitionUtil.cs" />
     <Compile Include="TestUtil.cs" />
   </ItemGroup>
 </Project>
