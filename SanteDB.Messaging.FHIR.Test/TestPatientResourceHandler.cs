@@ -19,12 +19,6 @@
  * Date: 2021-11-18
  */
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
@@ -36,6 +30,12 @@ using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -183,17 +183,15 @@ namespace SanteDB.Messaging.FHIR.Test
                         Family = "Melnyk"
                     }
                 },
-                MultipleBirth = new FhirDecimal(3),
+                MultipleBirth = new Integer(3),
                 Active = true,
-                BirthDate = FhirDateTime.Now().ToString(),
+                BirthDate = new DateTimeOffset(new DateTime(1969, 12, 31)).ToString("o"),
                 Gender = AdministrativeGender.Male,
                 Telecom = new List<ContactPoint>
                 {
                     new ContactPoint(ContactPoint.ContactPointSystem.Email, ContactPoint.ContactPointUse.Work, "David@gmail.com")
                 }
             };
-
-            Console.WriteLine(TestUtil.MessageToString(patient));
 
             Resource actual;
 
@@ -210,7 +208,8 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var createdPatient = (Patient) actual;
 
-            Assert.AreEqual(3, createdPatient.MultipleBirth);
+            // HACK: there is no value equality implementation in the FHIR Integer class :/
+            Assert.AreEqual(new Integer(3).Value, ((Integer)createdPatient.MultipleBirth).Value);
         }
 
         /// <summary>
