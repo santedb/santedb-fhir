@@ -71,6 +71,7 @@
     <EmbeddedResource Include="Resources\DeleteEncounter-Patient.json" />
     <EmbeddedResource Include="Resources\UpdateEncounterInvalidResource-Patient.json" />
     <EmbeddedResource Include="Resources\UpdateEncounterInvalidResource-Encounter.json" />
+    <EmbeddedResource Include="Resources\CreatePatientWithOrganization-Organization.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
