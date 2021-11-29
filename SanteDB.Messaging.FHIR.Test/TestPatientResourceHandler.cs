@@ -122,6 +122,8 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             var patient = TestUtil.GetFhirMessage("CreatePatient") as Patient;
 
+            var patientLink = TestUtil.GetFhirMessage("CreatePatient-PatientLink") as Patient;
+
             Resource result;
 
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
@@ -129,6 +131,12 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 // get the resource handler
                 var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                // create link patient
+                var createdPatientLink = patientResourceHandler.Create(patientLink, TransactionMode.Commit);
+
+                // Link the created patient with the main patient
+                patient.Link.First().Other = new ResourceReference($"urn:uuid:{createdPatientLink.Id}");
 
                 // create the patient using the resource handler
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
@@ -167,33 +175,13 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the creation of a patient with a multiple birth order in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
         [Test]
         public void TestCreatePatientMultipleBirth()
         {
-            var patient = new Patient
-            {
-                Name = new List<HumanName>
-                {
-                    new HumanName
-                    {
-                        Given = new List<string>
-                        {
-                            "David"
-                        },
-                        Family = "Melnyk"
-                    }
-                },
-                MultipleBirth = new FhirDecimal(3),
-                Active = true,
-                BirthDate = FhirDateTime.Now().ToString(),
-                Gender = AdministrativeGender.Male,
-                Telecom = new List<ContactPoint>
-                {
-                    new ContactPoint(ContactPoint.ContactPointSystem.Email, ContactPoint.ContactPointUse.Work, "David@gmail.com")
-                }
-            };
-
-            Console.WriteLine(TestUtil.MessageToString(patient));
+            var patient = TestUtil.GetFhirMessage("CreateMultipleBirthPatient") as Patient;
 
             Resource actual;
 
@@ -208,9 +196,9 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsNotNull(actual);
             Assert.IsInstanceOf<Patient>(actual);
 
-            var createdPatient = (Patient) actual;
+            var createdPatient = (Patient)actual;
 
-            Assert.AreEqual(3, createdPatient.MultipleBirth);
+            Assert.IsNotNull(createdPatient.MultipleBirth);
         }
 
         /// <summary>
@@ -251,10 +239,15 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsNotNull(createdPatient.GeneralPractitioner.First());
         }
 
+        /// <summary>
+        /// Tests the creation of a patient with a managing organization in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
         [Test]
         public void TestCreatePatientWithOrganization()
         {
             var patient = TestUtil.GetFhirMessage("CreatePatient") as Patient;
+
+            var patientLink = TestUtil.GetFhirMessage("CreatePatient-PatientLink") as Patient;
 
             var organization = TestUtil.GetFhirMessage("CreatePatientWithOrganization-Organization") as Organization;
 
@@ -267,14 +260,21 @@ namespace SanteDB.Messaging.FHIR.Test
                 var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
 
+                // Create the independent resources for the main Resource.
                 actualOrganization = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+                var createdPatientLink = patientResourceHandler.Create(patientLink, TransactionMode.Commit);
+
+                // Connect the independent resources to the dependent resource
                 patient.ManagingOrganization = new ResourceReference($"urn:uuid:{actualOrganization.Id}");
+                patient.Link.First().Other = new ResourceReference($"urn:uuid:{createdPatientLink.Id}");
+
+                // Create the dependent resource
                 actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
                 Assert.IsNotNull(actualPatient);
                 Assert.IsInstanceOf<Patient>(actualPatient);
 
-                var createdPatient = (Patient) actualPatient;
+                var createdPatient = (Patient)actualPatient;
 
                 Assert.IsNotNull(patient.ManagingOrganization);
             }
