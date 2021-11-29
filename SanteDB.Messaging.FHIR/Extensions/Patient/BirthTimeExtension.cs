@@ -1,9 +1,9 @@
 ﻿using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
@@ -34,7 +34,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (modelObject is SanteDB.Core.Model.Entities.Person person && person.DateOfBirthPrecision > Core.Model.DataTypes.DatePrecision.Day)
             {
-                yield return new Extension(this.Uri.ToString(), new FhirDateTime(person.DateOfBirth.Value));
+                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirDateTime(person.DateOfBirth));
             }
         }
 
@@ -45,7 +45,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (fhirExtension.Value is FhirDateTime dateTime && modelObject is SanteDB.Core.Model.Entities.Person person)
             {
-                person.DateOfBirth = dateTime.ToDateTime();
+                person.DateOfBirth = DataTypeConverter.ToDateTimeOffset(dateTime)?.Date;
                 person.DateOfBirthPrecision = Core.Model.DataTypes.DatePrecision.Full;
                 return true;
             }
