@@ -168,7 +168,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns></returns>
         public StructureDefinition GetStructureDefinition()
         {
-            return StructureDefinitionUtil.GetStructureDefinition(typeof(Hl7.Fhir.Model.Bundle), false);
+            return typeof(Bundle).GetStructureDefinition(false);
         }
 
         /// <summary>
