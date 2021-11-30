@@ -44,6 +44,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Diagnostics.Tracing;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Security;
@@ -1050,6 +1051,18 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns the converted instance.</returns>
         public static DateTimeOffset? ToDateTimeOffset(string dateTimeOffset)
         {
+            return ToDateTimeOffset(dateTimeOffset, out _);
+        }
+
+        /// <summary>
+        /// Converts a <see cref="FhirDateTime"/> instance to a <see cref="DateTimeOffset"/> instance.
+        /// </summary>
+        /// <param name="dateTimeOffset">The instance to convert.</param>
+        /// <returns>Returns the converted instance.</returns>
+        public static DateTimeOffset? ToDateTimeOffset(string dateTimeOffset, out DatePrecision? datePrecision)
+        {
+            datePrecision = null;
+
             if (string.IsNullOrEmpty(dateTimeOffset) || string.IsNullOrWhiteSpace(dateTimeOffset))
             {
                 return null;
@@ -1057,9 +1070,44 @@ namespace SanteDB.Messaging.FHIR.Util
 
             DateTimeOffset? result = null;
 
-            if (DateTimeOffset.TryParse(dateTimeOffset, out var value))
+            switch(dateTimeOffset.Length)
             {
-                result = value;
+                case 4:
+                    {
+                        if (DateTimeOffset.TryParseExact(dateTimeOffset, "yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out var value))
+                        {
+                            result = value;
+                            datePrecision = DatePrecision.Year;
+                        }
+                    }
+                    break;
+                case 7:
+                    {
+                        if (DateTimeOffset.TryParseExact(dateTimeOffset, "yyyy-MM", CultureInfo.InvariantCulture, DateTimeStyles.None, out var value))
+                        {
+                            result = value;
+                            datePrecision = DatePrecision.Month;
+                        }
+                    }
+                    break;
+                case 10:
+                    {
+                        if (DateTimeOffset.TryParseExact(dateTimeOffset, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var value))
+                        {
+                            result = value;
+                            datePrecision = DatePrecision.Day;
+                        }
+                    }
+                    break;
+                default:
+                    {
+                        if (DateTimeOffset.TryParse(dateTimeOffset, out var value))
+                        {
+                            result = value;
+                            datePrecision = DatePrecision.Full;
+                        }
+                    }
+                    break;
             }
 
             return result;
