@@ -232,7 +232,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestUpdateObservation()
         {
-            Resource createdResource, retrievedResource, result;
+            Resource result;
             var updatedEffectiveTime = new FhirDateTime(new DateTimeOffset(2021, 1, 1, 12, 30, 30, 30, new TimeSpan(1, 0, 0)));
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
@@ -240,7 +240,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 // get the resource handler
                 var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
 
-                retrievedResource = observationResourceHandler.Read(this.m_observation.Id, null);
+                Resource retrievedResource = observationResourceHandler.Read(this.m_observation.Id, null);
 
                 Assert.NotNull(retrievedResource);
                 Assert.IsInstanceOf<Observation>(retrievedResource);
@@ -323,5 +323,41 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests various value types of Observation in <see cref="ObservationResourceHandler" /> class.
+        /// </summary>
+        [Test]
+        public void TestObservationValueType()
+        {
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
+
+                var retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
+
+                //ensure the initial Quantity value is set correctly
+                var quantityValue = retrievedObservation.Value as Quantity;
+                Assert.AreEqual(22, quantityValue.Value.Value);
+
+                //update  observation value to Textual type
+                retrievedObservation.Value = new FhirString("test");
+                var updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+
+                //ensure the update took place correctly
+                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
+                var stringValue = retrievedObservation.Value as FhirString;
+                Assert.AreEqual("test", stringValue.Value);
+
+                //update  observation value to Codeable type
+                retrievedObservation.Value = new CodeableConcept("http://hl7.org/fhir/v3/ObservationInterpretation", "H");
+                updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+
+                //ensure the update took place correctly
+                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
+                var codeValue = retrievedObservation.Value as CodeableConcept;
+                Assert.AreEqual(1, codeValue.Coding.Count);
+                Assert.AreEqual("H",  codeValue.Coding.First().Code);
+            }
+        }
     }
 }
