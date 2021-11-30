@@ -113,7 +113,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCreateObservation()
         {
-            var effectiveTime = new FhirDateTime(DateTimeOffset.Parse("2021-10-01T08:06:32+01:00"));
+            var effectiveTime = new FhirDateTime(DateTimeOffset.Parse("2021-10-01T08:06:32-04:00"));
 
             var observation = TestUtil.GetFhirMessage("CreateObservation") as Observation;
 
@@ -233,7 +233,7 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestUpdateObservation()
         {
             Resource result;
-            var updatedEffectiveTime = new FhirDateTime(new DateTimeOffset(2021, 1, 1, 12, 30, 30, 30, new TimeSpan(1, 0, 0)));
+            var updatedEffectiveTime = new FhirDateTime(new DateTimeOffset(2021, 1, 1, 12, 30, 30, 30, new TimeSpan(-5, 0, 0)));
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
