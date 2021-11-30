@@ -1,0 +1,22 @@
+﻿{
+  "resourceType": "Patient",
+  "active": true,
+  "name": [
+    {
+      "family": "Melnyk",
+      "given": [
+        "David"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "email",
+      "value": "David@gmail.com",
+      "use": "work"
+    }
+  ],
+  "gender": "male",
+  "birthDate": "2021-11-29",
+  "multipleBirthInteger": "3"
+}

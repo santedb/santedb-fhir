@@ -71,6 +71,9 @@
     <EmbeddedResource Include="Resources\DeleteEncounter-Patient.json" />
     <EmbeddedResource Include="Resources\UpdateEncounterInvalidResource-Patient.json" />
     <EmbeddedResource Include="Resources\UpdateEncounterInvalidResource-Encounter.json" />
+    <EmbeddedResource Include="Resources\CreatePatientWithOrganization-Organization.json" />
+    <EmbeddedResource Include="Resources\CreatePatient-PatientLink.json" />
+    <EmbeddedResource Include="Resources\CreateMultipleBirthPatient.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
@@ -142,6 +145,7 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestBundleResourceHandler.cs" />
     <Compile Include="TestEncounterResourceHandler.cs" />
     <Compile Include="TestFhirResourceHandlerUtil.cs" />
     <Compile Include="TestModelExtensions.cs" />
@@ -151,6 +155,7 @@
     <Compile Include="TestRelatedPersonResourceHandler.cs" />
     <Compile Include="TestPractitionerResourceHandler.cs" />
     <Compile Include="TestImmunizationResourceHandler.cs" />
+    <Compile Include="TestStructureDefinitionUtil.cs" />
     <Compile Include="TestUtil.cs" />
   </ItemGroup>
 </Project>

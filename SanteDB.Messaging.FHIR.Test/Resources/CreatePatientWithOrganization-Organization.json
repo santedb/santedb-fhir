@@ -1,0 +1,21 @@
+﻿{
+  "resourceType": "Organization",
+  "identifier": [
+    {
+      "system": "http://santedb.org/fhir/test",
+      "value": "6324"
+    }
+  ],
+  "active": true,
+  "name": "Jordan Enterprises",
+  "address": [
+    {
+      "line": [
+        "123 Main Street"
+      ],
+      "city": "Hamilton",
+      "state": "Ontario",
+      "country": "Canada"
+    }
+  ]
+}

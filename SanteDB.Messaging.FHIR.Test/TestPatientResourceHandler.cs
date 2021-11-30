@@ -19,6 +19,12 @@
  * Date: 2021-11-18
  */
 
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
@@ -30,11 +36,6 @@ using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -66,7 +67,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Resources = new List<string>
                 {
                     "Patient",
-                    "Bundle",
+                    "Organization",
                     "Practitioner"
                 },
                 OperationHandlers = new List<TypeReferenceConfiguration>(),
@@ -121,6 +122,8 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             var patient = TestUtil.GetFhirMessage("CreatePatient") as Patient;
 
+            var patientLink = TestUtil.GetFhirMessage("CreatePatient-PatientLink") as Patient;
+
             Resource result;
 
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
@@ -128,6 +131,12 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 // get the resource handler
                 var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                // create link patient
+                var createdPatientLink = patientResourceHandler.Create(patientLink, TransactionMode.Commit);
+
+                // Link the created patient with the main patient
+                patient.Link.First().Other = new ResourceReference($"urn:uuid:{createdPatientLink.Id}");
 
                 // create the patient using the resource handler
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
@@ -145,6 +154,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Jordan", actual.Name.Single().Given.Single());
             Assert.AreEqual("Canada", actual.Address.Single().Country);
             Assert.AreEqual("mailto:Webber@gmail.com", actual.Telecom.First().Value);
+            Assert.IsNotNull(actual.Photo.First().Data);
             Assert.AreEqual(patient.BirthDate, actual.BirthDate);
         }
 
@@ -163,6 +173,52 @@ namespace SanteDB.Messaging.FHIR.Test
                 // create the patient using the resource handler
                 Assert.Throws<InvalidDataException>(() => patientResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
             }
+        }
+
+        /// <summary>
+        /// Tests the creation of a patient with a multiple birth order in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreatePatientMultipleBirth()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateMultipleBirthPatient") as Patient;
+
+            Resource actual;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                actual = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOf<Patient>(actual);
+
+            var createdPatient = (Patient)actual;
+
+            // HACK: the FHIR Integer equivalent doesn't implement value equality with the corresponding value type :/
+            Assert.AreEqual(new Integer(3).Value, ((Integer)createdPatient.MultipleBirth).Value);
+
+            createdPatient.MultipleBirth = new FhirBoolean(true);
+
+            Resource updatedPatient;
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                updatedPatient = patientResourceHandler.Update(createdPatient.Id, createdPatient, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(updatedPatient);
+            Assert.IsInstanceOf<Patient>(updatedPatient);
+
+            var actualPatient = (Patient)updatedPatient;
+
+            // HACK: the FHIR Boolean equivalent doesn't implement value equality with the corresponding value type :/
+            Assert.IsTrue(((FhirBoolean)actualPatient.MultipleBirth).Value);
         }
 
         /// <summary>
@@ -201,6 +257,47 @@ namespace SanteDB.Messaging.FHIR.Test
             var createdPatient = (Patient) actualPatient;
 
             Assert.IsNotNull(createdPatient.GeneralPractitioner.First());
+        }
+
+        /// <summary>
+        /// Tests the creation of a patient with a managing organization in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreatePatientWithOrganization()
+        {
+            var patient = TestUtil.GetFhirMessage("CreatePatient") as Patient;
+
+            var patientLink = TestUtil.GetFhirMessage("CreatePatient-PatientLink") as Patient;
+
+            var organization = TestUtil.GetFhirMessage("CreatePatientWithOrganization-Organization") as Organization;
+
+            Resource actualPatient;
+            Resource actualOrganization;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
+
+                // Create the independent resources for the main Resource.
+                actualOrganization = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+                var createdPatientLink = patientResourceHandler.Create(patientLink, TransactionMode.Commit);
+
+                // Connect the independent resources to the dependent resource
+                patient.ManagingOrganization = new ResourceReference($"urn:uuid:{actualOrganization.Id}");
+                patient.Link.First().Other = new ResourceReference($"urn:uuid:{createdPatientLink.Id}");
+
+                // Create the dependent resource
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+
+                Assert.IsNotNull(actualPatient);
+                Assert.IsInstanceOf<Patient>(actualPatient);
+
+                var createdPatient = (Patient)actualPatient;
+
+                Assert.IsNotNull(patient.ManagingOrganization);
+            }
         }
 
         /// <summary>
@@ -287,12 +384,16 @@ namespace SanteDB.Messaging.FHIR.Test
                 result = patientResourceHandler.Create(patient, TransactionMode.Commit);
 
                 // retrieve the patient using the resource handler
-                var queryResult = patientResourceHandler.Read(result.Id, result.VersionId);
+                var queryResult = patientResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", result.Id },
+                    { "versionId", result.VersionId }
+                });
 
                 Assert.NotNull(queryResult);
-                Assert.IsInstanceOf<Patient>(queryResult);
+                Assert.IsInstanceOf<Bundle>(queryResult);
 
-                var queriedPatient = (Patient) queryResult;
+                var queriedPatient = (Patient) queryResult.Entry.Single().Resource;
 
                 Assert.NotNull(queriedPatient);
                 Assert.IsInstanceOf<Patient>(queriedPatient);

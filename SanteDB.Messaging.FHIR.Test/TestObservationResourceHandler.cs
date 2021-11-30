@@ -21,6 +21,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
@@ -40,7 +41,7 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public class TestObservationResourceHandler : DataTest
     {
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
         private Observation m_observation;
 
@@ -78,15 +79,13 @@ namespace SanteDB.Messaging.FHIR.Test
                 FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
                 ExtensionUtil.Initialize(testConfiguration);
 
-
                 //add practitioner to be used as performer
                 var practitioner = TestUtil.GetFhirMessage("ObservationPerformer") as Practitioner;
 
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
 
                 // create the practitioner using the resource handler
-                this.m_practitioner = (Practitioner) practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
-
+                this.m_practitioner = (Practitioner)practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
 
                 //add patient to be used subject
                 var patient = TestUtil.GetFhirMessage("ObservationSubject") as Patient;
@@ -94,8 +93,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
 
                 // create the patient using the resource handler
-                this.m_patient = (Patient) patientResourceHandler.Create(patient, TransactionMode.Commit);
-
+                this.m_patient = (Patient)patientResourceHandler.Create(patient, TransactionMode.Commit);
 
                 //add a general observation to be used for multiple tests
                 var observation = TestUtil.GetFhirMessage("SetupObservation") as Observation;
@@ -105,22 +103,18 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
 
-                this.m_observation = (Observation) observationResourceHandler.Create(observation, TransactionMode.Commit);
+                this.m_observation = (Observation)observationResourceHandler.Create(observation, TransactionMode.Commit);
             }
         }
 
-        [TearDown]
-        public void TearDown()
-        {
-            TestApplicationContext.Current.Dispose();
-        }
-
         /// <summary>
-        /// Tests the create functionality in <see cref="ObservationResourceHandler"/> class.
+        /// Tests the create functionality in <see cref="ObservationResourceHandler" /> class.
         /// </summary>
         [Test]
         public void TestCreateObservation()
         {
+            var effectiveTime = new FhirDateTime(DateTimeOffset.Parse("2021-10-01T08:06:32+01:00"));
+
             var observation = TestUtil.GetFhirMessage("CreateObservation") as Observation;
 
             //subject
@@ -128,7 +122,6 @@ namespace SanteDB.Messaging.FHIR.Test
 
             //performer
             observation.Performer.Add(new ResourceReference($"urn:uuid:{this.m_practitioner.Id}"));
-
 
             Resource createdResource, retrievedResource;
 
@@ -147,14 +140,16 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(retrievedResource);
             Assert.IsInstanceOf<Observation>(retrievedResource);
 
-            var actual = (Observation) retrievedResource;
+            var actual = (Observation)retrievedResource;
             Assert.IsInstanceOf<Quantity>(actual.Value);
+
             var qty = actual.Value as Quantity;
             Assert.AreEqual(12, qty.Value);
+            Assert.AreEqual(effectiveTime, actual.Effective);
         }
 
         /// <summary>
-        /// Tests the delete functionality in <see cref="ObservationResourceHandler"/> class.
+        /// Tests the delete functionality in <see cref="ObservationResourceHandler" /> class.
         /// </summary>
         [Test]
         public void TestDeleteObservation()
@@ -164,16 +159,23 @@ namespace SanteDB.Messaging.FHIR.Test
                 // get the resource handler
                 var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
 
-                // delete the observation
+                var retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
+
+                //ensure that the status is not unknown
+                Assert.IsNotNull(retrievedObservation.Status);
+                Assert.AreNotEqual(ObservationStatus.Unknown, retrievedObservation.Status);
+
                 _ = observationResourceHandler.Delete(this.m_observation.Id, TransactionMode.Commit);
 
-                //ensure read is not successful
-                //Assert.Throws<KeyNotFoundException>(() => observationResourceHandler.Read(m_observation.Id, null));
+                retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
+                
+                //ensure observation status is now unknown since deletion was performed
+                Assert.AreEqual(ObservationStatus.Unknown, retrievedObservation.Status);
             }
         }
 
         /// <summary>
-        /// Tests the get interactions functionality in <see cref="ObservationResourceHandler"/> class.
+        /// Tests the get interactions functionality in <see cref="ObservationResourceHandler" /> class.
         /// </summary>
         [Test]
         public void TestGetInteractions()
@@ -184,40 +186,39 @@ namespace SanteDB.Messaging.FHIR.Test
             var interactions = methodInfo.Invoke(practitionerResourceHandler, null);
 
             Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
-            var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>) interactions;
+            var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions;
             Assert.AreEqual(5, resourceInteractionComponents.Count());
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.HistoryInstance));
         }
 
         /// <summary>
-        /// Tests the Query functionality in <see cref="ObservationResourceHandler"/> class.
+        /// Tests the Query functionality in <see cref="ObservationResourceHandler" /> class.
         /// </summary>
         [Test]
         public void TestQueryObservation()
         {
             Resource retrievedResource;
+            var observation = TestUtil.GetFhirMessage("SetupObservation") as Observation;
+
+            observation.Subject = new ResourceReference($"urn:uuid:{this.m_patient.Id}");
+            observation.Performer.Add(new ResourceReference($"urn:uuid:{this.m_practitioner.Id}"));
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 // get the resource handler
                 var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
+                var createdObservation = (Observation)observationResourceHandler.Create(observation, TransactionMode.Commit);
 
-                //ensure read is not successful
-                //retrievedResource = observationResourceHandler.Query(new NameValueCollection()
-                //{
-                //    { "id", m_observation.Id }
-                //});
+                retrievedResource = observationResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", createdObservation.Id }
+                });
 
-                retrievedResource = observationResourceHandler.Read(this.m_observation.Id, null);
+                //ensure query returns correct result
+                Assert.AreEqual(1, ((Bundle)retrievedResource).Entry.Count);
+                Assert.IsInstanceOf<Observation>(((Bundle)retrievedResource).Entry.First().Resource);
 
-                //Assert.AreEqual(1, ((Bundle)retrievedResource).Entry.Count);
-
-
-                //Assert.IsInstanceOf<Observation>(((Bundle)retrievedResource).Entry.First().Resource);
-
-                //var retrievedObservation = (((Bundle)retrievedResource).Entry.First().Resource) as Observation;
-
-                var retrievedObservation = (Observation) retrievedResource;
+                var retrievedObservation = ((Bundle)retrievedResource).Entry.First().Resource as Observation;
 
                 var retrievedObservationValue = retrievedObservation.Value as Quantity;
 
@@ -226,24 +227,25 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Tests the update functionality in <see cref="ObservationResourceHandler"/> class.
+        /// Tests the update functionality in <see cref="ObservationResourceHandler" /> class.
         /// </summary>
         [Test]
         public void TestUpdateObservation()
         {
-            Resource createdResource, retrievedResource, result;
+            Resource result;
+            var updatedEffectiveTime = new FhirDateTime(new DateTimeOffset(2021, 1, 1, 12, 30, 30, 30, new TimeSpan(1, 0, 0)));
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 // get the resource handler
                 var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
 
-                retrievedResource = observationResourceHandler.Read(this.m_observation.Id, null);
+                Resource retrievedResource = observationResourceHandler.Read(this.m_observation.Id, null);
 
                 Assert.NotNull(retrievedResource);
                 Assert.IsInstanceOf<Observation>(retrievedResource);
 
-                var retrievedObservation = (Observation) retrievedResource;
+                var retrievedObservation = (Observation)retrievedResource;
 
                 var retrievedObservationValue = retrievedObservation.Value as Quantity;
 
@@ -253,17 +255,109 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //update observation
                 retrievedObservation.Value = new Quantity(10, "mmHg");
+                
+                retrievedObservation.Effective = updatedEffectiveTime;
 
-                _ = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+                _ = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation,
+                    TransactionMode.Commit);
 
                 //read again
                 result = observationResourceHandler.Read(retrievedObservation.Id, null);
             }
 
             //ensure update took place
-            var updatedObservation = (Observation) result;
+            var updatedObservation = (Observation)result;
             var updatedObservationValue = updatedObservation.Value as Quantity;
+
             Assert.AreEqual(10, updatedObservationValue.Value);
+            Assert.AreEqual(updatedEffectiveTime, updatedObservation.Effective);
+        }
+
+        /// <summary>
+        /// Tests various status of Observation in <see cref="ObservationResourceHandler" /> class.
+        /// </summary>
+        [Test]
+        public void TestObservationStatus()
+        {
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                // get the resource handler
+                var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
+
+                var retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
+
+                //check initial status
+                Assert.AreEqual(ObservationStatus.Preliminary, retrievedObservation.Status);
+
+                //updated status to final
+                retrievedObservation.Status = ObservationStatus.Final;
+                var updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+
+                //check for correct status change
+                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
+                Assert.AreEqual(ObservationStatus.Final, retrievedObservation.Status);
+
+                //update status to amended
+                retrievedObservation.Status = ObservationStatus.Amended;
+                updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+
+                //check for correct status change
+                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
+                Assert.AreEqual(ObservationStatus.Amended, retrievedObservation.Status);
+
+                //update status to entered in error
+                retrievedObservation.Status = ObservationStatus.EnteredInError;
+                updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+
+                //check for correct status change
+                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
+                Assert.AreEqual(ObservationStatus.EnteredInError, retrievedObservation.Status);
+
+                //update status to cancelled
+                retrievedObservation.Status = ObservationStatus.Cancelled;
+                updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+
+                //check for correct status change
+                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
+                Assert.AreEqual(ObservationStatus.Cancelled, retrievedObservation.Status);
+            }
+        }
+
+        /// <summary>
+        /// Tests various value types of Observation in <see cref="ObservationResourceHandler" /> class.
+        /// </summary>
+        [Test]
+        public void TestObservationValueType()
+        {
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
+
+                var retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
+
+                //ensure the initial Quantity value is set correctly
+                var quantityValue = retrievedObservation.Value as Quantity;
+                Assert.AreEqual(22, quantityValue.Value.Value);
+
+                //update  observation value to Textual type
+                retrievedObservation.Value = new FhirString("test");
+                var updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+
+                //ensure the update took place correctly
+                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
+                var stringValue = retrievedObservation.Value as FhirString;
+                Assert.AreEqual("test", stringValue.Value);
+
+                //update  observation value to Codeable type
+                retrievedObservation.Value = new CodeableConcept("http://hl7.org/fhir/v3/ObservationInterpretation", "H");
+                updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
+
+                //ensure the update took place correctly
+                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
+                var codeValue = retrievedObservation.Value as CodeableConcept;
+                Assert.AreEqual(1, codeValue.Coding.Count);
+                Assert.AreEqual("H",  codeValue.Coding.First().Code);
+            }
         }
     }
 }

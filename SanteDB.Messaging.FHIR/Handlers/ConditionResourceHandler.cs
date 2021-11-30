@@ -53,11 +53,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Can map
         /// </summary>
-        public override bool CanMapObject(object instance)
-        {
-            return instance is Condition ||
-                   instance is CodedObservation cobs && cobs.TypeConceptKey == ObservationTypeKeys.Condition;
-        }
+        public override bool CanMapObject(object instance) => instance is Condition || instance is CodedObservation cobs && cobs.TypeConceptKey == ObservationTypeKeys.Condition;
 
         /// <summary>
         /// Get included resources
@@ -74,6 +70,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             return new[]
             {
+                TypeRestfulInteraction.Create,
+                TypeRestfulInteraction.Update,
                 TypeRestfulInteraction.HistoryInstance,
                 TypeRestfulInteraction.Read,
                 TypeRestfulInteraction.SearchType,
@@ -167,16 +165,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.Onset = new Period
                 {
-                    StartElement = model.StartTime.HasValue ? new FhirDateTime(model.StartTime.Value) : null,
-                    EndElement = model.StopTime.HasValue ? new FhirDateTime(model.StopTime.Value) : null
+                    StartElement = model.StartTime.HasValue ? DataTypeConverter.ToFhirDateTime(model.StartTime) : null,
+                    EndElement = model.StopTime.HasValue ? DataTypeConverter.ToFhirDateTime(model.StopTime) : null
                 };
             }
             else
             {
-                retVal.Onset = new FhirDateTime(model.ActTime);
+                retVal.Onset = DataTypeConverter.ToFhirDateTime(model.ActTime);
             }
 
-            retVal.RecordedDateElement = new FhirDateTime(model.CreationTime);
+            retVal.RecordedDateElement = DataTypeConverter.ToFhirDateTime(model.CreationTime);
 
             var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
 
@@ -189,11 +187,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Maps a FHIR condition to a model
+        /// Maps a FHIR <see cref="Condition"/> instance to a <see cref="CodedObservation"/> instance.
         /// </summary>
-        /// <param name="resource">The FHIR condition to be mapped</param>
-        /// <param name="restOperationContext">The REST operation context under which this method is called</param>
-        /// <returns>The constructed model instance</returns>
+        /// <param name="resource">The FHIR condition to be mapped.</param>
+        /// <returns>Returns the constructed model instance.</returns>
         protected override CodedObservation MapToModel(Condition resource)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));

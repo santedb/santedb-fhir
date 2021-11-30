@@ -6,7 +6,7 @@
       "value": "6324"
     }
   ],
-  "status": "registered",
+  "status": "preliminary",
   "code": {
     "coding": [
       {
@@ -16,7 +16,7 @@
     ],
     "text": "Clinical Document"
   },
-  "effectiveInstant": "2021-10-01T08:06:32+01:00",
+  "effectiveDateTime": "2021-10-01T08:06:32+01:00",
   "issued": "2021-08-01T08:06:32+01:00",
   "valueQuantity": {
     "value": 12,
