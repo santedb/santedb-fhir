@@ -21,12 +21,14 @@
 using RestSrvr;
 using SanteDB.Messaging.FHIR.Rest.Serialization;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Rest.Behavior
 {
     /// <summary>
     /// Dispatch formatter behavior
     /// </summary>
+    [ExcludeFromCodeCoverage]
     [DisplayName("FHIR R4 Message Format Serialization")]
     public class FhirMessageDispatchFormatterEndpointBehavior : IEndpointBehavior, IOperationBehavior
     {
