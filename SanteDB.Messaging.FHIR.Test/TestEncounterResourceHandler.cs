@@ -72,7 +72,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 {
                     "Encounter",
                     "Bundle",
-                    "Patient"
+                    "Patient",
+                    "Organization"
                 },
                 OperationHandlers = new List<TypeReferenceConfiguration>(),
                 ExtensionHandlers = new List<TypeReferenceConfiguration>(),
@@ -517,6 +518,53 @@ namespace SanteDB.Messaging.FHIR.Test
             var createdEncounter = (Encounter)actualEncounter;
 
             Assert.AreEqual(Encounter.EncounterStatus.EnteredInError, createdEncounter.Status);
+        }
+
+        /// <summary>
+        /// Tests the creation of a encounter with a service provider in the <see cref="EncounterResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateEncounterWithServiceProvoider()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateEncounter-Patient") as Patient;
+
+            var organization = TestUtil.GetFhirMessage("Organization") as Organization;
+
+            var encounter = TestUtil.GetFhirMessage("CreateEncounter-Encounter") as Encounter;
+
+            Resource actualPatient;
+            Resource actualOrganization;
+            Resource actualEncounter;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
+                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
+
+                // Create the patient and set it as the subject of the encounter
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+
+                // Create the patient and set it as the service provider of the encounter
+                actualOrganization = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+                encounter.ServiceProvider = new ResourceReference($"urn:uuid:{actualOrganization.Id}");
+
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actualPatient);
+            Assert.IsNotNull(actualOrganization);
+            Assert.IsNotNull(actualEncounter);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Organization>(actualOrganization);
+            Assert.IsInstanceOf<Encounter>(actualEncounter);
+
+            var createdEncounter = (Encounter)actualEncounter;
+
+            Assert.IsNotNull(createdEncounter.ServiceProvider);
         }
     }
 }
