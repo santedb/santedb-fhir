@@ -28,6 +28,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -77,6 +78,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.NotNull(FhirResourceHandlerUtil.GetResourceHandler(ResourceType.DomainResource));
             Assert.IsInstanceOf<DummyResourceHandler>(FhirResourceHandlerUtil.GetResourceHandler(ResourceType.DomainResource));
+            Assert.IsTrue(FhirResourceHandlerUtil.ResourceHandlers.Any(c => c.GetType() == typeof(DummyResourceHandler)));
         }
 
         /// <summary>
@@ -101,6 +103,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             FhirResourceHandlerUtil.UnRegisterResourceHandler(new DummyResourceHandler());
 
+            Assert.IsFalse(FhirResourceHandlerUtil.ResourceHandlers.Any(c => c.GetType() == typeof(DummyResourceHandler)));
             Assert.Throws<NotSupportedException>(() => FhirResourceHandlerUtil.GetResourceHandler(ResourceType.DomainResource));
         }
     }
