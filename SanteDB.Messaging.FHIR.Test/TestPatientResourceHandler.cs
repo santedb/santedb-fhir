@@ -198,7 +198,27 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var createdPatient = (Patient)actual;
 
-            Assert.IsNotNull(createdPatient.MultipleBirth);
+            // HACK: the FHIR Integer equivalent doesn't implement value equality with the corresponding value type :/
+            Assert.AreEqual(new Integer(3).Value, ((Integer)createdPatient.MultipleBirth).Value);
+
+            createdPatient.MultipleBirth = new FhirBoolean(true);
+
+            Resource updatedPatient;
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                updatedPatient = patientResourceHandler.Update(createdPatient.Id, createdPatient, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(updatedPatient);
+            Assert.IsInstanceOf<Patient>(updatedPatient);
+
+            var actualPatient = (Patient)updatedPatient;
+
+            // HACK: the FHIR Boolean equivalent doesn't implement value equality with the corresponding value type :/
+            Assert.IsTrue(((FhirBoolean)actualPatient.MultipleBirth).Value);
         }
 
         /// <summary>
