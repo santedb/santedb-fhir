@@ -414,6 +414,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the create functionality for an Encounter with a status of in progress in the <see cref="EncounterResourceHandler"/> class.
+        /// </summary>
         [Test]
         public void TestCreateEncounterInProgress()
         {
@@ -444,6 +447,41 @@ namespace SanteDB.Messaging.FHIR.Test
             var createdEncounter = (Encounter)actualEncounter;
 
             Assert.AreEqual(Encounter.EncounterStatus.InProgress, createdEncounter.Status);
+        }
+
+        /// <summary>
+        /// Tests the create functionality of an Encounter with a status of planned in the <see cref="EncounterResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateEncounterStatusPlanned()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateEncounter-Patient") as Patient;
+
+            var encounter = TestUtil.GetFhirMessage("CreateEncounterStatusPlanned") as Encounter;
+
+            Resource actualPatient;
+            Resource actualEncounter;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
+
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actualPatient);
+            Assert.IsNotNull(actualEncounter);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Encounter>(actualEncounter);
+
+            var createdEncounter = (Encounter)actualEncounter;
+
+            Assert.AreEqual(Encounter.EncounterStatus.Planned, createdEncounter.Status);
         }
     }
 }
