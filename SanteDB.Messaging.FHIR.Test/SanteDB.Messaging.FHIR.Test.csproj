@@ -77,6 +77,7 @@
     <EmbeddedResource Include="Resources\CreateEncounterInProgress-Patient.json" />
     <EmbeddedResource Include="Resources\CreateEncounterInProgress-Encounter.json" />
     <EmbeddedResource Include="Resources\CreateEncounterStatusPlanned.json" />
+    <EmbeddedResource Include="Resources\CreateEncounterStatusEnteredInError.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
