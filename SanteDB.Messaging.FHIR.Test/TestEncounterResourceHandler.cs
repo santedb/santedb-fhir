@@ -524,17 +524,16 @@ namespace SanteDB.Messaging.FHIR.Test
         /// Tests the creation of a encounter with a service provider in the <see cref="EncounterResourceHandler"/> class.
         /// </summary>
         [Test]
-        public void TestCreateEncounterWithServiceProvoider()
+        public void TestCreateEncounterWithServiceProvider()
         {
             var patient = TestUtil.GetFhirMessage("CreateEncounter-Patient") as Patient;
-
             var organization = TestUtil.GetFhirMessage("Organization") as Organization;
-
             var encounter = TestUtil.GetFhirMessage("CreateEncounter-Encounter") as Encounter;
 
             Resource actualPatient;
             Resource actualOrganization;
             Resource actualEncounter;
+            Resource readEncounter;
 
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
@@ -553,19 +552,26 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 // Create the encounter
                 actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+
+                readEncounter = encounterResourceHandler.Read(actualEncounter.Id, null);
+
             }
 
             Assert.IsNotNull(actualPatient);
             Assert.IsNotNull(actualOrganization);
             Assert.IsNotNull(actualEncounter);
+            Assert.IsNotNull(readEncounter);
 
             Assert.IsInstanceOf<Patient>(actualPatient);
             Assert.IsInstanceOf<Organization>(actualOrganization);
             Assert.IsInstanceOf<Encounter>(actualEncounter);
+            Assert.IsInstanceOf<Encounter>(readEncounter);
 
             var createdEncounter = (Encounter)actualEncounter;
+            var retrievedEncounter = (Encounter)readEncounter;
 
             Assert.IsNotNull(createdEncounter.ServiceProvider);
+            Assert.AreEqual(createdEncounter.ServiceProvider.Reference, retrievedEncounter.ServiceProvider.Reference);
         }
     }
 }
