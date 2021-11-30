@@ -136,6 +136,10 @@ namespace SanteDB.Messaging.FHIR.Test
                 // Grab the related person 
                 var sourceRelatedPerson = queryResult.Entry.Select(o => o.Resource).OfType<RelatedPerson>().First();
                 Assert.AreEqual(sdbPerson.Key.ToString(), sourceRelatedPerson.Id);
+                Assert.AreEqual("Ontario", sourceRelatedPerson.Address.First().State);
+                Assert.IsTrue(sourceRelatedPerson.Telecom.Count == 1);
+                Assert.AreEqual("905 617 2020", sourceRelatedPerson.Telecom.First<ContactPoint>().Value);
+                Assert.AreEqual("25 Tindale Crt", sourceRelatedPerson.Address.First<Address>().District);
 
                 // The Persistence layer did not create a patient
                 query = new System.Collections.Specialized.NameValueCollection();
@@ -146,11 +150,16 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 // Attempt to update the related person's name
                 sourceRelatedPerson.Name.First().Family = "SINGH";
+                sourceRelatedPerson.Address.First().Use = Address.AddressUse.Old;
+                sourceRelatedPerson.Telecom.RemoveAt(0);
                 messageString = TestUtil.MessageToString(sourceRelatedPerson);
+
                 var afterRelatedPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Update(sourceRelatedPerson.Id, sourceRelatedPerson, TransactionMode.Commit);
                 Assert.AreEqual(sdbPerson.Key.ToString(), afterRelatedPerson.Id);
                 sdbPerson = this.m_relationshipRepository.Get(Guid.Parse(createdFhirRelatedPerson.Id));
                 Assert.IsTrue(sdbPerson.LoadProperty(o => o.TargetEntity).Names.First().Component.Any(c => c.Value == "SINGH"));
+                Assert.AreEqual(Address.AddressUse.Old, sourceRelatedPerson.Address.First().Use);
+                Assert.IsFalse(sourceRelatedPerson.Telecom.Any());
                 messageString = TestUtil.MessageToString(afterRelatedPerson);
 
                 // The persistence layer did create a SARAH SINGH person
@@ -171,10 +180,12 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsFalse(actual.Active);
 
                 // read the related person
-                var readPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Read(sourceRelatedPerson.Id, sourceRelatedPerson.VersionId);
+                var readPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Read(deletedRelatedPerson.Id, deletedRelatedPerson.VersionId);
                 Assert.NotNull(readPerson);
                 Assert.IsInstanceOf<RelatedPerson>(readPerson);
                 var readRelatedPerson = (RelatedPerson)readPerson;
+                Assert.AreEqual(Address.AddressUse.Old, readRelatedPerson.Address.First().Use);
+                Assert.IsFalse(readRelatedPerson.Telecom.Any());
                 // ensure the related person is NOT active
                 Assert.IsFalse(readRelatedPerson.Active);
             }
