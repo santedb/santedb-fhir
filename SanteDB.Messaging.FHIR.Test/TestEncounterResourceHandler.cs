@@ -551,6 +551,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 actualOrganization = organizationResourceHandler.Create(organization, TransactionMode.Commit);
                 encounter.ServiceProvider = new ResourceReference($"urn:uuid:{actualOrganization.Id}");
 
+                // Create the encounter
                 actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
             }
 
