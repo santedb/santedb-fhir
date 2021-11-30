@@ -19,12 +19,6 @@
  * Date: 2021-11-15
  */
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Reflection;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
@@ -35,13 +29,27 @@ using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Reflection;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
     [ExcludeFromCodeCoverage]
     public class TestObservationResourceHandler : DataTest
     {
+        /// <summary>
+        /// The authentication key.
+        /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+
+        /// <summary>
+        /// The service manager.
+        /// </summary>
+        private IServiceManager m_serviceManager;
 
         private Observation m_observation;
 
@@ -50,9 +58,6 @@ namespace SanteDB.Messaging.FHIR.Test
         private Patient m_patient;
 
         private Practitioner m_practitioner;
-
-        // Bundler 
-        private IServiceManager m_serviceManager;
 
         [SetUp]
         public void Setup()

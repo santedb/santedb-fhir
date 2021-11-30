@@ -45,9 +45,14 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     internal class TestPatientResourceHandler : DataTest
     {
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        /// <summary>
+        /// The authentication key.
+        /// </summary>
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        // Bundler 
+        /// <summary>
+        /// The service manager.
+        /// </summary>
         private IServiceManager m_serviceManager;
 
         /// <summary>

@@ -2,7 +2,6 @@ using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
-using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Security;
@@ -22,17 +21,21 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public class TestRelatedPersonResourceHandler : DataTest
     {
+        /// <summary>
+        /// The authentication key.
+        /// </summary>
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        private readonly byte[] AUTH = new byte[] { 0x01, 0x02, 0x03, 0x04, 0x05 };
+        /// <summary>
+        /// The service manager.
+        /// </summary>
+        private IServiceManager m_serviceManager;
 
         private IRepositoryService<Core.Model.Roles.Patient> m_patientRepository;
 
         private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
 
         private IRepositoryService<Core.Model.Entities.EntityRelationship> m_relationshipRepository;
-
-        // Bundler 
-        private IServiceManager m_serviceManager;
 
         [SetUp]
         public void Setup()
