@@ -413,5 +413,37 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.Throws<KeyNotFoundException>(() => encounterResourceHandler.Delete(Guid.NewGuid().ToString(), TransactionMode.Commit));
             }
         }
+
+        [Test]
+        public void TestCreateEncounterInProgress()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateEncounterInProgress-Patient") as Patient;
+
+            var encounter = TestUtil.GetFhirMessage("CreateEncounterInProgress-Encounter") as Encounter;
+
+            Resource actualPatient;
+            Resource actualEncounter;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
+
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actualPatient);
+            Assert.IsNotNull(actualEncounter);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Encounter>(actualEncounter);
+
+            var createdEncounter = (Encounter)actualEncounter;
+
+            Assert.AreEqual(Encounter.EncounterStatus.InProgress, createdEncounter.Status);
+        }
     }
 }
