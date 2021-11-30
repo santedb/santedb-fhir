@@ -19,20 +19,16 @@
  * Date: 2021-8-5
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core;
-using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Services;
 using SanteDB.Core.Matching;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SanteDB.Messaging.FHIR.Operations
 {
