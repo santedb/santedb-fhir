@@ -373,7 +373,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 case FhirDateTime dtValue when !String.IsNullOrEmpty(dtValue.Value):
                     patient.DeceasedDate = DataTypeConverter.ToDateTimeOffset(dtValue.Value, out var datePrecision)?.DateTime;
-                    patient.DeceasedDatePrecision = datePrecision;
+                    // TODO: fix
+                    // HACK: the deceased date precision CK only allows "Y", "M", or "D" for the precision value
+                    patient.DeceasedDatePrecision = datePrecision == DatePrecision.Full ? DatePrecision.Day : datePrecision;
                     break;
                 case FhirBoolean boolValue when boolValue.Value.GetValueOrDefault():
                     // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
