@@ -27,12 +27,14 @@ using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Rest;
 using SanteDB.Messaging.FHIR.Util;
 using System;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Auditing
 {
 	/// <summary>
 	/// Audit dispatch service which sends audits using HL7 FHIR
 	/// </summary>
+	[ExcludeFromCodeCoverage]
 	public class FhirAuditDispatcher : IAuditDispatchService
     {
 

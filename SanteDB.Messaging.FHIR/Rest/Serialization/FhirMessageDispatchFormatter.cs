@@ -32,6 +32,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Net;
@@ -47,6 +48,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
     /// </summary>
     /// <remarks>This serialization is used because the SanteDB FHIR resources have extra features not contained in the pure HL7 API provided by HL7 International (such as operators to/from primitiives, generation of text, etc.). This 
     /// dispatch formatter is responsible for the serialization and de-serialization of FHIR objects to/from JSON and XML using the SanteDB classes for FHIR resources.</remarks>
+    [ExcludeFromCodeCoverage]
     public class FhirMessageDispatchFormatter : IDispatchMessageFormatter
     {
         // Configuration for the service

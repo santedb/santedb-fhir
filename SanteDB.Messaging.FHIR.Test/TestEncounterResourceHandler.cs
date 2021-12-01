@@ -44,9 +44,14 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public class TestEncounterResourceHandler : DataTest
     {
+        /// <summary>
+        /// The authentication key.
+        /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        // Bundler 
+        /// <summary>
+        /// The service manager.
+        /// </summary>
         private IServiceManager m_serviceManager;
 
         /// <summary>
@@ -67,7 +72,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 {
                     "Encounter",
                     "Bundle",
-                    "Patient"
+                    "Patient",
+                    "Organization"
                 },
                 OperationHandlers = new List<TypeReferenceConfiguration>(),
                 ExtensionHandlers = new List<TypeReferenceConfiguration>(),
@@ -407,6 +413,165 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 Assert.Throws<KeyNotFoundException>(() => encounterResourceHandler.Delete(Guid.NewGuid().ToString(), TransactionMode.Commit));
             }
+        }
+
+        /// <summary>
+        /// Tests the create functionality for an Encounter with a status of in progress in the <see cref="EncounterResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateEncounterInProgress()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateEncounterInProgress-Patient") as Patient;
+
+            var encounter = TestUtil.GetFhirMessage("CreateEncounterInProgress-Encounter") as Encounter;
+
+            Resource actualPatient;
+            Resource actualEncounter;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
+
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actualPatient);
+            Assert.IsNotNull(actualEncounter);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Encounter>(actualEncounter);
+
+            var createdEncounter = (Encounter)actualEncounter;
+
+            Assert.AreEqual(Encounter.EncounterStatus.InProgress, createdEncounter.Status);
+        }
+
+        /// <summary>
+        /// Tests the create functionality of an Encounter with a status of planned in the <see cref="EncounterResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateEncounterStatusPlanned()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateEncounter-Patient") as Patient;
+
+            var encounter = TestUtil.GetFhirMessage("CreateEncounterStatusPlanned") as Encounter;
+
+            Resource actualPatient;
+            Resource actualEncounter;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
+
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actualPatient);
+            Assert.IsNotNull(actualEncounter);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Encounter>(actualEncounter);
+
+            var createdEncounter = (Encounter)actualEncounter;
+
+            Assert.AreEqual(Encounter.EncounterStatus.Planned, createdEncounter.Status);
+        }
+
+        /// <summary>
+        /// Tests the create functionality of an Encounter with a status of entered in error in the <see cref="EncounterResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateEncounterStatusEnteredInError()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateEncounter-Patient") as Patient;
+
+            var encounter = TestUtil.GetFhirMessage("CreateEncounterStatusEnteredInError") as Encounter;
+
+            Resource actualPatient;
+            Resource actualEncounter;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
+
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actualPatient);
+            Assert.IsNotNull(actualEncounter);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Encounter>(actualEncounter);
+
+            var createdEncounter = (Encounter)actualEncounter;
+
+            Assert.AreEqual(Encounter.EncounterStatus.EnteredInError, createdEncounter.Status);
+        }
+
+        /// <summary>
+        /// Tests the creation of a encounter with a service provider in the <see cref="EncounterResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateEncounterWithServiceProvider()
+        {
+            var patient = TestUtil.GetFhirMessage("CreateEncounter-Patient") as Patient;
+            var organization = TestUtil.GetFhirMessage("Organization") as Organization;
+            var encounter = TestUtil.GetFhirMessage("CreateEncounter-Encounter") as Encounter;
+
+            Resource actualPatient;
+            Resource actualOrganization;
+            Resource actualEncounter;
+            Resource readEncounter;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
+                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
+
+                // Create the patient and set it as the subject of the encounter
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+
+                // Create the patient and set it as the service provider of the encounter
+                actualOrganization = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+                encounter.ServiceProvider = new ResourceReference($"urn:uuid:{actualOrganization.Id}");
+
+                // Create the encounter
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+
+                readEncounter = encounterResourceHandler.Read(actualEncounter.Id, null);
+
+            }
+
+            Assert.IsNotNull(actualPatient);
+            Assert.IsNotNull(actualOrganization);
+            Assert.IsNotNull(actualEncounter);
+            Assert.IsNotNull(readEncounter);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Organization>(actualOrganization);
+            Assert.IsInstanceOf<Encounter>(actualEncounter);
+            Assert.IsInstanceOf<Encounter>(readEncounter);
+
+            var createdEncounter = (Encounter)actualEncounter;
+            var retrievedEncounter = (Encounter)readEncounter;
+
+            Assert.IsNotNull(createdEncounter.ServiceProvider);
+            Assert.AreEqual(createdEncounter.ServiceProvider.Reference, retrievedEncounter.ServiceProvider.Reference);
         }
     }
 }

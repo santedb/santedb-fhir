@@ -1,0 +1,12 @@
+﻿{
+  "resourceType": "Encounter",
+  "status": "planned",
+  "class": {
+    "system": "http://santedb.org/conceptset/v3-ActEncounterCode",
+    "code": "HH"
+  },
+  "period": {
+    "start": "2021-11-30T12:42:00+00:00",
+    "end": "2021-11-30T12:55:00+00:00"
+  }
+}

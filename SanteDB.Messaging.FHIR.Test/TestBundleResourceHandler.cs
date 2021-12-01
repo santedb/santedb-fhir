@@ -44,6 +44,9 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public class TestBundleResourceHandler
     {
+        /// <summary>
+        /// The authentication key.
+        /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
         // Bundler 
@@ -89,8 +92,8 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestDelete()
         {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
 
@@ -104,8 +107,8 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestHistory()
         {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
 
@@ -119,8 +122,8 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestRead()
         {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
 
@@ -134,8 +137,8 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestQuery()
         {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
 
@@ -149,8 +152,8 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestUpdate()
         {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
 

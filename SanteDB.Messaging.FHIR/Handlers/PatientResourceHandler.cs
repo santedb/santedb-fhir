@@ -105,15 +105,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     switch (model.DeceasedDatePrecision)
                     {
                         case DatePrecision.Day:
-                            retVal.Deceased = new Date(model.DeceasedDate.Value.Year, model.DeceasedDate.Value.Month, model.DeceasedDate.Value.Day);
+                            retVal.Deceased = new FhirDateTime(model.DeceasedDate.Value.Year, model.DeceasedDate.Value.Month, model.DeceasedDate.Value.Day);
                             break;
 
                         case DatePrecision.Month:
-                            retVal.Deceased = new Date(model.DeceasedDate.Value.Year, model.DeceasedDate.Value.Month);
+                            retVal.Deceased = new FhirDateTime(model.DeceasedDate.Value.Year, model.DeceasedDate.Value.Month);
                             break;
 
                         case DatePrecision.Year:
-                            retVal.Deceased = new Date(model.DeceasedDate.Value.Year);
+                            retVal.Deceased = new FhirDateTime(model.DeceasedDate.Value.Year);
                             break;
 
                         default:
@@ -372,7 +372,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             switch (resource.Deceased)
             {
                 case FhirDateTime dtValue when !String.IsNullOrEmpty(dtValue.Value):
-                    patient.DeceasedDate = DataTypeConverter.ToDateTimeOffset(dtValue.Value)?.DateTime;
+                    patient.DeceasedDate = DataTypeConverter.ToDateTimeOffset(dtValue.Value, out var datePrecision)?.DateTime;
+                    patient.DeceasedDatePrecision = datePrecision;
                     break;
                 case FhirBoolean boolValue when boolValue.Value.GetValueOrDefault():
                     // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death

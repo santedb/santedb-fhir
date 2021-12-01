@@ -40,12 +40,14 @@ using SanteDB.Core.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using SanteDB.Core.Security;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR
 {
     /// <summary>
     /// Message handler for FHIR
     /// </summary>
+    [ExcludeFromCodeCoverage]
     [Description("Allows SanteDB iCDR to send and receive HL7 FHIR R4 messages")]
     [ApiServiceProvider("HL7 FHIR R4 API Endpoint", typeof(FhirServiceBehavior), configurationType: typeof(FhirServiceConfigurationSection))]
     public class FhirMessageHandler : IDaemonService, IApiEndpointProvider

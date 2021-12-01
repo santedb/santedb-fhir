@@ -1,14 +1,16 @@
-﻿using Hl7.Fhir.Model;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using Hl7.Fhir.Model;
+using Hl7.Fhir.Serialization;
 using Newtonsoft.Json;
 using SanteDB.Core;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Security;
 using SanteDB.Core.Security;
 using SanteDB.Core.Security.Services;
 using SanteDB.Core.Services;
-using System;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -18,33 +20,23 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public static class TestUtil
     {
-
         /// <summary>
-        /// Convert the <paramref name="message"/> to a string
+        /// Mimic an authentication
         /// </summary>
-        public static string MessageToString(Resource message)
+        internal static IDisposable AuthenticateFhir(string appId, byte[] appSecret)
         {
-            return new Hl7.Fhir.Serialization.FhirJsonSerializer(new Hl7.Fhir.Serialization.SerializerSettings()
-            {
-                Pretty = true
-            }).SerializeToString(message);
-        }
-
-        /// <summary>
-        /// Get a FHIR message
-        /// </summary>
-        public static Resource GetFhirMessage(String messageName)
-        {
-            using (var s = typeof(TestUtil).Assembly.GetManifestResourceStream($"SanteDB.Messaging.FHIR.Test.Resources.{messageName}.json"))
-            using (var sr = new StreamReader(s))
-            using (var jr = new JsonTextReader(sr))
-                return new Hl7.Fhir.Serialization.FhirJsonParser().Parse(jr) as Resource;
+            var appIdService = ApplicationServiceContext.Current.GetService<IApplicationIdentityProviderService>();
+            var appPrincipal = appIdService.Authenticate(appId, BitConverter.ToString(appSecret).Replace("-", ""));
+            var sesPvdService = ApplicationServiceContext.Current.GetService<ISessionProviderService>();
+            var sesIdService = ApplicationServiceContext.Current.GetService<ISessionIdentityProviderService>();
+            var session = sesPvdService.Establish(appPrincipal, "http://localhost", false, null, null, null);
+            return AuthenticationContext.EnterContext(sesIdService.Authenticate(session));
         }
 
         /// <summary>
         /// Create the specified authority
         /// </summary>
-        public static void CreateAuthority(string nsid, string oid, String url, string applicationName, byte[] deviceSecret)
+        public static void CreateAuthority(string nsid, string oid, string url, string applicationName, byte[] deviceSecret)
         {
             // Create the test harness device / application
             var securityDevService = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityDevice>>();
@@ -53,11 +45,11 @@ namespace SanteDB.Messaging.FHIR.Test
 
             using (AuthenticationContext.EnterSystemContext())
             {
-                string pubId = $"{applicationName}|TEST";
+                var pubId = $"{applicationName}|TEST";
                 var device = securityDevService.Find(o => o.Name == pubId).FirstOrDefault();
                 if (device == null)
                 {
-                    device = new SecurityDevice()
+                    device = new SecurityDevice
                     {
                         DeviceSecret = BitConverter.ToString(deviceSecret).Replace("-", ""),
                         Name = $"{applicationName}|TEST"
@@ -70,7 +62,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var app = securityAppService.Find(o => o.Name == applicationName).FirstOrDefault();
                 if (app == null)
                 {
-                    app = new SecurityApplication()
+                    app = new SecurityApplication
                     {
                         Name = applicationName,
                         ApplicationSecret = BitConverter.ToString(deviceSecret).Replace("-", "")
@@ -85,7 +77,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var aa = metadataService.Get(nsid);
                 if (aa == null)
                 {
-                    aa = new SanteDB.Core.Model.DataTypes.AssigningAuthority(nsid, nsid, oid)
+                    aa = new AssigningAuthority(nsid, nsid, oid)
                     {
                         AssigningApplicationKey = app.Key,
                         IsUnique = true,
@@ -94,21 +86,30 @@ namespace SanteDB.Messaging.FHIR.Test
                     metadataService.Insert(aa);
                 }
             }
-
         }
 
         /// <summary>
-        /// Mimic an authentication
+        /// Get a FHIR message
         /// </summary>
-        internal static IDisposable AuthenticateFhir(string appId, byte[] appSecret)
+        public static Resource GetFhirMessage(string messageName)
         {
-            var appIdService = ApplicationServiceContext.Current.GetService<IApplicationIdentityProviderService>();
-            var appPrincipal = appIdService.Authenticate(appId, BitConverter.ToString(appSecret).Replace("-", ""));
-            var sesPvdService = ApplicationServiceContext.Current.GetService<ISessionProviderService>();
-            var sesIdService = ApplicationServiceContext.Current.GetService<ISessionIdentityProviderService>();
-            var session = sesPvdService.Establish(appPrincipal, "http://localhost", false, null, null, null);
-            return AuthenticationContext.EnterContext(sesIdService.Authenticate(session));
+            using (var s = typeof(TestUtil).Assembly.GetManifestResourceStream($"SanteDB.Messaging.FHIR.Test.Resources.{messageName}.json"))
+            using (var sr = new StreamReader(s))
+            using (var jr = new JsonTextReader(sr))
+            {
+                return new FhirJsonParser().Parse(jr) as Resource;
+            }
         }
 
+        /// <summary>
+        /// Convert the <paramref name="message"/> to a string
+        /// </summary>
+        public static string MessageToString(Resource message)
+        {
+            return new FhirJsonSerializer(new SerializerSettings
+            {
+                Pretty = true
+            }).SerializeToString(message);
+        }
     }
 }
