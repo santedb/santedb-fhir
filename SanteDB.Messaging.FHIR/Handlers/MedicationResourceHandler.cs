@@ -162,6 +162,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
+            manufacturedMaterial.LotNumber = resource.Batch?.LotNumber;
+            manufacturedMaterial.ExpiryDate = DataTypeConverter.ToDateTimeOffset(resource.Batch?.ExpirationDateElement)?.DateTime;
+
+            if (resource.Manufacturer != null)
+            {
+                manufacturedMaterial.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.ManufacturedProduct, DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.Manufacturer, resource)));
+            }
+
             return manufacturedMaterial;
         }
     }

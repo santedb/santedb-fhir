@@ -102,5 +102,99 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsInstanceOf<Medication>(actual);
             Assert.AreEqual(medication.Id, actual.Id);
         }
+
+        /// <summary>
+        /// Tests the update functionality of the <see cref="MedicationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestUpdateMedication()
+        {
+            var medication = new Medication
+            {
+                //Code = new CodeableConcept("http://snomed.info/sct", "261000", "Codeine phosphate (substance)", null),
+                Id = Guid.NewGuid().ToString(),
+                Status = Medication.MedicationStatusCodes.Active,
+                Batch = new Medication.BatchComponent
+                {
+                    ExpirationDateElement = new FhirDateTime(2022, 12, 01),
+                    LotNumber = "12345"
+                }
+            };
+
+            Resource actual;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var medicationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Medication);
+
+                Assert.NotNull(medicationResourceHandler);
+
+                actual = medicationResourceHandler.Create(medication, TransactionMode.Commit);
+            }
+
+            Assert.NotNull(actual);
+            Assert.IsInstanceOf<Medication>(actual);
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var medicationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Medication);
+
+                Assert.NotNull(medicationResourceHandler);
+
+                actual = medicationResourceHandler.Read(actual.Id, actual.VersionId);
+            }
+
+            Assert.NotNull(actual);
+            Assert.IsInstanceOf<Medication>(actual);
+
+            var actualMedication = (Medication)actual;
+
+            Assert.AreEqual(medication.Id, actualMedication.Id);
+            Assert.AreEqual(Medication.MedicationStatusCodes.Active, actualMedication.Status);
+            Assert.AreEqual("2022-12-01T00:00:00-05:00", actualMedication.Batch.ExpirationDateElement.Value);
+            Assert.AreEqual("12345", actualMedication.Batch.LotNumber);
+
+            actualMedication.Status = Medication.MedicationStatusCodes.EnteredInError;
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var medicationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Medication);
+
+                Assert.NotNull(medicationResourceHandler);
+
+                actual = medicationResourceHandler.Update(actualMedication.Id, actualMedication, TransactionMode.Commit);
+            }
+
+            Assert.NotNull(actual);
+            Assert.IsInstanceOf<Medication>(actual);
+
+            actualMedication = (Medication)actual;
+
+            Assert.AreEqual(medication.Id, actualMedication.Id);
+            Assert.AreEqual(Medication.MedicationStatusCodes.EnteredInError, actualMedication.Status);
+            Assert.AreEqual("2022-12-01T00:00:00-05:00", actualMedication.Batch.ExpirationDateElement.Value);
+            Assert.AreEqual("12345", actualMedication.Batch.LotNumber);
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var medicationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Medication);
+
+                Assert.NotNull(medicationResourceHandler);
+
+                actual = medicationResourceHandler.Read(actualMedication.Id, actualMedication.VersionId);
+            }
+
+            Assert.NotNull(actual);
+            Assert.IsInstanceOf<Medication>(actual);
+
+            actualMedication = (Medication)actual;
+
+            Assert.AreEqual(medication.Id, actualMedication.Id);
+            Assert.AreEqual(Medication.MedicationStatusCodes.EnteredInError, actualMedication.Status);
+            Assert.AreEqual("2022-12-01T00:00:00-05:00", actualMedication.Batch.ExpirationDateElement.Value);
+            Assert.AreEqual("12345", actualMedication.Batch.LotNumber);
+        }
     }
 }
