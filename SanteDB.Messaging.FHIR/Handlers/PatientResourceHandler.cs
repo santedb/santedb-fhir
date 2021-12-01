@@ -358,8 +358,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             patient.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
             patient.CreationTime = DateTimeOffset.Now;
-            patient.DateOfBirthXml = resource.BirthDate;
-            patient.DateOfBirthPrecision = DatePrecision.Day;
             patient.GenderConceptKey = resource.Gender == null ? null : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             patient.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             patient.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
@@ -368,6 +366,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
             patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
             patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).ToList();
+
+            patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
+            // TODO: fix
+            // HACK: the date of birth precision CK only allows "Y", "M", or "D" for the precision value
+            patient.DateOfBirthPrecision = dateOfBirthPrecision == DatePrecision.Full ? DatePrecision.Day : dateOfBirthPrecision;
 
             switch (resource.Deceased)
             {
