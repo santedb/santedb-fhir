@@ -1058,6 +1058,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Converts a <see cref="FhirDateTime"/> instance to a <see cref="DateTimeOffset"/> instance.
         /// </summary>
         /// <param name="dateTimeOffset">The instance to convert.</param>
+        /// <param name="datePrecision">The date precision as determined by the datetime offset format.</param>
         /// <returns>Returns the converted instance.</returns>
         public static DateTimeOffset? ToDateTimeOffset(string dateTimeOffset, out DatePrecision? datePrecision)
         {
@@ -1120,7 +1121,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns the converted instance.</returns>
         public static DateTimeOffset? ToDateTimeOffset(FhirDateTime dateTimeOffset)
         {
-            return ToDateTimeOffset(dateTimeOffset.Value);
+            return ToDateTimeOffset(dateTimeOffset?.Value);
         }
 
 
