@@ -130,11 +130,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>Returns the mapped <see cref="ManufacturedMaterial"/> instance.</returns>
         protected override ManufacturedMaterial MapToModel(Medication resource)
         {
-            var manufacturedMaterial = new ManufacturedMaterial
+            ManufacturedMaterial manufacturedMaterial;
+
+            if (Guid.TryParse(resource.Id, out var key))
             {
-                Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
-                TypeConcept = DataTypeConverter.ToConcept(resource.Code.Coding.FirstOrDefault(), "http://snomed.info/sct")
-            };
+                manufacturedMaterial = this.m_repository.Get(key) ?? new ManufacturedMaterial
+                {
+                    Key = key
+                };
+            }
+            else
+            {
+                manufacturedMaterial = new ManufacturedMaterial();
+            }
+
+            manufacturedMaterial.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
+            manufacturedMaterial.TypeConcept = DataTypeConverter.ToConcept(resource.Code?.Coding?.FirstOrDefault(), "http://snomed.info/sct");
 
             switch (resource.Status)
             {
