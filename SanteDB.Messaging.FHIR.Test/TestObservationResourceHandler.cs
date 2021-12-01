@@ -38,6 +38,9 @@ using System.Reflection;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    /// <summary>
+    /// Contains tests for the <see cref="ObservationResourceHandler"/> class.
+    /// </summary>
     [ExcludeFromCodeCoverage]
     public class TestObservationResourceHandler : DataTest
     {
@@ -51,14 +54,20 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private IServiceManager m_serviceManager;
 
-        private Observation m_observation;
-
+        /// <summary>
+        /// The observation repository service.
+        /// </summary>
         private IRepositoryService<Core.Model.Acts.Observation> m_observationRepositoryService;
+
+        private Observation m_observation;
 
         private Patient m_patient;
 
         private Practitioner m_practitioner;
 
+        /// <summary>
+        /// Runs setup before each test execution.
+        /// </summary>
         [SetUp]
         public void Setup()
         {
