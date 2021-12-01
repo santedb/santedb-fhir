@@ -106,6 +106,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Is brand?
             var manufacturer = model.LoadCollection<EntityRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct);
+
             if (manufacturer != null)
             {
                 retVal.Manufacturer = DataTypeConverter.CreateVersionedReference<Organization>(manufacturer.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)));
@@ -129,7 +130,28 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>Returns the mapped <see cref="ManufacturedMaterial"/> instance.</returns>
         protected override ManufacturedMaterial MapToModel(Medication resource)
         {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+            var manufacturedMaterial = new ManufacturedMaterial
+            {
+                Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
+                TypeConcept = DataTypeConverter.ToConcept(resource.Code.Coding.FirstOrDefault(), "http://snomed.info/sct")
+            };
+
+            switch (resource.Status)
+            {
+                case Medication.MedicationStatusCodes.Active:
+                    manufacturedMaterial.StatusConceptKey = StatusKeys.Active;
+                    break;
+
+                case Medication.MedicationStatusCodes.Inactive:
+                    manufacturedMaterial.StatusConceptKey = StatusKeys.Obsolete;
+                    break;
+
+                case Medication.MedicationStatusCodes.EnteredInError:
+                    manufacturedMaterial.StatusConceptKey = StatusKeys.Nullified;
+                    break;
+            }
+
+            return manufacturedMaterial;
         }
     }
 }
