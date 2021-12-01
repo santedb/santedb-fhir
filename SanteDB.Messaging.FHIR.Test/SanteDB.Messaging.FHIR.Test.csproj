@@ -162,6 +162,8 @@
     <Compile Include="TestImmunizationResourceHandler.cs" />
     <Compile Include="TestStructureDefinitionResourceHandler.cs" />
     <Compile Include="TestStructureDefinitionUtil.cs" />
+    <Compile Include="TestNationalityExtension.cs" />
+    <Compile Include="TestReligionExtension.cs" />
     <Compile Include="TestUtil.cs" />
   </ItemGroup>
 </Project>
