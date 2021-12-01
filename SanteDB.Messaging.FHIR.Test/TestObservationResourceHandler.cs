@@ -195,9 +195,9 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestGetInteractions()
         {
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var practitionerResourceHandler = new ObservationResourceHandler(this.m_observationRepositoryService, localizationService);
+            var observationResourceHandler = new ObservationResourceHandler(this.m_observationRepositoryService, localizationService);
             var methodInfo = typeof(ObservationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
-            var interactions = methodInfo.Invoke(practitionerResourceHandler, null);
+            var interactions = methodInfo.Invoke(observationResourceHandler, null);
 
             Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
             var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions;
