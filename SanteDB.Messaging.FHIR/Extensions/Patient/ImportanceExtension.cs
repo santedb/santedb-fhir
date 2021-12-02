@@ -46,9 +46,10 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
             if (modelObject is Core.Model.Roles.Patient patient && fhirExtension.Value is CodeableConcept cc)
             {
                 patient.VipStatus = DataTypeConverter.ToConcept(cc);
+                return true;
             }
 
-            return true;
+            return false;
         }
     }
 }
