@@ -22,7 +22,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
@@ -36,17 +35,14 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
-using SanteDB.Messaging.FHIR.Exceptions;
-using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
-using Patient = Hl7.Fhir.Model.Patient;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
     /// <summary>
-    /// Test class for <see cref="BirthPlaceExtension"/>
+    /// Test class for <see cref="CitizenshipExtension"/>
     /// </summary>
     [ExcludeFromCodeCoverage]
     public class TestCitizenshipExtension
