@@ -1,17 +1,24 @@
+using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using Patient = SanteDB.Core.Model.Roles.Patient;
+using Person = SanteDB.Core.Model.Entities.Person;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -24,43 +31,43 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+
+        private IRepositoryService<Patient> m_patientRepository;
+
+        private IRepositoryService<Person> m_personRepository;
+
+        private IRepositoryService<EntityRelationship> m_relationshipRepository;
 
         /// <summary>
         /// The service manager.
         /// </summary>
         private IServiceManager m_serviceManager;
 
-        private IRepositoryService<Core.Model.Roles.Patient> m_patientRepository;
-
-        private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
-
-        private IRepositoryService<Core.Model.Entities.EntityRelationship> m_relationshipRepository;
-
         [SetUp]
         public void Setup()
         {
             // Force load of the DLL
-            var p = FirebirdSql.Data.FirebirdClient.FbCharset.Ascii;
+            var p = FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-            this.m_patientRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Roles.Patient>>();
-            this.m_personRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Entities.Person>>();
-            this.m_relationshipRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.Entities.EntityRelationship>>();
+            this.m_patientRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Patient>>();
+            this.m_personRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Person>>();
+            this.m_relationshipRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
 
-            var testConfiguration = new SanteDB.Messaging.FHIR.Configuration.FhirServiceConfigurationSection()
+            var testConfiguration = new FhirServiceConfigurationSection
             {
-                Resources = new System.Collections.Generic.List<string>()
+                Resources = new List<string>
                 {
                     "Patient",
                     "RelatedPerson",
                     "Bundle"
                 },
-                OperationHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                ExtensionHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                ProfileHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>(),
-                MessageHandlers = new System.Collections.Generic.List<SanteDB.Core.Configuration.TypeReferenceConfiguration>
+                OperationHandlers = new List<TypeReferenceConfiguration>(),
+                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
+                ProfileHandlers = new List<TypeReferenceConfiguration>(),
+                MessageHandlers = new List<TypeReferenceConfiguration>
                 {
                     new TypeReferenceConfiguration(typeof(PatientResourceHandler)),
                     new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
@@ -81,17 +88,15 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestPersistComplexPatient()
         {
-
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
-
                 // Load the Complex Patient Message
                 var request = TestUtil.GetFhirMessage("ComplexPatient") as Bundle;
                 var messageString = TestUtil.MessageToString(request);
                 var sourcePatient = request.Entry.FirstOrDefault(o => o.Resource.TypeName == "Patient").Resource as Hl7.Fhir.Model.Patient;
 
-                var result = FhirResourceHandlerUtil.GetMappersFor(Hl7.Fhir.Model.ResourceType.Bundle).First().Create(request, Core.Services.TransactionMode.Commit);
+                var result = FhirResourceHandlerUtil.GetMappersFor(ResourceType.Bundle).First().Create(request, TransactionMode.Commit);
                 messageString = TestUtil.MessageToString(result);
 
                 Assert.IsInstanceOf<Bundle>(result);
@@ -112,12 +117,12 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 // Get back the RelatedPerson
                 var relatedPersonHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson);
-                var originalRelatedPerson = relatedPersonHandler.Read(sdbPerson.Key.ToString(), String.Empty);
+                var originalRelatedPerson = relatedPersonHandler.Read(sdbPerson.Key.ToString(), string.Empty);
                 messageString = TestUtil.MessageToString(originalRelatedPerson);
 
                 // Ensure that a QUERY in FHIR returns the result
                 var patientHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
-                var query = new System.Collections.Specialized.NameValueCollection();
+                var query = new NameValueCollection();
                 query.Add("identifier", "http://santedb.org/fhir/test|FHR-1234");
                 var queryResult = patientHandler.Query(query);
                 Assert.AreEqual(1, queryResult.Total);
@@ -125,7 +130,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 // Get the patient - and mother
                 patientHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
-                query = new System.Collections.Specialized.NameValueCollection();
+                query = new NameValueCollection();
                 query.Add("identifier", "http://santedb.org/fhir/test|FHR-1234");
                 query.Add("_revinclude", "RelatedPerson:patient");
                 queryResult = patientHandler.Query(query);
@@ -138,11 +143,11 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(sdbPerson.Key.ToString(), sourceRelatedPerson.Id);
                 Assert.AreEqual("Ontario", sourceRelatedPerson.Address.First().State);
                 Assert.IsTrue(sourceRelatedPerson.Telecom.Count == 1);
-                Assert.AreEqual("905 617 2020", sourceRelatedPerson.Telecom.First<ContactPoint>().Value);
-                Assert.AreEqual("25 Tindale Crt", sourceRelatedPerson.Address.First<Address>().District);
+                Assert.AreEqual("905 617 2020", sourceRelatedPerson.Telecom.First().Value);
+                Assert.AreEqual("25 Tindale Crt", sourceRelatedPerson.Address.First().District);
 
                 // The Persistence layer did not create a patient
-                query = new System.Collections.Specialized.NameValueCollection();
+                query = new NameValueCollection();
                 query.Add("identifier", "http://santedb.org/fhir/test|FHR-9988");
                 queryResult = patientHandler.Query(query);
                 Assert.AreEqual(0, queryResult.Total);
@@ -164,7 +169,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 // The persistence layer did create a SARAH SINGH person
                 patientHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson);
-                query = new System.Collections.Specialized.NameValueCollection();
+                query = new NameValueCollection();
                 query.Add("identifier", "http://santedb.org/fhir/test|FHR-9988");
                 queryResult = patientHandler.Query(query);
                 Assert.AreEqual(1, queryResult.Total);
@@ -175,7 +180,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var deletedRelatedPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Delete(sourceRelatedPerson.Id, TransactionMode.Commit);
                 Assert.NotNull(deletedRelatedPerson);
                 Assert.IsInstanceOf<RelatedPerson>(deletedRelatedPerson);
-                var actual = (RelatedPerson)deletedRelatedPerson;
+                var actual = (RelatedPerson) deletedRelatedPerson;
                 // ensure the related person is NOT active
                 Assert.IsFalse(actual.Active);
 
@@ -183,7 +188,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var readPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Read(deletedRelatedPerson.Id, deletedRelatedPerson.VersionId);
                 Assert.NotNull(readPerson);
                 Assert.IsInstanceOf<RelatedPerson>(readPerson);
-                var readRelatedPerson = (RelatedPerson)readPerson;
+                var readRelatedPerson = (RelatedPerson) readPerson;
                 Assert.AreEqual(Address.AddressUse.Old, readRelatedPerson.Address.First().Use);
                 Assert.IsFalse(readRelatedPerson.Telecom.Any());
                 // ensure the related person is NOT active
@@ -197,10 +202,9 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestPersistComplexPatientPatientRelationship()
         {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
-
                 // Load the Complex Patient Message
                 var request = TestUtil.GetFhirMessage("ComplexPatientPatientRelationship") as Bundle;
 
@@ -211,7 +215,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreNotEqual(sourcePatient.Id, relatedPatient.Id);
 
                 //
-                var result = FhirResourceHandlerUtil.GetMappersFor(Hl7.Fhir.Model.ResourceType.Bundle).First().Create(request, Core.Services.TransactionMode.Commit);
+                var result = FhirResourceHandlerUtil.GetMappersFor(ResourceType.Bundle).First().Create(request, TransactionMode.Commit);
                 Assert.IsInstanceOf<Bundle>(result);
                 var bresult = result as Bundle;
                 Assert.AreEqual(2, bresult.Entry.Count(o => o.Resource is Hl7.Fhir.Model.Patient));
@@ -233,8 +237,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 var sdbRelationship = this.m_relationshipRepository.Get(Guid.Parse(createdFhirRelatedPerson.Id));
                 Assert.IsNotNull(sdbRelationship); // was saved
                 Assert.AreEqual(sdbFocalPatient.Key, sdbRelationship.HolderKey); // Focal patient is the holder
-                                                                                 // Relationship target is a patient
-                Assert.IsInstanceOf<Core.Model.Entities.Person>(sdbRelationship.LoadProperty(o => o.TargetEntity));
+                // Relationship target is a patient
+                Assert.IsInstanceOf<Person>(sdbRelationship.LoadProperty(o => o.TargetEntity));
 
                 // There is a patient related to the person
                 var equivRel = sdbRelatedPatient.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.EquivalentEntity);
@@ -248,24 +252,24 @@ namespace SanteDB.Messaging.FHIR.Test
                 // Ensure that there is a separate PERSON and separate PATIENT with the same identity 
                 var relatedPersons = this.m_personRepository.Find(o => o.Identifiers.Any(id => id.Authority.Url == "http://santedb.org/fhir/test" && id.Value == "FHR-4321"));
                 Assert.AreEqual(2, relatedPersons.Count());
-                Assert.AreEqual(1, relatedPersons.OfType<Core.Model.Roles.Patient>().Count());
+                Assert.AreEqual(1, relatedPersons.OfType<Patient>().Count());
 
                 // Ensure that a QUERY for focal patient returns
                 var patientHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
-                var query = new System.Collections.Specialized.NameValueCollection();
+                var query = new NameValueCollection();
                 query.Add("identifier", "http://santedb.org/fhir/test|FHR-4322");
                 var queryResult = patientHandler.Query(query);
                 Assert.AreEqual(1, queryResult.Total);
 
                 // Ensure a QUERY for related person returns
-                query = new System.Collections.Specialized.NameValueCollection();
+                query = new NameValueCollection();
                 query.Add("identifier", "http://santedb.org/fhir/test|FHR-4321");
                 queryResult = patientHandler.Query(query);
                 Assert.AreEqual(1, queryResult.Total);
 
                 // Ensure Query for RelatedPerson returns 1 
                 patientHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson);
-                query = new System.Collections.Specialized.NameValueCollection();
+                query = new NameValueCollection();
                 query.Add("identifier", "http://santedb.org/fhir/test|FHR-4321");
                 queryResult = patientHandler.Query(query);
                 Assert.AreEqual(1, queryResult.Total);

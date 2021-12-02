@@ -19,7 +19,6 @@
  * Date: 2021-12-01
  */
 
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
@@ -45,24 +44,11 @@ namespace SanteDB.Messaging.FHIR.Test
     public class TestStructureDefinitionResourceHandler
     {
         /// <summary>
-        /// The authentication key.
-        /// </summary>
-        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
-
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-
-        /// <summary>
         /// Set up method to initialize services.
         /// </summary>
         [SetUp]
         public void Setup()
         {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
@@ -88,6 +74,16 @@ namespace SanteDB.Messaging.FHIR.Test
                 ExtensionUtil.Initialize(testConfiguration);
             }
         }
+
+        /// <summary>
+        /// The authentication key.
+        /// </summary>
+        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+
+        /// <summary>
+        /// The service manager.
+        /// </summary>
+        private IServiceManager m_serviceManager;
 
         /// <summary>
         /// Tests the create functionality of the <see cref="BundleResourceHandler"/> class.
