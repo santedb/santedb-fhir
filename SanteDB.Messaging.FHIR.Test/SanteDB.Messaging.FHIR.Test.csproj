@@ -150,7 +150,6 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestCitizenshipExtension.cs" />
-    <Compile Include="TestBirthTimeExtension.cs" />
     <Compile Include="TestBundleResourceHandler.cs" />
     <Compile Include="TestBirthPlaceExtension.cs" />
     <Compile Include="TestEncounterResourceHandler.cs" />
