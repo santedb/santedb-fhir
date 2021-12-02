@@ -167,5 +167,6 @@
     <Compile Include="TestNationalityExtension.cs" />
     <Compile Include="TestReligionExtension.cs" />
     <Compile Include="TestUtil.cs" />
+    <Compile Include="TestValidateResourceOperation.cs" />
   </ItemGroup>
 </Project>
