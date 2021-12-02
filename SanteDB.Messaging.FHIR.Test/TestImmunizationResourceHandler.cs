@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
+using SanteDB.Core.Model.Acts;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
@@ -25,6 +28,11 @@ namespace SanteDB.Messaging.FHIR.Test
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+
+        /// <summary>
+        /// The observation repository service.
+        /// </summary>
+        private IRepositoryService<Core.Model.Acts.SubstanceAdministration> m_substanceAdministrationRepositoryService;
 
         /// <summary>
         /// The service manager.
@@ -448,6 +456,47 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 Assert.IsNull(deletedImmunization.Status);
             }
+        }
+
+        [Test]
+        public void TestCanMapObject()
+        {
+                var initialImmunizationKey = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
+                var immunizationKey = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
+                var boosterImmunizationKey = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
+                var randomGuidKey = Guid.NewGuid();
+
+                var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+                var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService);
+                var methodInfo = typeof(ImmunizationResourceHandler).GetMethod("CanMapObject", BindingFlags.Instance | BindingFlags.Public);
+                
+                //check to ensure immunization instance can be mapped
+                var result = methodInfo.Invoke(immunizationResourceHandler, new []{new Immunization()});
+                Assert.True((bool)result);
+
+                //check to ensure an invalid instance cannot be mapped
+                result = methodInfo.Invoke(immunizationResourceHandler, new []{new Medication()});
+                Assert.False((bool)result);
+
+                var substanceAdministration = new SubstanceAdministration()
+                {
+                    TypeConcept = new Concept() { Key = initialImmunizationKey }
+                };
+
+                //check to ensure substance instance can be mapped with valid type keys
+                result = methodInfo.Invoke(immunizationResourceHandler, new []{substanceAdministration});
+                Assert.True((bool)result);
+                substanceAdministration.TypeConcept = new Concept() { Key = boosterImmunizationKey };
+                result = methodInfo.Invoke(immunizationResourceHandler, new []{substanceAdministration});
+                Assert.True((bool)result);
+                substanceAdministration.TypeConcept = new Concept() { Key = immunizationKey };
+                result = methodInfo.Invoke(immunizationResourceHandler, new []{substanceAdministration});
+                Assert.True((bool)result);
+
+                //check to ensure substance instance cannot be mapped without valid key 
+                substanceAdministration.TypeConcept = new Concept() { Key = randomGuidKey };
+                result = methodInfo.Invoke(immunizationResourceHandler, new []{substanceAdministration});
+                Assert.False((bool)result);
         }
     }
 }
