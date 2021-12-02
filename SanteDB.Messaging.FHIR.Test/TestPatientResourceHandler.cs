@@ -478,6 +478,66 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
+        /// Tests the query functionality for a patient by querying for the general practitioner in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestQueryPatientByGeneralPractitioner()
+        {
+            var practitioner = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Practitioner") as Practitioner;
+
+            var patient = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Patient") as Patient;
+
+            Resource actualPatient;
+            Resource actualPractitioner;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
+
+                actualPractitioner = practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
+                patient.GeneralPractitioner = new List<ResourceReference>
+                {
+                    new ResourceReference($"urn:uuid:{actualPractitioner.Id}")
+                };
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.NotNull(actualPatient);
+            Assert.NotNull(actualPractitioner);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Practitioner>(actualPractitioner);
+
+            var createdPatient = (Patient)actualPatient;
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                var queryResult = patientResourceHandler.Query(new NameValueCollection
+                {
+                    { "_generalPractitioner", createdPatient.GeneralPractitioner.ToString() }
+                });
+
+                Assert.NotNull(queryResult);
+                Assert.IsInstanceOf<Bundle>(queryResult);
+                Assert.AreEqual(1, queryResult.Entry.Count);
+
+                var queriedPatient = (Patient)queryResult.Entry.Single().Resource;
+
+                Assert.IsNotNull(queriedPatient);
+
+                Assert.AreEqual("Jordan", queriedPatient.Name.First().Given.First());
+                Assert.AreEqual("Final", queriedPatient.Name.First().Given.ToList()[1]);
+                Assert.IsTrue(queriedPatient.Active);
+                Assert.AreEqual("905 905 9055", queriedPatient.Telecom.First().Value);
+                Assert.AreEqual("123 Main Street", queriedPatient.Address.First().Line.First());
+            }
+        }
+
+        /// <summary>
         /// Tests the update functionality in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
