@@ -64,7 +64,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Map a patient object to FHIR.
         /// </summary>
         /// <param name="model">The patient to map to FHIR</param>
-        /// <param name="restOperationContext">The current REST operation context</param>
         /// <returns>Returns the mapped FHIR resource.</returns>
         protected override Patient MapToFhir(Core.Model.Roles.Patient model)
         {
@@ -374,6 +373,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case FhirDateTime dtValue when !String.IsNullOrEmpty(dtValue.Value):
                     patient.DeceasedDate = DataTypeConverter.ToDateTimeOffset(dtValue.Value)?.DateTime;
                     break;
+
                 case FhirBoolean boolValue when boolValue.Value.GetValueOrDefault():
                     // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
                     // should find a better way to do this
@@ -387,6 +387,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case FhirBoolean boolBirth when boolBirth.Value.GetValueOrDefault():
                     patient.MultipleBirthOrder = 0;
                     break;
+
                 case Integer intBirth:
                     patient.MultipleBirthOrder = intBirth.Value;
                     break;
