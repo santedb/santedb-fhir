@@ -19,11 +19,6 @@
  * Date: 2021-11-30
  */
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
@@ -38,6 +33,12 @@ using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using Organization = SanteDB.Core.Model.Entities.Organization;
+using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -50,7 +51,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
 
         /// <summary>
         /// The service manager.
@@ -63,8 +64,6 @@ namespace SanteDB.Messaging.FHIR.Test
         [SetUp]
         public void Setup()
         {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
@@ -80,7 +79,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 ProfileHandlers = new List<TypeReferenceConfiguration>(),
                 MessageHandlers = new List<TypeReferenceConfiguration>
                 {
-                    new TypeReferenceConfiguration(typeof(BirthPlaceExtension)),
+                    new TypeReferenceConfiguration(typeof(BirthPlaceExtension))
                 }
             };
 
@@ -90,6 +89,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 ExtensionUtil.Initialize(testConfiguration);
             }
         }
+
         /// <summary>
         /// Tests the construct functionality in <see cref="CitizenshipExtension" /> class.
         /// With valid role and citizenship place.
@@ -102,11 +102,11 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Identifiers = new List<EntityIdentifier>
                 {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode,"NF")
+                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
                 }
             };
 
-            var patient = new SanteDB.Core.Model.Roles.Patient
+            var patient = new Patient
             {
                 Relationships = new List<EntityRelationship>
                 {
@@ -131,106 +131,19 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Tests the construct functionality in <see cref="CitizenshipExtension" /> class.
-        /// With invalid relationship type.
-        /// </summary>
-        [Test]
-        public void TestConstructFailedWithRelationshipTypeStudent()
-        {
-            var citizenshipExtension = this.m_serviceManager.CreateInjected<CitizenshipExtension>();
-            var citizenPlace = new Place
-            {
-                Identifiers = new List<EntityIdentifier>
-                {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode,"NF")
-                }
-            };
-
-            var patient = new SanteDB.Core.Model.Roles.Patient
-            {
-                Relationships = new List<EntityRelationship>
-                {
-                    new EntityRelationship(EntityRelationshipTypeKeys.Student, citizenPlace)
-                }
-            };
-
-            var constructedCitizenPlace = citizenshipExtension.Construct(patient).ToArray();
-
-            Assert.IsFalse(constructedCitizenPlace.Any());
-        }
-
-        /// <summary>
-        /// Tests the construct functionality in <see cref="CitizenshipExtension" /> class.
-        /// With invalid authority id for.
-        /// </summary>
-        [Test]
-        public void TestConstructFailedWithRandomAuthorityId()
-        {
-            var citizenshipExtension = this.m_serviceManager.CreateInjected<CitizenshipExtension>();
-            var citizenPlace = new Place
-            {
-                Identifiers = new List<EntityIdentifier>
-                {
-                    new EntityIdentifier(Guid.NewGuid(),"NF")
-                }
-            };
-
-            var patient = new SanteDB.Core.Model.Roles.Patient
-            {
-                Relationships = new List<EntityRelationship>
-                {
-                    new EntityRelationship(EntityRelationshipTypeKeys.Citizen, citizenPlace)
-                }
-            };
-
-            var constructedCitizenPlace = citizenshipExtension.Construct(patient).ToArray();
-
-            Assert.IsFalse(constructedCitizenPlace.Any());
-        }
-
-        /// <summary>
-        /// Tests the construct functionality in <see cref="CitizenshipExtension" /> class.
-        /// With invalid role.
-        /// </summary>
-        [Test]
-        public void TestConstructFailedWithOrganization()
-        {
-            var citizenshipExtension = this.m_serviceManager.CreateInjected<CitizenshipExtension>();
-            var citizenPlace = new Place
-            {
-                Identifiers = new List<EntityIdentifier>
-                {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode,"NF")
-                }
-            };
-
-            var organization = new SanteDB.Core.Model.Entities.Organization
-            {
-                Relationships = new List<EntityRelationship>
-                {
-                    new EntityRelationship(EntityRelationshipTypeKeys.Citizen, citizenPlace)
-                }
-            };
-
-            var constructedCitizenPlace = citizenshipExtension.Construct(organization).ToArray();
-
-            Assert.IsFalse(constructedCitizenPlace.Any());
-        }
-
-        /// <summary>
         /// Tests the parse functionality in <see cref="CitizenshipExtension" /> class.
         /// With valid role and extension.
         /// </summary>
         [Test]
         public void TestCitizenshipExtensionParseValidRoleExtension()
         {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var citizenshipExtension = this.m_serviceManager.CreateInjected<CitizenshipExtension>();
-                var patient = new SanteDB.Core.Model.Roles.Patient();
+                var patient = new Patient();
                 var extensionForTest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-citizenship",
-                                                new CodeableConcept("urn:oid:1.0.3166.1.2.3", "NF"));
+                    new CodeableConcept("urn:oid:1.0.3166.1.2.3", "NF"));
 
                 citizenshipExtension.Parse(extensionForTest, patient);
 
@@ -250,18 +163,105 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCitizenshipExtensionParseValidRoleInvalidExtension()
         {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var citizenshipExtension = this.m_serviceManager.CreateInjected<CitizenshipExtension>();
-                var patient = new SanteDB.Core.Model.Roles.Patient();
+                var patient = new Patient();
                 var extensionForTest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-citizenship",
-                                                        new FhirString("Test"));
+                    new FhirString("Test"));
 
                 citizenshipExtension.Parse(extensionForTest, patient);
 
                 Assert.IsEmpty(patient.Relationships);
             }
+        }
+
+        /// <summary>
+        /// Tests the construct functionality in <see cref="CitizenshipExtension" /> class.
+        /// With invalid role.
+        /// </summary>
+        [Test]
+        public void TestConstructFailedWithOrganization()
+        {
+            var citizenshipExtension = this.m_serviceManager.CreateInjected<CitizenshipExtension>();
+            var citizenPlace = new Place
+            {
+                Identifiers = new List<EntityIdentifier>
+                {
+                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
+                }
+            };
+
+            var organization = new Organization
+            {
+                Relationships = new List<EntityRelationship>
+                {
+                    new EntityRelationship(EntityRelationshipTypeKeys.Citizen, citizenPlace)
+                }
+            };
+
+            var constructedCitizenPlace = citizenshipExtension.Construct(organization).ToArray();
+
+            Assert.IsFalse(constructedCitizenPlace.Any());
+        }
+
+        /// <summary>
+        /// Tests the construct functionality in <see cref="CitizenshipExtension" /> class.
+        /// With invalid authority id for.
+        /// </summary>
+        [Test]
+        public void TestConstructFailedWithRandomAuthorityId()
+        {
+            var citizenshipExtension = this.m_serviceManager.CreateInjected<CitizenshipExtension>();
+            var citizenPlace = new Place
+            {
+                Identifiers = new List<EntityIdentifier>
+                {
+                    new EntityIdentifier(Guid.NewGuid(), "NF")
+                }
+            };
+
+            var patient = new Patient
+            {
+                Relationships = new List<EntityRelationship>
+                {
+                    new EntityRelationship(EntityRelationshipTypeKeys.Citizen, citizenPlace)
+                }
+            };
+
+            var constructedCitizenPlace = citizenshipExtension.Construct(patient).ToArray();
+
+            Assert.IsFalse(constructedCitizenPlace.Any());
+        }
+
+        /// <summary>
+        /// Tests the construct functionality in <see cref="CitizenshipExtension" /> class.
+        /// With invalid relationship type.
+        /// </summary>
+        [Test]
+        public void TestConstructFailedWithRelationshipTypeStudent()
+        {
+            var citizenshipExtension = this.m_serviceManager.CreateInjected<CitizenshipExtension>();
+            var citizenPlace = new Place
+            {
+                Identifiers = new List<EntityIdentifier>
+                {
+                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
+                }
+            };
+
+            var patient = new Patient
+            {
+                Relationships = new List<EntityRelationship>
+                {
+                    new EntityRelationship(EntityRelationshipTypeKeys.Student, citizenPlace)
+                }
+            };
+
+            var constructedCitizenPlace = citizenshipExtension.Construct(patient).ToArray();
+
+            Assert.IsFalse(constructedCitizenPlace.Any());
         }
     }
 }
