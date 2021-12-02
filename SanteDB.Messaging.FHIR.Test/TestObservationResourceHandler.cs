@@ -38,6 +38,9 @@ using System.Reflection;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    /// <summary>
+    /// Contains tests for the <see cref="ObservationResourceHandler"/> class.
+    /// </summary>
     [ExcludeFromCodeCoverage]
     public class TestObservationResourceHandler : DataTest
     {
@@ -51,14 +54,20 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private IServiceManager m_serviceManager;
 
-        private Observation m_observation;
-
+        /// <summary>
+        /// The observation repository service.
+        /// </summary>
         private IRepositoryService<Core.Model.Acts.Observation> m_observationRepositoryService;
+
+        private Observation m_observation;
 
         private Patient m_patient;
 
         private Practitioner m_practitioner;
 
+        /// <summary>
+        /// Runs setup before each test execution.
+        /// </summary>
         [SetUp]
         public void Setup()
         {
@@ -186,9 +195,9 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestGetInteractions()
         {
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var practitionerResourceHandler = new ObservationResourceHandler(this.m_observationRepositoryService, localizationService);
+            var observationResourceHandler = new ObservationResourceHandler(this.m_observationRepositoryService, localizationService);
             var methodInfo = typeof(ObservationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
-            var interactions = methodInfo.Invoke(practitionerResourceHandler, null);
+            var interactions = methodInfo.Invoke(observationResourceHandler, null);
 
             Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
             var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions;

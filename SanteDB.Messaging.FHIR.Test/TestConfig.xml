@@ -11,7 +11,6 @@
     <add type="SanteDB.Core.Configuration.Data.DataConfigurationSection, SanteDB.Core.Api"/>
     <add type="SanteDB.Core.Configuration.ResourceManagementConfigurationSection, SanteDB.Core.Api"/>
     <add type="SanteDB.Server.Core.Configuration.SecurityConfigurationSection, SanteDB.Server.Core" />
-    <add type="SanteDB.Server.Core.Configuration.AppletConfigurationSection, SanteDB.Server.Core" />
   </sections>
   <section xsi:type="MemoryCacheConfigurationSection" autoSubscribe="true" maxSize="10000" maxAge="3600" maxQueryAge="3600" />
   <section xsi:type="DataConfigurationSection">
@@ -84,15 +83,8 @@
       <add type="SanteDB.Persistence.Data.ADO.Services.AdoRoleProvider, SanteDB.Persistence.Data.ADO" />
       <add type="SanteDB.Core.Security.Privacy.DataPolicyFilterService, SanteDB.Core.Api" />
       <add type="SanteDB.Server.Core.Services.Impl.DefaultNetworkInformationService, SanteDB.Server.Core"/>
-      <add type="SanteDB.Core.Applets.Services.Impl.AppletLocalizationService, SanteDB.Core.Applets"/>
-      <add type="SanteDB.Server.Core.Services.Impl.LocalAppletManagerService, SanteDB.Server.Core" />
+      <add type="SanteDB.Core.TestFramework.TestLocalizationService, SanteDB.Core.TestFramework"/>
       <add type="SanteDB.Persistence.Data.ADO.Services.AdoServiceFactory, SanteDB.Persistence.Data.ADO" />
     </serviceProviders>
-  </section>
-  <section xsi:type="AppletConfigurationSection" appletDirectory=".\applets" allowUnsignedApplets="true">
-	  <trustedPublishers>
-		  <add>82C63E1E9B87578D0727E871D7613F2F0FAF683B</add>
-		  <add>4326A4421216AC254DA93DC61B93160B08925BB1</add>
-	  </trustedPublishers>
   </section>
 </SanteDBConfiguration>

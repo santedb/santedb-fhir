@@ -15,6 +15,9 @@ using SanteDB.Messaging.FHIR.Util;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    /// <summary>
+    /// Contains tests for the <see cref="ImmunizationResourceHandler"/> class.
+    /// </summary>
     [ExcludeFromCodeCoverage]
     public class TestImmunizationResourceHandler : DataTest
     {
@@ -27,6 +30,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// The service manager.
         /// </summary>
         private IServiceManager m_serviceManager;
+
         [SetUp]
         public void Setup()
         {

@@ -64,7 +64,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Map a patient object to FHIR.
         /// </summary>
         /// <param name="model">The patient to map to FHIR</param>
-        /// <param name="restOperationContext">The current REST operation context</param>
         /// <returns>Returns the mapped FHIR resource.</returns>
         protected override Patient MapToFhir(Core.Model.Roles.Patient model)
         {
@@ -358,8 +357,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             patient.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
             patient.CreationTime = DateTimeOffset.Now;
-            patient.DateOfBirthXml = resource.BirthDate;
-            patient.DateOfBirthPrecision = DatePrecision.Day;
             patient.GenderConceptKey = resource.Gender == null ? null : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             patient.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             patient.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
@@ -369,12 +366,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
             patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).ToList();
 
+            patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
+            // TODO: fix
+            // HACK: the date of birth precision CK only allows "Y", "M", or "D" for the precision value
+            patient.DateOfBirthPrecision = dateOfBirthPrecision == DatePrecision.Full ? DatePrecision.Day : dateOfBirthPrecision;
+
             switch (resource.Deceased)
             {
                 case FhirDateTime dtValue when !String.IsNullOrEmpty(dtValue.Value):
                     patient.DeceasedDate = DataTypeConverter.ToDateTimeOffset(dtValue.Value, out var datePrecision)?.DateTime;
-                    patient.DeceasedDatePrecision = datePrecision;
+                    // TODO: fix
+                    // HACK: the deceased date precision CK only allows "Y", "M", or "D" for the precision value
+                    patient.DeceasedDatePrecision = datePrecision == DatePrecision.Full ? DatePrecision.Day : datePrecision;
                     break;
+
                 case FhirBoolean boolValue when boolValue.Value.GetValueOrDefault():
                     // we don't have a field for "deceased indicator" to say that the patient is dead, but we don't know that actual date/time of death
                     // should find a better way to do this
@@ -388,6 +393,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case FhirBoolean boolBirth when boolBirth.Value.GetValueOrDefault():
                     patient.MultipleBirthOrder = 0;
                     break;
+
                 case Integer intBirth:
                     patient.MultipleBirthOrder = intBirth.Value;
                     break;

@@ -183,6 +183,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // We want to map from TFhirResource to TModel
             var modelInstance = this.MapToModel(target as TFhirResource);
+
             if (modelInstance == null)
                 throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
                 {
@@ -565,7 +566,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public IdentifiedData MapToModel(Resource resourceInstance)
         {
-            return this.MapToModel((TFhirResource)resourceInstance);
+            var retVal = this.MapToModel((TFhirResource)resourceInstance);
+            // Append the notice that this is a source model
+            if (retVal is IResourceCollection irc)
+            {
+                irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+            }
+            else
+            {
+                retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+            }
+            return retVal;
         }
 
         /// <summary>

@@ -1058,6 +1058,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Converts a <see cref="FhirDateTime"/> instance to a <see cref="DateTimeOffset"/> instance.
         /// </summary>
         /// <param name="dateTimeOffset">The instance to convert.</param>
+        /// <param name="datePrecision">The date precision as determined by the datetime offset format.</param>
         /// <returns>Returns the converted instance.</returns>
         public static DateTimeOffset? ToDateTimeOffset(string dateTimeOffset, out DatePrecision? datePrecision)
         {
@@ -1120,13 +1121,13 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns the converted instance.</returns>
         public static DateTimeOffset? ToDateTimeOffset(FhirDateTime dateTimeOffset)
         {
-            return ToDateTimeOffset(dateTimeOffset.Value);
+            return ToDateTimeOffset(dateTimeOffset?.Value);
         }
 
 
 
         /// <summary>
-        /// Converts an <see cref="FhirAddress"/> instance to an <see cref="EntityAddress"/> instance.
+        /// Converts an <see cref="Address"/> instance to an <see cref="EntityAddress"/> instance.
         /// </summary>
         /// <param name="fhirAddress">The FHIR address.</param>
         /// <returns>Returns an entity address instance.</returns>
@@ -1604,7 +1605,7 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts an <see cref="EntityTelecomAddress"/> instance to <see cref="FhirTelecom"/> instance.
+        /// Converts an <see cref="EntityTelecomAddress"/> instance to <see cref="ContactPoint"/> instance.
         /// </summary>
         /// <param name="telecomAddress">The telecom address.</param>
         /// <returns>Returns the mapped FHIR telecom.</returns>
@@ -1612,10 +1613,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity telecom address");
 
-            return new ContactPoint()
+            return new ContactPoint
             {
-                System = DataTypeConverter.ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.LoadProperty(o => o.TypeConcept), "http://hl7.org/fhir/contact-point-system"),
-                Use = DataTypeConverter.ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.LoadProperty(o => o.AddressUse), "http://hl7.org/fhir/contact-point-use"),
+                System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.LoadProperty(o => o.TypeConcept), "http://hl7.org/fhir/contact-point-system"),
+                Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.LoadProperty(o => o.AddressUse), "http://hl7.org/fhir/contact-point-use"),
                 Value = telecomAddress.IETFValue
             };
         }

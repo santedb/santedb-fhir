@@ -2,21 +2,21 @@
  * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
+ *
  * User: Nityan Khanna
- * Date: 2021-11-29
+ * Date: 2021-12-01
  */
 
 using FirebirdSql.Data.FirebirdClient;
@@ -38,11 +38,11 @@ using System.Diagnostics.CodeAnalysis;
 namespace SanteDB.Messaging.FHIR.Test
 {
     /// <summary>
-    /// Contains tests for the <see cref="BundleResourceHandler"/> class.
+    /// Contains tests for the <see cref="StructureDefinitionHandler"/>
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestBundleResourceHandler
+    public class TestStructureDefinitionResourceHandler
     {
         /// <summary>
         /// The authentication key.
@@ -53,6 +53,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// The service manager.
         /// </summary>
         private IServiceManager m_serviceManager;
+
 
         /// <summary>
         /// Set up method to initialize services.
@@ -70,14 +71,14 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Resources = new List<string>
                 {
-                    "Bundle"
+                    "StructureDefinition"
                 },
                 OperationHandlers = new List<TypeReferenceConfiguration>(),
                 ExtensionHandlers = new List<TypeReferenceConfiguration>(),
                 ProfileHandlers = new List<TypeReferenceConfiguration>(),
                 MessageHandlers = new List<TypeReferenceConfiguration>
                 {
-                    new TypeReferenceConfiguration(typeof(BundleResourceHandler))
+                    new TypeReferenceConfiguration(typeof(StructureDefinitionHandler))
                 }
             };
 
@@ -85,6 +86,21 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
                 ExtensionUtil.Initialize(testConfiguration);
+            }
+        }
+
+        /// <summary>
+        /// Tests the create functionality of the <see cref="BundleResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreate()
+        {
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var structureDefinitionResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.StructureDefinition);
+
+                Assert.Throws<NotSupportedException>(() => structureDefinitionResourceHandler.Create(new StructureDefinition(), TransactionMode.Commit));
             }
         }
 
@@ -97,9 +113,9 @@ namespace SanteDB.Messaging.FHIR.Test
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
-                var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
+                var structureDefinitionResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.StructureDefinition);
 
-                Assert.Throws<NotSupportedException>(() => bundleResourceHandler.Delete(Guid.NewGuid().ToString(), TransactionMode.Commit));
+                Assert.Throws<NotSupportedException>(() => structureDefinitionResourceHandler.Delete(Guid.NewGuid().ToString(), TransactionMode.Commit));
             }
         }
 
@@ -112,9 +128,9 @@ namespace SanteDB.Messaging.FHIR.Test
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
-                var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
+                var structureDefinitionResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.StructureDefinition);
 
-                Assert.Throws<NotSupportedException>(() => bundleResourceHandler.History(Guid.NewGuid().ToString()));
+                Assert.Throws<NotSupportedException>(() => structureDefinitionResourceHandler.History(Guid.NewGuid().ToString()));
             }
         }
 
@@ -127,9 +143,9 @@ namespace SanteDB.Messaging.FHIR.Test
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
-                var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
+                var structureDefinitionResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.StructureDefinition);
 
-                Assert.Throws<NotSupportedException>(() => bundleResourceHandler.Read(Guid.NewGuid().ToString(), null));
+                Assert.Throws<NotSupportedException>(() => structureDefinitionResourceHandler.Read(Guid.NewGuid().ToString(), null));
             }
         }
 
@@ -142,9 +158,9 @@ namespace SanteDB.Messaging.FHIR.Test
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
-                var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
+                var structureDefinitionResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.StructureDefinition);
 
-                Assert.Throws<NotSupportedException>(() => bundleResourceHandler.Query(new NameValueCollection()));
+                Assert.Throws<NotSupportedException>(() => structureDefinitionResourceHandler.Query(new NameValueCollection()));
             }
         }
 
@@ -157,9 +173,9 @@ namespace SanteDB.Messaging.FHIR.Test
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
-                var bundleResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Bundle);
+                var structureDefinitionResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.StructureDefinition);
 
-                Assert.Throws<NotSupportedException>(() => bundleResourceHandler.Update(Guid.NewGuid().ToString(), new Bundle(), TransactionMode.Commit));
+                Assert.Throws<NotSupportedException>(() => structureDefinitionResourceHandler.Update(Guid.NewGuid().ToString(), new StructureDefinition(), TransactionMode.Commit));
             }
         }
     }
