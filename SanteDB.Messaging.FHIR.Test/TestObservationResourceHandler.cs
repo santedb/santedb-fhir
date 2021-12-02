@@ -19,12 +19,6 @@
  * Date: 2021-11-15
  */
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Reflection;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
@@ -35,25 +29,45 @@ using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Reflection;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    /// <summary>
+    /// Contains tests for the <see cref="ObservationResourceHandler"/> class.
+    /// </summary>
     [ExcludeFromCodeCoverage]
     public class TestObservationResourceHandler : DataTest
     {
+        /// <summary>
+        /// The authentication key.
+        /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        private Observation m_observation;
+        /// <summary>
+        /// The service manager.
+        /// </summary>
+        private IServiceManager m_serviceManager;
 
+        /// <summary>
+        /// The observation repository service.
+        /// </summary>
         private IRepositoryService<Core.Model.Acts.Observation> m_observationRepositoryService;
+
+        private Observation m_observation;
 
         private Patient m_patient;
 
         private Practitioner m_practitioner;
 
-        // Bundler 
-        private IServiceManager m_serviceManager;
-
+        /// <summary>
+        /// Runs setup before each test execution.
+        /// </summary>
         [SetUp]
         public void Setup()
         {
@@ -113,7 +127,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCreateObservation()
         {
-            var effectiveTime = new FhirDateTime(DateTimeOffset.Parse("2021-10-01T08:06:32+01:00"));
+            var effectiveTime = new FhirDateTime(DateTimeOffset.Parse("2021-10-01T08:06:32-04:00"));
 
             var observation = TestUtil.GetFhirMessage("CreateObservation") as Observation;
 
@@ -181,9 +195,9 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestGetInteractions()
         {
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var practitionerResourceHandler = new ObservationResourceHandler(this.m_observationRepositoryService, localizationService);
+            var observationResourceHandler = new ObservationResourceHandler(this.m_observationRepositoryService, localizationService);
             var methodInfo = typeof(ObservationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
-            var interactions = methodInfo.Invoke(practitionerResourceHandler, null);
+            var interactions = methodInfo.Invoke(observationResourceHandler, null);
 
             Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
             var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions;
@@ -233,7 +247,7 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestUpdateObservation()
         {
             Resource result;
-            var updatedEffectiveTime = new FhirDateTime(new DateTimeOffset(2021, 1, 1, 12, 30, 30, 30, new TimeSpan(1, 0, 0)));
+            var updatedEffectiveTime = new FhirDateTime(new DateTimeOffset(2021, 1, 1, 12, 30, 30, 30, new TimeSpan(-5, 0, 0)));
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {

@@ -20,19 +20,15 @@
  */
 
 using Hl7.Fhir.Model;
-using RestSrvr;
+using SanteDB.Core.Diagnostics;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Rest.Behavior;
-using SanteDB.Messaging.FHIR.Rest.Serialization;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using SanteDB.Core;
-using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Services;
 
 namespace SanteDB.Messaging.FHIR.Operations
 {

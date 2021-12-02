@@ -128,7 +128,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else
             {
-                retVal.Effective = DataTypeConverter.ToFhirDate(model.ActTime.DateTime);
+                retVal.Effective = DataTypeConverter.ToFhirDateTime(model.ActTime);
             }
 
             retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Act.TypeConcept)));

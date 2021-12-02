@@ -68,7 +68,7 @@ namespace SanteDB.Messaging.FHIR
         public List<String> IncludeResource { get; set; }
 
         /// <summary>
-        /// Minimum degree natcg
+        /// Minimum degree match.
         /// </summary>
         public float MinimumDegreeMatch { get; set; }
 
@@ -85,6 +85,6 @@ namespace SanteDB.Messaging.FHIR
         /// <summary>
         /// The resource type
         /// </summary>
-        public String ResouceType { get; }
+        public String ResourceType { get; }
     }
 }

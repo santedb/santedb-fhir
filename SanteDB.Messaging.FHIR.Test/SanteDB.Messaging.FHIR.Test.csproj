@@ -74,6 +74,10 @@
     <EmbeddedResource Include="Resources\CreatePatientWithOrganization-Organization.json" />
     <EmbeddedResource Include="Resources\CreatePatient-PatientLink.json" />
     <EmbeddedResource Include="Resources\CreateMultipleBirthPatient.json" />
+    <EmbeddedResource Include="Resources\CreateEncounterInProgress-Patient.json" />
+    <EmbeddedResource Include="Resources\CreateEncounterInProgress-Encounter.json" />
+    <EmbeddedResource Include="Resources\CreateEncounterStatusPlanned.json" />
+    <EmbeddedResource Include="Resources\CreateEncounterStatusEnteredInError.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
@@ -148,6 +152,7 @@
     <Compile Include="TestBundleResourceHandler.cs" />
     <Compile Include="TestEncounterResourceHandler.cs" />
     <Compile Include="TestFhirResourceHandlerUtil.cs" />
+    <Compile Include="TestMedicationResourceHandler.cs" />
     <Compile Include="TestModelExtensions.cs" />
     <Compile Include="TestObservationResourceHandler.cs" />
     <Compile Include="TestPatientResourceHandler.cs" />
@@ -155,7 +160,10 @@
     <Compile Include="TestRelatedPersonResourceHandler.cs" />
     <Compile Include="TestPractitionerResourceHandler.cs" />
     <Compile Include="TestImmunizationResourceHandler.cs" />
+    <Compile Include="TestStructureDefinitionResourceHandler.cs" />
     <Compile Include="TestStructureDefinitionUtil.cs" />
+    <Compile Include="TestNationalityExtension.cs" />
+    <Compile Include="TestReligionExtension.cs" />
     <Compile Include="TestUtil.cs" />
   </ItemGroup>
 </Project>

@@ -4,8 +4,7 @@
   "entry": [
     {
       "fullUrl": "Patient/1",
-      "resource": 
-      {
+      "resource": {
         "resourceType": "Patient",
         "id": "1",
         "active": true,
@@ -67,7 +66,22 @@
             ]
           }
         ],
-        "gender": "female"
+        "gender": "female",
+        "address": [
+          {
+            "state": "Ontario",
+            "city": "Hamilton",
+            "postalCode": "L8K 6C8",
+            "district": "25 Tindale Crt"
+          }
+        ],
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "905 617 2020",
+            "use": "work"
+          }
+        ]
       },
       "request": {
         "method": "POST",

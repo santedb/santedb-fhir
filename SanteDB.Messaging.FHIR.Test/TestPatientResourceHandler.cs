@@ -45,9 +45,14 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     internal class TestPatientResourceHandler : DataTest
     {
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        /// <summary>
+        /// The authentication key.
+        /// </summary>
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        // Bundler 
+        /// <summary>
+        /// The service manager.
+        /// </summary>
         private IServiceManager m_serviceManager;
 
         /// <summary>
@@ -112,6 +117,71 @@ namespace SanteDB.Messaging.FHIR.Test
             var createdPatient = (Patient) actual;
 
             Assert.IsNotNull(createdPatient.Deceased);
+        }
+
+        /// <summary>
+        /// Tests the creation of a patient with a partial date (month and year) for the deceased date in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateDeceasedPatientPartialDate()
+        {
+            var patient = new Patient
+            {
+                Name = new List<HumanName>
+                {
+                    new HumanName
+                    {
+                        Given = new List<string>
+                        {
+                            "Alan"
+                        },
+                        Family = "Daniels"
+                    }
+                },
+                Active = false,
+                BirthDate = new FhirDateTime(1961, 4, 24).ToString(),
+                Telecom = new List<ContactPoint>
+                {
+                    new ContactPoint(ContactPoint.ContactPointSystem.Phone,  ContactPoint.ContactPointUse.Home, "905 123 1234")
+                },
+                Deceased = new FhirDateTime(2021, 8)
+            };
+
+            Resource actual;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                actual = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.IsInstanceOf<Patient>(actual);
+
+            var createdPatient = (Patient)actual;
+
+            Assert.IsNotNull(createdPatient.Deceased);
+            Assert.AreEqual(new FhirDateTime(2021, 8), createdPatient.Deceased);
+
+            createdPatient.Deceased = new FhirDateTime(2021);
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                actual = patientResourceHandler.Update(createdPatient.Id, createdPatient, TransactionMode.Commit);
+            }
+
+            Assert.IsNotNull(actual);
+
+            Assert.IsInstanceOf<Patient>(actual);
+
+            var updatedPatient = (Patient)actual;
+
+            Assert.IsNotNull(updatedPatient.Deceased);
+            Assert.AreEqual(new FhirDateTime(2021), updatedPatient.Deceased);
         }
 
         /// <summary>
