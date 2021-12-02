@@ -518,16 +518,19 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 var queryResult = patientResourceHandler.Query(new NameValueCollection
                 {
-                    { "_generalPractitioner", createdPatient.GeneralPractitioner.ToString() }
+                    { "_id", createdPatient.Id },
+                    { "_include", "Practitioner:generalPractitioner" }
                 });
 
                 Assert.NotNull(queryResult);
                 Assert.IsInstanceOf<Bundle>(queryResult);
-                Assert.AreEqual(1, queryResult.Entry.Count);
+                Assert.AreEqual(2, queryResult.Entry.Count);
 
-                var queriedPatient = (Patient)queryResult.Entry.Single().Resource;
+                var queriedPatient = (Patient)queryResult.Entry.First(c => c.Resource is Patient).Resource;
+                var includedPractitioner = (Practitioner)queryResult.Entry.First(c => c.Resource is Practitioner).Resource;
 
                 Assert.IsNotNull(queriedPatient);
+                Assert.IsNotNull(includedPractitioner);
 
                 Assert.AreEqual("Jordan", queriedPatient.Name.First().Given.First());
                 Assert.AreEqual("Final", queriedPatient.Name.First().Given.ToList()[1]);
