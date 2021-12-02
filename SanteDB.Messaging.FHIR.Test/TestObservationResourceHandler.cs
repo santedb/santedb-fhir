@@ -19,7 +19,6 @@
  * Date: 2021-11-15
  */
 
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
@@ -71,8 +70,6 @@ namespace SanteDB.Messaging.FHIR.Test
         [SetUp]
         public void Setup()
         {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
@@ -272,8 +269,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 
                 retrievedObservation.Effective = updatedEffectiveTime;
 
-                _ = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation,
-                    TransactionMode.Commit);
+                _ = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
 
                 //read again
                 result = observationResourceHandler.Read(retrievedObservation.Id, null);
