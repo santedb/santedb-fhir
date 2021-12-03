@@ -80,6 +80,7 @@
     <EmbeddedResource Include="Resources\CreateEncounterStatusEnteredInError.json" />
     <EmbeddedResource Include="Resources\CreateLocation.json" />
     <EmbeddedResource Include="Resources\CreatePartOfLocation.json" />
+    <EmbeddedResource Include="Resources\UpdateLocation.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />

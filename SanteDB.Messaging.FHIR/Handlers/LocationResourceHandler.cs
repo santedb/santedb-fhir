@@ -181,8 +181,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             place.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
 
             if (resource.Address != null)
-                place.Addresses.Add(DataTypeConverter.ToEntityAddress(resource.Address));
+                place.Addresses = new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(resource.Address) };
 
+            
             if(resource.Position != null)
             {
                 place.GeoTag = new GeoTag

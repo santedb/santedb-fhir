@@ -35,6 +35,8 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Security;
+using System.Security.Authentication;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -88,6 +90,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the create functionality for the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
         [Test]
         public void TestCreateLocation()
         {
@@ -138,6 +143,35 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsNotNull(retrievedLocation.Position.Latitude);
         }
 
+        /// <summary>
+        /// Tests the creation of an inactive location in the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestCreateInactiveLocation()
+        {
+            var location = TestUtil.GetFhirMessage("CreateLocation") as Location;
+            location.Status = Location.LocationStatus.Inactive;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
+
+                var actual = locationResourceHandler.Create(location, TransactionMode.Commit);
+
+                Assert.IsNotNull(actual);
+                Assert.IsInstanceOf<Location>(actual);
+
+                var createdLocation = (Location)actual;
+
+                Assert.IsNotNull(createdLocation);
+                Assert.AreEqual(Location.LocationStatus.Inactive, createdLocation.Status);
+            }
+        }
+
+        /// <summary>
+        /// Tests the create functionality with an invalid resource for the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
         [Test]
         public void TestCreateLocationInvalidResource()
         {
@@ -147,6 +181,98 @@ namespace SanteDB.Messaging.FHIR.Test
                 var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
 
                 Assert.Throws<InvalidDataException>(() => locationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+            }
+        }
+
+        /// <summary>
+        /// Tests the delete functionality of the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestDeleteLocation()
+        {
+            var location = TestUtil.GetFhirMessage("CreateLocation") as Location;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
+
+                var actual = locationResourceHandler.Create(location, TransactionMode.Commit);
+
+                Assert.IsNotNull(actual);
+                Assert.IsInstanceOf<Location>(actual);
+
+                var createdLocation = (Location)actual;
+
+                Assert.IsNotNull(createdLocation);
+
+                var actualDeleted = locationResourceHandler.Delete(createdLocation.Id, TransactionMode.Commit);
+
+                Assert.IsNotNull(actualDeleted);
+                Assert.IsInstanceOf<Location>(actualDeleted);
+
+                var deletedLocation = (Location)actualDeleted;
+
+                Assert.IsNotNull(deletedLocation);
+                Assert.AreEqual(Location.LocationStatus.Inactive, deletedLocation.Status);
+            }
+        }
+
+        /// <summary>
+        /// Tests the delete functionality when a invalid guid is given in the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestDeleteLocationInvalidGuid()
+        {
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
+
+                Assert.Throws<KeyNotFoundException>(() => locationResourceHandler.Delete(Guid.NewGuid().ToString(), TransactionMode.Commit));
+            }
+        }
+
+        /// <summary>
+        /// Tests the update functionality in the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestUpdateLocation()
+        {
+            var location = TestUtil.GetFhirMessage("UpdateLocation") as Location;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
+
+                var actual = locationResourceHandler.Create(location, TransactionMode.Commit);
+
+                Assert.IsNotNull(actual);
+                Assert.IsInstanceOf<Location>(actual);
+
+                var createdLocation = (Location)actual;
+
+                Assert.IsNotNull(createdLocation);
+                Assert.AreEqual(Location.LocationStatus.Active, createdLocation.Status);
+                Assert.AreEqual(Location.LocationMode.Instance, createdLocation.Mode);
+                Assert.AreEqual("Ontario", createdLocation.Address.State);
+
+                createdLocation.Status = Location.LocationStatus.Suspended;
+                createdLocation.Mode = Location.LocationMode.Kind;
+                createdLocation.Address.State = "Alberta";
+
+                var actualUpdated = locationResourceHandler.Update(createdLocation.Id, createdLocation, TransactionMode.Commit);
+
+                Assert.IsNotNull(actualUpdated);
+                Assert.IsInstanceOf<Location>(actualUpdated);
+
+                var updatedLocation = (Location)actualUpdated;
+
+                Assert.IsNotNull(updatedLocation);
+                Assert.AreEqual(Location.LocationStatus.Suspended, updatedLocation.Status);
+                Assert.AreEqual(Location.LocationMode.Kind, updatedLocation.Mode);
+                Assert.AreEqual("Alberta", updatedLocation.Address.State);
             }
         }
     }
