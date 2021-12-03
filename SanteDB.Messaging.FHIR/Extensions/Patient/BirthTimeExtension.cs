@@ -47,8 +47,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (fhirExtension.Value is FhirDateTime dateTime && modelObject is Person person)
             {
-                person.DateOfBirth = DataTypeConverter.ToDateTimeOffset(dateTime)?.Date;
-                person.DateOfBirthPrecision = DatePrecision.Full;
+                person.DateOfBirth = DataTypeConverter.ToDateTimeOffset(dateTime.Value, out var datePrecision)?.Date;
+                person.DateOfBirthPrecision = datePrecision;
                 return true;
             }
 
