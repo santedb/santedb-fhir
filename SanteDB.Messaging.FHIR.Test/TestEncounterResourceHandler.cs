@@ -447,6 +447,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var createdEncounter = (Encounter)actualEncounter;
 
+            Assert.IsNotNull(createdEncounter.Status);
             Assert.AreEqual(Encounter.EncounterStatus.InProgress, createdEncounter.Status);
         }
 
@@ -482,6 +483,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var createdEncounter = (Encounter)actualEncounter;
 
+            Assert.IsNotNull(createdEncounter.Status);
             Assert.AreEqual(Encounter.EncounterStatus.Planned, createdEncounter.Status);
         }
 
@@ -517,6 +519,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var createdEncounter = (Encounter)actualEncounter;
 
+            Assert.IsNotNull(createdEncounter.Status);
             Assert.AreEqual(Encounter.EncounterStatus.EnteredInError, createdEncounter.Status);
         }
 

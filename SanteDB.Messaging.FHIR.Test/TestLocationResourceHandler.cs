@@ -33,6 +33,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -90,43 +91,9 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCreateLocation()
         {
-            var partOfLocation = new Location
-            {
-                Status = Location.LocationStatus.Active,
-                Name = "Test Part Of Location",
-            };
+            var partOfLocation = TestUtil.GetFhirMessage("CreatePartOfLocation") as Location;
 
-            var location = new Location
-            {
-                Status = Location.LocationStatus.Active,
-                Name = "Test Location",
-                Alias = new List<string>
-                {
-                    "Past Location Name"
-                },
-                Description = "This is a pretty cool location",
-                Mode = Location.LocationMode.Kind,
-                Telecom = new List<ContactPoint>
-                {
-                    new ContactPoint(ContactPoint.ContactPointSystem.Email, ContactPoint.ContactPointUse.Work, "location@email.com")
-                },
-                Address = new Address
-                {
-                    Country = "Canada",
-                    State = "Ontario",
-                    City = "Hamilton",
-                    Line = new List<string>
-                    {
-                        "123 New Street"
-                    }
-                },
-                PhysicalType = new CodeableConcept(),
-                Position = new Location.PositionComponent
-                {
-                    Latitude = (decimal?)32.34,
-                    Longitude = (decimal?)43.3453
-                } 
-            };
+            var location = TestUtil.GetFhirMessage("CreateLocation") as Location;
 
             Resource actual;
             Resource partOfLocationActual;
@@ -166,6 +133,21 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Test Location", retrievedLocation.Name);
             Assert.AreEqual(Location.LocationMode.Kind, retrievedLocation.Mode);
             Assert.AreEqual(Location.LocationStatus.Active, retrievedLocation.Status);
+            Assert.AreEqual("Hamilton", retrievedLocation.Address.City);
+            Assert.AreEqual("6324", retrievedLocation.Identifier.First().Value);
+            Assert.IsNotNull(retrievedLocation.Position.Latitude);
+        }
+
+        [Test]
+        public void TestCreateLocationInvalidResource()
+        {
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
+
+                Assert.Throws<InvalidDataException>(() => locationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+            }
         }
     }
 }
