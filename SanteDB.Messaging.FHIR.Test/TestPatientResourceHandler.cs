@@ -541,6 +541,67 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
+        /// Tests the query functionality by managing organization in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestQueryPatientByManagingOrganization()
+        {
+            var patient = TestUtil.GetFhirMessage("CreatePatient") as Patient;
+
+            var patientLink = TestUtil.GetFhirMessage("CreatePatient-PatientLink") as Patient;
+
+            var organization = TestUtil.GetFhirMessage("CreatePatientWithOrganization-Organization") as Organization;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
+
+                // Create the independent resources for the main Resource.
+                var actualOrganization = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+                var createdPatientLink = patientResourceHandler.Create(patientLink, TransactionMode.Commit);
+
+                // Connect the independent resources to the dependent resource
+                patient.ManagingOrganization = new ResourceReference($"urn:uuid:{actualOrganization.Id}");
+                patient.Link.First().Other = new ResourceReference($"urn:uuid:{createdPatientLink.Id}");
+
+                // Create the dependent resource
+                var actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+
+                Assert.IsNotNull(actualPatient);
+                Assert.IsInstanceOf<Patient>(actualPatient);
+
+                var createdPatient = (Patient)actualPatient;
+
+                Assert.IsNotNull(patient.ManagingOrganization);
+
+                var queryResult = patientResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", createdPatient.Id },
+                    { "_include", "Organization:managingOrganization" }
+                });
+
+                Assert.NotNull(queryResult);
+                Assert.IsInstanceOf<Bundle>(queryResult);
+                Assert.AreEqual(2, queryResult.Entry.Count);
+
+                var queriedPatient = (Patient)queryResult.Entry.First(c => c.Resource is Patient).Resource;
+                var includedOrganization = (Organization)queryResult.Entry.First(c => c.Resource is Organization).Resource;
+
+                Assert.IsNotNull(queriedPatient);
+                Assert.IsNotNull(includedOrganization);
+
+                Assert.AreEqual("Jordan", queriedPatient.Name.First().Given.First());
+                Assert.AreEqual("Webber", queriedPatient.Name.First().Family);
+                Assert.AreEqual(AdministrativeGender.Male, queriedPatient.Gender);
+                Assert.AreEqual("Hamilton", queriedPatient.Address.First().City);
+                Assert.AreEqual("mailto:Webber@gmail.com", queriedPatient.Telecom.First().Value);
+                Assert.AreEqual("2021-11-23", queriedPatient.BirthDate);
+            }
+        }
+
+        /// <summary>
         /// Tests the update functionality in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
