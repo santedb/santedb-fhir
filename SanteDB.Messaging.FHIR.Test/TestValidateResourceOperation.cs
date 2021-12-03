@@ -105,6 +105,7 @@ namespace SanteDB.Messaging.FHIR.Test
         }
     }
 
+    [ExcludeFromCodeCoverage]
     internal class SamplePatientBusinessRulesService : IBusinessRulesService<Core.Model.Roles.Patient>
     {
         /// <summary>
