@@ -1473,8 +1473,7 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 return null;
             }
-
-            if (preferredCodeSystems == null || !preferredCodeSystems.Any())
+            if (preferredCodeSystems == null || preferredCodeSystems.All(p => p == null))
             {
                 var refTerms = concept.LoadCollection<ConceptReferenceTerm>(nameof(Concept.ReferenceTerms));
                 if (refTerms.Any())
