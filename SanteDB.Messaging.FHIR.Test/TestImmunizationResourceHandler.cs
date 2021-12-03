@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Reflection;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
@@ -70,6 +71,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the create functionality in <see cref="ImmunizationResourceHandler" /> class.
+        /// </summary>
         [Test]
         public void TestCreateImmunization()
         {
@@ -152,6 +156,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the update functionality in <see cref="ImmunizationResourceHandler" /> class.
+        /// </summary>
         [Test]
         public void TestUpdateImmunization()
         {
@@ -256,6 +263,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the Entered In Error status update functionality in <see cref="ImmunizationResourceHandler" /> class.
+        /// </summary>
         [Test]
         public void TestUpdateImmunizationStatusEnteredInError()
         {
@@ -358,6 +368,10 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+
+        /// <summary>
+        /// Tests the delete functionality in <see cref="ImmunizationResourceHandler" /> class.
+        /// </summary>
         [Test]
         public void TestDeleteImmunization()
         {
@@ -458,6 +472,9 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Tests the object mapping ability <see cref="ImmunizationResourceHandler" /> class.
+        /// </summary>
         [Test]
         public void TestCanMapObject()
         {
@@ -468,15 +485,14 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
                 var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService);
-                var methodInfo = typeof(ImmunizationResourceHandler).GetMethod("CanMapObject", BindingFlags.Instance | BindingFlags.Public);
-                
+
                 //check to ensure immunization instance can be mapped
-                var result = methodInfo.Invoke(immunizationResourceHandler, new []{new Immunization()});
-                Assert.True((bool)result);
+                var result = immunizationResourceHandler.CanMapObject(new Immunization());
+                Assert.True(result);
 
                 //check to ensure an invalid instance cannot be mapped
-                result = methodInfo.Invoke(immunizationResourceHandler, new []{new Medication()});
-                Assert.False((bool)result);
+                result = immunizationResourceHandler.CanMapObject(new Medication());
+                Assert.False(result);
 
                 var substanceAdministration = new SubstanceAdministration()
                 {
@@ -484,19 +500,38 @@ namespace SanteDB.Messaging.FHIR.Test
                 };
 
                 //check to ensure substance instance can be mapped with valid type keys
-                result = methodInfo.Invoke(immunizationResourceHandler, new []{substanceAdministration});
-                Assert.True((bool)result);
+                result = immunizationResourceHandler.CanMapObject(substanceAdministration);
+                Assert.True(result);
                 substanceAdministration.TypeConcept = new Concept() { Key = boosterImmunizationKey };
-                result = methodInfo.Invoke(immunizationResourceHandler, new []{substanceAdministration});
-                Assert.True((bool)result);
+                result = immunizationResourceHandler.CanMapObject(substanceAdministration);
+                Assert.True(result);
                 substanceAdministration.TypeConcept = new Concept() { Key = immunizationKey };
-                result = methodInfo.Invoke(immunizationResourceHandler, new []{substanceAdministration});
-                Assert.True((bool)result);
+                result = immunizationResourceHandler.CanMapObject(substanceAdministration);
+                Assert.True(result);
 
                 //check to ensure substance instance cannot be mapped without valid key 
                 substanceAdministration.TypeConcept = new Concept() { Key = randomGuidKey };
-                result = methodInfo.Invoke(immunizationResourceHandler, new []{substanceAdministration});
-                Assert.False((bool)result);
+                result = immunizationResourceHandler.CanMapObject(substanceAdministration);
+                Assert.False(result);
+        }
+
+        /// <summary>
+        /// Tests the get interactions functionality in <see cref="ImmunizationResourceHandler" /> class.
+        /// </summary>
+        [Test]
+        public void TestGetInteractions()
+        {
+            var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+            var immunizationResourceHandler = new ImmunizationResourceHandler(this.m_substanceAdministrationRepositoryService, localizationService);
+            var methodInfo = typeof(ImmunizationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
+            var interactions = methodInfo.Invoke(immunizationResourceHandler, null);
+
+            Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
+            var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions;
+            Assert.AreEqual(7, resourceInteractionComponents.Count());
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.HistoryInstance));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Vread));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.SearchType));
         }
     }
 }
