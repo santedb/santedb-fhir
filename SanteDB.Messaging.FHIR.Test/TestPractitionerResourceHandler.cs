@@ -47,7 +47,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
 
         /// <summary>
         /// The service manager.

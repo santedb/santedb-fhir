@@ -1,0 +1,35 @@
+﻿{
+  "resourceType": "Location",
+  "identifier": [
+    {
+      "system": "http://santedb.org/fhir/test",
+      "value": "6324"
+    }
+  ],
+  "status": "active",
+  "name": "Test Location",
+  "alias": [
+    "Past Location Name"
+  ],
+  "description": "This is a pretty cool location",
+  "mode": "kind",
+  "telecom": [
+    {
+      "system": "email",
+      "value": "location@email.com",
+      "use": "work"
+    }
+  ],
+  "address": {
+    "line": [
+      "123 New Street"
+    ],
+    "city": "Hamilton",
+    "state": "Ontario",
+    "country": "Canada"
+  },
+  "position": {
+    "longitude": 43.3453,
+    "latitude": 32.34
+  }
+}

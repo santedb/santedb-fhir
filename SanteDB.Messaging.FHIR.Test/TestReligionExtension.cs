@@ -19,10 +19,6 @@
  * Date: 2021-11-30
  */
 
-using System;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
@@ -33,6 +29,9 @@ using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
+using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using Patient = SanteDB.Core.Model.Roles.Patient;
 
 namespace SanteDB.Messaging.FHIR.Test
@@ -45,26 +44,27 @@ namespace SanteDB.Messaging.FHIR.Test
     public class TestReligionExtension
     {
         /// <summary>
-        /// The service manager.
+        /// Runs setup before each test execution.
         /// </summary>
-        private IServiceManager m_serviceManager;
-        
-        /// <summary>
-        /// The extension under test.
-        /// </summary>
-        private IFhirExtensionHandler m_extension;
-
         [SetUp]
         public void Setup()
         {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
 
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_extension = this.m_serviceManager.CreateInjected<ReligionExtension>();
         }
+
+        /// <summary>
+        /// The service manager.
+        /// </summary>
+        private IServiceManager m_serviceManager;
+
+        /// <summary>
+        /// The extension under test.
+        /// </summary>
+        private IFhirExtensionHandler m_extension;
 
         /// <summary>
         /// Tests the construct functionality in <see cref="ReligionExtension" /> class.
@@ -75,15 +75,15 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             var patient = new Patient
             {
-                ReligiousAffiliation = new Concept() { Mnemonic = "Talos", Key = Guid.NewGuid()}
+                ReligiousAffiliation = new Concept
+                    {Mnemonic = "Talos", Key = Guid.NewGuid()}
             };
 
             var constructedReligion = this.m_extension.Construct(patient).ToArray();
-            Assert.AreEqual(1,constructedReligion.Length);
+            Assert.AreEqual(1, constructedReligion.Length);
             Assert.IsInstanceOf<CodeableConcept>(constructedReligion.First().Value);
-            var codeableConcept = (CodeableConcept)constructedReligion.First().Value;
+            var codeableConcept = (CodeableConcept) constructedReligion.First().Value;
             Assert.AreEqual("Talos", codeableConcept.Coding.First().Code);
-
         }
 
         /// <summary>
@@ -120,15 +120,14 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestReligionExtensionParseValidRoleExtension()
         {
-            var extensionforTest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-religion", 
+            var extensionforTest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-religion",
                 new CodeableConcept("http://terminology.hl7.org/CodeSystem/v2-2.4", "ATH"));
             var patient = new Patient();
 
             this.m_extension.Parse(extensionforTest, patient);
-            
+
             Assert.IsNotNull(patient.ReligiousAffiliation);
             Assert.AreEqual("RELIGION-Atheist", patient.ReligiousAffiliation.Mnemonic);
-
         }
 
         /// <summary>
@@ -138,13 +137,13 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestReligionExtensionParseValidRoleInvalidExtension()
         {
-            var extensionforTest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-religion", 
+            var extensionforTest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-religion",
                 new CodeableConcept("http://terminology.hl7.org/CodeSystem/v2-2.4", "ASDF"));
             var patient = new Patient();
 
-            Assert.Throws<FhirException>(()=>this.m_extension.Parse(extensionforTest, patient));
+            Assert.Throws<FhirException>(() => this.m_extension.Parse(extensionforTest, patient));
         }
-  
+
         /// <summary>
         /// Tests the parse functionality in <see cref="ReligionExtension" /> class.
         /// With invalid extension value.

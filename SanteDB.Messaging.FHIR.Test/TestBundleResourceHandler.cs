@@ -60,8 +60,6 @@ namespace SanteDB.Messaging.FHIR.Test
         [SetUp]
         public void Setup()
         {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();

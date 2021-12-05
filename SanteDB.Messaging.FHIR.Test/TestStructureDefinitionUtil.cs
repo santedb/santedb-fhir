@@ -19,6 +19,7 @@
  * Date: 2021-11-29
  */
 
+using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core.TestFramework;
@@ -41,8 +42,6 @@ namespace SanteDB.Messaging.FHIR.Test
         [SetUp]
         public void Setup()
         {
-            // Force load of the DLL
-            var p = FirebirdSql.Data.FirebirdClient.FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestFhirResourceHandlerUtil).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
         }

@@ -478,6 +478,130 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
+        /// Tests the query functionality for a patient by querying for the general practitioner in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestQueryPatientByGeneralPractitioner()
+        {
+            var practitioner = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Practitioner") as Practitioner;
+
+            var patient = TestUtil.GetFhirMessage("CreatePatientWithGeneralPractitioner-Patient") as Patient;
+
+            Resource actualPatient;
+            Resource actualPractitioner;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
+
+                actualPractitioner = practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
+                patient.GeneralPractitioner = new List<ResourceReference>
+                {
+                    new ResourceReference($"urn:uuid:{actualPractitioner.Id}")
+                };
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+            }
+
+            Assert.NotNull(actualPatient);
+            Assert.NotNull(actualPractitioner);
+
+            Assert.IsInstanceOf<Patient>(actualPatient);
+            Assert.IsInstanceOf<Practitioner>(actualPractitioner);
+
+            var createdPatient = (Patient)actualPatient;
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                var queryResult = patientResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", createdPatient.Id },
+                    { "_include", "Practitioner:generalPractitioner" }
+                });
+
+                Assert.NotNull(queryResult);
+                Assert.IsInstanceOf<Bundle>(queryResult);
+                Assert.AreEqual(2, queryResult.Entry.Count);
+
+                var queriedPatient = (Patient)queryResult.Entry.First(c => c.Resource is Patient).Resource;
+                var includedPractitioner = (Practitioner)queryResult.Entry.First(c => c.Resource is Practitioner).Resource;
+
+                Assert.IsNotNull(queriedPatient);
+                Assert.IsNotNull(includedPractitioner);
+
+                Assert.AreEqual("Jordan", queriedPatient.Name.First().Given.First());
+                Assert.AreEqual("Final", queriedPatient.Name.First().Given.ToList()[1]);
+                Assert.IsTrue(queriedPatient.Active);
+                Assert.AreEqual("905 905 9055", queriedPatient.Telecom.First().Value);
+                Assert.AreEqual("123 Main Street", queriedPatient.Address.First().Line.First());
+            }
+        }
+
+        /// <summary>
+        /// Tests the query functionality by managing organization in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestQueryPatientByManagingOrganization()
+        {
+            var patient = TestUtil.GetFhirMessage("CreatePatient") as Patient;
+
+            var patientLink = TestUtil.GetFhirMessage("CreatePatient-PatientLink") as Patient;
+
+            var organization = TestUtil.GetFhirMessage("CreatePatientWithOrganization-Organization") as Organization;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
+
+                // Create the independent resources for the main Resource.
+                var actualOrganization = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+                var createdPatientLink = patientResourceHandler.Create(patientLink, TransactionMode.Commit);
+
+                // Connect the independent resources to the dependent resource
+                patient.ManagingOrganization = new ResourceReference($"urn:uuid:{actualOrganization.Id}");
+                patient.Link.First().Other = new ResourceReference($"urn:uuid:{createdPatientLink.Id}");
+
+                // Create the dependent resource
+                var actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+
+                Assert.IsNotNull(actualPatient);
+                Assert.IsInstanceOf<Patient>(actualPatient);
+
+                var createdPatient = (Patient)actualPatient;
+
+                Assert.IsNotNull(patient.ManagingOrganization);
+
+                var queryResult = patientResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", createdPatient.Id },
+                    { "_include", "Organization:managingOrganization" }
+                });
+
+                Assert.NotNull(queryResult);
+                Assert.IsInstanceOf<Bundle>(queryResult);
+                Assert.AreEqual(2, queryResult.Entry.Count);
+
+                var queriedPatient = (Patient)queryResult.Entry.First(c => c.Resource is Patient).Resource;
+                var includedOrganization = (Organization)queryResult.Entry.First(c => c.Resource is Organization).Resource;
+
+                Assert.IsNotNull(queriedPatient);
+                Assert.IsNotNull(includedOrganization);
+
+                Assert.AreEqual("Jordan", queriedPatient.Name.First().Given.First());
+                Assert.AreEqual("Webber", queriedPatient.Name.First().Family);
+                Assert.AreEqual(AdministrativeGender.Male, queriedPatient.Gender);
+                Assert.AreEqual("Hamilton", queriedPatient.Address.First().City);
+                Assert.AreEqual("mailto:Webber@gmail.com", queriedPatient.Telecom.First().Value);
+                Assert.AreEqual("2021-11-23", queriedPatient.BirthDate);
+            }
+        }
+
+        /// <summary>
         /// Tests the update functionality in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
         [Test]
@@ -575,6 +699,143 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 // create the patient using the resource handler
                 Assert.Throws<InvalidDataException>(() => patientResourceHandler.Update(actual.Id, new Practitioner(), TransactionMode.Commit));
+            }
+        }
+
+        /// <summary>
+        /// Test update functionality with Organization and Person contact roles in the <see cref="PatientResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestUpdatePatientContactRole()
+        {
+            var patient = TestUtil.GetFhirMessage("UpdatePatient") as Patient;
+            
+            //create a contact person for test
+            var personContacts = new List<Patient.ContactComponent>()
+            { 
+                new Patient.ContactComponent()
+                {
+                    Name = new HumanName()
+                    {
+                        Family = "Person",
+                        Given = new List<string>() { "Test" }
+                    },
+                    Address = new Address()
+                    {
+                        State = "Ontario",
+                        Country = "Canada",
+                        Line = new List<string>
+                        {
+                            "123 Test Street"
+                        },
+                        City = "Hamilton"
+                    },
+                    Telecom = new List<ContactPoint>()
+                    {
+                        new ContactPoint(ContactPoint.ContactPointSystem.Phone, ContactPoint.ContactPointUse.Home, "222 222 2222")
+                    },
+                    Relationship = new List<CodeableConcept>() { new CodeableConcept("http://terminology.hl7.org/CodeSystem/v2-0131", "N") },
+                }
+            }; 
+
+            patient.Contact = personContacts;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                // get the resource handler
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+
+                // create the patient using the resource handler
+                Resource result = patientResourceHandler.Create(patient, TransactionMode.Commit);
+
+                // retrieve the patient using the resource handler
+                result = patientResourceHandler.Read(result.Id, result.VersionId);
+
+                Assert.NotNull(result);
+                Assert.IsInstanceOf<Patient>(result);
+                var actual = (Patient)result;
+                //Ensure persistence of single contact and contact details 
+                Assert.AreEqual(1, actual.Contact.Count);
+                var contact = actual.Contact.Single();
+                Assert.AreEqual("Test", contact.Name.Given.First());
+                Assert.AreEqual("Person", contact.Name.Family);
+                Assert.AreEqual("123 Test Street", contact.Address.Line.First());
+                Assert.AreEqual("222 222 2222", contact.Telecom.First().Value);
+                Assert.IsNotEmpty(contact.Relationship); 
+                var relationshipConcept = contact.Relationship.First();
+                Assert.AreEqual("N", relationshipConcept.Coding.First().Code);
+
+                //update contact to same value
+                actual.Contact = personContacts;
+                result= patientResourceHandler.Update(actual.Id, actual, TransactionMode.Commit);
+
+                //query for patient
+                var patientBundle =  patientResourceHandler.Query(new NameValueCollection()
+                {
+                    { "_id", result.Id }
+                });
+
+                //Ensure persistence of single updated contact and contact details 
+                var updatedPatient = (Patient)patientBundle.Entry.First().Resource;
+                Assert.AreEqual(1, updatedPatient.Contact.Count);
+                contact = updatedPatient.Contact.First();
+                Assert.AreEqual("123 Test Street", contact.Address.Line.First());
+                Assert.IsNotEmpty(contact.Relationship); 
+                relationshipConcept = contact.Relationship.First();
+                Assert.AreEqual("N", relationshipConcept.Coding.First().Code);
+
+                //ensure read is also returning single updated contact with same contact details
+                result = patientResourceHandler.Read(actual.Id, actual.VersionId);
+                var readPatient = (Patient)result;
+                Assert.AreEqual(1, readPatient.Contact.Count);
+                contact = readPatient.Contact.First();
+                Assert.AreEqual("123 Test Street", contact.Address.Line.First());
+
+                //create organization to be used as contact
+                var organization = TestUtil.GetFhirMessage("Organization") as Organization;
+                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
+                var orgResult = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+
+                //create contact
+                var orgContacts =  new List<Patient.ContactComponent>()
+                { 
+                    new Patient.ContactComponent()
+                    {
+                        Organization = new ResourceReference($"urn:uuid:{orgResult.Id}")
+                    }
+                };
+
+                //update contact
+                readPatient.Contact = orgContacts;
+                result = patientResourceHandler.Update(readPatient.Id, readPatient, TransactionMode.Commit);
+                
+                //Ensure read is returning single contact of organization
+                actual = (Patient)patientResourceHandler.Read(result.Id, result.VersionId);
+                 
+                //confirm organization detail
+                Assert.AreEqual(1, actual.Contact.Count);
+                contact = actual.Contact.First();
+                Assert.True(contact.Organization.Reference.Contains(orgResult.Id));
+
+                //ensure  previous contact info is not present
+                Assert.IsNull(contact.Name);
+                Assert.IsNull(contact.Address);
+
+                //Ensure query is also returning single contact of organization
+                patientBundle =  patientResourceHandler.Query(new NameValueCollection()
+                {
+                    { "_id", result.Id }
+                });
+
+                updatedPatient = (Patient)patientBundle.Entry.First().Resource;
+                contact = updatedPatient.Contact.First();
+
+                //confirm organization detail
+                Assert.True(contact.Organization.Reference.Contains(orgResult.Id));
+                //ensure  previous contact info is not present
+                Assert.IsNull(contact.Name);
+                Assert.IsNull(contact.Address);
             }
         }
     }

@@ -4,7 +4,6 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
@@ -47,8 +46,10 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && fhirExtension.Value is CodeableConcept cc)
             {
                 patient.ReligiousAffiliation = DataTypeConverter.ToConcept(cc);
+                return true;
             }
-            return true;
+
+            return false;
         }
     }
 }

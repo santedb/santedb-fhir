@@ -141,7 +141,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else
             {
-                manufacturedMaterial = new ManufacturedMaterial();
+                manufacturedMaterial = new ManufacturedMaterial
+                {
+                    Key = Guid.NewGuid()
+                };
             }
 
             manufacturedMaterial.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();

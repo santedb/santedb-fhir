@@ -1,9 +1,11 @@
-﻿using Hl7.Fhir.Model;
+﻿using System;
+using System.Collections.Generic;
+using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
-using System;
-using System.Collections.Generic;
+using Person = SanteDB.Core.Model.Entities.Person;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
@@ -13,9 +15,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     public class BirthTimeExtension : IFhirExtensionHandler
     {
         /// <summary>
-        /// Gets the URI of this extension
+        /// Gets the resource type this applies to
         /// </summary>
-        public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-birthTime");
+        public ResourceType? AppliesTo => ResourceType.Patient;
 
         /// <summary>
         /// Gets the profile definition
@@ -23,16 +25,16 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         public Uri ProfileUri => this.Uri;
 
         /// <summary>
-        /// Gets the resource type this applies to
+        /// Gets the URI of this extension
         /// </summary>
-        public ResourceType? AppliesTo => ResourceType.Patient;
+        public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-birthTime");
 
         /// <summary>
         /// Construct the extentsion
         /// </summary>
         public IEnumerable<Extension> Construct(IIdentifiedEntity modelObject)
         {
-            if (modelObject is SanteDB.Core.Model.Entities.Person person && person.DateOfBirthPrecision > Core.Model.DataTypes.DatePrecision.Day)
+            if (modelObject is Person person && person.DateOfBirthPrecision > DatePrecision.Day)
             {
                 yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirDateTime(person.DateOfBirth));
             }
@@ -43,12 +45,13 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public bool Parse(Extension fhirExtension, IdentifiedData modelObject)
         {
-            if (fhirExtension.Value is FhirDateTime dateTime && modelObject is SanteDB.Core.Model.Entities.Person person)
+            if (fhirExtension.Value is FhirDateTime dateTime && modelObject is Person person)
             {
-                person.DateOfBirth = DataTypeConverter.ToDateTimeOffset(dateTime)?.Date;
-                person.DateOfBirthPrecision = Core.Model.DataTypes.DatePrecision.Full;
+                person.DateOfBirth = DataTypeConverter.ToDateTimeOffset(dateTime.Value, out var datePrecision)?.Date;
+                person.DateOfBirthPrecision = datePrecision;
                 return true;
             }
+
             return false;
         }
     }
