@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using static Hl7.Fhir.Model.ContactPoint;
 
 namespace SanteDB.Messaging.FHIR.Test
@@ -292,6 +293,34 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsTrue(actual.Address.Count == 1);
             Assert.IsFalse(actual.Extension.Any());
             Assert.AreEqual("2021", actual.Identifier.First().Value);
+        }
+
+        /// <summary>
+        /// Tests the get interactions functionality in <see cref="OrganizationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestGetInteractions()
+        {
+            var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
+            var methodInfo = typeof(OrganizationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.NotNull(methodInfo);
+
+            var interactions = methodInfo.Invoke(organizationResourceHandler, null);
+
+            Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
+
+            var resourceInteractionComponents = ((IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions).ToArray();
+
+            Assert.AreEqual(7, resourceInteractionComponents.Length);
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Create));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.HistoryInstance));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Read));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.SearchType));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Vread));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Delete));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Create));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Update));
         }
     }
 }
