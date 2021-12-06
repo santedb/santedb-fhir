@@ -22,9 +22,7 @@
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
-using RestSrvr;
 using SanteDB.Core;
-using SanteDB.Core.Applets.ViewModel.Json;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
@@ -34,13 +32,10 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Xml.Serialization;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
