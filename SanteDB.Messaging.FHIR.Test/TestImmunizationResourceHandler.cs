@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
@@ -151,8 +152,10 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 var retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
 
+                Assert.IsNotNull(retrievedImmunization);
                 Assert.AreEqual(retrievedImmunization.Id, actualImmunization.Id);
                 Assert.AreEqual(12, retrievedImmunization.DoseQuantity.Value);
+                //Assert.AreEqual(new Integer(1), retrievedImmunization.ProtocolApplied.FirstOrDefault().DoseNumber);
             }
         }
 
@@ -532,6 +535,119 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.HistoryInstance));
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Vread));
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.SearchType));
+        }
+
+        // ToDo: 
+        /// <summary>
+        /// Tests the query functionality of <see cref="ImmunizationResourceHandler" /> class.
+        /// </summary>
+        //[Test]
+        public void TestQueryImmunization()
+        {
+            var patient = new Patient
+            {
+                Name = new List<HumanName>
+                {
+                    new HumanName
+                    {
+                        Given = new List<string>
+                        {
+                            "Test"
+                        },
+                        Family = "Patient"
+                    }
+                }
+            };
+
+            var encounter = new Encounter
+            {
+                Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH"),
+                Status = Encounter.EncounterStatus.Finished,
+                Length = new Duration
+                {
+                    Value = 25
+                },
+                Period = new Period
+                {
+                    StartElement = FhirDateTime.Now(),
+                    EndElement = FhirDateTime.Now()
+                }
+            };
+
+
+            //set up resource for create request
+            var immunization = new Immunization
+            {
+                DoseQuantity = new Quantity(12, "mmHg"),
+                RecordedElement = new FhirDateTime(DateTimeOffset.Now),
+                Route = new CodeableConcept("http://hl7.org/fhir/sid/ROUTE", "AMNINJ"),
+                Site = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActSite", "LA"),
+                Status = Immunization.ImmunizationStatusCodes.Completed,
+                StatusReason = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActReason", "PATCAR"),
+                VaccineCode = new CodeableConcept("http://hl7.org/fhir/sid/cvx", "112"),
+                ExpirationDateElement = Date.Today(),
+                LotNumber = "4"
+            };
+
+            immunization.ProtocolApplied.Add(new Immunization.ProtocolAppliedComponent
+            {
+                DoseNumber = new Integer(1),
+                Series = "test"
+            });
+
+            Resource actualPatient;
+            Resource actualEncounter;
+            Resource actualImmunization;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
+                var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
+                var immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
+
+                actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
+                encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+                actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
+
+                immunization.Patient = new ResourceReference($"urn:uuid:{actualPatient.Id}");
+
+                immunization.Encounter = new ResourceReference($"urn:uuid:{actualEncounter.Id}");
+
+                actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
+
+                var bundle = immunizationResourceHandler.Query(new NameValueCollection()
+                {
+                    {"_id", actualImmunization.Id}
+                });
+                var retrievedImmunization = (Immunization)bundle.Entry.FirstOrDefault()?.Resource;
+
+                Assert.IsNotNull(retrievedImmunization);
+                Assert.AreEqual(retrievedImmunization.Id, actualImmunization.Id);
+                Assert.AreEqual(12, retrievedImmunization.DoseQuantity.Value);
+            }
+        }
+
+        /// <summary>
+        /// Tests non UUID references <see cref="ImmunizationResourceHandler" /> class.
+        /// </summary>
+        [Test]
+        public void TestCreateImmunizationWithNonUUIDReference()
+        {
+            var immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
+            var immunization = new Immunization
+            {
+                Patient = new ResourceReference(Guid.NewGuid().ToString())
+            };
+
+            Assert.Throws<NotSupportedException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
+
+            immunization = new Immunization()
+            {
+                Encounter = new ResourceReference(Guid.NewGuid().ToString())
+            };
+
+            Assert.Throws<NotSupportedException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
         }
     }
 }
