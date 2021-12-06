@@ -53,11 +53,6 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private IServiceManager m_serviceManager;
 
-        /// <summary>
-        /// The observation repository service.
-        /// </summary>
-        private IRepositoryService<Core.Model.Acts.Observation> m_observationRepositoryService;
-
         private Observation m_observation;
 
         private Patient m_patient;
@@ -124,7 +119,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCreateObservation()
         {
-            var effectiveTime = new FhirDateTime(DateTimeOffset.Parse("2021-10-01T08:06:32-04:00"));
+            var effectiveTime = new FhirDateTime(DateTimeOffset.Parse("2021-11-29T08:06:32-05:00"));
 
             var observation = TestUtil.GetFhirMessage("CreateObservation") as Observation;
 
@@ -191,15 +186,22 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestGetInteractions()
         {
-            var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var observationResourceHandler = new ObservationResourceHandler(this.m_observationRepositoryService, localizationService);
+            var observationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Observation);
             var methodInfo = typeof(ObservationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
             var interactions = methodInfo.Invoke(observationResourceHandler, null);
 
             Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
+
             var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions;
-            Assert.AreEqual(5, resourceInteractionComponents.Count());
+
+            Assert.AreEqual(7, resourceInteractionComponents.Count());
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.HistoryInstance));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Read));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.SearchType));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Vread));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Delete));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Create));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Update));
         }
 
         /// <summary>
