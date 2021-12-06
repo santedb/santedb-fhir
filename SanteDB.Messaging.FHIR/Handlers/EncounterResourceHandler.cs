@@ -72,7 +72,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.SearchType,
                 TypeRestfulInteraction.Read,
                 TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.HistoryInstance
+                TypeRestfulInteraction.HistoryInstance,
+                TypeRestfulInteraction.Create,
+                TypeRestfulInteraction.Delete,
+                TypeRestfulInteraction.Update,
             }.Select(o => new ResourceInteractionComponent
                 {Code = o});
         }

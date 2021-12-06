@@ -14,7 +14,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using Hl7.Fhir.Serialization;
 using DetectedIssue = SanteDB.Core.BusinessRules.DetectedIssue;
 
 namespace SanteDB.Messaging.FHIR.Test
@@ -65,6 +64,35 @@ namespace SanteDB.Messaging.FHIR.Test
             }
         }
 
+        /// <summary>
+        /// Test the validate operation for a FHIR resource.
+        /// </summary>
+        [Test]
+        public void TestValidateInvalidResource()
+        {
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var validateResourceOperation = this.m_serviceManager.CreateInjected<FhirValidateResourceOperation>();
+
+               Assert.Throws<NotSupportedException>(() => validateResourceOperation.Invoke(new Parameters
+               {
+                   Parameter = new List<Parameters.ParameterComponent>
+                   {
+                       new Parameters.ParameterComponent
+                       {
+                           Name = "resource",
+                           Resource = new DummyResource()
+                       }
+                   }
+               }));
+            }
+        }
+
+        /// <summary>
+        /// Test the validate operation for a FHIR resource.
+        /// </summary>
         [Test]
         public void TestValidateResource()
         {
@@ -102,6 +130,15 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Severity == OperationOutcome.IssueSeverity.Error));
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Code == OperationOutcome.IssueType.NoStore));
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Diagnostics == "No Gender"));
+        }
+    }
+
+    [ExcludeFromCodeCoverage]
+    internal class DummyResource : Resource
+    {
+        public override IDeepCopyable DeepCopy()
+        {
+            return new DummyResource();
         }
     }
 

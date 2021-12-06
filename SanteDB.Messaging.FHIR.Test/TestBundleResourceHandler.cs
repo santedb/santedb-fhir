@@ -19,7 +19,6 @@
  * Date: 2021-11-29
  */
 
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;

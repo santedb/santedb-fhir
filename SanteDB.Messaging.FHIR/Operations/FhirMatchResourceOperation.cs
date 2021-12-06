@@ -33,32 +33,40 @@ using System.Linq;
 namespace SanteDB.Messaging.FHIR.Operations
 {
     /// <summary>
-    /// A FHIR operation handler which executs the matching logic of the CDR
+    /// A FHIR operation handler which executes the matching logic of the CDR.
     /// </summary>
-    public class FhirMatchResourceOperation : IFhirOperationHandler,IServiceImplementation
+    public class FhirMatchResourceOperation : IFhirOperationHandler, IServiceImplementation
     {
-        // Tracer
+        /// <summary>
+        /// The tracer instance.
+        /// </summary>
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirMatchResourceOperation));
 
-        // Configuration
-        private IRecordMatchingConfigurationService m_matchConfigurationService;
-
-        // Localization service
+        /// <summary>
+        /// The localization service.
+        /// </summary>
         private readonly ILocalizationService m_localizationService;
 
         /// <summary>
-        /// Configurations for the merge configuration
+        /// The record matching configuration instance.
         /// </summary>
-        public FhirMatchResourceOperation(ILocalizationService localizationService)
+        private readonly IRecordMatchingConfigurationService m_matchConfigurationService;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FhirMatchResourceOperation"/> class.
+        /// </summary>
+        /// <param name="localizationService">The localization service.</param>
+        /// <param name="recordMatchingConfigurationService">The record matching configuration service.</param>
+        public FhirMatchResourceOperation(ILocalizationService localizationService, IRecordMatchingConfigurationService recordMatchingConfigurationService)
         {
-            this.m_matchConfigurationService = ApplicationServiceContext.Current.GetService<IRecordMatchingConfigurationService>();
+            this.m_matchConfigurationService = recordMatchingConfigurationService;
             this.m_localizationService = localizationService;
         }
 
         /// <summary>
         /// Get the parameters
         /// </summary>
-        public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<String, FHIRAllTypes>()
+        public IDictionary<string, FHIRAllTypes> Parameters => new Dictionary<string, FHIRAllTypes>
         {
             { "resource", FHIRAllTypes.Any  },
             { "onlyCertainMatches", FHIRAllTypes.Boolean },
@@ -90,6 +98,9 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// </summary>
         public bool IsGet => false;
 
+        /// <summary>
+        /// Gets the service name.
+        /// </summary>
         public string ServiceName => "Fhir Match Resource Operation";
 
         /// <summary>
@@ -112,7 +123,6 @@ namespace SanteDB.Messaging.FHIR.Operations
 
             // Execute the logic
             try
-
             {
                 // First we want to get the handler, as this will tell us the SanteDB CDR type 
                 if (!resource.TryDeriveResourceType(out ResourceType rt))
