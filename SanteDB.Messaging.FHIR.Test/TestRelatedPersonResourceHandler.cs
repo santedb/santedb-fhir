@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Reflection;
 using Patient = SanteDB.Core.Model.Roles.Patient;
 using Person = SanteDB.Core.Model.Entities.Person;
 
@@ -274,6 +275,31 @@ namespace SanteDB.Messaging.FHIR.Test
                 queryResult = patientHandler.Query(query);
                 Assert.AreEqual(1, queryResult.Total);
             }
+        }
+
+        /// <summary>
+        /// Tests the get interactions functionality in <see cref="RelatedPersonResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestGetInteractions()
+        {
+            var relatedPersonResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson);
+            var methodInfo = typeof(RelatedPersonResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
+
+            Assert.NotNull(methodInfo);
+
+            var interactions = methodInfo.Invoke(relatedPersonResourceHandler, null);
+
+            Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
+
+            var resourceInteractionComponents = ((IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions).ToArray();
+
+            Assert.AreEqual(5, resourceInteractionComponents.Length);
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Create));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Read));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.SearchType));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Delete));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Update));
         }
     }
 }

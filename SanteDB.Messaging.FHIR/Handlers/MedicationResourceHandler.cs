@@ -40,9 +40,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
     public class MedicationResourceHandler : RepositoryResourceHandlerBase<Medication, ManufacturedMaterial>
     {
         /// <summary>
-        /// Create new resource handler
+        /// Initializes a new instance of the <see cref="MedicationResourceHandler"/> class.
         /// </summary>
-        public MedicationResourceHandler(IRepositoryService<ManufacturedMaterial> repo, ILocalizationService localizationService) : base(repo, localizationService)
+        /// <param name="repositoryService">The repository service.</param>
+        /// <param name="localizationService">The localization service.</param>
+        public MedicationResourceHandler(IRepositoryService<ManufacturedMaterial> repositoryService, ILocalizationService localizationService) : base(repositoryService, localizationService)
         {
         }
 
@@ -61,6 +63,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             return new[]
             {
+                TypeRestfulInteraction.Create,
+                TypeRestfulInteraction.Update,
                 TypeRestfulInteraction.HistoryInstance,
                 TypeRestfulInteraction.Read,
                 TypeRestfulInteraction.SearchType,

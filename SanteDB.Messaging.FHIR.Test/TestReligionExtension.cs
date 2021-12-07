@@ -76,7 +76,9 @@ namespace SanteDB.Messaging.FHIR.Test
             var patient = new Patient
             {
                 ReligiousAffiliation = new Concept
-                    {Mnemonic = "Talos", Key = Guid.NewGuid()}
+                {
+                    Mnemonic = "Talos", Key = Guid.NewGuid()
+                }
             };
 
             var constructedReligion = this.m_extension.Construct(patient).ToArray();
@@ -137,11 +139,10 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestReligionExtensionParseValidRoleInvalidExtension()
         {
-            var extensionforTest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-religion",
-                new CodeableConcept("http://terminology.hl7.org/CodeSystem/v2-2.4", "ASDF"));
+            var extensionUnderTest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-religion", new CodeableConcept("http://terminology.hl7.org/CodeSystem/v2-2.4", "ASDF"));
             var patient = new Patient();
 
-            Assert.Throws<FhirException>(() => this.m_extension.Parse(extensionforTest, patient));
+            Assert.Throws<FhirException>(() => this.m_extension.Parse(extensionUnderTest, patient));
         }
 
         /// <summary>
