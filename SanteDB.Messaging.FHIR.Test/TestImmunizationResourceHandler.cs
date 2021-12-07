@@ -530,11 +530,17 @@ namespace SanteDB.Messaging.FHIR.Test
             var interactions = methodInfo.Invoke(immunizationResourceHandler, null);
 
             Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
+
             var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions;
+
             Assert.AreEqual(7, resourceInteractionComponents.Count());
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.HistoryInstance));
-            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Vread));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Read));
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.SearchType));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Vread));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Delete));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Create));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Update));
         }
 
         // ToDo: 
@@ -648,6 +654,34 @@ namespace SanteDB.Messaging.FHIR.Test
             };
 
             Assert.Throws<NotSupportedException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
+        }
+
+        /// <summary>
+        /// Tests create functionality of <see cref="ImmunizationResourceHandler" /> class given dose qty of 0.
+        /// </summary>
+        [Test]
+        public void TestCreateImmunizationGivenDoseQuantityOfZero()
+        {
+            //set up resource for create request
+            var immunization = new Immunization
+            {
+                DoseQuantity = new Quantity(0, "mmHg"),
+                VaccineCode = new CodeableConcept("http://hl7.org/fhir/sid/cvx", "112"),
+            };
+
+            Resource actualImmunization;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
+            {
+                var immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
+                actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
+                var retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
+
+                Assert.IsNotNull(retrievedImmunization);
+                Assert.AreEqual(retrievedImmunization.Id, actualImmunization.Id);
+                Assert.AreEqual(1, retrievedImmunization.DoseQuantity.Value);
+            }
         }
     }
 }
