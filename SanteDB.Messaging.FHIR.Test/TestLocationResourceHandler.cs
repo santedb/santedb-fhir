@@ -32,6 +32,7 @@ using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -302,6 +303,141 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Vread));
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Delete));
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Update));
+        }
+
+        /// Tests the update functionality when an invalid resource is passed to the update method in the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestUpdateLocationInvalidResource()
+        {
+            var location = TestUtil.GetFhirMessage("UpdateLocation") as Location;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
+
+                var actual = locationResourceHandler.Create(location, TransactionMode.Commit);
+
+                Assert.IsNotNull(actual);
+                Assert.IsInstanceOf<Location>(actual);
+
+                var createdLocation = (Location)actual;
+
+                Assert.IsNotNull(createdLocation);
+                Assert.AreEqual(Location.LocationStatus.Active, createdLocation.Status);
+                Assert.AreEqual(Location.LocationMode.Instance, createdLocation.Mode);
+                Assert.AreEqual("Ontario", createdLocation.Address.State);
+
+                createdLocation.Status = Location.LocationStatus.Suspended;
+                createdLocation.Mode = Location.LocationMode.Kind;
+                createdLocation.Address.State = "Alberta";
+
+                Assert.Throws<InvalidDataException>(() => locationResourceHandler.Update(createdLocation.Id, new Patient(), TransactionMode.Commit));
+            }
+        }
+
+        /// <summary>
+        /// Tests the query functionality in the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestQueryLocation()
+        {
+            var location = TestUtil.GetFhirMessage("UpdateLocation") as Location;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
+
+                var actual = locationResourceHandler.Create(location, TransactionMode.Commit);
+
+                Assert.IsNotNull(actual);
+                Assert.IsInstanceOf<Location>(actual);
+
+                var createdLocation = (Location)actual;
+
+                Assert.IsNotNull(createdLocation);
+
+                Assert.AreEqual(Location.LocationStatus.Active, createdLocation.Status);
+                Assert.AreEqual(Location.LocationMode.Instance, createdLocation.Mode);
+                Assert.AreEqual("Ontario", createdLocation.Address.State);
+
+                var actualQuery = locationResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", createdLocation.Id }
+                });
+
+                Assert.IsNotNull(actualQuery);
+                Assert.IsInstanceOf<Bundle>(actualQuery);
+
+                Assert.AreEqual(1, actualQuery.Entry.Count);
+
+                var queriedLocation = (Location)actualQuery.Entry.First().Resource;
+
+                Assert.IsNotNull(queriedLocation);
+                Assert.IsInstanceOf<Location>(queriedLocation);
+
+                Assert.AreEqual(Location.LocationStatus.Active, queriedLocation.Status);
+                Assert.AreEqual(Location.LocationMode.Instance, queriedLocation.Mode);
+                Assert.AreEqual("Ontario", queriedLocation.Address.State);
+            }
+        }
+
+        /// <summary>
+        /// Tests the query functionality when querying by part of location in the <see cref="LocationResourceHandler"/> class.
+        /// </summary>
+        [Test]
+        public void TestQueryLocationByPartOfLocation()
+        {
+            var partOfLocation = TestUtil.GetFhirMessage("CreatePartOfLocation") as Location;
+
+            var location = TestUtil.GetFhirMessage("CreateLocation") as Location;
+
+            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
+            {
+                var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
+
+                var partOfLocationActual = locationResourceHandler.Create(partOfLocation, TransactionMode.Commit);
+                location.PartOf = new ResourceReference($"urn:uuid:{partOfLocationActual.Id}");
+                var actual = locationResourceHandler.Create(location, TransactionMode.Commit);
+
+                Assert.IsNotNull(actual);
+                Assert.IsInstanceOf<Location>(actual);
+
+                var createdLocation = (Location)actual;
+
+                Assert.IsNotNull(createdLocation);
+
+                Assert.AreEqual("Test Location", createdLocation.Name);
+                Assert.AreEqual(Location.LocationMode.Kind, createdLocation.Mode);
+                Assert.AreEqual(Location.LocationStatus.Active, createdLocation.Status);
+                Assert.AreEqual("Hamilton", createdLocation.Address.City);
+                Assert.AreEqual("6324", createdLocation.Identifier.First().Value);
+
+                var queryResult = locationResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", createdLocation.Id },
+                    { "_include", "Location:partOf" }
+                });
+
+                Assert.NotNull(queryResult);
+                Assert.IsInstanceOf<Bundle>(queryResult);
+                Assert.AreEqual(2, queryResult.Entry.Count);
+
+                var queriedLocation = (Location)queryResult.Entry.First().Resource;
+                var includedPartOfLocation = (Location)queryResult.Entry.Last().Resource;
+
+                Assert.IsNotNull(queriedLocation);
+                Assert.IsNotNull(includedPartOfLocation);
+
+                Assert.AreEqual("Test Location", queriedLocation.Name);
+                Assert.AreEqual(Location.LocationMode.Kind, queriedLocation.Mode);
+                Assert.AreEqual(Location.LocationStatus.Active, queriedLocation.Status);
+                Assert.AreEqual("Hamilton", queriedLocation.Address.City);
+                Assert.AreEqual("6324", queriedLocation.Identifier.First().Value);
+            }
         }
     }
 }
