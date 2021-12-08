@@ -78,8 +78,6 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsTrue(constructedBirthTime.Any());
             Assert.AreEqual(1, constructedBirthTime.Count);
 
-            Console.WriteLine(constructedBirthTime.First().Value);
-
             var extension = constructedBirthTime.First();
 
             Assert.IsNotNull(extension);
