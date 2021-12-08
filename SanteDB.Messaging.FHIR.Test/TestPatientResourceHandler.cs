@@ -19,13 +19,6 @@
  * Date: 2021-11-18
  */
 
-using System;
-using System.Collections.Generic;
-using System.Collections.Specialized;
-using System.Diagnostics.CodeAnalysis;
-using System.IO;
-using System.Linq;
-using System.Reflection;
 using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
@@ -37,6 +30,13 @@ using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
+using System.Linq;
+using System.Reflection;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -225,6 +225,11 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Jordan", actual.Name.Single().Given.Single());
             Assert.AreEqual("Canada", actual.Address.Single().Country);
             Assert.AreEqual("mailto:Webber@gmail.com", actual.Telecom.First().Value);
+
+            Assert.NotNull(actual.Deceased);
+            Assert.IsInstanceOf<FhirBoolean>(actual.Deceased);
+            Assert.AreEqual(((FhirBoolean)patient.Deceased).Value, ((FhirBoolean)actual.Deceased).Value);
+
             Assert.IsNotNull(actual.Photo.First().Data);
             Assert.AreEqual(patient.BirthDate, actual.BirthDate);
         }

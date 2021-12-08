@@ -19,6 +19,7 @@
   ],
   "gender": "male",
   "birthDate": "2021-11-23",
+  "deceasedBoolean": true,
   "address": [
     {
       "city": "Hamilton",
