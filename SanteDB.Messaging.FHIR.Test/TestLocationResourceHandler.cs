@@ -415,6 +415,28 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(Location.LocationStatus.Active, createdLocation.Status);
                 Assert.AreEqual("Hamilton", createdLocation.Address.City);
                 Assert.AreEqual("6324", createdLocation.Identifier.First().Value);
+
+                var queryResult = locationResourceHandler.Query(new NameValueCollection
+                {
+                    { "_id", createdLocation.Id },
+                    { "_include", "Location:partOf" }
+                });
+
+                Assert.NotNull(queryResult);
+                Assert.IsInstanceOf<Bundle>(queryResult);
+                Assert.AreEqual(2, queryResult.Entry.Count);
+
+                var queriedLocation = (Location)queryResult.Entry.First().Resource;
+                var includedPartOfLocation = (Location)queryResult.Entry.Last().Resource;
+
+                Assert.IsNotNull(queriedLocation);
+                Assert.IsNotNull(includedPartOfLocation);
+
+                Assert.AreEqual("Test Location", queriedLocation.Name);
+                Assert.AreEqual(Location.LocationMode.Kind, queriedLocation.Mode);
+                Assert.AreEqual(Location.LocationStatus.Active, queriedLocation.Status);
+                Assert.AreEqual("Hamilton", queriedLocation.Address.City);
+                Assert.AreEqual("6324", queriedLocation.Identifier.First().Value);
             }
         }
     }
