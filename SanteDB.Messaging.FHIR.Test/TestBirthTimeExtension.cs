@@ -69,13 +69,14 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             var person = new Person
             {
-                DateOfBirth = new DateTime(1970, 4, 5),
+                DateOfBirth = new DateTime(1980, 4, 6, 2, 3, 23),
+                DateOfBirthPrecision = Core.Model.DataTypes.DatePrecision.Minute
             };
 
-            var constructedBirthTime = m_extension.Construct(person).ToArray();
+            var constructedBirthTime = m_extension.Construct(person).ToList();
 
             Assert.IsTrue(constructedBirthTime.Any());
-            Assert.AreEqual(1, constructedBirthTime.Length);
+            Assert.AreEqual(1, constructedBirthTime.Count);
 
             Console.WriteLine(constructedBirthTime.First().Value);
 
@@ -87,7 +88,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var birthDate = extension.Value as FhirDateTime;
 
             Assert.IsNotNull(birthDate);
-            Assert.AreEqual(new FhirDateTime(1970, 4, 5), birthDate);
+            Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23), birthDate);
         }
     }
 }
