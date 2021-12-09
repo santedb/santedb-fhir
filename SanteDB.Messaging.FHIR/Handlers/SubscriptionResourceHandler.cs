@@ -309,13 +309,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Type = new Uri(channel.Endpoint).Scheme == "sms" ? Subscription.SubscriptionChannelType.Sms :
                     new Uri(channel.Endpoint).Scheme == "mailto" ? Subscription.SubscriptionChannelType.Email :
-                   typeof(FhirPubSubMessageDispatcherFactory) == channel.DispatcherFactoryType ? Subscription.SubscriptionChannelType.Message :
+                   "fhir-message" == channel.DispatcherFactoryId ? Subscription.SubscriptionChannelType.Message :
                    Subscription.SubscriptionChannelType.RestHook,
                 Endpoint = channel.Endpoint.ToString(),
                 Header = channel.Settings.Where(o => !o.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase)).Select(o => $"{o.Name}: {o.Value}"),
                 Payload = channel.Settings.FirstOrDefault(o => o.Name.Equals("Content-Type", StringComparison.OrdinalIgnoreCase))?.Value,
             };
 
+            retVal.End = model.NotAfter;
             // TODO: Map the HDSI query syntax to FHIR PATH
             var mapper = FhirResourceHandlerUtil.GetMappersFor(model.ResourceType).FirstOrDefault();
             retVal.Criteria = $"{mapper.ResourceType}?";
@@ -348,7 +349,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                     if (mode == TransactionMode.Commit) // Actually register the channel
                     {
-                        channel = this.m_pubSubManager.RegisterChannel(name, new Uri(fhirChannel.Endpoint), settings);
+                        channel = this.m_pubSubManager.RegisterChannel(name, String.Empty, new Uri(fhirChannel.Endpoint), settings);
                     }
                     break;
 
@@ -363,7 +364,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                     if (mode == TransactionMode.Commit) // Actually register the channel
                     {
-                        channel = this.m_pubSubManager.RegisterChannel(name, new Uri(fhirChannel.Endpoint), settings);
+                        channel = this.m_pubSubManager.RegisterChannel(name, String.Empty, new Uri(fhirChannel.Endpoint), settings);
                     }
                     break;
 

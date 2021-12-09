@@ -48,6 +48,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
     public class FhirPubSubMessageDispatcherFactory : IPubSubDispatcherFactory
     {
         /// <summary>
+        /// Fhir message id
+        /// </summary>
+        public string Id => "fhir-message";
+
+        /// <summary>
         /// Gets the schemes for this factory
         /// </summary>
         public IEnumerable<string> Schemes => new String[] { "fhir-msg-http", "fhir-msg-https" };
@@ -382,7 +387,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 catch (Exception e)
                 {
                     this.m_tracer.TraceError("Could not send create to {0} for {1} - {2}", this.Endpoint, data, e);
-                    throw new DataDispatchException($"Error sending obsolete notification to {this.Endpoint}", e);
+                    throw new DataDispatchException($"Error sending update notification to {this.Endpoint}", e);
                 }
             }
         }
