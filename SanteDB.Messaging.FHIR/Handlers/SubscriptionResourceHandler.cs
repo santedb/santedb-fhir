@@ -36,6 +36,7 @@ using System.Text;
 using System.Threading.Tasks;
 using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
+using SanteDB.Core.Model;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -205,6 +206,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             hdsiQuery.Add("obsoletionTime", "null");
             // Do the query
             int totalResults = 0;
+
+            // Add the queries for resource mappers
+            hdsiQuery.Add("resource", FhirResourceHandlerUtil.ResourceHandlers.OfType<IFhirResourceMapper>().Select(o => o.CanonicalType.GetSerializationName()).ToList());
             var predicate = QueryExpressionParser.BuildLinqExpression<PubSubSubscriptionDefinition>(hdsiQuery);
             var hdsiResults = this.m_pubSubManager.FindSubscription(predicate, query.Start, query.Quantity, out totalResults);
             var restOperationContext = RestOperationContext.Current;
