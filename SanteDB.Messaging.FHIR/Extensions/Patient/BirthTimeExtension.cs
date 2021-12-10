@@ -30,7 +30,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-birthTime");
 
         /// <summary>
-        /// Construct the extentsion
+        /// Construct the extension
         /// </summary>
         public IEnumerable<Extension> Construct(IIdentifiedEntity modelObject)
         {
