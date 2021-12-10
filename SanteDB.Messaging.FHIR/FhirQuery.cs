@@ -70,7 +70,7 @@ namespace SanteDB.Messaging.FHIR
         public List<String> IncludeResource { get; set; }
 
         /// <summary>
-        /// Minimum degree natcg
+        /// Minimum degree match.
         /// </summary>
         public float MinimumDegreeMatch { get; set; }
 

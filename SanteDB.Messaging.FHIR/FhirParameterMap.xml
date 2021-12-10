@@ -231,7 +231,7 @@
     <map fhir="form" model="formConcept" type="concept"/>
     <map fhir="manufacturer" model="relationship[WarrantedProduct].source" type="reference"/>
     <map fhir="manufacturer.name" model="relationship[WarrantedProduct].source.name.component.value"/>
-    <map fhir="lotNummber" model="lotNumber"/>
+    <map fhir="lotNumber" model="lotNumber"/>
     <map fhir="expirationDate" model="expireDate"/>
     <map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/medication-status"/>
   </type>

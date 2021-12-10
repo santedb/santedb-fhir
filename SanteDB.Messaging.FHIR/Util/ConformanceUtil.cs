@@ -21,7 +21,6 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
-using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Interop;
 using SanteDB.Core.Services;
@@ -30,7 +29,6 @@ using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Rest.Common;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Reflection;
@@ -44,15 +42,16 @@ namespace SanteDB.Messaging.FHIR.Util
     public static class ConformanceUtil
     {
         // Conformance built
-        private static CapabilityStatement s_conformance = null;
+        private static CapabilityStatement s_conformance;
+
         // Sync lock
-        private static Object s_syncLock = new object();
+        private static readonly object s_syncLock = new object();
 
         // FHIR trace source
-        private static Tracer s_traceSource = new Tracer(FhirConstants.TraceSourceName);
+        private static readonly Tracer s_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         // Configuration section
-        private static FhirServiceConfigurationSection s_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
+        private static readonly FhirServiceConfigurationSection s_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
 
         /// <summary>
         /// Get Conformance Statement from FHIR service

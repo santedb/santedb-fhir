@@ -18,9 +18,11 @@
  * User: fyfej
  * Date: 2021-8-5
  */
+
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
-using RestSrvr;
+using SanteDB.Core;
+using SanteDB.Core.Services;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -34,40 +36,47 @@ namespace SanteDB.Messaging.FHIR.Util
     /// </summary>
     public static class StructureDefinitionUtil
     {
+        private static readonly ILocalizationService s_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+
         /// <summary>
         /// Get structure definition
         /// </summary>
-        public static StructureDefinition GetStructureDefinition(this Type me, bool isProfile = false)
+        public static StructureDefinition GetStructureDefinition(this Type source, bool isProfile = false)
         {
+            if (source == null)
+            {
+                throw new ArgumentNullException(nameof(source), s_localizationService.GetString("error.type.ArgumentNullException"));
+            }
 
             // Base structure definition
-            Assembly entryAssembly = Assembly.GetEntryAssembly();
-            var fhirType = me.GetCustomAttribute<FhirTypeAttribute>();
+            var entryAssembly = Assembly.GetEntryAssembly();
+
+            var fhirType = source.GetCustomAttribute<FhirTypeAttribute>();
 
             // Create the structure definition
-            var retVal = new StructureDefinition()
+            var retVal = new StructureDefinition
             {
-                Abstract = me.IsAbstract,
-                Contact = new List<ContactDetail>()
+                Abstract = source.IsAbstract,
+                Contact = new List<ContactDetail>
                 {
-                    new ContactDetail()
+                    new ContactDetail
                     {
-                        Name =  me.Assembly.GetCustomAttribute<AssemblyCompanyAttribute>().Company
+                        Name = source.Assembly.GetCustomAttribute<AssemblyCompanyAttribute>().Company
                     }
                 },
-                Name = me.Name,
-                Description = new Markdown(me.GetCustomAttribute<DescriptionAttribute>()?.Description ?? me.Name),
+                Name = source.Name,
+                Description = new Markdown(source.GetCustomAttribute<DescriptionAttribute>()?.Description ?? source.Name),
                 FhirVersion = FHIRVersion.N4_0_0,
-                DateElement = new FhirDateTime(DateTime.Now),
+                DateElement = DataTypeConverter.ToFhirDateTime(DateTimeOffset.Now),
                 Kind = fhirType.IsResource ? StructureDefinition.StructureDefinitionKind.Resource : StructureDefinition.StructureDefinitionKind.ComplexType,
                 Type = fhirType.Name,
                 Derivation = StructureDefinition.TypeDerivationRule.Constraint,
-                Id = me.GetCustomAttribute<XmlTypeAttribute>()?.TypeName ?? me.Name,
-                Version = entryAssembly.GetName().Version.ToString(),
-                VersionId = me.Assembly.GetName().Version.ToString(),
-                Copyright = new Markdown(me.Assembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright),
+                Id = source.GetCustomAttribute<XmlTypeAttribute>()?.TypeName ?? source.Name,
+                Version = entryAssembly?.GetName().Version.ToString(),
+                VersionId = source.Assembly.GetName().Version.ToString(),
+                Copyright = new Markdown(source.Assembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright),
                 Experimental = true,
-                Publisher = me.Assembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company,
+                Publisher = source.Assembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company,
                 Status = PublicationStatus.Active
             };
 

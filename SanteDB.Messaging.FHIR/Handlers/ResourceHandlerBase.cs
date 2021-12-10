@@ -22,9 +22,7 @@
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
-using RestSrvr;
 using SanteDB.Core;
-using SanteDB.Core.Applets.ViewModel.Json;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
@@ -34,13 +32,10 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Xml.Serialization;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -183,6 +178,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // We want to map from TFhirResource to TModel
             var modelInstance = this.MapToModel(target as TFhirResource);
+
             if (modelInstance == null)
                 throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
@@ -427,7 +423,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Model instance key does not equal path
             if (modelInstance.Key != Guid.Empty && modelInstance.Key != guidId)
-                throw new InvalidCastException(this.m_localizationService.GetString("error.messaging.fhir.resourceBase.key"));
+                throw new InvalidOperationException(this.m_localizationService.GetString("error.messaging.fhir.resourceBase.key"));
             else if (modelInstance.Key == Guid.Empty)
                 modelInstance.Key = guidId;
 
@@ -562,7 +558,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public IdentifiedData MapToModel(Resource resourceInstance)
         {
-            return this.MapToModel((TFhirResource)resourceInstance);
+            var retVal = this.MapToModel((TFhirResource)resourceInstance);
+            // Append the notice that this is a source model
+            if (retVal is IResourceCollection irc)
+            {
+                irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+            }
+            else
+            {
+                retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+            }
+            return retVal;
         }
 
         /// <summary>

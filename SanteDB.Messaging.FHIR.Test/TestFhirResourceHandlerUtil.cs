@@ -1,16 +1,35 @@
-﻿using System;
+﻿/*
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * User: Nityan Khanna
+ * Date: 2021-11-27
+ */
+
+using FirebirdSql.Data.FirebirdClient;
+using Hl7.Fhir.Model;
+using NUnit.Framework;
+using SanteDB.Core.Services;
+using SanteDB.Core.TestFramework;
+using SanteDB.Messaging.FHIR.Handlers;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Hl7.Fhir.Model;
-using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Handlers;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -27,10 +46,27 @@ namespace SanteDB.Messaging.FHIR.Test
         public void Setup()
         {
             // Force load of the DLL
-            var p = FirebirdSql.Data.FirebirdClient.FbCharset.Ascii;
+            var p = FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestFhirResourceHandlerUtil).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            TestApplicationContext.Current.Start();
+        }
+
+        /// <summary>
+        /// Tests the retrieval of a resource handler in the <see cref="FhirResourceHandlerUtil"/> class.
+        /// </summary>
+        [Test]
+        public void TestGetResourceHandlerInvalidResource()
+        {
+            Assert.Throws<KeyNotFoundException>(() => FhirResourceHandlerUtil.GetResourceHandler("Address"));
+        }
+
+        /// <summary>
+        /// Tests the retrieval of a resource handler in the <see cref="FhirResourceHandlerUtil"/> class.
+        /// </summary>
+        [Test]
+        public void TestGetResourceHandlerNull()
+        {
+            Assert.Throws<ArgumentNullException>(() => FhirResourceHandlerUtil.GetResourceHandler(null));
         }
 
         /// <summary>
@@ -43,6 +79,16 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.NotNull(FhirResourceHandlerUtil.GetResourceHandler(ResourceType.DomainResource));
             Assert.IsInstanceOf<DummyResourceHandler>(FhirResourceHandlerUtil.GetResourceHandler(ResourceType.DomainResource));
+            Assert.IsTrue(FhirResourceHandlerUtil.ResourceHandlers.Any(c => c.GetType() == typeof(DummyResourceHandler)));
+        }
+
+        /// <summary>
+        /// Tests the registration of a FHIR resource handler in the <see cref="FhirResourceHandlerUtil"/> class.
+        /// </summary>
+        [Test]
+        public void TestRegisterResourceHandlerNull()
+        {
+            Assert.Throws<ArgumentNullException>(() => FhirResourceHandlerUtil.RegisterResourceHandler(null));
         }
 
         /// <summary>
@@ -58,6 +104,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             FhirResourceHandlerUtil.UnRegisterResourceHandler(new DummyResourceHandler());
 
+            Assert.IsFalse(FhirResourceHandlerUtil.ResourceHandlers.Any(c => c.GetType() == typeof(DummyResourceHandler)));
             Assert.Throws<NotSupportedException>(() => FhirResourceHandlerUtil.GetResourceHandler(ResourceType.DomainResource));
         }
     }
@@ -74,30 +121,6 @@ namespace SanteDB.Messaging.FHIR.Test
         public ResourceType ResourceType => ResourceType.DomainResource;
 
         /// <summary>
-        /// Read a specific version of a resource
-        /// </summary>
-        public Resource Read(string id, string versionId)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Update a resource
-        /// </summary>
-        public Resource Update(string id, Resource target, TransactionMode mode)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Delete a resource
-        /// </summary>
-        public Resource Delete(string id, TransactionMode mode)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
         /// Create a resource
         /// </summary>
         public Resource Create(Resource target, TransactionMode mode)
@@ -106,17 +129,9 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Query a FHIR resource
+        /// Delete a resource
         /// </summary>
-        public Bundle Query(NameValueCollection parameters)
-        {
-            throw new NotImplementedException();
-        }
-
-        /// <summary>
-        /// Get the history of a specific FHIR object
-        /// </summary>
-        public Bundle History(string id)
+        public Resource Delete(string id, TransactionMode mode)
         {
             throw new NotImplementedException();
         }
@@ -136,6 +151,37 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             throw new NotImplementedException();
         }
-    }
 
+        /// <summary>
+        /// Get the history of a specific FHIR object
+        /// </summary>
+        public Bundle History(string id)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Query a FHIR resource
+        /// </summary>
+        public Bundle Query(NameValueCollection parameters)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Read a specific version of a resource
+        /// </summary>
+        public Resource Read(string id, string versionId)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Update a resource
+        /// </summary>
+        public Resource Update(string id, Resource target, TransactionMode mode)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

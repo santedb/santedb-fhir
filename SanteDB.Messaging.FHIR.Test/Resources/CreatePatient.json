@@ -1,5 +1,7 @@
 ﻿{
   "resourceType": "Patient",
+  "language": "English",
+  "active": true,
   "name": [
     {
       "family": "Webber",
@@ -17,11 +19,30 @@
   ],
   "gender": "male",
   "birthDate": "2021-11-23",
+  "deceasedBoolean": true,
   "address": [
     {
       "city": "Hamilton",
       "postalCode": "L3D 1B4",
       "country": "Canada"
+    }
+  ],
+  "maritalStatus": {
+    "coding": [
+      {
+        "system": "http://santedb.org/fhir/test",
+        "code": "M"
+      }
+    ]
+  },
+  "photo": [
+    {
+      "data": "/w=="
+    }
+  ],
+  "link": [
+    {
+      "type": "seealso"
     }
   ]
 }

@@ -20,8 +20,6 @@
  */
 
 using Hl7.Fhir.Model;
-using RestSrvr;
-using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -139,11 +137,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override Provider MapToModel(Practitioner resource)
         {
             Provider retVal = null;
-            if (Guid.TryParse(resource.Id, out Guid key))
+
+            if (Guid.TryParse(resource.Id, out var key))
             {
                 retVal = this.m_repository.Get(key);
             }
-            else if (resource.Identifier?.Count > 0)
+            else if (resource.Identifier.Any())
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
@@ -157,9 +156,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 }
             }
+
             if (retVal == null)
             {
-                retVal = new Provider()
+                retVal = new Provider
                 {
                     Key = Guid.NewGuid()
                 };
@@ -171,19 +171,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             retVal.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
             retVal.StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
-            retVal.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
+            retVal.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).ToList();
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
             retVal.GenderConceptKey = resource.Gender == null ? NullReasonKeys.Unknown : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             retVal.DateOfBirthXml = resource.BirthDate;
             retVal.DateOfBirthPrecision = DatePrecision.Day;
             retVal.LanguageCommunication = resource.Communication.Select(c => DataTypeConverter.ToLanguageCommunication(c, false)).ToList();
 
-            // TODO: Photo
             if (resource.Photo != null && resource.Photo.Any())
             {
                 retVal.Extensions.RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
                 retVal.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
             }
+
+            if (resource.Qualification.Any())
+            {
+                retVal.ProviderSpecialty = DataTypeConverter.ToConcept(resource.Qualification.First().Code);
+            }
+            
             return retVal;
         }
     }

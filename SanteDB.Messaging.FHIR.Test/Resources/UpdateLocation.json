@@ -1,0 +1,15 @@
+﻿{
+  "resourceType": "Location",
+  "status": "active",
+  "name": "Test updating location",
+  "description": "This is a test description",
+  "mode": "instance",
+  "address": {
+    "line": [
+      "123 Main Street"
+    ],
+    "city": "Milton",
+    "state": "Ontario",
+    "country": "Canada"
+  }
+}

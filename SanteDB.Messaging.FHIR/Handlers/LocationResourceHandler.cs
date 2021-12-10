@@ -21,6 +21,7 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -39,6 +40,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class LocationResourceHandler : RepositoryResourceHandlerBase<Location, Place>
     {
+
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(LocationResourceHandler));
 
         /// <summary>
 		/// Create new resource handler
@@ -68,6 +71,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
                 case StatusKeyStrings.Nullified:
                 case StatusKeyStrings.Obsolete:
+                case StatusKeyStrings.Inactive:
                     retVal.Status = Location.LocationStatus.Inactive;
                     break;
             }
@@ -101,14 +105,111 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Map the incoming FHIR reosurce to a MODEL resource
+        /// Map the incoming FHIR resource to a MODEL resource
         /// </summary>
         /// <param name="resource">The resource to be mapped</param>
-        /// <param name="restOperationContext">The operation context under which this method is being called</param>
         /// <returns></returns>
 		protected override Place MapToModel(Location resource)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+            Place place = null;
+
+            if (Guid.TryParse(resource.Id, out Guid key))
+            {
+                place = this.m_repository.Get(key);
+
+                if(place == null)
+                {
+                    place = new Place
+                    {
+                        Key = key
+                    };
+                }
+            }
+            else if (resource.Identifier.Any())
+            {
+                foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                {
+                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    {
+                        place = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                    }
+                    if (place != null)
+                    {
+                        break;
+                    }
+                }
+
+                if (place == null)
+                {
+                    place = new Place
+                    {
+                        Key = Guid.NewGuid()
+                    };
+                }
+            }
+            else
+            {
+                place = new Place
+                {
+                    Key = Guid.NewGuid()
+                };
+            }
+
+            switch (resource.Status)
+            {
+                case Location.LocationStatus.Active:
+                    place.StatusConceptKey = StatusKeys.Active;
+                    break;
+                case Location.LocationStatus.Suspended:
+                    place.StatusConceptKey = StatusKeys.Cancelled;
+                    break;
+                case Location.LocationStatus.Inactive:
+                    place.StatusConceptKey = StatusKeys.Inactive;
+                    break;
+            }
+
+            place.Names = new List<EntityName>() { new EntityName(NameUseKeys.OfficialRecord, resource.Name) };
+            place.Names.AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
+
+            if (resource.Mode == Location.LocationMode.Kind)
+                place.DeterminerConceptKey = DeterminerKeys.Described;
+            else
+                place.DeterminerConceptKey = DeterminerKeys.Specific;
+
+            place.TypeConcept = DataTypeConverter.ToConcept(resource.Type.FirstOrDefault());
+            place.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
+            place.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
+
+            if (resource.Address != null)
+                place.Addresses = new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(resource.Address) };
+
+            
+            if(resource.Position != null)
+            {
+                place.GeoTag = new GeoTag
+                {
+                    Lat = (double)resource.Position.Latitude,
+                    Lng = (double)resource.Position.Longitude
+                };
+            }
+
+            if (resource.PartOf != null)
+            {
+                var reference = DataTypeConverter.ResolveEntity<Place>(resource.PartOf, resource);
+                if (reference == null)
+                {
+                    this.m_tracer.TraceError($"Could not resolve {resource.PartOf.Reference}");
+                    throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.couldNotResolve", new
+                    {
+                        param = resource.PartOf.Reference
+                    }));
+                }
+
+                // point the child place entity at the target place entity with a relationship of parent 
+                place.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
+            }
+
+            return place;
         }
 
         /// <summary>
@@ -122,7 +223,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Read,
                 TypeRestfulInteraction.SearchType,
                 TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.Delete
+                TypeRestfulInteraction.Delete,
+                TypeRestfulInteraction.Create,
+                TypeRestfulInteraction.Update
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 

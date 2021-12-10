@@ -261,7 +261,7 @@ namespace SanteDB.Messaging.FHIR.Rest
         }
 
         /// <summary>
-        /// Validate a resource (really an update with debugging / non comit)
+        /// Validate a resource (really an update with debugging / non commit)
         /// </summary>
         public OperationOutcome ValidateResource(string resourceType, string id, Resource target)
         {

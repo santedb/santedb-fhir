@@ -18,9 +18,11 @@
  * User: fyfej
  * Date: 2021-8-5
  */
-
+using Hl7.Fhir.Model;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
-using SanteDB.Core.Model.Collection;
+using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -36,12 +38,6 @@ using System.Reflection;
 using SanteDB.Core.Diagnostics;
 using RestSrvr;
 using static Hl7.Fhir.Model.CapabilityStatement;
-using SanteDB.Core.Services;
-using System.Linq.Expressions;
-using Hl7.Fhir.Model;
-using System.Collections.Specialized;
-using SanteDB.Core;
-using SanteDB.Core.Model.Interfaces;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -178,7 +174,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns></returns>
         public StructureDefinition GetStructureDefinition()
         {
-            return StructureDefinitionUtil.GetStructureDefinition(typeof(Hl7.Fhir.Model.Bundle), false);
+            return typeof(Bundle).GetStructureDefinition(false);
         }
 
         /// <summary>

@@ -32,13 +32,15 @@ using System.Collections.Generic;
 using System.Text;
 
 using SanteDB.Core.Model.Audit;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Auditing
 {
-    /// <summary>
-    /// Audit dispatch service which sends audits using HL7 FHIR
-    /// </summary>
-    public class FhirAuditDispatcher : IAuditDispatchService
+	/// <summary>
+	/// Audit dispatch service which sends audits using HL7 FHIR
+	/// </summary>
+	[ExcludeFromCodeCoverage]
+	public class FhirAuditDispatcher : IAuditDispatchService
     {
         // Get tracer for the audit dispatcher
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirAuditDispatcher));

@@ -22,28 +22,24 @@
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using Hl7.Fhir.Serialization;
+using Hl7.Fhir.Utility;
 using Newtonsoft.Json;
 using RestSrvr;
-using RestSrvr.Attributes;
 using RestSrvr.Message;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model.Serialization;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Xml;
-using System.Xml.Schema;
-using System.Xml.Serialization;
+using Formatting = Newtonsoft.Json.Formatting;
 
 namespace SanteDB.Messaging.FHIR.Rest.Serialization
 {
@@ -52,13 +48,17 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
     /// </summary>
     /// <remarks>This serialization is used because the SanteDB FHIR resources have extra features not contained in the pure HL7 API provided by HL7 International (such as operators to/from primitiives, generation of text, etc.). This
     /// dispatch formatter is responsible for the serialization and de-serialization of FHIR objects to/from JSON and XML using the SanteDB classes for FHIR resources.</remarks>
+    [ExcludeFromCodeCoverage]
     public class FhirMessageDispatchFormatter : IDispatchMessageFormatter
     {
+        // Configuration for the service
+        private readonly FhirServiceConfigurationSection m_configuration;
+
         // Trace source
         private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         // Default settings
-        private ParserSettings m_settings = new ParserSettings()
+        private readonly ParserSettings m_settings = new ParserSettings
         {
             AcceptUnknownMembers = false,
             AllowUnrecognizedEnums = true,
@@ -66,8 +66,8 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
             PermissiveParsing = true
         };
 
-        // Configuration for the service
-        private FhirServiceConfigurationSection m_configuration;
+        // Trace source
+        private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         /// <summary>
         /// Creates a new instance of the FHIR message dispatch formatter
@@ -85,21 +85,26 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
             try
             {
                 var httpRequest = RestOperationContext.Current.IncomingRequest;
-                string contentType = httpRequest.Headers["Content-Type"];
+                var contentType = httpRequest.Headers["Content-Type"];
 
-                for (int pNumber = 0; pNumber < parameters.Length; pNumber++)
+                for (var pNumber = 0; pNumber < parameters.Length; pNumber++)
                 {
                     var parm = operation.Description.InvokeMethod.GetParameters()[pNumber];
 
                     // Simple parameter
-                    if (parameters[pNumber] != null) continue;
+                    if (parameters[pNumber] != null)
+                    {
+                        continue;
+                    }
 
                     // Use XML Serializer
                     if (contentType?.StartsWith("application/fhir+xml") == true)
                     {
                         var parser = new FhirXmlParser(this.m_settings);
                         using (var xr = XmlReader.Create(request.Body))
+                        {
                             parameters[pNumber] = parser.Parse(xr);
+                        }
                     }
                     // Use JSON Serializer
                     else if (contentType?.StartsWith("application/fhir+json") == true)
@@ -107,10 +112,14 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                         var parser = new FhirJsonParser(this.m_settings);
                         using (var sr = new StreamReader(request.Body))
                         using (var jr = new JsonTextReader(sr))
+                        {
                             parameters[pNumber] = parser.Parse(jr);
+                        }
                     }
-                    else if (contentType != null)// TODO: Binaries
+                    else if (contentType != null) // TODO: Binaries
+                    {
                         throw new InvalidOperationException("Invalid request format");
+                    }
                 }
             }
             catch (Exception e)
@@ -133,13 +142,19 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                     contentType = httpRequest.Headers["Content-Type"],
                     formatParm = httpRequest.QueryString["_format"];
 
-                bool isOutputPretty = httpRequest.QueryString["_pretty"] == "true";
+                var isOutputPretty = httpRequest.QueryString["_pretty"] == "true";
 
                 SummaryType? summaryType = SummaryType.False;
                 if (httpRequest.QueryString["_summary"] != null)
-                    summaryType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<SummaryType>(httpRequest.QueryString["_summary"], true);
+                {
+                    summaryType = EnumUtility.ParseLiteral<SummaryType>(httpRequest.QueryString["_summary"], true);
+                }
+
                 if (accepts == "*/*") // Any = null
+                {
                     accepts = null;
+                }
+
                 contentType = accepts ?? contentType ?? formatParm;
 
                 // No specified content type
@@ -158,40 +173,51 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                     switch (format)
                     {
                         case "application/fhir+xml":
-                            using (var xw = XmlWriter.Create(ms, new XmlWriterSettings()
+                            using (var xw = XmlWriter.Create(ms, new XmlWriterSettings
                             {
                                 Encoding = new UTF8Encoding(false),
                                 Indent = isOutputPretty
                             }))
+                            {
                                 new FhirXmlSerializer().Serialize(baseObject, xw, summaryType.Value);
+                            }
+
                             break;
 
                         case "application/fhir+json":
                             using (var sw = new StreamWriter(ms, new UTF8Encoding(false), 1024, true))
                             using (var jw = new JsonTextWriter(sw)
                             {
-                                Formatting = isOutputPretty ? Newtonsoft.Json.Formatting.Indented : Newtonsoft.Json.Formatting.None,
+                                Formatting = isOutputPretty ? Formatting.Indented : Formatting.None,
                                 DateFormatHandling = DateFormatHandling.IsoDateFormat
                             })
-                                new FhirJsonSerializer(new SerializerSettings()
+                            {
+                                new FhirJsonSerializer(new SerializerSettings
                                 {
                                     Pretty = isOutputPretty
                                 }).Serialize(baseObject, jw);
+                            }
+
                             break;
 
                         default:
-                            throw new FhirException((HttpStatusCode)406, OperationOutcome.IssueType.NotSupported, $"{contentType} not supported");
+                            throw new FhirException((HttpStatusCode) 406, OperationOutcome.IssueType.NotSupported, $"{contentType} not supported");
                     }
+
                     ms.Seek(0, SeekOrigin.Begin);
                     responseMessage.Body = ms;
                 }
                 else if (result == null)
+                {
                     responseMessage.StatusCode = 204; // no content
+                }
                 else
+                {
                     throw new InvalidOperationException("FHIR return values must inherit from Base");
+                }
 
                 RestOperationContext.Current.OutgoingResponse.ContentType = contentType;
-                RestOperationContext.Current.OutgoingResponse.AppendHeader("X-PoweredBy", String.Format("{0} v{1} ({2})", Assembly.GetEntryAssembly().GetName().Name, Assembly.GetEntryAssembly().GetName().Version, Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion));
+                RestOperationContext.Current.OutgoingResponse.AppendHeader("X-PoweredBy", string.Format("{0} v{1} ({2})", Assembly.GetEntryAssembly().GetName().Name, Assembly.GetEntryAssembly().GetName().Version, Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion));
                 RestOperationContext.Current.OutgoingResponse.AppendHeader("X-GeneratedOn", DateTime.Now.ToString("o"));
             }
             catch (Exception e)
