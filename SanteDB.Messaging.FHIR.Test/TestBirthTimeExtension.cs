@@ -23,6 +23,7 @@ using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
+using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Extensions;
@@ -64,8 +65,11 @@ namespace SanteDB.Messaging.FHIR.Test
             this.m_extension = this.m_serviceManager.CreateInjected<BirthTimeExtension>();
         }
 
+        /// <summary>
+        /// Tests the construct and parse method in the <see cref="BirthTimeExtension"/> class.
+        /// </summary>
         [Test]
-        public void TestBirthTimeConstructValidDate()
+        public void TestBirthTimeConstructAndParseValidDate()
         {
             var person = new Person
             {
@@ -87,6 +91,42 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.IsNotNull(birthDate);
             Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23), birthDate);
+
+            var parsedBirthTime = m_extension.Parse(extension, person);
+
+            Assert.IsTrue(parsedBirthTime);
+        }
+
+        /// <summary>
+        /// Tests the parse method when passed identified data that is not a person in the <see cref="BirthPlaceExtension"/> class.
+        /// </summary>
+        [Test]
+        public void TestBirthTimeParseInvalidIndentifiedData()
+        {
+            var person = new Person
+            {
+                DateOfBirth = new DateTime(1980, 4, 6, 2, 3, 23),
+                DateOfBirthPrecision = Core.Model.DataTypes.DatePrecision.Minute
+            };
+
+            var constructedBirthTime = m_extension.Construct(person).ToList();
+
+            Assert.IsTrue(constructedBirthTime.Any());
+            Assert.AreEqual(1, constructedBirthTime.Count);
+
+            var extension = constructedBirthTime.First();
+
+            Assert.IsNotNull(extension);
+            Assert.IsInstanceOf<FhirDateTime>(extension.Value);
+
+            var birthDate = extension.Value as FhirDateTime;
+
+            Assert.IsNotNull(birthDate);
+            Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23), birthDate);
+
+            var parsedBirthTime = m_extension.Parse(extension, new Place());
+
+            Assert.IsFalse(parsedBirthTime);
         }
     }
 }
