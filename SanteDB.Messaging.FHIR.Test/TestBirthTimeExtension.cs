@@ -90,7 +90,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var birthDate = extension.Value as FhirDateTime;
 
             Assert.IsNotNull(birthDate);
-            Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23), birthDate);
+            Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23, TimeSpan.FromHours(-5)), birthDate);
 
             var parsedBirthTime = m_extension.Parse(extension, person);
 
@@ -122,7 +122,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var birthDate = extension.Value as FhirDateTime;
 
             Assert.IsNotNull(birthDate);
-            Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23), birthDate);
+            Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23, TimeSpan.FromHours(-5)), birthDate);
 
             var parsedBirthTime = m_extension.Parse(extension, new Place());
 

@@ -34,7 +34,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public IEnumerable<Extension> Construct(IIdentifiedEntity modelObject)
         {
-            if (modelObject is Person person && person.DateOfBirthPrecision > DatePrecision.Day)
+            if (modelObject is Person person && person.DateOfBirthPrecision >= DatePrecision.Day)
             {
                 yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirDateTime(person.DateOfBirth));
             }
