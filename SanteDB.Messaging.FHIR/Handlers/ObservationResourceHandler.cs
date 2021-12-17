@@ -238,11 +238,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.StatusConceptKey = StatusKeys.Completed;
                     break;
                 case ObservationStatus.Amended:
-                    retVal.StatusConceptKey = StatusKeys.Completed;
-                    break;
+                case ObservationStatus.Corrected:
+                    throw new NotSupportedException(this.m_localizationService.GetString("error.messaging.fhir.observationStatus"));
                 case ObservationStatus.Unknown:
                     retVal.StatusConceptKey = StatusKeys.Obsolete;
                     break;
+                
             }
 
             //Effective 
