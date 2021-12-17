@@ -101,6 +101,10 @@ namespace SanteDB.Messaging.FHIR.Test
             var partOfLocation = TestUtil.GetFhirMessage("CreatePartOfLocation") as Location;
 
             var location = TestUtil.GetFhirMessage("CreateLocation") as Location;
+            location.Type = new List<CodeableConcept>
+            {
+                new CodeableConcept("http://santedb.org/conceptsets/PlaceClassCodes", "DX")
+            };
 
             Resource actual;
             Resource partOfLocationActual;
@@ -149,25 +153,17 @@ namespace SanteDB.Messaging.FHIR.Test
         /// Tests the creation of an inactive location in the <see cref="LocationResourceHandler"/> class.
         /// </summary>
         [Test]
-        public void TestCreateInactiveLocation()
+        public void TestCreateSuspendedLocation()
         {
             var location = TestUtil.GetFhirMessage("CreateLocation") as Location;
-            location.Status = Location.LocationStatus.Inactive;
+            location.Status = Location.LocationStatus.Suspended;
 
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
 
-                var actual = locationResourceHandler.Create(location, TransactionMode.Commit);
-
-                Assert.IsNotNull(actual);
-                Assert.IsInstanceOf<Location>(actual);
-
-                var createdLocation = (Location)actual;
-
-                Assert.IsNotNull(createdLocation);
-                Assert.AreEqual(Location.LocationStatus.Inactive, createdLocation.Status);
+                Assert.Throws<NotSupportedException>(() => locationResourceHandler.Create(location, TransactionMode.Commit));
             }
         }
 
@@ -260,7 +256,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(Location.LocationMode.Instance, createdLocation.Mode);
                 Assert.AreEqual("Ontario", createdLocation.Address.State);
 
-                createdLocation.Status = Location.LocationStatus.Suspended;
+                createdLocation.Status = Location.LocationStatus.Inactive;
                 createdLocation.Mode = Location.LocationMode.Kind;
                 createdLocation.Address.State = "Alberta";
 
@@ -272,7 +268,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var updatedLocation = (Location)actualUpdated;
 
                 Assert.IsNotNull(updatedLocation);
-                Assert.AreEqual(Location.LocationStatus.Suspended, updatedLocation.Status);
+                Assert.AreEqual(Location.LocationStatus.Inactive, updatedLocation.Status);
                 Assert.AreEqual(Location.LocationMode.Kind, updatedLocation.Mode);
                 Assert.AreEqual("Alberta", updatedLocation.Address.State);
             }
