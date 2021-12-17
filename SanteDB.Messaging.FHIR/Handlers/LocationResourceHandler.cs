@@ -161,8 +161,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     place.StatusConceptKey = StatusKeys.Active;
                     break;
                 case Location.LocationStatus.Suspended:
-                    place.StatusConceptKey = StatusKeys.Cancelled;
-                    break;
+                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
                 case Location.LocationStatus.Inactive:
                     place.StatusConceptKey = StatusKeys.Inactive;
                     break;

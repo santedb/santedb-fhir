@@ -1,0 +1,21 @@
+﻿{
+  "resourceType": "Patient",
+  "active": false,
+  "name": [
+    {
+      "family": "Daniels",
+      "given": [
+        "Alan"
+      ]
+    }
+  ],
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "905 123 1234",
+      "use": "home"
+    }
+  ],
+  "birthDate": "1961-04-24",
+  "deceasedDateTime": "2021-08"
+}

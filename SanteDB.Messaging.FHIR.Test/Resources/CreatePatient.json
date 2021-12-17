@@ -1,6 +1,12 @@
 ﻿{
   "resourceType": "Patient",
   "language": "English",
+  "extension": [
+    {
+      "url": "http://santedb.org/extensions/core/originalDate",
+      "valueDateTime": "1961-04-24"
+    }
+  ],
   "active": true,
   "name": [
     {

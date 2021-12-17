@@ -242,6 +242,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     substanceAdministration.DoseQuantity = 1;
                     substanceAdministration.DoseUnitKey = material.QuantityConceptKey;
                 }
+
+                substanceAdministration.TypeConceptKey = this.IMMUNIZATION; 
             }
 
             return substanceAdministration;

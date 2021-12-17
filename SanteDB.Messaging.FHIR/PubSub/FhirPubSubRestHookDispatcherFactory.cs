@@ -45,6 +45,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
     public class FhirPubSubRestHookDispatcherFactory : IPubSubDispatcherFactory
     {
         /// <summary>
+        /// Fhir rest based
+        /// </summary>
+        public string Id => "fhir-rest-hook";
+
+        /// <summary>
         /// Gets the schemes for this factory
         /// </summary>
         public IEnumerable<string> Schemes => new String[] { "fhir-rest-http", "fhir-rest-https" };

@@ -1,4 +1,25 @@
-﻿using Hl7.Fhir.Model;
+﻿/*
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * User: khannan
+ * Date: 2021-12-1
+ */
+
+using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
@@ -11,9 +32,14 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using System.Reflection;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    /// <summary>
+    /// Contains tests for the <see cref="MedicationResourceHandler"/> class.
+    /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
     public class TestMedicationResourceHandler : DataTest
@@ -34,11 +60,9 @@ namespace SanteDB.Messaging.FHIR.Test
         [SetUp]
         public void Setup()
         {
-            // Force load of the DLL
-            //var p = FbCharset.Ascii;
             TestApplicationContext.TestAssembly = typeof(TestOrganizationResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
+            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
 
             var testConfiguration = new FhirServiceConfigurationSection
             {
@@ -165,6 +189,30 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual(Medication.MedicationStatusCodes.EnteredInError, actualMedication.Status);
             Assert.AreEqual("2022-12-01T00:00:00-05:00", actualMedication.Batch.ExpirationDateElement.Value);
             Assert.AreEqual("12345", actualMedication.Batch.LotNumber);
+        }
+
+        /// <summary>
+        /// Tests the get interactions functionality in <see cref="MedicationResourceHandler" /> class.
+        /// </summary>
+        [Test]
+        public void TestGetInteractions()
+        {
+            var medicationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Medication);
+            var methodInfo = typeof(MedicationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
+            var interactions = methodInfo.Invoke(medicationResourceHandler, null);
+
+            Assert.True(interactions is IEnumerable<CapabilityStatement.ResourceInteractionComponent>);
+
+            var resourceInteractionComponents = (IEnumerable<CapabilityStatement.ResourceInteractionComponent>)interactions;
+
+            Assert.AreEqual(7, resourceInteractionComponents.Count());
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.HistoryInstance));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Read));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.SearchType));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Vread));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Delete));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Create));
+            Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Update));
         }
     }
 }

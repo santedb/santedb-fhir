@@ -81,6 +81,7 @@
     <EmbeddedResource Include="Resources\CreateLocation.json" />
     <EmbeddedResource Include="Resources\CreatePartOfLocation.json" />
     <EmbeddedResource Include="Resources\UpdateLocation.json" />
+    <EmbeddedResource Include="Resources\CreateDeceasedPatientPartialDate.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
@@ -152,6 +153,9 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TestMessageUtil.cs" />
+    <Compile Include="TestAdverseEventResourceHandler.cs" />
+    <Compile Include="TestQueryRewriter.cs" />
     <Compile Include="TestBirthTimeExtension.cs" />
     <Compile Include="TestCitizenshipExtension.cs" />
     <Compile Include="TestBundleResourceHandler.cs" />
@@ -167,6 +171,7 @@
     <Compile Include="TestRelatedPersonResourceHandler.cs" />
     <Compile Include="TestPractitionerResourceHandler.cs" />
     <Compile Include="TestImmunizationResourceHandler.cs" />
+    <Compile Include="TestImportanceExtension.cs" />
     <Compile Include="TestStructureDefinitionResourceHandler.cs" />
     <Compile Include="TestStructureDefinitionUtil.cs" />
     <Compile Include="TestNationalityExtension.cs" />
