@@ -101,10 +101,6 @@ namespace SanteDB.Messaging.FHIR.Test
             var partOfLocation = TestUtil.GetFhirMessage("CreatePartOfLocation") as Location;
 
             var location = TestUtil.GetFhirMessage("CreateLocation") as Location;
-            location.Type = new List<CodeableConcept>
-            {
-                new CodeableConcept("http://santedb.org/conceptsets/PlaceClassCodes", "DX")
-            };
 
             Resource actual;
             Resource partOfLocationActual;
