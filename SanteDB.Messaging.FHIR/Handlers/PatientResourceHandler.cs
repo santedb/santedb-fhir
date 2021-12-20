@@ -135,14 +135,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
             {
-                // Contact => Person
-                if (rel.LoadProperty(o => o.TargetEntity) is SanteDB.Core.Model.Roles.Patient && rel.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)
-                {
-                    var relative = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rel);
-                    relative.Meta.Security = null;
-                    retVal.Contained.Add(relative);
-                }
-
                 if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
                 {
                     var relEntity = rel.LoadProperty(o => o.TargetEntity);

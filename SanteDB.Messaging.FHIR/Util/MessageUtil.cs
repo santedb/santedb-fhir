@@ -19,14 +19,9 @@
  * Date: 2021-8-5
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
-using SanteDB.Core;
 using SanteDB.Core.Model.Interfaces;
-using SanteDB.Core.Services;
-using SanteDB.Messaging.FHIR.Configuration;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Util
@@ -36,14 +31,15 @@ namespace SanteDB.Messaging.FHIR.Util
     /// </summary>
     public static class MessageUtil
     {
-
-        // Escape characters
-        private static readonly Dictionary<String, String> s_escapeChars = new Dictionary<string, string>()
+        /// <summary>
+        /// The escape characters.
+        /// </summary>
+        private static readonly Dictionary<string, string> s_escapeChars = new Dictionary<string, string>
         {
             { "\\,", "\\#002C" },
             { "\\$", "\\#0024" },
             { "\\|", "\\#007C" },
-            { "\\\\", "\\#005C" },
+            { "\\\\", "\\#005C" }
         };
 
         //Base path

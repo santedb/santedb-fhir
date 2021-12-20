@@ -547,7 +547,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Tests the query functionality of <see cref="ImmunizationResourceHandler" /> class.
         /// </summary>
-        //[Test]
+        [Test]
         public void TestQueryImmunization()
         {
             var patient = new Patient

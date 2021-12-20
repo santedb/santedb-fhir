@@ -126,27 +126,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCreateDeceasedPatientPartialDate()
         {
-            var patient = new Patient
-            {
-                Name = new List<HumanName>
-                {
-                    new HumanName
-                    {
-                        Given = new List<string>
-                        {
-                            "Alan"
-                        },
-                        Family = "Daniels"
-                    }
-                },
-                Active = false,
-                BirthDate = new FhirDateTime(1961, 4, 24).ToString(),
-                Telecom = new List<ContactPoint>
-                {
-                    new ContactPoint(ContactPoint.ContactPointSystem.Phone,  ContactPoint.ContactPointUse.Home, "905 123 1234")
-                },
-                Deceased = new FhirDateTime(2021, 8)
-            };
+            var patient = TestUtil.GetFhirMessage("CreateDeceasedPatientPartialDate") as Patient;
 
             Resource actual;
 
@@ -229,7 +209,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(actual.Deceased);
             Assert.IsInstanceOf<FhirBoolean>(actual.Deceased);
             Assert.AreEqual(((FhirBoolean)patient.Deceased).Value, ((FhirBoolean)actual.Deceased).Value);
-
+            Assert.IsTrue(actual.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/originalDate"));
             Assert.IsNotNull(actual.Photo.First().Data);
             Assert.AreEqual(patient.BirthDate, actual.BirthDate);
         }

@@ -58,6 +58,10 @@ namespace SanteDB.Messaging.FHIR.Docker
         public const string ProfileSetting = "PROFILE";
 
         /// <summary>
+        /// Extensions allowed
+        /// </summary>
+        public const string ExtensionSetting = "EXTENSION";
+        /// <summary>
         /// Set id for base URI
         /// </summary>
         public const string BaseUriSetting = "BASE";
@@ -73,6 +77,7 @@ namespace SanteDB.Messaging.FHIR.Docker
         /// Set ID for authentication
         /// </summary>
         public const string AuthenticationSetting = "AUTH";
+
 
         /// <summary>
         /// Authentication settings
@@ -255,6 +260,15 @@ namespace SanteDB.Messaging.FHIR.Docker
                 foreach (var res in profiles.Split(';'))
                 {
                     fhirConfiguration.Profiles.Add(res);
+                }
+            }
+            // Custom settings
+            if(settings.TryGetValue(ExtensionSetting, out string extensions))
+            {
+                fhirConfiguration.Extensions = new List<string>();
+                foreach(var res in extensions.Split(';'))
+                {
+                    fhirConfiguration.Extensions.Add(res);
                 }
             }
             // Custom message list?
