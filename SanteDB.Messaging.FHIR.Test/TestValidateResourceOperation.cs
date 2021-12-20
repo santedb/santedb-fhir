@@ -3,6 +3,7 @@ using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Configuration;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
@@ -171,7 +172,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Called after query
         /// </summary>
-        public IEnumerable<Core.Model.Roles.Patient> AfterQuery(IEnumerable<Core.Model.Roles.Patient> results)
+        public IQueryResultSet<Core.Model.Roles.Patient> AfterQuery(IQueryResultSet<Core.Model.Roles.Patient> results)
         {
             throw new NotImplementedException();
         }
@@ -257,7 +258,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Called after query
         /// </summary>
-        public IEnumerable<object> AfterQuery(IEnumerable<object> results)
+        public IQueryResultSet AfterQuery(IQueryResultSet  results)
         {
             throw new NotImplementedException();
         }

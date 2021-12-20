@@ -199,7 +199,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 if (reference == null)
                 {
                     this.m_tracer.TraceError($"Could not resolve {resource.PartOf.Reference}");
-                    throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.couldNotResolve", new
+                    throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.couldNotResolve", new
                     {
                         param = resource.PartOf.Reference
                     }));

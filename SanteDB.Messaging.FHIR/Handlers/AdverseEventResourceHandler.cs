@@ -25,6 +25,7 @@ using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -55,33 +56,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             return base.CanMapObject(instance);
         }
-
-        protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
-        {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
-        }
-
-        /// <summary>
-        /// Get interactions
-        /// </summary>
-        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
-        {
-            return new[]
-            {
-                TypeRestfulInteraction.HistoryInstance,
-                TypeRestfulInteraction.Read,
-                TypeRestfulInteraction.SearchType,
-                TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.Delete
-            }.Select(o => new ResourceInteractionComponent
-                {Code = o});
-        }
-
-        protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
-        {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
-        }
-
+        
         /// <summary>
         /// Maps the specified act to an adverse event
         /// </summary>

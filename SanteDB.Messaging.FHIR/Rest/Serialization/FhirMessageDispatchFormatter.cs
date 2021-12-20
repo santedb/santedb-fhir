@@ -66,9 +66,6 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
             PermissiveParsing = true
         };
 
-        // Trace source
-        private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
-
         /// <summary>
         /// Creates a new instance of the FHIR message dispatch formatter
         /// </summary>

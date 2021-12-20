@@ -38,6 +38,7 @@ using System.Reflection;
 using SanteDB.Core.Diagnostics;
 using RestSrvr;
 using static Hl7.Fhir.Model.CapabilityStatement;
+using System.Collections.Specialized;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {

@@ -220,30 +220,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return this.m_repository.Find(query);
         }
 
-        /// <summary>
-        /// Get interactions
-        /// </summary>
-        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
-        {
-            return new TypeRestfulInteraction[]
-            {
-                TypeRestfulInteraction.HistoryInstance,
-                TypeRestfulInteraction.Read,
-                TypeRestfulInteraction.SearchType,
-                TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.Delete
-            }.Select(o => new ResourceInteractionComponent() { Code = o });
-        }
 
-        /// <summary>
-        /// Get included resources
-        /// </summary>
-        protected override IEnumerable<Resource> GetIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> includePaths)
-        {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
-        }
-
-            return (this.m_repository as IPersistableQueryRepositoryService<SubstanceAdministration>).Find(query, offset, count, out totalResults, queryId);
-        }
     }
 }

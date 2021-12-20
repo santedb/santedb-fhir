@@ -52,15 +52,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
-
-        /// <summary>
-        /// Get included resources
-        /// </summary>
-        protected override IEnumerable<Resource> GetIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> includePaths)
-        {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
+       
         /// <summary>
         /// Get interactions
         /// </summary>
@@ -347,20 +341,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             Core.Model.Query.NameValueCollection hdsiQuery = null;
             var query = QueryRewriter.RewriteFhirQuery(typeof(Observation), typeof(Core.Model.Acts.Observation), parameters, out hdsiQuery);
 
-            // Do the query
-            var totalResults = 0;
-
-            IEnumerable<Core.Model.Acts.Observation> hdsiResults = null;
+            IQueryResultSet hdsiResults = null;
 
             if (parameters["value-concept"] != null)
             {
                 var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiQuery);
-                hdsiResults = this.QueryEx<CodedObservation>(predicate);
+                hdsiResults = this.QueryEx(predicate);
             }
             else if (parameters["value-quantity"] != null)
             {
                 var predicate = QueryExpressionParser.BuildLinqExpression<QuantityObservation>(hdsiQuery);
-                hdsiResults = this.QueryEx(predicate).OfType<Core.Model.Acts.Observation>();
+                hdsiResults = this.QueryEx(predicate);
             }
             else
             {
@@ -370,16 +361,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // TODO: Sorting
             var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<SanteDB.Core.Model.Acts.Observation>();
-            var restOperationContext = RestOperationContext.Current;
 
             // Return FHIR query result
             var retVal = new FhirQueryResult("Observation")
             {
-                Results = hdsiResults.Select(this.MapToFhir).Select(o => new Bundle.EntryComponent
+                Results = results.Select(this.MapToFhir).Select(o => new Bundle.EntryComponent()
                 {
                     Resource = o,
-                    Search = new Bundle.SearchComponent
-                        {Mode = Bundle.SearchEntryMode.Match}
+                    Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match },
                 }).ToList(),
                 Query = query,
                 TotalResults = totalResults
@@ -390,21 +379,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Get interactions
-        /// </summary>
-        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
-        {
-            return new TypeRestfulInteraction[]
-            {
-                TypeRestfulInteraction.HistoryInstance,
-                TypeRestfulInteraction.Read,
-                TypeRestfulInteraction.SearchType,
-                TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.Delete
-            }.Select(o => new ResourceInteractionComponent() { Code = o });
-        }
-
-        /// <summary>
         /// Get included resources
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> includePaths)
@@ -412,12 +386,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-        /// <summary>
-        /// Get reverse includes
-        /// </summary>
-        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
-        {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
-        }
+       
     }
 }
