@@ -82,6 +82,7 @@
     <EmbeddedResource Include="Resources\CreatePartOfLocation.json" />
     <EmbeddedResource Include="Resources\UpdateLocation.json" />
     <EmbeddedResource Include="Resources\CreateDeceasedPatientPartialDate.json" />
+    <EmbeddedResource Include="Resources\CreateImmunization.json" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
