@@ -311,11 +311,11 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //update status to amended
                 retrievedObservation.Status = ObservationStatus.Amended;
-                updatedObservation = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
-
-                //check for correct status change
-                retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
-                Assert.AreEqual(ObservationStatus.Amended, retrievedObservation.Status);
+                Assert.Throws<NotSupportedException>(() => observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit));
+                
+                //update status to corrected
+                retrievedObservation.Status = ObservationStatus.Corrected;
+                Assert.Throws<NotSupportedException>(() => observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit));
 
                 //update status to entered in error
                 retrievedObservation.Status = ObservationStatus.EnteredInError;
