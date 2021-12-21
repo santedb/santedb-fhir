@@ -151,6 +151,9 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var qty = actual.Value as Quantity;
             Assert.AreEqual(12, qty.Value);
+            
+            //Due to time zone not being supported by current version of test database
+            //this following assert will only work if original effective time has local timezone
             Assert.AreEqual(effectiveTime, actual.Effective);
         }
 
