@@ -68,9 +68,6 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && fhirExtension.Value is Hl7.Fhir.Model.Address address)
             {
-                var entityAddress = DataTypeConverter.ToEntityAddress(address);
-
-                ApplicationServiceContext.Current.GetService<IRepositoryService<Place>>().Find(c => c.Addresses.Any(x => x.Component.Any(a => a.Value == address.Text)));
                 // look for a place that has an address of the address provided
                 // if can't find place, throw detected issue exception or key not found exception
 
