@@ -1,4 +1,5 @@
 ﻿using Hl7.Fhir.Model;
+using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Entities;
@@ -8,9 +9,6 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using SanteDB.Core;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
@@ -68,9 +66,6 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public bool Parse(Extension fhirExtension, IdentifiedData modelObject)
         {
-            // 1. persist place -> location resource handler
-            // 2. 
-
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && fhirExtension.Value is Hl7.Fhir.Model.Address address)
             {
                 var entityAddress = DataTypeConverter.ToEntityAddress(address);
