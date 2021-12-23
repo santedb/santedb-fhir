@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using SanteDB.Core;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
@@ -56,7 +57,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 if (birthPlaceRelationship != null)
                 {
                     var address = DataTypeConverter.ToFhirAddress(birthPlaceRelationship.LoadProperty(o => o.TargetEntity).LoadCollection(o => o.Addresses)?.FirstOrDefault());
-                    address.Text = birthPlaceRelationship.TargetEntity.LoadCollection(o => o.Names)?.FirstOrDefault()?.ToDisplay();
+                    address.Text = birthPlaceRelationship.TargetEntity.LoadCollection(o => o.Names)?.FirstOrDefault(c => c.NameUseKey == NameUseKeys.Search)?.ToDisplay();
                     yield return new Extension(this.Uri.ToString(), address);
                 }
             }
@@ -67,10 +68,20 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public bool Parse(Extension fhirExtension, IdentifiedData modelObject)
         {
+            // 1. persist place -> location resource handler
+            // 2. 
+
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && fhirExtension.Value is Hl7.Fhir.Model.Address address)
             {
+                var entityAddress = DataTypeConverter.ToEntityAddress(address);
+
+                ApplicationServiceContext.Current.GetService<IRepositoryService<Place>>().Find(c => c.Addresses.Any(x => x.Component.Any(a => a.Value == address.Text)));
+                // look for a place that has an address of the address provided
+                // if can't find place, throw detected issue exception or key not found exception
+
                 // TODO: Cross reference birthplace to an entity relationship (see the HL7v2 PID segment handler for example)
             }
+
             return false;
         }
     }

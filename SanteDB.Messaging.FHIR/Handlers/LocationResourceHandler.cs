@@ -167,7 +167,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
-            place.Names = new List<EntityName>() { new EntityName(NameUseKeys.OfficialRecord, resource.Name) };
+            // add the textual representation of the name of the place as the address text property for search purposes
+            // see the BirthPlaceExtension class
+            if (!string.IsNullOrEmpty(resource.Address.Text))
+            {
+                place.Names.Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
+            }
+
+            place.Names.Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
             place.Names.AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
 
             if (resource.Mode == Location.LocationMode.Kind)
