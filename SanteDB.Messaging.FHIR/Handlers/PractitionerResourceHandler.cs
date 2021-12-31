@@ -119,7 +119,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
 
             // Load the koala-fication
-            var qual = provider.LoadProperty(o => o.ProviderSpecialty);
+            var qual = provider.LoadProperty(o => o.Specialty);
             if (qual != null)
             {
                 retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(qual) } };
@@ -186,7 +186,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (resource.Qualification.Any())
             {
-                retVal.ProviderSpecialty = DataTypeConverter.ToConcept(resource.Qualification.First().Code);
+                retVal.Specialty = DataTypeConverter.ToConcept(resource.Qualification.First().Code);
             }
             
             return retVal;
