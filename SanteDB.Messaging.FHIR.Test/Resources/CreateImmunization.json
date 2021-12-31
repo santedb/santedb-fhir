@@ -1,0 +1,45 @@
+﻿{
+  "resourceType": "Immunization",
+  "status": "completed",
+  "statusReason": {
+    "coding": [
+      {
+        "system": "http://hl7.org/fhir/ValueSet/v3-ActReason",
+        "code": "PATCAR"
+      }
+    ]
+  },
+  "vaccineCode": {
+    "coding": [
+      {
+        "system": "http://hl7.org/fhir/sid/cvx",
+        "code": "112"
+      }
+    ]
+  },
+  "recorded": "2021-12-21T13:17:49.51808-05:00",
+  "lotNumber": "4",
+  "expirationDate": "2021-12-21",
+  "site": {
+    "coding": [
+      {
+        "system": "http://hl7.org/fhir/ValueSet/v3-ActSite",
+        "code": "LA"
+      }
+    ]
+  },
+  "route": {
+    "coding": [
+      {
+        "system": "http://hl7.org/fhir/sid/ROUTE",
+        "code": "AMNINJ"
+      }
+    ]
+  },
+  "doseQuantity": {
+    "value": 12,
+    "unit": "mmHg",
+    "system": "http://unitsofmeasure.org",
+    "code": "mmHg"
+  }
+}
