@@ -58,11 +58,6 @@ namespace SanteDB.Messaging.FHIR.Test
         private IServiceManager m_serviceManager;
 
         /// <summary>
-        /// The extension under test.
-        /// </summary>
-        private IFhirExtensionHandler m_extension;
-
-        /// <summary>
         /// Set up method to initialize services.
         /// </summary>
         [SetUp]
@@ -71,8 +66,6 @@ namespace SanteDB.Messaging.FHIR.Test
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-            this.m_extension = this.m_serviceManager.CreateInjected<ReligionExtension>();
-
             var testConfiguration = new FhirServiceConfigurationSection
             {
                 Resources = new List<string>
@@ -107,6 +100,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestBirthPlaceExtensionConstructValidRoleBirthPlace()
         {
+            var birthPlaceExtension = this.m_serviceManager.CreateInjected<BirthPlaceExtension>();
             var birthPlace = new Place
             {
                 Addresses = new List<EntityAddress>
@@ -127,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 }
             };
 
-            var constructedBirthPlace = this.m_extension.Construct(patient).ToArray();
+            var constructedBirthPlace = birthPlaceExtension.Construct(patient).ToArray();
 
             Assert.IsTrue(constructedBirthPlace.Any());
 
@@ -156,6 +150,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestConstructFailedWithPlaceOfDeath()
         {
+            var birthPlaceExtension = this.m_serviceManager.CreateInjected<BirthPlaceExtension>();
             var birthPlace = new Place
             {
                 Addresses = new List<EntityAddress>
@@ -176,7 +171,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 }
             };
 
-            var constructedBirthPlace = this.m_extension.Construct(patient).ToArray();
+            var constructedBirthPlace = birthPlaceExtension.Construct(patient).ToArray();
 
             Assert.IsNotNull(constructedBirthPlace);
             Assert.IsFalse(constructedBirthPlace.Any());
@@ -189,6 +184,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestConstructFailedWithOrganization()
         {
+            var birthPlaceExtension = this.m_serviceManager.CreateInjected<BirthPlaceExtension>();
             var birthPlace = new Place
             {
                 Addresses = new List<EntityAddress>
@@ -208,7 +204,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 }
             };
 
-            var constructedBirthPlace = this.m_extension.Construct(organization).ToArray();
+            var constructedBirthPlace = birthPlaceExtension.Construct(organization).ToArray();
 
             Assert.IsNotNull(constructedBirthPlace);
             Assert.IsFalse(constructedBirthPlace.Any());
@@ -221,6 +217,8 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestBirthPlaceExtensionConstructInvalidNames()
         {
+            var birthPlaceExtension = this.m_serviceManager.CreateInjected<BirthPlaceExtension>();
+
             var birthPlace = new Place
             {
                 Addresses = new List<EntityAddress>
@@ -240,7 +238,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 }
             };
 
-            var constructedBirthPlace = this.m_extension.Construct(patient).ToArray();
+            var constructedBirthPlace = birthPlaceExtension.Construct(patient).ToArray();
 
             Assert.IsNotNull(constructedBirthPlace);
             Assert.IsTrue(constructedBirthPlace.Any());

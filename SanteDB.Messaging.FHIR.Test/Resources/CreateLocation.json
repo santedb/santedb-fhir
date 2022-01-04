@@ -26,7 +26,8 @@
     ],
     "city": "Hamilton",
     "state": "Ontario",
-    "country": "Canada"
+    "country": "Canada",
+    "text": "123 New Street,Hamilton,Ontario,Canada"
   },
   "position": {
     "longitude": 43.3453,
