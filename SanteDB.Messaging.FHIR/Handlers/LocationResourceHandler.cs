@@ -169,7 +169,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // add the textual representation of the name of the place as the address text property for search purposes
             // see the BirthPlaceExtension class
-            if (!string.IsNullOrEmpty(resource.Address.Text))
+            if (!string.IsNullOrEmpty(resource.Address?.Text))
             {
                 place.Names.Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
             }
