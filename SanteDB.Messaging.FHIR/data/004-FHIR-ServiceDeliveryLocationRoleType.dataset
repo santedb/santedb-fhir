@@ -1,0 +1,126 @@
+<?xml version="1.0"?>
+<dataset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="Imported Dataset" xmlns="http://santedb.org/data">
+  <update skipIfError="false" insertIfNotExists="true">
+    <CodeSystem xmlns="http://santedb.org/model">
+      <id>dde6620f-195f-471f-a5a8-4dc91fd8f10e</id>
+      <name>FHIR Service Delivery Location Codes</name>
+      <oid>2.16.840.1.113883.1.11.17660</oid>
+      <authority />
+      <url>http://terminology.hl7.org/ValueSet/v3-ServiceDeliveryLocationRoleType</url>
+    </CodeSystem>
+  </update>
+  <update skipIfError="true" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>85dda81d-f368-4b2c-a07a-029dea5184c4</id>
+      <mnemonic>GACH</mnemonic>
+      <codeSystem>dde6620f-195f-471f-a5a8-4dc91fd8f10e</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Hospitals; General Acute Care Hospital</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>625b997c-692f-48a6-9251-dac4b46cacf6</id>
+      <source>fa3041e3-42cc-41de-a9bc-35ec8530b691</source>
+      <term>85dda81d-f368-4b2c-a07a-029dea5184c4</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="true" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>28829dca-8a46-4a52-802e-076de757775c</id>
+      <mnemonic>MHSP</mnemonic>
+      <codeSystem>dde6620f-195f-471f-a5a8-4dc91fd8f10e</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Military Hospital</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>1792543b-9f3d-49d5-89d3-e523e93f22aa</id>
+      <source>fa487084-5c69-4f08-b9ee-92955b09305d</source>
+      <term>28829dca-8a46-4a52-802e-076de757775c</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="true" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>4e85218e-11e4-4ce7-83bd-ace1996cf8c3</id>
+      <mnemonic>COMM</mnemonic>
+      <codeSystem>dde6620f-195f-471f-a5a8-4dc91fd8f10e</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Community Location</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>d881ec98-c6d8-4ae9-a4f2-a056b0466ccf</id>
+      <source>fa587084-5c69-4f08-b9ee-92955b09305d</source>
+      <term>4e85218e-11e4-4ce7-83bd-ace1996cf8c3</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="true" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>fc48b508-de96-4448-ac2a-35b106643c62</id>
+      <mnemonic>CSC</mnemonic>
+      <codeSystem>dde6620f-195f-471f-a5a8-4dc91fd8f10e</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Community Service Center</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>be8b05bf-111a-4bd5-be9a-d55612023cfd</id>
+      <source>fa687084-5c69-4f08-b9ee-92955b09305d</source>
+      <term>fc48b508-de96-4448-ac2a-35b106643c62</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="true" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>54cb29ea-0ae3-4d7d-a8d3-4d1634d25ae4</id>
+      <mnemonic>PC</mnemonic>
+      <codeSystem>dde6620f-195f-471f-a5a8-4dc91fd8f10e</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Primary Care Clinic</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>97f8fe0f-4881-4edd-b7f4-5c137cdfe194</id>
+      <source>fa787084-5c69-4f08-b9ee-92955b09305d</source>
+      <term>54cb29ea-0ae3-4d7d-a8d3-4d1634d25ae4</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="true" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>4e9ff906-0c3b-4d88-98fb-586f3ce774d1</id>
+      <mnemonic>PROFF</mnemonic>
+      <codeSystem>dde6620f-195f-471f-a5a8-4dc91fd8f10e</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Provider's Office</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>af2bb29f-301f-460f-99c1-4483031344a5</id>
+      <source>fa887084-5c69-4f08-b9ee-92955b09305d</source>
+      <term>4e9ff906-0c3b-4d88-98fb-586f3ce774d1</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+</dataset>
