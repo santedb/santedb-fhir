@@ -76,7 +76,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Unit = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.DoseUnit)), "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code,
                 Value = model.DoseQuantity
             };
-            retVal.RecordedElement = new FhirDateTime(model.ActTime); // TODO: This is probably not the best place to put this?
+            retVal.RecordedElement = new FhirDateTime(model.ActTime.GetValueOrDefault()); // TODO: This is probably not the best place to put this?
             retVal.Route = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.Route)));
             retVal.Site = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.Site)));
             retVal.StatusReason = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.ReasonConcept)));
@@ -95,8 +95,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Material
-            var matPtcpt = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Consumable) ??
-                model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Product);
+            var matPtcpt = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Consumable) ??
+                model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product);
             if (matPtcpt != null)
             {
                 var matl = matPtcpt.LoadProperty<Material>(nameof(ActParticipation.PlayerEntity));
@@ -108,14 +108,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.ExpirationDate = null;
 
             // RCT
-            var rct = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
+            var rct = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
             if (rct != null)
             {
                 retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
             }
 
             // Performer
-            retVal.Performer.AddRange(model.Participations.Where(c => c.ParticipationRoleKey == ActParticipationKey.Performer).Select(c => new Immunization.PerformerComponent
+            retVal.Performer.AddRange(model.Participations.Where(c => c.ParticipationRoleKey == ActParticipationKeys.Performer).Select(c => new Immunization.PerformerComponent
             {
                 Actor = DataTypeConverter.CreateVersionedReference<Practitioner>(c.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
             }));
@@ -169,7 +169,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 // Is the subject a uuid
                 if (resource.Patient.Reference.StartsWith("urn:uuid:"))
-                    substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Patient.Reference.Substring(9))));
+                    substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Patient.Reference.Substring(9))));
                 else
                 {
                     this.m_tracer.TraceError("Only UUID references are supported");
@@ -199,7 +199,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
-            substanceAdministration.Participations.AddRange(resource.Performer.Select(c => new ActParticipation(ActParticipationKey.Performer, Guid.Parse(c.Actor.Reference.Substring(9)))));
+            substanceAdministration.Participations.AddRange(resource.Performer.Select(c => new ActParticipation(ActParticipationKeys.Performer, Guid.Parse(c.Actor.Reference.Substring(9)))));
 
             // Find the material that was issued
             if (resource.VaccineCode != null)
@@ -220,7 +220,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     return null;
                 }
 
-                substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKey.Product, material.Key));
+                substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKeys.Product, material.Key));
 
                 if (resource.LotNumber != null)
                 {
@@ -231,7 +231,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                     if (manufacturedMaterial != null)
                     {
-                        substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKey.Consumable, manufacturedMaterial.Key) { Quantity = 1 });
+                        substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKeys.Consumable, manufacturedMaterial.Key) { Quantity = 1 });
                     }
                         
                 }

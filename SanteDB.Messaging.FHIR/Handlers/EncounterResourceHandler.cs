@@ -155,7 +155,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var associated = model.LoadCollection<ActParticipation>("Participations").ToArray();
 
             // Subject of encounter
-            retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(associated.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget)?.LoadProperty<Entity>("PlayerEntity"));
+            retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(associated.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget)?.LoadProperty<Entity>("PlayerEntity"));
 
             // Locations
             retVal.Location = associated.Where(o => o.LoadProperty<Entity>("PlayerEntity") is Place).Select(o => new Encounter.LocationComponent
@@ -165,7 +165,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }).ToList();
 
             // Service provider
-            var cst = associated.FirstOrDefault(o => o.LoadProperty<Entity>("PlayerEntity") is Organization && o.ParticipationRoleKey == ActParticipationKey.Custodian);
+            var cst = associated.FirstOrDefault(o => o.LoadProperty<Entity>("PlayerEntity") is Organization && o.ParticipationRoleKey == ActParticipationKeys.Custodian);
 
             if (cst != null)
             {
@@ -222,7 +222,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 // if the subject is a UUID then add the record target key
                 // otherwise attempt to resolve the reference
-                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
             }
 
             // Attempt to resolve organization
@@ -231,7 +231,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // Is the subject a uuid
                 if (resource.ServiceProvider.Reference.StartsWith("urn:uuid:"))
                 {
-                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.Custodian, Guid.Parse(resource.ServiceProvider.Reference.Substring(9))));
+                    retVal.Participations.Add(new ActParticipation(ActParticipationKeys.Custodian, Guid.Parse(resource.ServiceProvider.Reference.Substring(9))));
                 }
                 else
                 {

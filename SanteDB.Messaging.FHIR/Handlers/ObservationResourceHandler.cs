@@ -133,7 +133,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Act.TypeConcept)));
 
             // RCT
-            var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
+            var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
 
             if (rct != null)
             {
@@ -141,7 +141,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Performer
-            retVal.Performer = model.LoadProperty(o=>o.Participations).Where(o => o.ParticipationRoleKey == ActParticipationKey.Performer)
+            retVal.Performer = model.LoadProperty(o=>o.Participations).Where(o => o.ParticipationRoleKey == ActParticipationKeys.Performer)
                 .Select(o => DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity))))
                 .ToList();
 
@@ -286,8 +286,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // if the subject is a UUID then add the record target key
                 // otherwise attempt to resolve the reference
                 retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? 
-                    new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : 
-                    new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                    new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : 
+                    new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
                 //else 
                 //{
                 //    this.m_tracer.TraceError("Only UUID references are supported");
@@ -304,8 +304,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 foreach (var res in resource.Performer)
                 {
                     retVal.Participations.Add(res.Reference.StartsWith("urn:uuid:") ?
-                        new ActParticipation(ActParticipationKey.Performer, Guid.Parse(res.Reference.Substring(9))) :
-                        new ActParticipation(ActParticipationKey.Performer, DataTypeConverter.ResolveEntity<Provider>(res, resource)));
+                        new ActParticipation(ActParticipationKeys.Performer, Guid.Parse(res.Reference.Substring(9))) :
+                        new ActParticipation(ActParticipationKeys.Performer, DataTypeConverter.ResolveEntity<Provider>(res, resource)));
 
                     //if (res.Reference.StartsWith("urn:uuid:"))
                     //{

@@ -152,7 +152,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.BodySite = sites.Select(o => DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<CodedObservation>("TargetAct").LoadProperty<Concept>("Value"))).ToList();
 
             // Subject
-            var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
+            var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
 
             if (recordTarget != null)
             {
@@ -176,7 +176,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.RecordedDateElement = DataTypeConverter.ToFhirDateTime(model.CreationTime);
 
-            var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
+            var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Authororiginator);
 
             if (author != null)
             {

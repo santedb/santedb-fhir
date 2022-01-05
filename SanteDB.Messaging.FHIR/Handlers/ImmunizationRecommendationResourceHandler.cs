@@ -87,11 +87,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.DateElement = new FhirDateTime(DateTimeOffset.Now);
             retVal.Identifier = model.Identifiers.Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
 
-            var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget)?.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity));
+            var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget)?.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity));
             if (rct != null)
                 retVal.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(rct);
 
-            var mat = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Product).PlayerEntity;
+            var mat = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product).PlayerEntity;
 
             // Recommend
             string status = (model.StopTime ?? model.ActTime) < DateTimeOffset.Now ? "overdue" : "due";
@@ -105,7 +105,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     new ImmunizationRecommendation.DateCriterionComponent()
                     {
                         Code = new CodeableConcept("http://hl7.org/fhir/conceptset/immunization-recommendation-date-criterion", "recommended"),
-                        ValueElement = new FhirDateTime(model.ActTime)
+                        ValueElement = new FhirDateTime(model.ActTime.GetValueOrDefault())
                     }
                 }
             };
