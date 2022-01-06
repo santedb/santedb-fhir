@@ -1,0 +1,20 @@
+﻿{
+  "resourceType": "Organization",
+  "name": "McMaster University Medical School",
+  "telecom": [
+    {
+      "system": "phone",
+      "value": "905 525 9140",
+      "use": "work"
+    }
+  ],
+  "address": [
+    {
+      "line": [
+        "1280 Main Street West"
+      ],
+      "city": "Hamilton",
+      "postalCode": "L8S4L8"
+    }
+  ]
+}

@@ -1,4 +1,25 @@
-﻿using FirebirdSql.Data.FirebirdClient;
+﻿/*
+ * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * User: Zhiping Yu
+ * Date: 2021-12-13
+ */
+
+using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
@@ -14,7 +35,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using static Hl7.Fhir.Model.ContactPoint;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -34,6 +54,9 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private IServiceManager m_serviceManager;
 
+        /// <summary>
+        /// Setup method for unit tests.
+        /// </summary>
         [SetUp]
         public void Setup()
         {
@@ -111,72 +134,55 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsTrue(actual.Identifier.Count == 1);
         }
 
+        /// <summary>
+        /// Tests the create function for the <see cref="OrganizationResourceHandler"/> class
+        /// with part of property.
+        /// </summary>
         [Test]
         public void TestCreateOrganizationWithParent()
         {
-            var parentOrganization = new Organization
-            {
-                Name = "McMaster University Medical School",
-                Address = new List<Address>
-                {
-                    new Address
-                    {
-                        City = "Hamilton",
-                        Text = "1280 Main Street West",
-                        PostalCode = "L8S4L8 "
-                    }
-                },
-                Telecom = new List<ContactPoint>
-                {
-                    new ContactPoint(ContactPointSystem.Phone, ContactPointUse.Work, "905 525 9140")
-                }
-            };
+            var parentOrganization = TestUtil.GetFhirMessage("ParentOrganization") as Organization;
+            var organization = TestUtil.GetFhirMessage("Organization") as Organization;
 
             Resource createdParentOrganization;
+            Resource actual;
+
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
                 createdParentOrganization = organizationResourceHandler.Create(parentOrganization, TransactionMode.Commit);
+                organization.PartOf = new ResourceReference($"urn:uuid:{createdParentOrganization.Id}");
+                actual = organizationResourceHandler.Create(organization, TransactionMode.Commit);
+
             }
 
-            var subOrganization = new Organization
-            {
-                Name = "Hamilton Health Sciences",
-                Address = new List<Address>
-                {
-                    new Address
-                    {
-                        Text = "237 Barton St E",
-                        City = "Hamilton",
-                        PostalCode = "L8L 2X2"
-                    }
-                },
+            Assert.NotNull(actual);
+            Assert.IsInstanceOf<Organization>(actual);
 
-                Telecom = new List<ContactPoint>
-                {
-                    new ContactPoint(ContactPointSystem.Phone, ContactPointUse.Work, "905 512 2100")
-                }
-            };
+            var createdOrganization= (Organization) actual;
+            Assert.IsNotNull(createdOrganization);
 
-            subOrganization.PartOf = new ResourceReference($"urn:uuid:{createdParentOrganization.Id}");
-            Resource subResult;
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
+            Resource readOrganization;
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
-                subResult = organizationResourceHandler.Create(subOrganization, TransactionMode.Commit);
-                subResult = organizationResourceHandler.Read(subResult.Id, null);
+                readOrganization = organizationResourceHandler.Read(createdOrganization.Id, createdOrganization.VersionId);
             }
 
-            // assert create organization successfully
-            Assert.NotNull(subResult);
-            Assert.IsInstanceOf<Organization>(subResult);
-            var actualSubOrganization = (Organization) subResult;
-            Assert.AreEqual("McMaster University Medical School", actualSubOrganization.Name);
-            Assert.IsTrue(actualSubOrganization.Alias.Any(c => c == "hhs"));
-            Assert.IsTrue(actualSubOrganization.Address.Count == 1);
-            Assert.IsNotNull(actualSubOrganization.PartOf);
+            Assert.IsNotNull(readOrganization);
+            Assert.IsInstanceOf<Organization>(readOrganization);
+
+            var actualOrganization = (Organization) readOrganization;
+
+            Assert.IsNotNull(actualOrganization.Address);
+            Assert.AreEqual("Hamilton Health Sciences",actualOrganization.Name);
+            Assert.IsTrue(actualOrganization.Alias.All(c => c == "hhs"));
+            Assert.IsTrue(actualOrganization.Address.Count == 2);
+            Assert.IsTrue(actualOrganization.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/detectedIssue"));
+            Assert.IsTrue(actualOrganization.Identifier.First().Value == "6324");
+            Assert.AreEqual("http://santedb.org/fhir/test", actualOrganization.Identifier.First().System);
+            Assert.IsTrue(actualOrganization.Identifier.Count == 1);
         }
 
         /// <summary>
