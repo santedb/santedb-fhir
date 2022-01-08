@@ -78,56 +78,9 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCreateImmunization()
         {
-            var patient = new Patient
-            {
-                Name = new List<HumanName>
-                {
-                    new HumanName
-                    {
-                        Given = new List<string>
-                        {
-                            "Test"
-                        },
-                        Family = "Patient"
-                    }
-                }
-            };
-
-            var encounter = new Encounter
-            {
-                Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH"),
-                Status = Encounter.EncounterStatus.Finished,
-                Length = new Duration
-                {
-                    Value = 25
-                },
-                Period = new Period
-                {
-                    StartElement = FhirDateTime.Now(),
-                    EndElement = FhirDateTime.Now()
-                }
-            };
-
-
-            //set up resource for create request
-            var immunization = new Immunization
-            {
-                DoseQuantity = new Quantity(12, "mmHg"),
-                RecordedElement = new FhirDateTime(DateTimeOffset.Now),
-                Route = new CodeableConcept("http://hl7.org/fhir/sid/ROUTE", "AMNINJ"),
-                Site = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActSite", "LA"),
-                Status = Immunization.ImmunizationStatusCodes.Completed,
-                StatusReason = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActReason", "PATCAR"),
-                VaccineCode = new CodeableConcept("http://hl7.org/fhir/sid/cvx", "112"),
-                ExpirationDateElement = Date.Today(),
-                LotNumber = "4"
-            };
-
-            immunization.ProtocolApplied.Add(new Immunization.ProtocolAppliedComponent
-            {
-                DoseNumber = new Integer(1),
-                Series = "test"
-            });
+            var patient = TestUtil.GetFhirMessage("ObservationSubject");
+            var encounter = (Encounter)TestUtil.GetFhirMessage("CreateEncounter-Encounter");
+            var immunization = (Immunization)TestUtil.GetFhirMessage("CreateImmunization");
 
             Resource actualPatient;
             Resource actualEncounter;
@@ -143,19 +96,14 @@ namespace SanteDB.Messaging.FHIR.Test
                 actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
                 encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
                 actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
-
                 immunization.Patient = new ResourceReference($"urn:uuid:{actualPatient.Id}");
-
                 immunization.Encounter = new ResourceReference($"urn:uuid:{actualEncounter.Id}");
-
                 actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
-
                 var retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
 
                 Assert.IsNotNull(retrievedImmunization);
                 Assert.AreEqual(retrievedImmunization.Id, actualImmunization.Id);
                 Assert.AreEqual(12, retrievedImmunization.DoseQuantity.Value);
-                //Assert.AreEqual(new Integer(1), retrievedImmunization.ProtocolApplied.FirstOrDefault().DoseNumber);
             }
         }
 
@@ -165,57 +113,10 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestUpdateImmunization()
         {
-            var patient = new Patient
-            {
-                Name = new List<HumanName>
-                {
-                    new HumanName
-                    {
-                        Given = new List<string>
-                        {
-                            "Test"
-                        },
-                        Family = "Patient"
-                    }
-                }
-            };
-
-            var encounter = new Encounter
-            {
-                Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH"),
-                Status = Encounter.EncounterStatus.Finished,
-                Length = new Duration
-                {
-                    Value = 25
-                },
-                Period = new Period
-                {
-                    StartElement = FhirDateTime.Now(),
-                    EndElement = FhirDateTime.Now()
-                }
-            };
-
+            var patient = TestUtil.GetFhirMessage("ObservationSubject");
+            var encounter = (Encounter)TestUtil.GetFhirMessage("CreateEncounter-Encounter");
+            var immunization = (Immunization)TestUtil.GetFhirMessage("CreateImmunization");
             var practitioner = TestUtil.GetFhirMessage("ObservationPerformer") as Practitioner;
-
-            //set up resource for create request
-            var immunization = new Immunization
-            {
-                DoseQuantity = new Quantity(12, "mmHg"),
-                RecordedElement = new FhirDateTime(DateTimeOffset.Now),
-                Route = new CodeableConcept("http://hl7.org/fhir/sid/ROUTE", "AMNINJ"),
-                Site = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActSite", "LA"),
-                Status = Immunization.ImmunizationStatusCodes.Completed,
-                StatusReason = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActReason", "PATCAR"),
-                VaccineCode = new CodeableConcept("http://hl7.org/fhir/sid/cvx", "112"),
-                ExpirationDateElement = Date.Today(),
-                LotNumber = "4"
-            };
-
-            immunization.ProtocolApplied.Add(new Immunization.ProtocolAppliedComponent
-            {
-                DoseNumber = new Integer(1),
-                Series = "test"
-            });
 
             Resource actualPatient;
             Resource actualEncounter;
@@ -229,17 +130,13 @@ namespace SanteDB.Messaging.FHIR.Test
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
                 var immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
-               
-
+                
                 actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
                 actualPractitioner = (Practitioner)practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
                 encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
                 actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
-
                 immunization.Patient = new ResourceReference($"urn:uuid:{actualPatient.Id}");
-
                 immunization.Encounter = new ResourceReference($"urn:uuid:{actualEncounter.Id}");
-
                 immunization.Performer = new List<Immunization.PerformerComponent>
                 {
                     new Immunization.PerformerComponent
@@ -247,9 +144,7 @@ namespace SanteDB.Messaging.FHIR.Test
                         Actor = new ResourceReference($"urn:uuid:{actualPractitioner.Id}")
                     }
                 };
-
                 actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
-
                 var retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
                 
                 Assert.AreEqual(retrievedImmunization.Id, actualImmunization.Id);
@@ -272,57 +167,10 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestUpdateImmunizationStatusEnteredInError()
         {
-            var patient = new Patient
-            {
-                Name = new List<HumanName>
-                {
-                    new HumanName
-                    {
-                        Given = new List<string>
-                        {
-                            "Test"
-                        },
-                        Family = "Patient"
-                    }
-                }
-            };
-
-            var encounter = new Encounter
-            {
-                Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH"),
-                Status = Encounter.EncounterStatus.Finished,
-                Length = new Duration
-                {
-                    Value = 25
-                },
-                Period = new Period
-                {
-                    StartElement = FhirDateTime.Now(),
-                    EndElement = FhirDateTime.Now()
-                }
-            };
-
+            var patient = TestUtil.GetFhirMessage("ObservationSubject");
+            var encounter = (Encounter)TestUtil.GetFhirMessage("CreateEncounter-Encounter");
+            var immunization = (Immunization)TestUtil.GetFhirMessage("CreateImmunization");
             var practitioner = TestUtil.GetFhirMessage("ObservationPerformer") as Practitioner;
-
-            //set up resource for create request
-            var immunization = new Immunization
-            {
-                DoseQuantity = new Quantity(12, "mmHg"),
-                RecordedElement = new FhirDateTime(DateTimeOffset.Now),
-                Route = new CodeableConcept("http://hl7.org/fhir/sid/ROUTE", "AMNINJ"),
-                Site = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActSite", "LA"),
-                Status = Immunization.ImmunizationStatusCodes.Completed,
-                StatusReason = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActReason", "PATCAR"),
-                VaccineCode = new CodeableConcept("http://hl7.org/fhir/sid/cvx", "112"),
-                ExpirationDateElement = Date.Today(),
-                LotNumber = "4"
-            };
-
-            immunization.ProtocolApplied.Add(new Immunization.ProtocolAppliedComponent
-            {
-                DoseNumber = new Integer(1),
-                Series = "test"
-            });
 
             Resource actualPatient;
             Resource actualEncounter;
@@ -337,16 +185,12 @@ namespace SanteDB.Messaging.FHIR.Test
                 var immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
 
-
                 actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
                 actualPractitioner = (Practitioner)practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
                 encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
                 actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
-
                 immunization.Patient = new ResourceReference($"urn:uuid:{actualPatient.Id}");
-
                 immunization.Encounter = new ResourceReference($"urn:uuid:{actualEncounter.Id}");
-
                 immunization.Performer = new List<Immunization.PerformerComponent>
                 {
                     new Immunization.PerformerComponent
@@ -356,7 +200,6 @@ namespace SanteDB.Messaging.FHIR.Test
                 };
 
                 actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
-
                 var retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
 
                 Assert.AreEqual(retrievedImmunization.Id, actualImmunization.Id);
@@ -378,57 +221,10 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestDeleteImmunization()
         {
-            var patient = new Patient
-            {
-                Name = new List<HumanName>
-                {
-                    new HumanName
-                    {
-                        Given = new List<string>
-                        {
-                            "Test"
-                        },
-                        Family = "Patient"
-                    }
-                }
-            };
-
-            var encounter = new Encounter
-            {
-                Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH"),
-                Status = Encounter.EncounterStatus.Finished,
-                Length = new Duration
-                {
-                    Value = 25
-                },
-                Period = new Period
-                {
-                    StartElement = FhirDateTime.Now(),
-                    EndElement = FhirDateTime.Now()
-                }
-            };
-
+            var patient = TestUtil.GetFhirMessage("ObservationSubject");
+            var encounter = (Encounter)TestUtil.GetFhirMessage("CreateEncounter-Encounter");
+            var immunization = (Immunization)TestUtil.GetFhirMessage("CreateImmunization");
             var practitioner = TestUtil.GetFhirMessage("ObservationPerformer") as Practitioner;
-
-            //set up resource for create request
-            var immunization = new Immunization
-            {
-                DoseQuantity = new Quantity(12, "mmHg"),
-                RecordedElement = new FhirDateTime(DateTimeOffset.Now),
-                Route = new CodeableConcept("http://hl7.org/fhir/sid/ROUTE", "AMNINJ"),
-                Site = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActSite", "LA"),
-                Status = Immunization.ImmunizationStatusCodes.Completed,
-                StatusReason = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActReason", "PATCAR"),
-                VaccineCode = new CodeableConcept("http://hl7.org/fhir/sid/cvx", "112"),
-                ExpirationDateElement = Date.Today(),
-                LotNumber = "4"
-            };
-
-            immunization.ProtocolApplied.Add(new Immunization.ProtocolAppliedComponent
-            {
-                DoseNumber = new Integer(1),
-                Series = "test"
-            });
 
             Resource actualPatient;
             Resource actualEncounter;
@@ -443,16 +239,12 @@ namespace SanteDB.Messaging.FHIR.Test
                 var immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
 
-
                 actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
                 actualPractitioner = (Practitioner)practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
                 encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
                 actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
-
                 immunization.Patient = new ResourceReference($"urn:uuid:{actualPatient.Id}");
-
                 immunization.Encounter = new ResourceReference($"urn:uuid:{actualEncounter.Id}");
-
                 immunization.Performer = new List<Immunization.PerformerComponent>
                 {
                     new Immunization.PerformerComponent
@@ -460,9 +252,7 @@ namespace SanteDB.Messaging.FHIR.Test
                         Actor = new ResourceReference($"urn:uuid:{actualPractitioner.Id}")
                     }
                 };
-
                 actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
-
                 var retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
 
                 Assert.NotNull(retrievedImmunization);
@@ -481,41 +271,53 @@ namespace SanteDB.Messaging.FHIR.Test
         [Test]
         public void TestCanMapObject()
         {
-                var initialImmunizationKey = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
-                var immunizationKey = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
-                var boosterImmunizationKey = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
-                var randomGuidKey = Guid.NewGuid();
+            var initialImmunizationKey = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
+            var immunizationKey = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
+            var boosterImmunizationKey = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
+            var randomGuidKey = Guid.NewGuid();
 
-                var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-                var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService);
+            var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService);
 
-                //check to ensure immunization instance can be mapped
-                var result = immunizationResourceHandler.CanMapObject(new Immunization());
-                Assert.True(result);
+            //check to ensure immunization instance can be mapped
+            var result = immunizationResourceHandler.CanMapObject(new Immunization());
+            Assert.True(result);
 
-                //check to ensure an invalid instance cannot be mapped
-                result = immunizationResourceHandler.CanMapObject(new Medication());
-                Assert.False(result);
+            //check to ensure an invalid instance cannot be mapped
+            result = immunizationResourceHandler.CanMapObject(new Medication());
+            Assert.False(result);
 
-                var substanceAdministration = new SubstanceAdministration()
-                {
-                    TypeConcept = new Concept() { Key = initialImmunizationKey }
-                };
+            //check to ensure substance instance can be mapped with valid type keys
+            var substanceAdministration = new SubstanceAdministration()
+            {
+                TypeConcept = new Concept() { Key = initialImmunizationKey }
+            };
+            result = immunizationResourceHandler.CanMapObject(substanceAdministration);
+            Assert.True(result);
 
-                //check to ensure substance instance can be mapped with valid type keys
-                result = immunizationResourceHandler.CanMapObject(substanceAdministration);
-                Assert.True(result);
-                substanceAdministration.TypeConcept = new Concept() { Key = boosterImmunizationKey };
-                result = immunizationResourceHandler.CanMapObject(substanceAdministration);
-                Assert.True(result);
-                substanceAdministration.TypeConcept = new Concept() { Key = immunizationKey };
-                result = immunizationResourceHandler.CanMapObject(substanceAdministration);
-                Assert.True(result);
+            //check to ensure substance instance can be mapped with valid type keys
+            substanceAdministration.TypeConcept = new Concept()
+            {
+                Key = boosterImmunizationKey
+            };
+            result = immunizationResourceHandler.CanMapObject(substanceAdministration);
+            Assert.True(result);
 
-                //check to ensure substance instance cannot be mapped without valid key 
-                substanceAdministration.TypeConcept = new Concept() { Key = randomGuidKey };
-                result = immunizationResourceHandler.CanMapObject(substanceAdministration);
-                Assert.False(result);
+            //check to ensure substance instance can be mapped with valid type keys
+            substanceAdministration.TypeConcept = new Concept()
+            {
+                Key = immunizationKey
+            };
+            result = immunizationResourceHandler.CanMapObject(substanceAdministration);
+            Assert.True(result);
+
+            //check to ensure substance instance cannot be mapped without valid key 
+            substanceAdministration.TypeConcept = new Concept()
+            {
+                Key = randomGuidKey
+            };
+            result = immunizationResourceHandler.CanMapObject(substanceAdministration);
+            Assert.False(result);
         }
 
         /// <summary>
@@ -543,63 +345,15 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsTrue(resourceInteractionComponents.Any(c => c.Code == CapabilityStatement.TypeRestfulInteraction.Update));
         }
 
-        // ToDo: 
         /// <summary>
         /// Tests the query functionality of <see cref="ImmunizationResourceHandler" /> class.
         /// </summary>
         [Test]
         public void TestQueryImmunization()
         {
-            var patient = new Patient
-            {
-                Name = new List<HumanName>
-                {
-                    new HumanName
-                    {
-                        Given = new List<string>
-                        {
-                            "Test"
-                        },
-                        Family = "Patient"
-                    }
-                }
-            };
-
-            var encounter = new Encounter
-            {
-                Class = new Coding("http://santedb.org/conceptset/v3-ActEncounterCode", "HH"),
-                Status = Encounter.EncounterStatus.Finished,
-                Length = new Duration
-                {
-                    Value = 25
-                },
-                Period = new Period
-                {
-                    StartElement = FhirDateTime.Now(),
-                    EndElement = FhirDateTime.Now()
-                }
-            };
-
-
-            //set up resource for create request
-            var immunization = new Immunization
-            {
-                DoseQuantity = new Quantity(12, "mmHg"),
-                RecordedElement = new FhirDateTime(DateTimeOffset.Now),
-                Route = new CodeableConcept("http://hl7.org/fhir/sid/ROUTE", "AMNINJ"),
-                Site = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActSite", "LA"),
-                Status = Immunization.ImmunizationStatusCodes.Completed,
-                StatusReason = new CodeableConcept("http://hl7.org/fhir/ValueSet/v3-ActReason", "PATCAR"),
-                VaccineCode = new CodeableConcept("http://hl7.org/fhir/sid/cvx", "112"),
-                ExpirationDateElement = Date.Today(),
-                LotNumber = "4"
-            };
-
-            immunization.ProtocolApplied.Add(new Immunization.ProtocolAppliedComponent
-            {
-                DoseNumber = new Integer(1),
-                Series = "test"
-            });
+            var patient = TestUtil.GetFhirMessage("ObservationSubject");
+            var encounter = (Encounter)TestUtil.GetFhirMessage("CreateEncounter-Encounter");
+            var immunization = (Immunization)TestUtil.GetFhirMessage("CreateImmunization");
 
             Resource actualPatient;
             Resource actualEncounter;
@@ -615,13 +369,9 @@ namespace SanteDB.Messaging.FHIR.Test
                 actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
                 encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
                 actualEncounter = encounterResourceHandler.Create(encounter, TransactionMode.Commit);
-
                 immunization.Patient = new ResourceReference($"urn:uuid:{actualPatient.Id}");
-
                 immunization.Encounter = new ResourceReference($"urn:uuid:{actualEncounter.Id}");
-
                 actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
-
                 var bundle = immunizationResourceHandler.Query(new NameValueCollection()
                 {
                     {"_id", actualImmunization.Id}

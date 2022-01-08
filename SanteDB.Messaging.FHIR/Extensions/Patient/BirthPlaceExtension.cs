@@ -1,15 +1,15 @@
 ﻿using Hl7.Fhir.Model;
+using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
@@ -18,6 +18,17 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// </summary>
     public class BirthPlaceExtension : IFhirExtensionHandler
     {
+        // Address Hierarchy
+        private readonly Guid[] AddressHierarchy = {
+            EntityClassKeys.ServiceDeliveryLocation,
+            EntityClassKeys.CityOrTown,
+            EntityClassKeys.CountyOrParish,
+            EntityClassKeys.State,
+            EntityClassKeys.Country,
+            EntityClassKeys.Place
+        };
+
+
         // Place repository
         private IRepositoryService<SanteDB.Core.Model.Entities.Place> m_placeRepository;
 
@@ -56,7 +67,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 if (birthPlaceRelationship != null)
                 {
                     var address = DataTypeConverter.ToFhirAddress(birthPlaceRelationship.LoadProperty(o => o.TargetEntity).LoadCollection(o => o.Addresses)?.FirstOrDefault());
-                    address.Text = birthPlaceRelationship.TargetEntity.LoadCollection(o => o.Names)?.FirstOrDefault()?.ToDisplay();
+                    var test = birthPlaceRelationship.TargetEntity.LoadCollection(o => o.Names);
+                    address.Text = birthPlaceRelationship.TargetEntity.LoadCollection(o => o.Names)?.FirstOrDefault(c => c.NameUseKey == NameUseKeys.Search)?.ToDisplay();
                     yield return new Extension(this.Uri.ToString(), address);
                 }
             }
@@ -70,6 +82,30 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && fhirExtension.Value is Hl7.Fhir.Model.Address address)
             {
                 // TODO: Cross reference birthplace to an entity relationship (see the HL7v2 PID segment handler for example)
+                var birthPlaceRelationship = patient.Relationships.FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace);
+                var places = ApplicationServiceContext.Current.GetService<IDataPersistenceService<Place>>()?.Query(o => o.Names.Any(c => c.NameUseKey == NameUseKeys.Search && c.Component.Any(a => a.Value == address.Text)), AuthenticationContext.SystemPrincipal);
+                if (places.Count() > 1)
+                {
+                    var placeClasses = places.GroupBy(o => o.ClassConceptKey).OrderBy(o => Array.IndexOf(AddressHierarchy, o.Key.Value));
+                    // Take the first wrung of the address hierarchy
+                    places = placeClasses.First();
+                    if (places.Count() > 1) // Still more than one type of place
+                        places = places.Where(p => p.LoadCollection<EntityAddress>(nameof(Entity.Addresses)).Any(a => a.Component.All(a2 => patient.LoadCollection<EntityAddress>(nameof(Entity.Addresses)).Any(pa => pa.Component.Any(pc => pc.Value == a2.Value && pc.ComponentTypeKey == a2.ComponentTypeKey)))));
+                }
+                if (places.Count() == 1)
+                {
+                    if (birthPlaceRelationship == null)
+                    {
+                        patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, places.First()));
+                    }  
+                    else
+                        birthPlaceRelationship.TargetEntityKey = places.First().Key;
+                    return true;
+                }
+                else
+                {
+                    throw new KeyNotFoundException("Cannot find unique birth place registration.");
+                }
             }
             return false;
         }
