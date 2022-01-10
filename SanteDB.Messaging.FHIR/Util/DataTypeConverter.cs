@@ -781,7 +781,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 else if (extension.ExtensionType.ExtensionHandler == typeof(StringExtensionHandler))
                     extension.ExtensionValue = (fhirExtension.Value as FhirString).Value;
                 else if (extension.ExtensionType.ExtensionHandler == typeof(DateExtensionHandler))
-                    extension.ExtensionValue = (fhirExtension.Value as FhirDateTime).Value;
+                    extension.ExtensionValue = (fhirExtension.Value as FhirDateTime).ToDateTimeOffset();
                 // TODO: Implement binary incoming extensions
                 else if (extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler) ||
                     extension.ExtensionType.ExtensionHandler == typeof(DictionaryExtensionHandler))
