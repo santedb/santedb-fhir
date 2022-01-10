@@ -209,7 +209,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(actual.Deceased);
             Assert.IsInstanceOf<FhirBoolean>(actual.Deceased);
             Assert.AreEqual(((FhirBoolean)patient.Deceased).Value, ((FhirBoolean)actual.Deceased).Value);
-
+            Assert.IsTrue(actual.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/originalDate"));
             Assert.IsNotNull(actual.Photo.First().Data);
             Assert.AreEqual(patient.BirthDate, actual.BirthDate);
         }

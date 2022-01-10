@@ -161,14 +161,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     place.StatusConceptKey = StatusKeys.Active;
                     break;
                 case Location.LocationStatus.Suspended:
-                    place.StatusConceptKey = StatusKeys.Cancelled;
-                    break;
+                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
                 case Location.LocationStatus.Inactive:
                     place.StatusConceptKey = StatusKeys.Inactive;
                     break;
             }
 
-            place.Names = new List<EntityName>() { new EntityName(NameUseKeys.OfficialRecord, resource.Name) };
+            // add the textual representation of the name of the place as the address text property for search purposes
+            // see the BirthPlaceExtension class
+            if (!string.IsNullOrEmpty(resource.Address?.Text))
+            {
+                place.Names.Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
+            }
+
+            place.Names.Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
             place.Names.AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
 
             if (resource.Mode == Location.LocationMode.Kind)

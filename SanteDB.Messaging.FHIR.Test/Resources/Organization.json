@@ -25,12 +25,16 @@
   ],
   "address": [
     {
-      "text": "237 Barton St E",
+      "line": [
+          "237 Barton St E"
+      ],
       "city": "Hamilton",
       "postalCode": "L8L 2X2"
     },
     {
-      "text": "169 Main Street East",
+      "line": [
+        "169 Main Street East"
+      ],
       "city": "Grimsby",
       "postalCode": "L3M 1P3"
     }
