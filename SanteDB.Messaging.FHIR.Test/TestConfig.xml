@@ -85,6 +85,7 @@
       <add type="SanteDB.Server.Core.Services.Impl.DefaultNetworkInformationService, SanteDB.Server.Core"/>
       <add type="SanteDB.Core.TestFramework.TestLocalizationService, SanteDB.Core.TestFramework"/>
       <add type="SanteDB.Persistence.Data.ADO.Services.AdoServiceFactory, SanteDB.Persistence.Data.ADO" />
+      <add type="SanteDB.Caching.Memory.MemoryAdhocCacheService, SanteDB.Caching.Memory" />
     </serviceProviders>
   </section>
 </SanteDBConfiguration>
