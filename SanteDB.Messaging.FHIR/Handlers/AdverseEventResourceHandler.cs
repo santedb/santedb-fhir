@@ -48,22 +48,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
         }
 
-        /// <summary>
-        /// Can map this object
-        /// </summary>
+        /// <inheritdoc/>
         public override bool CanMapObject(object instance)
         {
             return base.CanMapObject(instance);
         }
 
+        /// <inheritdoc/>
         protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-        /// <summary>
-        /// Get interactions
-        /// </summary>
+        /// <inheritdoc/>
         protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
         {
             return new[]
@@ -77,14 +74,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {Code = o});
         }
 
+        /// <inheritdoc/>
         protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-        /// <summary>
-        /// Maps the specified act to an adverse event
-        /// </summary>
+        /// <inheritdoc/>
         protected override AdverseEvent MapToFhir(Act model)
         {
             var retVal = DataTypeConverter.CreateResource<AdverseEvent>(model);
@@ -177,9 +173,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return retVal;
         }
 
-        /// <summary>
-        /// Map adverse events to the model 
-        /// </summary>
+        /// <inheritdoc/>
         protected override Act MapToModel(AdverseEvent resource)
         {
             var retVal = new Act();
@@ -295,9 +289,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return retVal;
         }
 
-        /// <summary>
-        /// Query for specified adverse event 
-        /// </summary>
+        /// <inheritdoc/>
         protected override IEnumerable<Act> Query(Expression<Func<Act, bool>> query, Guid queryId, int offset, int count, out int totalResults)
         {
             var typeReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(Act).GetProperty(nameof(Act.ClassConceptKey))), typeof(Guid)), Expression.Constant(ActClassKeys.Condition));

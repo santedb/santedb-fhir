@@ -73,12 +73,6 @@ namespace SanteDB.Messaging.FHIR.Auditing
                 PreferCompressedResponses = true,
                 VerifyFhirVersion = false
             });
-            this.m_client.PreferredFormat = ResourceFormat.Json;
-            this.m_client.ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
-            {
-                AcceptUnknownMembers = true,
-                AllowUnrecognizedEnums = true
-            };
 
             // Attach authenticator
             if (this.m_configuration.Authenticator?.Type != null)
