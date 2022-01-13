@@ -31,10 +31,17 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Auditing
 {
-	/// <summary>
-	/// Audit dispatch service which sends audits using HL7 FHIR
-	/// </summary>
-	[ExcludeFromCodeCoverage]
+    /// <summary>
+    /// Audit dispatch service which sends audits using HL7 FHIR
+    /// </summary>
+    /// <remarks>
+    /// <para>This implementation of the <see cref="IAuditDispatchService"/> is responsible for dispatching audits to a central
+    /// FHIR repository which supports the FHIR auditing specification.</para>
+    /// <para>This dispatcher is configured using the <see cref="FhirDispatcherTargetConfiguration"/> class where the dispatcher name
+    /// is <c>audit</c>. The dispatcher configuration may include authentication/authorization parameters for the solution, as well
+    /// as authenticators or proxy information.</para>
+    /// </remarks>
+    [ExcludeFromCodeCoverage]
 	public class FhirAuditDispatcher : IAuditDispatchService
     {
 
