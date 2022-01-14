@@ -1196,10 +1196,13 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (fhirId.Period != null)
             {
+#pragma warning disable CS0618
                 if (fhirId.Period.StartElement != null)
-                    retVal.IssueDate = fhirId.Period.StartElement.ToDateTimeOffset().DateTime;
+                    retVal.IssueDate = fhirId.Period.StartElement.ToDateTimeOffset();
                 if (fhirId.Period.EndElement != null)
-                    retVal.ExpiryDate = fhirId.Period.EndElement.ToDateTimeOffset().DateTime;
+                    retVal.ExpiryDate = fhirId.Period.EndElement.ToDateTimeOffset();
+#pragma warning restore CS0618
+
             }
             // TODO: Fill in use
             return retVal;
