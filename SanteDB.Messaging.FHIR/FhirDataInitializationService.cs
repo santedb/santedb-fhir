@@ -37,8 +37,15 @@ using System.Xml;
 namespace SanteDB.Messaging.FHIR
 {
     /// <summary>
-    /// FHIR based data initialization service
+    /// Scans the configured directory on application startup to import or seed data into SanteDB from FHIR
     /// </summary>
+    /// <remarks>
+    /// <para>This service, like the <see cref="SanteDB.Server.Core.Persistence.DataInitializationService"/> reads FHIR resource
+    /// files in the configured directory and imports the data from those files (on system startup) into the CDR instance. FHIR resource files
+    /// can be either <c>.xml</c> or <c>.json</c> instances.</para>
+    /// <para>After data is processed the import process will rename the input file as <c>.complete</c> and will emit an equivalent file
+    /// suffixed with <c>-response</c> to indicate any information returned by the FHIR handler for the contained resources.</para>
+    /// </remarks>
     [ExcludeFromCodeCoverage]
     public class FhirDataInitializationService : IDaemonService, IReportProgressChanged
     {
