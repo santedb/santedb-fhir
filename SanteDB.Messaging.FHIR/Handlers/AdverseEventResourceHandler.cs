@@ -303,29 +303,5 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return base.Query(query);
         }
 
-        /// <summary>
-        /// Get interactions
-        /// </summary>
-        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
-        {
-            return new TypeRestfulInteraction[]
-            {
-                TypeRestfulInteraction.HistoryInstance,
-                TypeRestfulInteraction.Read,
-                TypeRestfulInteraction.SearchType,
-                TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.Delete
-            }.Select(o => new ResourceInteractionComponent() { Code = o });
-        }
-
-        protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
-        {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
-        }
-
-        protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
-        {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
-        }
     }
 }

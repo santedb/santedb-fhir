@@ -83,7 +83,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
             {
                 // TODO: Cross reference birthplace to an entity relationship (see the HL7v2 PID segment handler for example)
                 var birthPlaceRelationship = patient.Relationships.FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace);
-                var places = ApplicationServiceContext.Current.GetService<IDataPersistenceService<Place>>()?.Query(o => o.Names.Any(c => c.NameUseKey == NameUseKeys.Search && c.Component.Any(a => a.Value == address.Text)), AuthenticationContext.SystemPrincipal);
+                var places = ApplicationServiceContext.Current.GetService<IDataPersistenceService<Place>>()?.Query(o => o.Names.Any(c => c.NameUseKey == NameUseKeys.Search && c.Component.Any(a => a.Value == address.Text)), AuthenticationContext.SystemPrincipal).AsEnumerable();
                 if (places.Count() > 1)
                 {
                     var placeClasses = places.GroupBy(o => o.ClassConceptKey).OrderBy(o => Array.IndexOf(AddressHierarchy, o.Key.Value));
