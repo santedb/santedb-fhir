@@ -49,17 +49,39 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
         }
 
-        /// <summary>
-        /// Can map this object
-        /// </summary>
+        /// <inheritdoc/>
         public override bool CanMapObject(object instance)
         {
             return base.CanMapObject(instance);
         }
-        
-        /// <summary>
-        /// Maps the specified act to an adverse event
-        /// </summary>
+
+        /// <inheritdoc/>
+        protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
+        {
+            return new[]
+            {
+                TypeRestfulInteraction.HistoryInstance,
+                TypeRestfulInteraction.Read,
+                TypeRestfulInteraction.SearchType,
+                TypeRestfulInteraction.Vread,
+                TypeRestfulInteraction.Delete
+            }.Select(o => new ResourceInteractionComponent
+                {Code = o});
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+        }
+
+        /// <inheritdoc/>
         protected override AdverseEvent MapToFhir(Act model)
         {
             var retVal = DataTypeConverter.CreateResource<AdverseEvent>(model);
@@ -152,9 +174,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return retVal;
         }
 
-        /// <summary>
-        /// Map adverse events to the model
-        /// </summary>
+        /// <inheritdoc/>
         protected override Act MapToModel(AdverseEvent resource)
         {
             var retVal = new Act();

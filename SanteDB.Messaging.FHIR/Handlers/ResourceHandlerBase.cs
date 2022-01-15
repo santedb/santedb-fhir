@@ -558,17 +558,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public IdentifiedData MapToModel(Resource resourceInstance)
         {
-            var retVal = this.MapToModel((TFhirResource)resourceInstance);
-            // Append the notice that this is a source model
-            if (retVal is IResourceCollection irc)
+            using (AuthenticationContext.EnterSystemContext()) // All queries under the mapping process are performed by the SYSTEM
             {
-                irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+                var retVal = this.MapToModel((TFhirResource)resourceInstance);
+                // Append the notice that this is a source model
+                if (retVal is IResourceCollection irc)
+                {
+                    irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+                }
+                else
+                {
+                    retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                }
+                return retVal;
             }
-            else
-            {
-                retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
-            }
-            return retVal;
         }
 
         /// <summary>

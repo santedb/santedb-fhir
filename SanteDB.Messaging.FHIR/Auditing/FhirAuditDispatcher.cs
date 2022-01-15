@@ -36,10 +36,17 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Auditing
 {
-	/// <summary>
-	/// Audit dispatch service which sends audits using HL7 FHIR
-	/// </summary>
-	[ExcludeFromCodeCoverage]
+    /// <summary>
+    /// Audit dispatch service which sends audits using HL7 FHIR
+    /// </summary>
+    /// <remarks>
+    /// <para>This implementation of the <see cref="IAuditDispatchService"/> is responsible for dispatching audits to a central
+    /// FHIR repository which supports the FHIR auditing specification.</para>
+    /// <para>This dispatcher is configured using the <see cref="FhirDispatcherTargetConfiguration"/> class where the dispatcher name
+    /// is <c>audit</c>. The dispatcher configuration may include authentication/authorization parameters for the solution, as well
+    /// as authenticators or proxy information.</para>
+    /// </remarks>
+    [ExcludeFromCodeCoverage]
 	public class FhirAuditDispatcher : IAuditDispatchService
     {
         // Get tracer for the audit dispatcher
@@ -77,12 +84,6 @@ namespace SanteDB.Messaging.FHIR.Auditing
                 PreferCompressedResponses = true,
                 VerifyFhirVersion = false
             });
-            this.m_client.PreferredFormat = ResourceFormat.Json;
-            this.m_client.ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
-            {
-                AcceptUnknownMembers = true,
-                AllowUnrecognizedEnums = true
-            };
 
             // Attach authenticator
             if (this.m_configuration.Authenticator?.Type != null)

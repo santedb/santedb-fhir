@@ -45,8 +45,14 @@ using System.Diagnostics.CodeAnalysis;
 namespace SanteDB.Messaging.FHIR
 {
     /// <summary>
-    /// Message handler for FHIR
+    /// Implementation of an <see cref="IApiEndpointProvider"/> for HL7 Fast Health Interoperability Resources (FHIR) REST Interface
     /// </summary>
+    /// <remarks>
+    /// <para>The FHIR based message handler is responsible for starting the <see cref="IFhirServiceContract"/> REST service and 
+    /// enables SanteDB's <see href="https://help.santesuite.org/developers/service-apis/hl7-fhir">FHIR REST</see> services. Consult the
+    /// <see cref="https://help.santesuite.org/developers/service-apis/hl7-fhir/enabling-fhir-interfaces">Enabling FHIR Interfaces</see> documentation
+    /// for more information on enabling these services in SanteDB.</para>
+    /// </remarks>
     [ExcludeFromCodeCoverage]
     [Description("Allows SanteDB iCDR to send and receive HL7 FHIR R4 messages")]
     [ApiServiceProvider("HL7 FHIR R4 API Endpoint", typeof(FhirServiceBehavior), configurationType: typeof(FhirServiceConfigurationSection))]
