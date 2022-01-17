@@ -238,7 +238,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 ConditionalDelete = ConditionalDeleteStatus.NotSupported,
                 ReadHistory = true,
                 UpdateCreate = true,
-                Versioning = typeof(IVersionedEntity).IsAssignableFrom(typeof(TModel)) ?
+                Versioning = typeof(IVersionedData).IsAssignableFrom(typeof(TModel)) ?
                     ResourceVersionPolicy.Versioned :
                     ResourceVersionPolicy.NoVersion,
                 Interaction = this.GetInteractions().ToList(),
@@ -523,9 +523,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Results
             List<TModel> results = new List<TModel>() { result };
-            while ((result as IVersionedEntity)?.PreviousVersionKey.HasValue == true)
+            while ((result as IVersionedData)?.PreviousVersionKey.HasValue == true)
             {
-                result = this.Read(guidId, (result as IVersionedEntity).PreviousVersionKey.Value);
+                result = this.Read(guidId, (result as IVersionedData).PreviousVersionKey.Value);
                 results.Add(result);
             }
 

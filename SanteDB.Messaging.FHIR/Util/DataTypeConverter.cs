@@ -375,7 +375,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the t resource.</typeparam>
         /// <param name="targetEntity">The target entity.</param>
         /// <returns>Returns a reference instance.</returns>
-        public static ResourceReference CreateVersionedReference<TResource>(IVersionedEntity targetEntity)
+        public static ResourceReference CreateVersionedReference<TResource>(IVersionedData targetEntity)
             where TResource : DomainResource, new()
         {
             if (targetEntity == null)
@@ -627,9 +627,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the t resource.</typeparam>
         /// <param name="resource">The resource.</param>
         /// <returns>TResource.</returns>
-        public static TResource CreateResource<TResource>(IVersionedEntity resource) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IVersionedData resource) where TResource : Resource, new()
         {
-            var retVal = CreateResource<TResource>((IIdentifiedEntity)resource);
+            var retVal = CreateResource<TResource>((IIdentifiedData)resource);
             retVal.VersionId = resource.VersionKey.ToString();
             retVal.Meta.VersionId = resource.VersionKey?.ToString();
             return retVal;
@@ -638,7 +638,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Create non versioned resource
         /// </summary>
-        public static TResource CreateResource<TResource>(IIdentifiedEntity resource) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IIdentifiedData resource) where TResource : Resource, new()
         {
             var retVal = new TResource();
 
@@ -687,7 +687,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
-                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
+                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IIdentifiedData, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
             else

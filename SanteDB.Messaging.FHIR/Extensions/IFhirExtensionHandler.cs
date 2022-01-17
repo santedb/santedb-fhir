@@ -60,7 +60,7 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// </summary>
         /// <param name="modelObject">The object which the construction occurs from</param>
         /// <returns>The constructed FHIR extension</returns>
-        IEnumerable<Extension> Construct(IIdentifiedEntity modelObject);
+        IEnumerable<Extension> Construct(IIdentifiedData modelObject);
 
         /// <summary>
         /// Parse the specified extension
