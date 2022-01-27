@@ -217,7 +217,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Return FHIR query result
             var retVal = new FhirQueryResult(nameof(Subscription))
             {
-                Results = hdsiResults.AsParallel().Select(o =>
+                Results = hdsiResults.Select(o =>
                 {
                     using (AuthenticationContext.EnterContext(auth))
                     {
