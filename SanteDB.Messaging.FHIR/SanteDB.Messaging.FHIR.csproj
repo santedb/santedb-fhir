@@ -202,6 +202,9 @@
     <None Update="data\004-FHIR-RoleCode.dataset">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="data\004-FHIR-AdverseEventSeverity.dataset">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="data\004-FHIR-ServiceDeliveryLocationRoleType.dataset">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

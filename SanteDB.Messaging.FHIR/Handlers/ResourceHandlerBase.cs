@@ -564,14 +564,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 var retVal = this.MapToModel((TFhirResource)resourceInstance);
                 // Append the notice that this is a source model
-                if (retVal is IResourceCollection irc)
+                switch (retVal)
                 {
-                    irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+                    case IResourceCollection irc:
+                        irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+                        break;
+                    case ITargetedAssociation tra:
+                        (tra.TargetEntity as IdentifiedData)?.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        (tra.SourceEntity as IdentifiedData)?.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        break;
+                    default:
+                        retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        break;
                 }
-                else
-                {
-                    retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
-                }
+
                 return retVal;
             }
         }

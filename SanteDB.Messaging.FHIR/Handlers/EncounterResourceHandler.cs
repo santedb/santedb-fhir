@@ -148,7 +148,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("ReasonConcept"))
             };
 
-            retVal.Class = DataTypeConverter.ToCoding(model.LoadProperty<Concept>("TypeConcept").ReferenceTerms.FirstOrDefault()?.ReferenceTerm);
+            retVal.Class = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept")).GetCoding();
 
             // Map associated
             var associated = model.LoadCollection<ActParticipation>("Participations").ToArray();
