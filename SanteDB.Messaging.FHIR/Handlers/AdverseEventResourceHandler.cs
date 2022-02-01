@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -16,9 +16,8 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-8-5
+ * Date: 2021-10-29
  */
-
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
@@ -121,7 +120,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var severity = subject.LoadCollection<ActRelationship>("Relationships").First(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.LoadProperty<Act>("TargetAct").TypeConceptKey == ObservationTypeKeys.Severity);
             if (severity != null)
             {
-                retVal.Seriousness = DataTypeConverter.ToFhirCodeableConcept(severity.LoadProperty<CodedObservation>("TargetAct").Value, "http://hl7.org/fhir/adverse-event-seriousness");
+                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept(severity.LoadProperty<CodedObservation>("TargetAct").Value, "http://terminology.hl7.org/CodeSystem/adverse-event-severity");
             }
 
             // Did the patient die?
@@ -176,6 +175,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <inheritdoc/>
         protected override Act MapToModel(AdverseEvent resource)
         {
+
+#if !DEBUG
+            throw new NotSupportedException();
+#endif
+
             var retVal = new Act();
 
             if (!Guid.TryParse(resource.Id, out var key))
@@ -209,7 +213,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // map date element to act time
             var occurTime = (DateTimeOffset)DataTypeConverter.ToDateTimeOffset(resource.DateElement);
-            var targetAct = new Act() { ActTime = occurTime };
+            var targetAct = new CodedObservation() { ActTime = occurTime };
 
             retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasSubject, targetAct));
             retVal.ActTime = occurTime;
@@ -227,9 +231,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // map seriousness to relationships
-
-            var severityTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Seriousness.Coding.FirstOrDefault(), "http://hl7.org/fhir/adverse-event-seriousness"), TypeConceptKey = ObservationTypeKeys.Severity };
-            targetAct.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, severityTarget));
+            if (resource.Severity != null)
+            {
+                var severityTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Severity.Coding.FirstOrDefault(), "http://terminology.hl7.org/CodeSystem/adverse-event-severity"), TypeConceptKey = ObservationTypeKeys.Severity };
+                targetAct.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, severityTarget));
+            }
 
             // map recoder to provider
             if (resource.Recorder != null)
