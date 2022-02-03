@@ -38,6 +38,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Organization = SanteDB.Core.Model.Entities.Organization;
 using Patient = SanteDB.Core.Model.Roles.Patient;
+using SanteDB.Core.Model;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -277,9 +278,9 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 Assert.IsNotNull(patient.Relationships);
                 Assert.IsTrue(patient.Relationships.Count() == 1);
-                Assert.IsInstanceOf<Place>(patient.Relationships.Single().TargetEntity);
+                Assert.IsInstanceOf<Place>(patient.Relationships.Single().LoadProperty(o => o.TargetEntity));
                 Assert.IsTrue(patient.Relationships.Single().RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace);
-            }      
+            }
         }
 
         /// <summary>
@@ -304,8 +305,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 var extensionFortest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-birthPlace", location.Address);
                 var patient = new SanteDB.Core.Model.Roles.Patient();
 
-                Assert.Throws <KeyNotFoundException>(() => birthPlaceExtension.Parse(extensionFortest, patient));
-            }  
+                Assert.Throws<KeyNotFoundException>(() => birthPlaceExtension.Parse(extensionFortest, patient));
+            }
         }
 
         /// <summary>
@@ -321,7 +322,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             birthPlaceExtension.Parse(extensionforTest, patient);
 
-            Assert.IsFalse(patient.Relationships.Any(c => c.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace));
+            Assert.IsFalse(patient.LoadProperty(o=>o.Relationships).Any(c => c.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace));
         }
     }
 }

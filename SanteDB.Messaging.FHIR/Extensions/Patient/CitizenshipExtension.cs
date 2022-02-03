@@ -59,7 +59,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
                     if (isoCode != null)
                     {
-                        yield return new Extension(this.Uri.ToString(), new CodeableConcept($"urn:oid:{isoCode.AuthorityXml.Oid}", isoCode.Value));
+                        yield return new Extension(this.Uri.ToString(), new CodeableConcept($"urn:oid:{isoCode.LoadProperty(o=>o.Authority).Oid}", isoCode.Value));
                     }
                 }
             }

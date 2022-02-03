@@ -1142,7 +1142,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var address = new EntityAddress
             {
-                AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key
+                AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key,
+                Component = new List<EntityAddressComponent>()
             };
 
             if (!string.IsNullOrEmpty(fhirAddress.City))
@@ -1235,7 +1236,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var name = new EntityName
             {
-                NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key
+                NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key,
+                Component = new List<EntityNameComponent>()
             };
 
             if (fhirHumanName.Family != null)

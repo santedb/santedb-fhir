@@ -171,11 +171,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // see the BirthPlaceExtension class
             if (!string.IsNullOrEmpty(resource.Address?.Text))
             {
-                place.Names.Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
+                place.LoadProperty(o=>o.Names).Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
             }
 
-            place.Names.Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
-            place.Names.AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
+            place.LoadProperty(o => o.Names).Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
+            place.LoadProperty(o => o.Names).AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
 
             if (resource.Mode == Location.LocationMode.Kind)
                 place.DeterminerConceptKey = DeterminerKeys.Described;
@@ -212,7 +212,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
 
                 // point the child place entity at the target place entity with a relationship of parent 
-                place.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
+                place.LoadProperty(o=>o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
             }
 
             return place;
