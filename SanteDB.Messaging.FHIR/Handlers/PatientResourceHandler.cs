@@ -44,19 +44,47 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         // ER repository
         private IRepositoryService<EntityRelationship> m_erRepository;
-
-        private List<Guid> m_relatedPersons;
+        private readonly IAdhocCacheService m_adhocCacheService;
+        private readonly IRepositoryService<Concept> m_conceptRepository;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(PatientResourceHandler));
 
         /// <summary>
         /// Resource handler subscription
         /// </summary>
-        public PatientResourceHandler(IRepositoryService<Core.Model.Roles.Patient> repo, IRepositoryService<EntityRelationship> erRepository, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService) : base(repo, localizationService)
+        public PatientResourceHandler(IRepositoryService<Core.Model.Roles.Patient> repo, IRepositoryService<EntityRelationship> erRepository, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService, IAdhocCacheService adhocCacheService = null) : base(repo, localizationService)
         {
             this.m_erRepository = erRepository;
+            this.m_adhocCacheService = adhocCacheService;
+            this.m_conceptRepository = conceptRepository;
+        }
 
-            var relTypes = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"));
-            this.m_relatedPersons = relTypes.Select(c => c.Key.Value).ToList();
+        /// <summary>
+        /// Gets all related person uuids
+        /// </summary>
+        private Guid[] GetRelatedPersonConceptUuids()
+        {
+            var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.relatedPersonsUuids");
+            if(retVal == null)
+            {
+                retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(o => o.Key.Value).ToArray();
+                this.m_adhocCacheService?.Add("fhir.patient.relatedPersonsUuids", retVal);
+            }
+            return retVal;
+        }
+
+        /// <summary>
+        /// Get all family member uuids
+        /// </summary>
+        private Guid[] GetFamilyMemberUuids()
+        {
+            var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.familyMemberUuids");
+            if (retVal == null)
+            {
+                retVal = this.m_conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember")).Select(o => o.Key.Value).ToArray();
+                this.m_adhocCacheService?.Add("fhir.patient.familyMemberUuids", retVal);
+            }
+            return retVal;
+            
         }
 
         /// <summary>
@@ -220,7 +248,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else if (partOfBundle != null) // This is part of a bundle and we need to include it
                 {
                     // HACK: This piece of code is used to add any RelatedPersons to the container bundle if it is part of a bundle
-                    if (m_relatedPersons.Contains(rel.RelationshipTypeKey.Value))
+                    if (this.GetRelatedPersonConceptUuids().Contains(rel.RelationshipTypeKey.Value))
                     {
                         var relative = FhirResourceHandlerUtil.GetMapperForInstance(rel).MapToFhir(rel);
                         partOfBundle.Entry.Add(new Bundle.EntryComponent()
@@ -234,7 +262,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Reverse relationships of family member?
             var uuids = model.Relationships.Where(r => r.RelationshipTypeKey == MDM_MASTER_LINK).Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
-            var reverseRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && o.RelationshipType.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember") && o.ObsoleteVersionSequenceId == null);
+            var familyMemberConcepts = this.GetFamilyMemberUuids();
+            var reverseRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
 
             foreach (var rrv in reverseRelationships)
             {
@@ -629,7 +658,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         return resource.LoadCollection(o => o.Relationships)
                             .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                 o.RelationshipRoleKey == null &&
-                                this.m_relatedPersons.Contains(o.RelationshipTypeKey.Value))
+                                this.GetRelatedPersonConceptUuids().Contains(o.RelationshipTypeKey.Value))
                             .Select(o => rpHandler.MapToFhir(o));
 
                     default:

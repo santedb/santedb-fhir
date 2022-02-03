@@ -902,8 +902,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 return null;
             }
 
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping reference term");
-
+            
             var cs = referenceTerm.LoadProperty(o => o.CodeSystem);
             return new Coding(cs.Url ?? $"urn:oid:{cs.Oid}", referenceTerm.Mnemonic)
             {

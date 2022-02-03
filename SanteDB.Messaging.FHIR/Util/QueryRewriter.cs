@@ -266,7 +266,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // Count and offset parameters
             int count = 0, offset = 0, page = 0;
-            if (!Int32.TryParse(fhirQuery["_count"] ?? "100", out count))
+            if (!Int32.TryParse(fhirQuery["_count"] ?? "25", out count))
                 throw new ArgumentException("_count");
             if (!Int32.TryParse(fhirQuery["_offset"] ?? "0", out offset))
                 throw new ArgumentException("_offset");
@@ -276,8 +276,10 @@ namespace SanteDB.Messaging.FHIR.Util
             Guid queryId = Guid.Empty;
             if (fhirQuery["_stateid"] != null)
                 queryId = Guid.Parse(fhirQuery["_stateid"]);
-            else
+            else if (fhirQuery["_total"] == "accurate") // to get an accurate total we have to persist query state
                 queryId = Guid.NewGuid();
+            else
+                queryId = Guid.Empty;
 
             // Return new query
             FhirQuery retVal = new FhirQuery()
