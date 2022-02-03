@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<dataset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="Import FHIR Code System adverse-event-severity" xmlns="http://santedb.org/data">
+  <update skipIfError="false" insertIfNotExists="true">
+    <CodeSystem xmlns="http://santedb.org/model">
+      <id>24798fa7-6c1a-4018-836c-5b68764e20b1</id>
+      <name>AdverseEventSeverity</name>
+      <oid>urn:oid:2.16.840.1.113883.4.642.4.1256</oid>
+      <authority>AdverseEventSeverity</authority>
+      <url>http://terminology.hl7.org/CodeSystem/adverse-event-severity</url>
+      <version>4.0.1</version>
+    </CodeSystem>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>64a0dba4-5d3a-4f42-a001-9e4730a032a2</id>
+      <mnemonic>mild</mnemonic>
+      <codeSystem>24798fa7-6c1a-4018-836c-5b68764e20b1</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Mild</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>41715279-2793-49c2-a52b-e16553faa589</id>
+      <mnemonic>moderate</mnemonic>
+      <codeSystem>24798fa7-6c1a-4018-836c-5b68764e20b1</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Moderate</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>8dfda05e-025b-4d97-bf32-b0da88818624</id>
+      <mnemonic>severe</mnemonic>
+      <codeSystem>24798fa7-6c1a-4018-836c-5b68764e20b1</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Severe</value>
+      </name>
+    </ReferenceTerm>
+  </update>
+
+
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>fdfda05e-025b-4d97-bf32-b0da88818624</id>
+      <term>8dfda05e-025b-4d97-bf32-b0da88818624</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      <source>ba7c70a2-4eab-4eb0-b3a1-4ad1a792c131</source>
+    </ConceptReferenceTerm>
+  </update>
+
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>fefda05e-025b-4d97-bf32-b0da88818624</id>
+      <term>41715279-2793-49c2-a52b-e16553faa589</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      <source>2a1bdbdb-f0e9-4ee2-872f-f3cad824ba10</source>
+    </ConceptReferenceTerm>
+  </update>
+
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>fffda05e-025b-4d97-bf32-b0da88818624</id>
+      <term>64a0dba4-5d3a-4f42-a001-9e4730a032a2</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      <source>b09b4f76-df38-4825-86a9-e791cd37859b</source>
+    </ConceptReferenceTerm>
+  </update>
+</dataset>
