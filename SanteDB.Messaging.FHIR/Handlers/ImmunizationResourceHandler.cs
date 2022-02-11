@@ -71,13 +71,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.DoseQuantity = new Quantity()
             {
-                Unit = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.DoseUnit)), "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code,
+                Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code,
                 Value = model.DoseQuantity
             };
             retVal.RecordedElement = new FhirDateTime(model.ActTime); // TODO: This is probably not the best place to put this?
-            retVal.Route = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.Route)));
-            retVal.Site = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.Site)));
-            retVal.StatusReason = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.ReasonConcept)));
+            retVal.Route = DataTypeConverter.ToFhirCodeableConcept(model.RouteKey);
+            retVal.Site = DataTypeConverter.ToFhirCodeableConcept(model.SiteKey);
+            retVal.StatusReason = DataTypeConverter.ToFhirCodeableConcept(model.ReasonConceptKey);
             switch (model.StatusConceptKey?.ToString().ToUpper())
             {
                 case StatusKeyStrings.Completed:
@@ -98,7 +98,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (matPtcpt != null)
             {
                 var matl = matPtcpt.LoadProperty<Material>(nameof(ActParticipation.PlayerEntity));
-                retVal.VaccineCode = DataTypeConverter.ToFhirCodeableConcept(matl.LoadProperty<Concept>(nameof(Act.TypeConcept)));
+                retVal.VaccineCode = DataTypeConverter.ToFhirCodeableConcept(matl.TypeConceptKey);
                 retVal.ExpirationDateElement = matl.ExpiryDate.HasValue ? DataTypeConverter.ToFhirDate(matl.ExpiryDate) : null;
                 retVal.LotNumber = (matl as ManufacturedMaterial)?.LotNumber;
             }
