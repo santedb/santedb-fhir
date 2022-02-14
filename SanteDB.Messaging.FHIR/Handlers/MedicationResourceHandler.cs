@@ -90,7 +90,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = DataTypeConverter.CreateResource<Medication>(model);
 
             // Code of medication code
-            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Entity.TypeConcept)), "http://snomed.info/sct");
+            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://snomed.info/sct");
             retVal.Identifier = model.LoadCollection<EntityIdentifier>(nameof(Entity.Identifiers)).Select(DataTypeConverter.ToFhirIdentifier).ToList();
 
             switch (model.StatusConceptKey.ToString().ToUpper())
@@ -116,7 +116,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Form
-            retVal.Form = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("FormConcept"), "http://hl7.org/fhir/ValueSet/medication-form-codes");
+            retVal.Form = DataTypeConverter.ToFhirCodeableConcept(model.FormConceptKey, "http://hl7.org/fhir/ValueSet/medication-form-codes");
             retVal.Batch = new Medication.BatchComponent
             {
                 LotNumber = model.LotNumber,

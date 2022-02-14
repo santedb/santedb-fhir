@@ -97,7 +97,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 			var recommendation = new ImmunizationRecommendation.RecommendationComponent()
 			{
 				DoseNumber = new PositiveInt(model.SequenceId),
-				VaccineCode = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(mat?.TypeConcept) },
+				VaccineCode = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(mat?.TypeConceptKey) },
 				ForecastStatus = new CodeableConcept("http://hl7.org/fhir/conceptset/immunization-recommendation-status", status),
                 DateCriterion = new List<ImmunizationRecommendation.DateCriterionComponent>()
 				{

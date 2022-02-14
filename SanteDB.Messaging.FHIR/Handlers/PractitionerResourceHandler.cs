@@ -118,11 +118,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
 
             // Load the koala-fication
-            var qual = provider.LoadProperty(o => o.ProviderSpecialty);
-            if (qual != null)
-            {
-                retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(qual) } };
-            }
+            retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(provider.ProviderSpecialtyKey) } };
 
             // Language of communication
             retVal.Communication = model.LoadCollection(o => o.LanguageCommunication)?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();
@@ -187,7 +183,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.ProviderSpecialty = DataTypeConverter.ToConcept(resource.Qualification.First().Code);
             }
-            
+
             return retVal;
         }
     }

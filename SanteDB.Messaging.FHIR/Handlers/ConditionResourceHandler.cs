@@ -140,15 +140,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Severity
             if (severity != null)
             {
-                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept((severity as CodedObservation).LoadProperty<Concept>("Value"));
+                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept((severity as CodedObservation).ValueKey);
             }
 
-            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("Value"));
+            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.ValueKey);
 
             // body sites?
             var sites = actRelationshipService.Query(o => o.SourceEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.FindingSite, AuthenticationContext.Current.Principal);
 
-            retVal.BodySite = sites.Select(o => DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<CodedObservation>("TargetAct").LoadProperty<Concept>("Value"))).ToList();
+            retVal.BodySite = sites.Select(o => DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<CodedObservation>("TargetAct").ValueKey)).ToList();
 
             // Subject
             var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);

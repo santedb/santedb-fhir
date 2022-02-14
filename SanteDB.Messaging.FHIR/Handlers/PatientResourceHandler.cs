@@ -66,7 +66,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.relatedPersonsUuids");
             if(retVal == null)
             {
-                retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(o => o.Key.Value).ToArray();
+                retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"), 0, 1000, out _).Select(o => o.Key.Value).ToArray();
                 this.m_adhocCacheService?.Add("fhir.patient.relatedPersonsUuids", retVal);
             }
             return retVal;
@@ -80,7 +80,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.familyMemberUuids");
             if (retVal == null)
             {
-                retVal = this.m_conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember")).Select(o => o.Key.Value).ToArray();
+                retVal = this.m_conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember"), 0, 1000, out _).Select(o => o.Key.Value).ToArray();
                 this.m_adhocCacheService?.Add("fhir.patient.familyMemberUuids", retVal);
             }
             return retVal;
@@ -151,7 +151,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (model.GenderConceptKey.HasValue)
             {
-                retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true);
+                retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.GenderConceptKey, "http://hl7.org/fhir/administrative-gender", true);
             }
 
             retVal.Identifier = model.Identifiers?.Select(DataTypeConverter.ToFhirIdentifier).ToList();
@@ -173,12 +173,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             ElementId = $"{person.Key}",
                             Address = DataTypeConverter.ToFhirAddress(person.GetAddresses().FirstOrDefault()),
                             Relationship = new List<CodeableConcept>() {
-                                DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o=>o.RelationshipRole), "http://terminology.hl7.org/CodeSystem/v2-0131", true),
-                                DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o => o.RelationshipType), "http://terminology.hl7.org/CodeSystem/v2-0131", true)
+                                DataTypeConverter.ToFhirCodeableConcept(rel.RelationshipRoleKey, "http://terminology.hl7.org/CodeSystem/v2-0131"),
+                                DataTypeConverter.ToFhirCodeableConcept(rel.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131")
                             }.OfType<CodeableConcept>().ToList(),
                             Name = DataTypeConverter.ToFhirHumanName(person.GetNames().FirstOrDefault()),
                             // TODO: Gender
-                            Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.LoadProperty(o => o.GenderConcept), "http://hl7.org/fhir/administrative-gender", true),
+                            Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.GenderConceptKey, "http://hl7.org/fhir/administrative-gender"),
                             Telecom = person.GetTelecoms().Select(t => DataTypeConverter.ToFhirTelecom(t)).ToList()
                         };
 
@@ -196,8 +196,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             ElementId = $"{org.Key}",
                             Relationship = new List<CodeableConcept>() {
-                                DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o=>o.RelationshipRole), "http://terminology.hl7.org/CodeSystem/v2-0131", true),
-                                DataTypeConverter.ToFhirCodeableConcept(rel.LoadProperty(o => o.RelationshipType), "http://terminology.hl7.org/CodeSystem/v2-0131", true)
+                                DataTypeConverter.ToFhirCodeableConcept(rel.RelationshipRoleKey, "http://terminology.hl7.org/CodeSystem/v2-0131"),
+                                DataTypeConverter.ToFhirCodeableConcept(rel.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131")
                             }.OfType<CodeableConcept>().ToList(),
                             Organization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(org)
                         };
