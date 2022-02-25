@@ -149,7 +149,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // body sites?
             var sites = actRelationshipService.Query(o => o.SourceEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.FindingSite, AuthenticationContext.Current.Principal);
 
-            retVal.BodySite = sites.Select(o => DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<CodedObservation>("TargetAct").ValueKey)).ToList();
+            retVal.BodySite = sites.ToArray().Select(o => DataTypeConverter.ToFhirCodeableConcept((o.LoadProperty(t=>t.TargetAct) as CodedObservation).ValueKey)).ToList();
 
             // Subject
             var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);

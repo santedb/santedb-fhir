@@ -66,7 +66,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.relatedPersonsUuids");
             if(retVal == null)
             {
-                retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"), 0, 1000, out _).Select(o => o.Key.Value).ToArray();
+                retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(o => o.Key.Value).ToArray();
                 this.m_adhocCacheService?.Add("fhir.patient.relatedPersonsUuids", retVal);
             }
             return retVal;
@@ -80,7 +80,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.familyMemberUuids");
             if (retVal == null)
             {
-                retVal = this.m_conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember"), 0, 1000, out _).Select(o => o.Key.Value).ToArray();
+                retVal = this.m_conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember")).Select(o => o.Key.Value).ToArray();
                 this.m_adhocCacheService?.Add("fhir.patient.familyMemberUuids", retVal);
             }
             return retVal;

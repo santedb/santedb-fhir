@@ -284,12 +284,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<TModel>();
 
             var auth = AuthenticationContext.Current;
-            // Return FHIR query result
-            if(Environment.ProcessorCount > 4)
-            {
-                hdsiResults = hdsiResults.AsParallel().AsOrdered();
-            }
-
+           
             var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
             {
                 Results = results.Select(o =>

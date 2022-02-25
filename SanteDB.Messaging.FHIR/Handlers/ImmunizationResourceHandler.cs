@@ -75,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code,
                 Value = model.DoseQuantity
             };
-            retVal.RecordedElement = new FhirDateTime(model.ActTime); // TODO: This is probably not the best place to put this?
+            retVal.RecordedElement = new FhirDateTime(model.ActTime.Value); // TODO: This is probably not the best place to put this?
             retVal.Route = DataTypeConverter.ToFhirCodeableConcept(model.RouteKey);
             retVal.Site = DataTypeConverter.ToFhirCodeableConcept(model.SiteKey);
             retVal.StatusReason = DataTypeConverter.ToFhirCodeableConcept(model.ReasonConceptKey);
