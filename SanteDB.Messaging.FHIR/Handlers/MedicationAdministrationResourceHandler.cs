@@ -103,7 +103,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = DataTypeConverter.CreateResource<MedicationAdministration>(model);
 
             retVal.Identifier = model.LoadCollection<ActIdentifier>(nameof(Act.Identifiers)).Select(DataTypeConverter.ToFhirIdentifier).ToList();
-            retVal.StatusReason = new List<CodeableConcept> {DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Act.ReasonConcept)))};
+            retVal.StatusReason = new List<CodeableConcept> {DataTypeConverter.ToFhirCodeableConcept(model.ReasonConceptKey)};
 
             switch (model.StatusConceptKey.ToString().ToUpper())
             {
@@ -133,7 +133,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Status = MedicationAdministration.MedicationAdministrationStatusCodes.NotDone;
             }
 
-            retVal.Category = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Entity.TypeConcept)), "http://hl7.org/fhir/medication-admin-category");
+            retVal.Category = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://hl7.org/fhir/medication-admin-category");
 
             var consumableRelationship = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Consumable);
             var productRelationship = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product);
@@ -178,12 +178,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Dosage = new MedicationAdministration.DosageComponent
             {
-                Site = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("Site")),
-                Route = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("Route")),
+                Site = DataTypeConverter.ToFhirCodeableConcept(model.SiteKey),
+                Route = DataTypeConverter.ToFhirCodeableConcept(model.RouteKey),
                 Dose = new Quantity
                 {
                     Value = model.DoseQuantity,
-                    Unit = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(SubstanceAdministration.DoseUnit)), "http://hl7.org/fhir/sid/ucum").GetCoding()?.Code
+                    Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, "http://hl7.org/fhir/sid/ucum").GetCoding()?.Code
                 }
             };
 

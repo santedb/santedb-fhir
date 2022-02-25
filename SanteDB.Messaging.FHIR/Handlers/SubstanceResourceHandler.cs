@@ -99,10 +99,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Category and code
             retVal.Category = new List<CodeableConcept>
             {
-                DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Entity.TypeConcept)), "http://terminology.hl7.org/CodeSystem/substance-category", true)
+                DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://terminology.hl7.org/CodeSystem/substance-category")
             };
 
-            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept"), "http://snomed.info/sct", true);
+            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://snomed.info/sct");
             retVal.Description = model.LoadCollection<EntityName>("Names").FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Components")?.FirstOrDefault()?.Value;
 
             // TODO: Instance or kind
@@ -112,7 +112,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     ExpiryElement = DataTypeConverter.ToFhirDateTime(model.ExpiryDate),
                     Identifier = DataTypeConverter.ToFhirIdentifier(m.GetIdentifiers().FirstOrDefault()),
-                    Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.LoadProperty<Concept>(nameof(Material.QuantityConcept)))
+                    Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.QuantityConceptKey)
                 }).ToList();
             }
             else if (model.DeterminerConceptKey == DeterminerKeys.Specific)
@@ -124,7 +124,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     new Substance.InstanceComponent
                     {
                         ExpiryElement = DataTypeConverter.ToFhirDateTime(model.ExpiryDate),
-                        Quantity = DataTypeConverter.ToQuantity(model.Quantity, model.LoadProperty<Concept>(nameof(Material.QuantityConcept)))
+                        Quantity = DataTypeConverter.ToQuantity(model.Quantity, model.QuantityConceptKey)
                     }
                 };
             }

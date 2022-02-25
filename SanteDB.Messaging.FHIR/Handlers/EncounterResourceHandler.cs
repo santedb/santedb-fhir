@@ -145,10 +145,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.ReasonCode = new List<CodeableConcept>
             {
-                DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("ReasonConcept"))
+                DataTypeConverter.ToFhirCodeableConcept(model.ReasonConceptKey)
             };
 
-            retVal.Class = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept")).GetCoding();
+            retVal.Class = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey).GetCoding();
 
             // Map associated
             var associated = model.LoadCollection<ActParticipation>("Participations").ToArray();
@@ -176,7 +176,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Type = new List<CodeableConcept>
                 {
-                    DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<Concept>("ParticipationRole"))
+                    DataTypeConverter.ToFhirCodeableConcept(o.ParticipationRoleKey)
                 },
                 Individual = DataTypeConverter.CreateVersionedReference<Practitioner>(o.PlayerEntity)
             }).ToList();

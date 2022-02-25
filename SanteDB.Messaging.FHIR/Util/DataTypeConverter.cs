@@ -160,7 +160,7 @@ namespace SanteDB.Messaging.FHIR.Util
             var pou = audit.AuditableObjects.Find(o => o.ObjectId == SanteDBClaimTypes.PurposeOfUse)?.NameData;
             if (pou != null && Guid.TryParse(pou, out Guid pouKey))
             {
-                retVal.PurposeOfEvent = new List<CodeableConcept>() { ToFhirCodeableConcept(conceptService.Get(pouKey)) };
+                retVal.PurposeOfEvent = new List<CodeableConcept>() { ToFhirCodeableConcept(pouKey) };
             }
 
             // Actors
@@ -189,8 +189,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal.Agent.Add(new AuditEvent.AgentComponent()
                 {
                     AltId = act.AlternativeUserId,
-                    Role = act.ActorRoleCode.Skip(1).Select(o => ToFhirCodeableConcept(conceptService.GetConceptByReferenceTerm(o.Code, o.CodeSystem))).ToList(),
-                    Type = act.ActorRoleCode.Take(1).Select(o => ToFhirCodeableConcept(conceptService.GetConceptByReferenceTerm(o.Code, o.CodeSystem))).FirstOrDefault(),
+                    Role = act.ActorRoleCode.Skip(1).Select(o => ToFhirCodeableConcept(conceptService.GetConceptByReferenceTerm(o.Code, o.CodeSystem).Key)).ToList(),
+                    Type = act.ActorRoleCode.Take(1).Select(o => ToFhirCodeableConcept(conceptService.GetConceptByReferenceTerm(o.Code, o.CodeSystem).Key)).FirstOrDefault(),
                     Name = act.UserName,
                     Network = new AuditEvent.NetworkComponent()
                     {
@@ -462,12 +462,12 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// To quantity
         /// </summary>
-        public static Quantity ToQuantity(decimal? quantity, Concept unitConcept)
+        public static Quantity ToQuantity(decimal? quantity, Guid? unitConceptKey)
         {
             return new Quantity()
             {
                 Value = quantity,
-                Unit = DataTypeConverter.ToFhirCodeableConcept(unitConcept, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code
+                Unit = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code
             };
         }
 
@@ -829,7 +829,7 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 throw new InvalidOperationException("Codeable concept must contain a language code");
             }
-                
+
             return new PersonLanguageCommunication(lang.Coding.First().Code, preferred);
         }
 
@@ -911,8 +911,6 @@ namespace SanteDB.Messaging.FHIR.Util
                 return null;
             }
 
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping reference term");
-
             var cs = referenceTerm.LoadProperty(o => o.CodeSystem);
             return new Coding(cs.Url ?? $"urn:oid:{cs.Oid}", referenceTerm.Mnemonic)
             {
@@ -940,7 +938,7 @@ namespace SanteDB.Messaging.FHIR.Util
             else if (ext.Value is bool || eType.ExtensionHandler == typeof(BooleanExtensionHandler))
                 retVal.Value = new FhirBoolean((bool)(ext.Value ?? new BooleanExtensionHandler().DeSerialize(ext.Data)));
             else if (ext.Value is Concept concept)
-                retVal.Value = ToFhirCodeableConcept(concept);
+                retVal.Value = ToFhirCodeableConcept(concept.Key);
             else if (ext.Value is SanteDB.Core.Model.Roles.Patient patient)
                 retVal.Value = DataTypeConverter.CreateVersionedReference<Patient>(patient);
             else
@@ -1073,7 +1071,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             DateTimeOffset? result = null;
 
-            switch(dateTimeOffset.Length)
+            switch (dateTimeOffset.Length)
             {
                 case 4:
                     {
@@ -1428,7 +1426,7 @@ namespace SanteDB.Messaging.FHIR.Util
             // Return value
             var retVal = new Address()
             {
-                Use = DataTypeConverter.ToFhirEnumeration<Address.AddressUse>(address.LoadProperty<Concept>(nameof(EntityAddress.AddressUse)), "http://hl7.org/fhir/address-use"),
+                Use = DataTypeConverter.ToFhirEnumeration<Address.AddressUse>(address.AddressUseKey, "http://hl7.org/fhir/address-use"),
                 Line = new List<String>()
             };
 
@@ -1463,59 +1461,57 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Converts a reference term to the codeable concept
         /// </summary>
-        public static CodeableConcept ToFhirCodeableConcept(Concept concept, String preferredCodeSystem = null, bool nullIfNoPreferred = false)
+        public static CodeableConcept ToFhirCodeableConcept(Guid? conceptKey, params String[] preferredCodeSystem)
         {
-            return ToFhirCodeableConcept(concept, new string[] { preferredCodeSystem }, nullIfNoPreferred);
-        }
+            using (AuthenticationContext.EnterSystemContext())
+            {
+                traceSource.TraceEvent(EventLevel.Verbose, "Mapping concept");
 
-        /// <summary>
-        /// Converts a <see cref="Concept"/> instance to an <see cref="FhirCodeableConcept"/> instance.
-        /// </summary>
-        /// <param name="concept">The concept to be converted to a <see cref="FhirCodeableConcept"/></param>
-        /// <param name="preferredCodeSystems">The preferred code system for the codeable concept</param>
-        /// <param name="nullIfNoPreferred">When true, instructs the system to return only code in preferred code system or nothing</param>
-        /// <returns>Returns a FHIR codeable concept.</returns>
-        public static CodeableConcept ToFhirCodeableConcept(Concept concept, String[] preferredCodeSystems, bool nullIfNoPreferred)
-        {
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping concept");
+                if (conceptKey.GetValueOrDefault() == Guid.Empty)
+                {
+                    return null;
+                }
 
-            if (concept == null)
-            {
-                return null;
-            }
-            if (preferredCodeSystems == null || preferredCodeSystems.All(p => p == null))
-            {
-                var refTerms = concept.LoadCollection<ConceptReferenceTerm>(nameof(Concept.ReferenceTerms));
-                if (refTerms.Any())
-                    return new CodeableConcept
-                    {
-                        Coding = refTerms.Select(o => DataTypeConverter.ToCoding(o.LoadProperty<ReferenceTerm>(nameof(ConceptReferenceTerm.ReferenceTerm)))).ToList(),
-                        Text = concept.LoadCollection<ConceptName>(nameof(Concept.ConceptNames)).FirstOrDefault()?.Name
-                    };
-                else
-                    return new CodeableConcept("http://openiz.org/concept", concept.Mnemonic)
-                    {
-                        Text = concept.LoadCollection<ConceptName>(nameof(Concept.ConceptNames)).FirstOrDefault()?.Name
-                    };
-            }
-            else
-            {
                 var codeSystemService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
-                var refTerms = preferredCodeSystems.Select(cs => codeSystemService.GetConceptReferenceTerm(concept.Key.Value, cs)).ToArray();
-                if (!refTerms.Any(o => o != null) && nullIfNoPreferred)
-                    return null; // No code in the preferred system, ergo, we will instead use our own
-                else if (!refTerms.Any(o => o != null))
-                    return new CodeableConcept
+
+                // No preferred CS then all
+                if (!preferredCodeSystem.Any())
+                {
+                    var refTerms = codeSystemService.FindReferenceTermsByConcept(conceptKey.Value, String.Empty);
+                    if (refTerms.Any())
                     {
-                        Coding = concept.LoadCollection<ConceptReferenceTerm>(nameof(Concept.ReferenceTerms)).Select(o => DataTypeConverter.ToCoding(o.LoadProperty<ReferenceTerm>(nameof(ConceptReferenceTerm.ReferenceTerm)))).ToList(),
-                        Text = concept.LoadCollection<ConceptName>(nameof(Concept.ConceptNames)).FirstOrDefault()?.Name
-                    };
+                        return new CodeableConcept
+                        {
+                            Coding = refTerms.Where(o=>o.RelationshipTypeKey == ConceptRelationshipTypeKeys.SameAs).Select(o => ToCoding(o.LoadProperty(t=>t.ReferenceTerm))).ToList(),
+                            Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                        };
+                    }
+                    else
+                    {
+                        var concept = codeSystemService.Get(conceptKey.Value);
+                        return new CodeableConcept("http://santedb.org/concept", concept.Mnemonic)
+                        {
+                            Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                        };
+                    }
+                }
                 else
-                    return new CodeableConcept
+                {
+                    var refTerms = preferredCodeSystem.Select(o => codeSystemService.GetConceptReferenceTerm(conceptKey.Value, o)).OfType<ReferenceTerm>().ToArray();
+                    if (refTerms.Any())
                     {
-                        Coding = refTerms.Select(o => ToCoding(o)).ToList(),
-                        Text = concept.LoadCollection<ConceptName>(nameof(Concept.ConceptNames)).FirstOrDefault()?.Name
-                    };
+                        return new CodeableConcept
+                        {
+                            Coding = refTerms.Select(o => ToCoding(o)).ToList(),
+                            Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                        };
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+
             }
         }
 
@@ -1536,7 +1532,7 @@ namespace SanteDB.Messaging.FHIR.Util
             // Return value
             var retVal = new HumanName
             {
-                Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.LoadProperty<Concept>(nameof(EntityName.NameUse)), "http://hl7.org/fhir/name-use")
+                Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.NameUseKey, "http://hl7.org/fhir/name-use")
             };
 
             // Process components
@@ -1560,13 +1556,13 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// To FHIR enumeration
         /// </summary>
-        public static TEnum? ToFhirEnumeration<TEnum>(Concept concept, string codeSystem, bool throwIfNotFound = false) where TEnum : struct
+        public static TEnum? ToFhirEnumeration<TEnum>(Guid? conceptKey, string codeSystem, bool throwIfNotFound = false) where TEnum : struct
         {
-            var coding = DataTypeConverter.ToFhirCodeableConcept(concept, codeSystem, true);
+            var coding = DataTypeConverter.ToFhirCodeableConcept(conceptKey, codeSystem);
             if (coding != null)
                 return Hl7.Fhir.Utility.EnumUtility.ParseLiteral<TEnum>(coding.Coding.First().Code, true);
-            else if (throwIfNotFound && concept != null)
-                throw new ConstraintException($"Cannot find FHIR mapping for Concept {concept}");
+            else if (throwIfNotFound)
+                throw new ConstraintException($"Cannot find FHIR mapping for Concept {conceptKey}");
             else
                 return null;
         }
@@ -1591,7 +1587,7 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = new Identifier
             {
                 System = authority?.Url ?? $"urn:oid:{authority?.Oid}",
-                Type = ToFhirCodeableConcept(identifier.LoadProperty<IdentifierType>(nameof(EntityIdentifier.IdentifierType))?.TypeConcept),
+                Type = ToFhirCodeableConcept(identifier.LoadProperty<IdentifierType>(nameof(EntityIdentifier.IdentifierType))?.TypeConceptKey),
                 Value = identifier.Value
             };
 
@@ -1616,8 +1612,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
             return new ContactPoint
             {
-                System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.LoadProperty(o => o.TypeConcept), "http://hl7.org/fhir/contact-point-system"),
-                Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.LoadProperty(o => o.AddressUse), "http://hl7.org/fhir/contact-point-use"),
+                System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
+                Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
                 Value = telecomAddress.IETFValue
             };
         }

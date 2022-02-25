@@ -129,7 +129,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Effective = DataTypeConverter.ToFhirDateTime(model.ActTime);
             }
 
-            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Act.TypeConcept)));
+            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey);
 
             // RCT
             var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
@@ -150,12 +150,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             switch (model.ValueType)
             {
                 case "CD":
-                    retVal.Value = DataTypeConverter.ToFhirCodeableConcept((model as CodedObservation).Value);
+                    retVal.Value = DataTypeConverter.ToFhirCodeableConcept((model as CodedObservation).ValueKey);
                     break;
 
                 case "PQ":
                     var qty = model as QuantityObservation;
-                    retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.LoadProperty<Concept>(nameof(QuantityObservation.UnitOfMeasure)));
+                    retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey);
                     break;
 
                 case "ED":
@@ -168,7 +168,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.Interpretation = new List<CodeableConcept>
                 {
-                    DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(QuantityObservation.InterpretationConcept)))
+                    DataTypeConverter.ToFhirCodeableConcept(model.InterpretationConceptKey)
                 };
             }
 

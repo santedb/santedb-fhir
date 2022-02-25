@@ -85,7 +85,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             else
                 retVal.Mode = Location.LocationMode.Instance;
 
-            retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>(nameof(Place.TypeConcept)), "http://hl7.org/fhir/ValueSet/v3-ServiceDeliveryLocationRoleType") };
+            retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://hl7.org/fhir/ValueSet/v3-ServiceDeliveryLocationRoleType") };
             retVal.Telecom = model.LoadCollection<EntityTelecomAddress>("Telecoms").Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
             retVal.Address = DataTypeConverter.ToFhirAddress(model.LoadCollection<EntityAddress>("Addresses").FirstOrDefault());
 

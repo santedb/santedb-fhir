@@ -54,7 +54,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (modelObject is Core.Model.Roles.Patient patient && patient.VipStatusKey.HasValue)
             {
-                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.LoadProperty(o => o.VipStatus)));
+                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.VipStatusKey));
             }
         }
 

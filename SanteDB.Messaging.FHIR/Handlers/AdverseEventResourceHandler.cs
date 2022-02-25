@@ -87,7 +87,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Identifier = DataTypeConverter.ToFhirIdentifier(model.Identifiers.FirstOrDefault());
             retVal.Category = new List<CodeableConcept>
-                {DataTypeConverter.ToFhirCodeableConcept(model.LoadProperty<Concept>("TypeConcept"))};
+                {DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey)};
 
             var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
             if (recordTarget != null)
@@ -108,7 +108,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var reactions = subject.LoadCollection<ActRelationship>("Relationships").Where(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasManifestation).FirstOrDefault();
             if (reactions != null)
             {
-                retVal.Event = DataTypeConverter.ToFhirCodeableConcept(reactions.LoadProperty<CodedObservation>("TargetAct").LoadProperty<Concept>(nameof(CodedObservation.Value)));
+                retVal.Event = DataTypeConverter.ToFhirCodeableConcept(reactions.LoadProperty<CodedObservation>("TargetAct").ValueKey);
             }
 
             var location = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Location);
@@ -121,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var severity = subject.LoadCollection<ActRelationship>("Relationships").First(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.LoadProperty<Act>("TargetAct").TypeConceptKey == ObservationTypeKeys.Severity);
             if (severity != null)
             {
-                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept(severity.LoadProperty<CodedObservation>("TargetAct").Value, "http://terminology.hl7.org/CodeSystem/adverse-event-severity");
+                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept(severity.LoadProperty<CodedObservation>("TargetAct").ValueKey, "http://terminology.hl7.org/CodeSystem/adverse-event-severity");
             }
 
             // Did the patient die?

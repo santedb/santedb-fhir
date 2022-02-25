@@ -93,13 +93,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var mat = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product).PlayerEntity;
 
-            // Recommend
-            string status = (model.StopTime ?? model.ActTime) < DateTimeOffset.Now ? "overdue" : "due";
-            var recommendation = new ImmunizationRecommendation.RecommendationComponent()
-            {
-                DoseNumber = new PositiveInt(model.SequenceId),
-                VaccineCode = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(mat?.TypeConcept) },
-                ForecastStatus = new CodeableConcept("http://hl7.org/fhir/conceptset/immunization-recommendation-status", status),
+			// Recommend
+			string status = (model.StopTime ?? model.ActTime) < DateTimeOffset.Now ? "overdue" : "due";
+			var recommendation = new ImmunizationRecommendation.RecommendationComponent()
+			{
+				DoseNumber = new PositiveInt(model.SequenceId),
+				VaccineCode = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(mat?.TypeConceptKey) },
+				ForecastStatus = new CodeableConcept("http://hl7.org/fhir/conceptset/immunization-recommendation-status", status),
                 DateCriterion = new List<ImmunizationRecommendation.DateCriterionComponent>()
                 {
                     new ImmunizationRecommendation.DateCriterionComponent()

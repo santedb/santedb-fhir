@@ -54,7 +54,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && patient.ReligiousAffiliationKey.HasValue)
             {
-                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.LoadProperty(o => o.ReligiousAffiliation)));
+                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.ReligiousAffiliationKey));
             }
         }
 
