@@ -28,7 +28,9 @@ using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Model.Query;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Rest.Common.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -103,9 +105,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Perform a delete operation
         /// </summary>
+        [Demand(PermissionPolicyIdentifiers.LoginAsService)]
         protected override TModel Delete(Guid modelId)
         {
-            return this.m_repository.Obsolete(modelId);
+            return this.m_repository.Delete(modelId);
         }
 
         /// <summary>

@@ -277,7 +277,7 @@ namespace SanteDB.Messaging.FHIR.Util
             if (fhirQuery["_stateid"] != null)
                 queryId = Guid.Parse(fhirQuery["_stateid"]);
             else
-                queryId = Guid.NewGuid();
+                queryId = Guid.Empty;
 
             // Return new query
             FhirQuery retVal = new FhirQuery()
@@ -288,7 +288,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 MinimumDegreeMatch = 100,
                 QueryId = queryId,
                 IncludeHistory = false,
-                IncludeContained = false
+                IncludeContained = false,
+                ExactTotal = fhirQuery["_total"] == "exact"
             };
 
             hdsiQuery = new NameValueCollection();

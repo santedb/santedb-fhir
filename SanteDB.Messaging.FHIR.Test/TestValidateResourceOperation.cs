@@ -164,7 +164,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public Core.Model.Roles.Patient AfterObsolete(Core.Model.Roles.Patient data)
+        public Core.Model.Roles.Patient AfterDelete(Core.Model.Roles.Patient data)
         {
             throw new NotImplementedException();
         }
@@ -204,7 +204,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Called before obsolete
         /// </summary>
-        public Core.Model.Roles.Patient BeforeObsolete(Core.Model.Roles.Patient data)
+        public Core.Model.Roles.Patient BeforeDelete(Core.Model.Roles.Patient data)
         {
             throw new NotImplementedException();
         }

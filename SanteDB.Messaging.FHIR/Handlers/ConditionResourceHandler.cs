@@ -232,7 +232,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Subject
             if (resource.Subject != null)
             {
-                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
             }
 
             // Time
@@ -245,7 +245,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Author
             if (resource.Asserter != null)
             {
-                retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKey.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
+                retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
             }
 
             if (resource.RecordedDateElement != null)

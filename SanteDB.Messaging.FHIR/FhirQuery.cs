@@ -100,7 +100,6 @@ namespace SanteDB.Messaging.FHIR
         public IQueryResultSet ApplyCommonQueryControls(IQueryResultSet hdsiResults, out int totalResults)
         {
             // TODO: sorting
-
             if (this.QueryId != Guid.Empty)
             {
                 hdsiResults = hdsiResults.AsStateful(this.QueryId);
