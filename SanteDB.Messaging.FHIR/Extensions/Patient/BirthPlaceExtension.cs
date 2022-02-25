@@ -88,9 +88,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 {
                     var placeClasses = places.GroupBy(o => o.ClassConceptKey).OrderBy(o => Array.IndexOf(AddressHierarchy, o.Key.Value));
                     // Take the first wrung of the address hierarchy
-                    places = placeClasses.First();
+                    places = placeClasses.First().AsResultSet();
                     if (places.Count() > 1) // Still more than one type of place
-                        places = places.Where(p => p.LoadCollection<EntityAddress>(nameof(Entity.Addresses)).Any(a => a.Component.All(a2 => patient.LoadCollection<EntityAddress>(nameof(Entity.Addresses)).Any(pa => pa.Component.Any(pc => pc.Value == a2.Value && pc.ComponentTypeKey == a2.ComponentTypeKey)))));
+                        places = places.ToList().Where(p => p.LoadProperty(o=>o.Addresses).Any(a => a.Component.All(a2 => patient.LoadProperty(o=>o.Addresses).Any(pa => pa.Component.Any(pc => pc.Value == a2.Value && pc.ComponentTypeKey == a2.ComponentTypeKey))))).AsResultSet();
                 }
                 if (places.Count() == 1)
                 {
