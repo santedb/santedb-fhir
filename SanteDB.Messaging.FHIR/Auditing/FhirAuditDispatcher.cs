@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -16,7 +16,7 @@
  * the License.
  *
  * User: fyfej
- * Date: 2021-8-5
+ * Date: 2021-10-29
  */
 
 using Hl7.Fhir.Rest;
@@ -36,10 +36,17 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Auditing
 {
-	/// <summary>
-	/// Audit dispatch service which sends audits using HL7 FHIR
-	/// </summary>
-	[ExcludeFromCodeCoverage]
+    /// <summary>
+    /// Audit dispatch service which sends audits using HL7 FHIR
+    /// </summary>
+    /// <remarks>
+    /// <para>This implementation of the <see cref="IAuditDispatchService"/> is responsible for dispatching audits to a central
+    /// FHIR repository which supports the FHIR auditing specification.</para>
+    /// <para>This dispatcher is configured using the <see cref="FhirDispatcherTargetConfiguration"/> class where the dispatcher name
+    /// is <c>audit</c>. The dispatcher configuration may include authentication/authorization parameters for the solution, as well
+    /// as authenticators or proxy information.</para>
+    /// </remarks>
+    [ExcludeFromCodeCoverage]
 	public class FhirAuditDispatcher : IAuditDispatchService
     {
         // Get tracer for the audit dispatcher
@@ -77,12 +84,6 @@ namespace SanteDB.Messaging.FHIR.Auditing
                 PreferCompressedResponses = true,
                 VerifyFhirVersion = false
             });
-            this.m_client.PreferredFormat = ResourceFormat.Json;
-            this.m_client.ParserSettings = new Hl7.Fhir.Serialization.ParserSettings()
-            {
-                AcceptUnknownMembers = true,
-                AllowUnrecognizedEnums = true
-            };
 
             // Attach authenticator
             if (this.m_configuration.Authenticator?.Type != null)

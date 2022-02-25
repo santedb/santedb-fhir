@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-8-5
+ * Date: 2021-10-29
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
@@ -171,11 +171,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // see the BirthPlaceExtension class
             if (!string.IsNullOrEmpty(resource.Address?.Text))
             {
-                place.Names.Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
+                place.LoadProperty(o=>o.Names).Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
             }
 
-            place.Names.Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
-            place.Names.AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
+            place.LoadProperty(o => o.Names).Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
+            place.LoadProperty(o => o.Names).AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
 
             if (resource.Mode == Location.LocationMode.Kind)
                 place.DeterminerConceptKey = DeterminerKeys.Described;
@@ -212,7 +212,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
 
                 // point the child place entity at the target place entity with a relationship of parent 
-                place.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
+                place.LoadProperty(o=>o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
             }
 
             return place;

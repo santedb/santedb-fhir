@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -16,9 +16,8 @@
  * the License.
  *
  * User: fyfej
- * Date: 2021-8-5
+ * Date: 2021-10-29
  */
-
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
@@ -49,17 +48,39 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
         }
 
-        /// <summary>
-        /// Can map this object
-        /// </summary>
+        /// <inheritdoc/>
         public override bool CanMapObject(object instance)
         {
             return base.CanMapObject(instance);
         }
-        
-        /// <summary>
-        /// Maps the specified act to an adverse event
-        /// </summary>
+
+        /// <inheritdoc/>
+        protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
+        {
+            return new[]
+            {
+                TypeRestfulInteraction.HistoryInstance,
+                TypeRestfulInteraction.Read,
+                TypeRestfulInteraction.SearchType,
+                TypeRestfulInteraction.Vread,
+                TypeRestfulInteraction.Delete
+            }.Select(o => new ResourceInteractionComponent
+            { Code = o });
+        }
+
+        /// <inheritdoc/>
+        protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+        }
+
+        /// <inheritdoc/>
         protected override AdverseEvent MapToFhir(Act model)
         {
             var retVal = DataTypeConverter.CreateResource<AdverseEvent>(model);
@@ -100,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var severity = subject.LoadCollection<ActRelationship>("Relationships").First(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.LoadProperty<Act>("TargetAct").TypeConceptKey == ObservationTypeKeys.Severity);
             if (severity != null)
             {
-                retVal.Seriousness = DataTypeConverter.ToFhirCodeableConcept(severity.LoadProperty<CodedObservation>("TargetAct").Value, "http://hl7.org/fhir/adverse-event-seriousness");
+                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept(severity.LoadProperty<CodedObservation>("TargetAct").Value, "http://terminology.hl7.org/CodeSystem/adverse-event-severity");
             }
 
             // Did the patient die?
@@ -152,11 +173,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return retVal;
         }
 
-        /// <summary>
-        /// Map adverse events to the model
-        /// </summary>
+        /// <inheritdoc/>
         protected override Act MapToModel(AdverseEvent resource)
         {
+
+#if !DEBUG
+            throw new NotSupportedException();
+#endif
+
             var retVal = new Act();
 
             if (!Guid.TryParse(resource.Id, out var key))
@@ -166,18 +190,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.ClassConceptKey = ActClassKeys.Act;
 
-      //      retVal.StatusConceptKey = StatusKeys.Active;
+            //      retVal.StatusConceptKey = StatusKeys.Active;
 
             retVal.Key = key;
 
             retVal.MoodConceptKey = ActMoodKeys.Eventoccurrence;
 
             // map identifier to identifiers
-            retVal.Identifiers.Add(DataTypeConverter.ToActIdentifier(resource.Identifier));
-           /* retVal.Identifiers = new List<ActIdentifier>
-           {
-               DataTypeConverter.ToActIdentifier(resource.Identifier)
-           };*/
+            retVal.LoadProperty(o => o.Identifiers).Add(DataTypeConverter.ToActIdentifier(resource.Identifier));
+            /* retVal.Identifiers = new List<ActIdentifier>
+            {
+                DataTypeConverter.ToActIdentifier(resource.Identifier)
+            };*/
 
             //map category to type concept
             retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Category.FirstOrDefault());
@@ -185,39 +209,41 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // map subject to patient
             if (resource.Subject != null)
             {
-                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))): new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                retVal.LoadProperty(o => o.Participations).Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
             }
 
             // map date element to act time
             var occurTime = (DateTimeOffset)DataTypeConverter.ToDateTimeOffset(resource.DateElement);
-            var targetAct = new Act() { ActTime = occurTime };
+            var targetAct = new CodedObservation() { ActTime = occurTime };
 
-            retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasSubject, targetAct));
+            retVal.LoadProperty(o => o.Relationships).Add(new ActRelationship(ActRelationshipTypeKeys.HasSubject, targetAct));
             retVal.ActTime = occurTime;
 
             // map event to relationships
-            var reactionTarget = new CodedObservation() {Value = DataTypeConverter.ToConcept(resource.Event)};
-            targetAct.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasManifestation, reactionTarget));
+            var reactionTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Event) };
+            targetAct.LoadProperty(o => o.Relationships).Add(new ActRelationship(ActRelationshipTypeKeys.HasManifestation, reactionTarget));
 
             // map location to place
             if (resource.Location != null)
             {
-                retVal.Participations.Add(resource.Location.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Location, Guid.Parse(resource.Location.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Location, DataTypeConverter.ResolveEntity<Core.Model.Entities.Place>(resource.Location, resource)));
+                retVal.LoadProperty(o => o.Participations).Add(resource.Location.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Location, Guid.Parse(resource.Location.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Location, DataTypeConverter.ResolveEntity<Core.Model.Entities.Place>(resource.Location, resource)));
 
-               // retVal.Participations.Add(new ActParticipation(ActParticipationKey.Location, DataTypeConverter.ResolveEntity<Core.Model.Entities.Place>(resource.Location, resource)));
+                // retVal.Participations.Add(new ActParticipation(ActParticipationKey.Location, DataTypeConverter.ResolveEntity<Core.Model.Entities.Place>(resource.Location, resource)));
             }
 
             // map seriousness to relationships
-
-            var severityTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Seriousness.Coding.FirstOrDefault(), "http://hl7.org/fhir/adverse-event-seriousness"), TypeConceptKey = ObservationTypeKeys.Severity };
-            targetAct.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, severityTarget));
+            if (resource.Severity != null)
+            {
+                var severityTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Severity.Coding.FirstOrDefault(), "http://terminology.hl7.org/CodeSystem/adverse-event-severity"), TypeConceptKey = ObservationTypeKeys.Severity };
+                targetAct.LoadProperty(o=>o.Relationships).Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, severityTarget));
+            }
 
             // map recoder to provider
             if (resource.Recorder != null)
             {
-                retVal.Participations.Add(resource.Recorder.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Authororiginator, Guid.Parse(resource.Recorder.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Recorder, resource)));
+                retVal.LoadProperty(o => o.Participations).Add(resource.Recorder.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Authororiginator, Guid.Parse(resource.Recorder.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Recorder, resource)));
 
-              //  retVal.Participations.Add(new ActParticipation(ActParticipationKey.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Recorder, resource)));
+                //  retVal.Participations.Add(new ActParticipation(ActParticipationKey.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Recorder, resource)));
             }
 
             // map outcome to status concept key or relationships
@@ -228,7 +254,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     if (resource.Outcome.Coding.Any(o => o.Code == "fatal"))
                     {
-                        retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.IsCauseOf, new CodedObservation { TypeConceptKey = ObservationTypeKeys.ClinicalState, ValueKey = Guid.Parse("6df3720b-857f-4ba2-826f-b7f1d3c3adbb") }));
+                        retVal.LoadProperty(o => o.Relationships).Add(new ActRelationship(ActRelationshipTypeKeys.IsCauseOf, new CodedObservation { TypeConceptKey = ObservationTypeKeys.ClinicalState, ValueKey = Guid.Parse("6df3720b-857f-4ba2-826f-b7f1d3c3adbb") }));
                     }
                     else if (resource.Outcome.Coding.Any(o => o.Code == "ongoing"))
                     {
@@ -249,20 +275,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     var adm = new SubstanceAdministration();
                     if (component.Instance.GetType() == typeof(Medication))
                     {
-                        adm.Participations.Add(component.Instance.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Consumable, Guid.Parse(component.Instance.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Consumable, DataTypeConverter.ResolveEntity<Core.Model.Entities.ManufacturedMaterial>(component.Instance, resource)));
+                        adm.LoadProperty(o => o.Participations).Add(component.Instance.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Consumable, Guid.Parse(component.Instance.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Consumable, DataTypeConverter.ResolveEntity<Core.Model.Entities.ManufacturedMaterial>(component.Instance, resource)));
 
-                      //  adm.Participations.Add(new ActParticipation(ActParticipationKey.Consumable, DataTypeConverter.ResolveEntity<Core.Model.Entities.ManufacturedMaterial>(component.Instance, resource)));
+                        //  adm.Participations.Add(new ActParticipation(ActParticipationKey.Consumable, DataTypeConverter.ResolveEntity<Core.Model.Entities.ManufacturedMaterial>(component.Instance, resource)));
 
-                        retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.RefersTo, adm));
+                        retVal.LoadProperty(o => o.Relationships).Add(new ActRelationship(ActRelationshipTypeKeys.RefersTo, adm));
 
                     }
-                    else if(component.Instance.GetType() == typeof(Substance))
+                    else if (component.Instance.GetType() == typeof(Substance))
                     {
-                        adm.Participations.Add((component.Instance.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Product, Guid.Parse(component.Instance.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Product, DataTypeConverter.ResolveEntity<Core.Model.Entities.Material>(component.Instance, resource))));
+                        adm.LoadProperty(o => o.Participations).Add((component.Instance.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Product, Guid.Parse(component.Instance.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Product, DataTypeConverter.ResolveEntity<Core.Model.Entities.Material>(component.Instance, resource))));
 
                         //  adm.Participations.Add(new ActParticipation(ActParticipationKey.Product, DataTypeConverter.ResolveEntity<Core.Model.Entities.Material>(component.Instance, resource)));
 
-                        retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.RefersTo, adm));
+                        retVal.LoadProperty(o => o.Relationships).Add(new ActRelationship(ActRelationshipTypeKeys.RefersTo, adm));
                     }
                 }
 
@@ -283,29 +309,5 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return base.Query(query);
         }
 
-        /// <summary>
-        /// Get interactions
-        /// </summary>
-        protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
-        {
-            return new TypeRestfulInteraction[]
-            {
-                TypeRestfulInteraction.HistoryInstance,
-                TypeRestfulInteraction.Read,
-                TypeRestfulInteraction.SearchType,
-                TypeRestfulInteraction.Vread,
-                TypeRestfulInteraction.Delete
-            }.Select(o => new ResourceInteractionComponent() { Code = o });
-        }
-
-        protected override IEnumerable<Resource> GetIncludes(Act resource, IEnumerable<IncludeInstruction> includePaths)
-        {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
-        }
-
-        protected override IEnumerable<Resource> GetReverseIncludes(Act resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
-        {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
-        }
     }
 }

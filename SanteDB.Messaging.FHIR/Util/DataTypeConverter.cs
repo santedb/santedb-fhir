@@ -1,24 +1,23 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you
- * may not use this file except in compliance with the License. You may
- * obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you 
+ * may not use this file except in compliance with the License. You may 
+ * obtain a copy of the License at 
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
+ * License for the specific language governing permissions and limitations under 
  * the License.
- *
+ * 
  * User: fyfej
- * Date: 2021-8-5
+ * Date: 2021-10-29
  */
-
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.BusinessRules;
@@ -375,7 +374,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the t resource.</typeparam>
         /// <param name="targetEntity">The target entity.</param>
         /// <returns>Returns a reference instance.</returns>
-        public static ResourceReference CreateVersionedReference<TResource>(IVersionedEntity targetEntity)
+        public static ResourceReference CreateVersionedReference<TResource>(IVersionedData targetEntity)
             where TResource : DomainResource, new()
         {
             if (targetEntity == null)
@@ -627,9 +626,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the t resource.</typeparam>
         /// <param name="resource">The resource.</param>
         /// <returns>TResource.</returns>
-        public static TResource CreateResource<TResource>(IVersionedEntity resource) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IVersionedData resource) where TResource : Resource, new()
         {
-            var retVal = CreateResource<TResource>((IIdentifiedEntity)resource);
+            var retVal = CreateResource<TResource>((IIdentifiedData)resource);
             retVal.VersionId = resource.VersionKey.ToString();
             retVal.Meta.VersionId = resource.VersionKey?.ToString();
             return retVal;
@@ -638,7 +637,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Create non versioned resource
         /// </summary>
-        public static TResource CreateResource<TResource>(IIdentifiedEntity resource) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IIdentifiedData resource) where TResource : Resource, new()
         {
             var retVal = new TResource();
 
@@ -687,7 +686,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
-                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
+                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IIdentifiedData, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
             else
@@ -1142,7 +1141,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var address = new EntityAddress
             {
-                AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key
+                AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key,
+                Component = new List<EntityAddressComponent>()
             };
 
             if (!string.IsNullOrEmpty(fhirAddress.City))
@@ -1205,10 +1205,13 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (fhirId.Period != null)
             {
+#pragma warning disable CS0618
                 if (fhirId.Period.StartElement != null)
-                    retVal.IssueDate = fhirId.Period.StartElement.ToDateTimeOffset().DateTime;
+                    retVal.IssueDate = fhirId.Period.StartElement.ToDateTimeOffset();
                 if (fhirId.Period.EndElement != null)
-                    retVal.ExpiryDate = fhirId.Period.EndElement.ToDateTimeOffset().DateTime;
+                    retVal.ExpiryDate = fhirId.Period.EndElement.ToDateTimeOffset();
+#pragma warning restore CS0618
+
             }
 
             // TODO: Fill in use
@@ -1232,7 +1235,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var name = new EntityName
             {
-                NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key
+                NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key,
+                Component = new List<EntityNameComponent>()
             };
 
             if (fhirHumanName.Family != null)

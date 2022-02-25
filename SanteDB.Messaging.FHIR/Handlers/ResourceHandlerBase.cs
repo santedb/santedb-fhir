@@ -1,24 +1,23 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you
- * may not use this file except in compliance with the License. You may
- * obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you 
+ * may not use this file except in compliance with the License. You may 
+ * obtain a copy of the License at 
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
+ * License for the specific language governing permissions and limitations under 
  * the License.
- *
+ * 
  * User: fyfej
- * Date: 2021-8-5
+ * Date: 2021-10-29
  */
-
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
@@ -238,7 +237,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 ConditionalDelete = ConditionalDeleteStatus.NotSupported,
                 ReadHistory = true,
                 UpdateCreate = true,
-                Versioning = typeof(IVersionedEntity).IsAssignableFrom(typeof(TModel)) ?
+                Versioning = typeof(IVersionedData).IsAssignableFrom(typeof(TModel)) ?
                     ResourceVersionPolicy.Versioned :
                     ResourceVersionPolicy.NoVersion,
                 Interaction = this.GetInteractions().ToList(),
@@ -288,7 +287,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Return FHIR query result
             var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
             {
-                Results = results.AsParallel().AsOrdered().WithDegreeOfParallelism(2).Select(o =>
+                Results = hdsiResults.Select(o =>
                 {
                     using (AuthenticationContext.EnterContext(auth.Principal))
                     {
@@ -523,9 +522,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Results
             List<TModel> results = new List<TModel>() { result };
-            while ((result as IVersionedEntity)?.PreviousVersionKey.HasValue == true)
+            while ((result as IVersionedData)?.PreviousVersionKey.HasValue == true)
             {
-                result = this.Read(guidId, (result as IVersionedEntity).PreviousVersionKey.Value);
+                result = this.Read(guidId, (result as IVersionedData).PreviousVersionKey.Value);
                 results.Add(result);
             }
 
@@ -558,17 +557,26 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public IdentifiedData MapToModel(Resource resourceInstance)
         {
-            var retVal = this.MapToModel((TFhirResource)resourceInstance);
-            // Append the notice that this is a source model
-            if (retVal is IResourceCollection irc)
+            using (AuthenticationContext.EnterSystemContext()) // All queries under the mapping process are performed by the SYSTEM
             {
-                irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+                var retVal = this.MapToModel((TFhirResource)resourceInstance);
+                // Append the notice that this is a source model
+                switch (retVal)
+                {
+                    case IResourceCollection irc:
+                        irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+                        break;
+                    case ITargetedAssociation tra:
+                        (tra.TargetEntity as IdentifiedData)?.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        (tra.SourceEntity as IdentifiedData)?.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        break;
+                    default:
+                        retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        break;
+                }
+
+                return retVal;
             }
-            else
-            {
-                retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
-            }
-            return retVal;
         }
 
         /// <summary>
