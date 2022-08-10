@@ -107,7 +107,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Birthdate
             retVal.BirthDateElement = DataTypeConverter.ToFhirDate(provider?.DateOfBirth ?? model.DateOfBirth);
 
-            var photo = (provider?.LoadCollection<EntityExtension>(nameof(Entity.Extensions)) ?? model.LoadCollection<EntityExtension>(nameof(Entity.Extensions)))?.FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+            var photo = (provider?.LoadProperty(o=>o.Extensions) ?? model.LoadProperty(o=>o.Extensions))?.FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
             if (photo != null)
                 retVal.Photo = new List<Attachment>() {
                     new Attachment()
@@ -118,7 +118,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
 
             // Load the koala-fication
-            retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(provider.SpecialtyKey) } };
+            
+            retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept((provider ?? model).SpecialtyKey) } };
 
             // Language of communication
             retVal.Communication = model.LoadCollection(o => o.LanguageCommunication)?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();

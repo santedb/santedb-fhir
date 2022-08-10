@@ -36,6 +36,7 @@ using System.Threading.Tasks;
 using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
 using SanteDB.Core.Model;
+using SanteDB.Core.i18n;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -109,7 +110,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (cdrType == null)
             {
                 this.m_tracer.TraceError($"Resource type {enumType.Value} is not supported by this service");
-                throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
             }
 
             var hdsiQuery = new NameValueCollection();
@@ -189,7 +190,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Bundle History(string id)
         {
             this.m_tracer.TraceError("Versioning is not supported on this object");
-            throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>
@@ -198,7 +199,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
         {
             if (parameters == null)
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
 
             Core.Model.Query.NameValueCollection hdsiQuery = null;
             FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Subscription), typeof(PubSubSubscriptionDefinition), parameters, out hdsiQuery);
@@ -268,7 +269,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (cdrType == null)
             {
                 this.m_tracer.TraceError($"Resource type {enumType.Value} is not supported by this service");
-                throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
             }
 
             QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, NameValueCollection.ParseQueryString(queryObject.Query.Substring(1)).ToNameValueCollection(), out NameValueCollection hdsiQuery);
@@ -385,7 +386,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 default:
                     this.m_tracer.TraceError($"Resource channel type {fhirChannel.Type} not supported ");
-                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                    throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
             }
 
             return channel;

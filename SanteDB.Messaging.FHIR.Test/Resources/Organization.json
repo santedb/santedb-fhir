@@ -1,11 +1,6 @@
 ﻿{
   "resourceType": "Organization",
-  "extension": [
-    {
-      "url": "http://santedb.org/extensions/core/detectedIssue",
-      "valueBase64Binary": "AQIDBAU="
-    }
-  ],
+ 
   "identifier": [
     {
       "system": "http://santedb.org/fhir/test",

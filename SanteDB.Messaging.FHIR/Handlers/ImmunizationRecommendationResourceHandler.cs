@@ -22,6 +22,7 @@
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -59,7 +60,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <exception cref="System.NotImplementedException"></exception>
         protected override SubstanceAdministration Create(SubstanceAdministration modelInstance, TransactionMode mode)
         {
-            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>
@@ -71,7 +72,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <exception cref="System.NotImplementedException"></exception>
         protected override SubstanceAdministration Delete(Guid modelId)
         {
-            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>
@@ -174,7 +175,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <exception cref="System.NotImplementedException"></exception>
         protected override SubstanceAdministration Update(SubstanceAdministration model, TransactionMode mode)
         {
-            throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>

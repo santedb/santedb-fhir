@@ -26,6 +26,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -176,10 +177,16 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 _ = observationResourceHandler.Delete(this.m_observation.Id, TransactionMode.Commit);
 
-                retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
-                
-                //ensure observation status is now unknown since deletion was performed
-                Assert.AreEqual(ObservationStatus.Unknown, retrievedObservation.Status);
+                try
+                {
+                    retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
+                    Assert.Fail("Should throw exception");
+                }
+                catch(FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone) { }
+                catch
+                {
+                    Assert.Fail("Threw wrong exception type");
+                }
             }
         }
 

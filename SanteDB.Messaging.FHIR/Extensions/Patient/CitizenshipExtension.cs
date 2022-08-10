@@ -79,7 +79,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
                     if (isoCode != null)
                     {
-                        yield return new Extension(this.Uri.ToString(), new CodeableConcept($"urn:oid:{isoCode.LoadProperty(o=>o.Authority).Oid}", isoCode.Value));
+                        yield return new Extension(this.Uri.ToString(), new CodeableConcept($"urn:oid:{isoCode.LoadProperty(o => o.Authority).Oid}", isoCode.Value));
                     }
                 }
             }
@@ -98,7 +98,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 {
                     var country = this.m_placeRepository.Find(o => o.Identifiers.Where(a => a.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode).Any(i => i.Value == isoCode.Code) && StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value)).SingleOrDefault();
 
-                    if (country != null && !patient.Relationships.Any(c => c.TargetEntityKey == country.Key))
+                    if (country != null && !patient.LoadProperty(o => o.Relationships).Any(c => c.TargetEntityKey == country.Key))
                     {
                         patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Citizen, country));
 

@@ -142,6 +142,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override TModel Read(Guid id, Guid versionId)
         {
+
             return this.m_repository.Get(id, versionId);
         }
 

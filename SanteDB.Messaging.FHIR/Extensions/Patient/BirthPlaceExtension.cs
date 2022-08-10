@@ -26,6 +26,7 @@ using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -130,7 +131,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 }
                 else
                 {
-                    throw new KeyNotFoundException("Cannot find unique birth place registration.");
+                    throw new FhirException((System.Net.HttpStatusCode)422, OperationOutcome.IssueType.MultipleMatches, "Cannot find unique birth place registration.");
                 }
             }
             return false;

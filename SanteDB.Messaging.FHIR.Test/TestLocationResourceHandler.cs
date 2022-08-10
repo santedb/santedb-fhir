@@ -28,6 +28,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -174,7 +175,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
 
-                Assert.Throws<InvalidDataException>(() => locationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => locationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
             }
         }
 
@@ -208,7 +209,21 @@ namespace SanteDB.Messaging.FHIR.Test
                 var deletedLocation = (Location)actualDeleted;
 
                 Assert.IsNotNull(deletedLocation);
-                Assert.AreEqual(Location.LocationStatus.Inactive, deletedLocation.Status);
+
+                // Try to fetch
+                try
+                {
+                    locationResourceHandler.Read(deletedLocation.Id, null);
+                    Assert.Fail("Should throw exception");
+                }
+                catch(FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone)
+                {
+
+                }
+                catch
+                {
+                    Assert.Fail("Threw wrong type of exception");
+                }
             }
         }
 
@@ -325,7 +340,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 createdLocation.Mode = Location.LocationMode.Kind;
                 createdLocation.Address.State = "Alberta";
 
-                Assert.Throws<InvalidDataException>(() => locationResourceHandler.Update(createdLocation.Id, new Patient(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => locationResourceHandler.Update(createdLocation.Id, new Patient(), TransactionMode.Commit));
             }
         }
 

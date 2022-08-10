@@ -22,6 +22,7 @@ using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -76,8 +77,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
-            retVal.Name = model.LoadCollection<EntityName>("Names").FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value;
-            retVal.Alias = model.LoadCollection<EntityName>("Names").Where(o => o.NameUseKey != NameUseKeys.OfficialRecord)?.Select(n => n.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value).ToList();
+            retVal.Name = model.LoadProperty(o=>o.Names).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value;
+            retVal.Alias = model.LoadProperty(o=>o.Names).Where(o => o.NameUseKey != NameUseKeys.OfficialRecord)?.Select(n => n.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value).ToList();
 
             // Convert the determiner code
             if (model.DeterminerConceptKey == DeterminerKeys.Described)
@@ -86,10 +87,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Mode = Location.LocationMode.Instance;
 
             retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://hl7.org/fhir/ValueSet/v3-ServiceDeliveryLocationRoleType") };
-            retVal.Telecom = model.LoadCollection<EntityTelecomAddress>("Telecoms").Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
-            retVal.Address = DataTypeConverter.ToFhirAddress(model.LoadCollection<EntityAddress>("Addresses").FirstOrDefault());
+            retVal.Telecom = model.LoadProperty(o=>o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+            retVal.Address = DataTypeConverter.ToFhirAddress(model.LoadProperty(o=>o.Addresses).FirstOrDefault());
 
-            if (model.GeoTag != null)
+            if (model.LoadProperty(o=>o.GeoTag) != null)
                 retVal.Position = new Location.PositionComponent()
                 {
                     Latitude = (decimal)model.GeoTag.Lat,
@@ -97,9 +98,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
 
             // Part of?
-            var parent = model.LoadCollection<EntityRelationship>(nameof(Entity.Relationships)).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
+            var parent = model.LoadProperty(o=>o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
             if (parent != null)
-                retVal.PartOf = DataTypeConverter.CreateVersionedReference<Location>(parent.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)));
+                retVal.PartOf = DataTypeConverter.CreateVersionedReference<Location>(parent.LoadProperty(o=>o.TargetEntity));
 
             return retVal;
         }
@@ -161,7 +162,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     place.StatusConceptKey = StatusKeys.Active;
                     break;
                 case Location.LocationStatus.Suspended:
-                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                    throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
                 case Location.LocationStatus.Inactive:
                     place.StatusConceptKey = StatusKeys.Inactive;
                     break;

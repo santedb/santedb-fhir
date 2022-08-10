@@ -28,6 +28,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -202,13 +203,20 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 var result = encounterResourceHandler.Delete(retrievedEncounter.Id, TransactionMode.Commit);
 
-                result = encounterResourceHandler.Read(result.Id, null);
+                try
+                {
+                    result = encounterResourceHandler.Read(result.Id, null);
+                    Assert.Fail("Should throw gone exception");
+                }
+                catch(FhirException f) when (f.Status == System.Net.HttpStatusCode.Gone)
+                {
 
-                Assert.IsInstanceOf<Encounter>(result);
+                }
+                catch
+                {
+                    Assert.Fail("Wrong exception type thrown!");
+                }
 
-                var obsoletedEncounter = (Encounter)result;
-
-                Assert.AreEqual(Encounter.EncounterStatus.Unknown, obsoletedEncounter.Status);
             }
         }
 
@@ -319,7 +327,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
 
                 // create the encounter using the resource handler with an incorrect resource
-                Assert.Throws<InvalidDataException>(() => encounterResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => encounterResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
 
             }
         }
@@ -369,7 +377,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
 
-                Assert.Throws<InvalidDataException>(() => updatedEncounter = encounterResourceHandler.Update(createdEncounter.Id, new Account(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => updatedEncounter = encounterResourceHandler.Update(createdEncounter.Id, new Account(), TransactionMode.Commit));
             }
         }
 

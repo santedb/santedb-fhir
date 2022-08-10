@@ -22,6 +22,7 @@
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
+using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
@@ -78,7 +79,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 VipStatus = new Concept
                 {
                     Mnemonic = "VIPStatus-ForeignDignitary",
-                    Key = Guid.NewGuid(),
+                    Key = VipStatusKeys.ForeignDignitary
                 }
             };
 
@@ -86,7 +87,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual(1, constructedVipStatus.Length);
             Assert.IsInstanceOf<CodeableConcept>(constructedVipStatus.First().Value);
             var codeableConcept = (CodeableConcept)constructedVipStatus.First().Value;
-            Assert.AreEqual("VIPStatus-ForeignDignitary", codeableConcept.Coding.First().Code);
+            Assert.AreEqual("FOR", codeableConcept.Coding.First().Code);
         }
 
         /// <summary>

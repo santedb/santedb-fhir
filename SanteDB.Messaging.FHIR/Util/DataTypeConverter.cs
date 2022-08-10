@@ -631,6 +631,8 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = CreateResource<TResource>((IIdentifiedData)resource);
             retVal.VersionId = resource.VersionKey.ToString();
             retVal.Meta.VersionId = resource.VersionKey?.ToString();
+
+            // Create all collections 
             return retVal;
         }
 
@@ -650,6 +652,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 LastUpdated = (resource as IdentifiedData).ModifiedOn.DateTime,
             };
 
+            
             if (resource is ITaggable taggable)
             {
                 retVal.Meta.Tag = taggable.Tags.Where(o => !o.TagKey.StartsWith("$fhir")).Select(tag => new Coding("http://santedb.org/fhir/tags", $"{tag.TagKey}:{tag.Value}")).ToList();
@@ -737,12 +740,16 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 throw new ArgumentNullException(nameof(fhirExtension), "Value cannot be null");
             }
+            else if(fhirExtension.Url == ExtensionTypeKeys.DataQualityExtensionName || fhirExtension.Url == ExtensionTypeKeys.JpegPhotoExtensionName)
+            {
+                return null;
+            }
 
             var extensionTypeService = ApplicationServiceContext.Current.GetService<IExtensionTypeRepository>();
 
             extension.ExtensionType = extensionTypeService.Get(new Uri(fhirExtension.Url));
             //extension.ExtensionValue = fhirExtension.Value;
-            if (extension.ExtensionType.ExtensionHandler == typeof(DecimalExtensionHandler))
+            if (extension.LoadProperty(o=>o.ExtensionType).ExtensionHandler == typeof(DecimalExtensionHandler))
                 extension.ExtensionValue = (fhirExtension.Value as FhirDecimal).Value;
             else if (extension.ExtensionType.ExtensionHandler == typeof(StringExtensionHandler))
                 extension.ExtensionValue = (fhirExtension.Value as FhirString).Value;
@@ -752,7 +759,7 @@ namespace SanteDB.Messaging.FHIR.Util
             //else if(extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler))
             //    extension.ExtensionValueXml = (fhirExtension.Value as FhirBase64Binary).Value;
             else
-                throw new NotImplementedException($"Extension type is not understood");
+                throw new NotImplementedException($"Extension type {extension.ExtensionType.ExtensionHandler} is not understood");
             // Now will
             return extension;
         }
@@ -1252,7 +1259,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Resolve the specified entity
         /// </summary>
-        public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin) where TEntity : Entity, new()
+        public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin) where TEntity : BaseEntityData, ITaggable, IHasIdentifiers, new()
         {
             var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TEntity>>();
 

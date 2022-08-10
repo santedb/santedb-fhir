@@ -91,7 +91,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Code of medication code
             retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://snomed.info/sct");
-            retVal.Identifier = model.LoadCollection<EntityIdentifier>(nameof(Entity.Identifiers)).Select(DataTypeConverter.ToFhirIdentifier).ToList();
+            retVal.Identifier = model.LoadProperty(o=>o.Identifiers).Select(DataTypeConverter.ToFhirIdentifier).ToList();
 
             switch (model.StatusConceptKey.ToString().ToUpper())
             {
@@ -108,7 +108,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Is brand?
-            var manufacturer = model.LoadCollection<EntityRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct);
+            var manufacturer = model.LoadProperty(o=>o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct);
 
             if (manufacturer != null)
             {
@@ -173,7 +173,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (resource.Manufacturer != null)
             {
-                manufacturedMaterial.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.ManufacturedProduct, DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.Manufacturer, resource)));
+                manufacturedMaterial.LoadProperty(o=>o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.ManufacturedProduct, DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.Manufacturer, resource)));
             }
 
             return manufacturedMaterial;

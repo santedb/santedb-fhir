@@ -39,6 +39,7 @@ using System.Linq;
 using Organization = SanteDB.Core.Model.Entities.Organization;
 using Patient = SanteDB.Core.Model.Roles.Patient;
 using SanteDB.Core.Model;
+using SanteDB.Messaging.FHIR.Exceptions;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -305,7 +306,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var extensionFortest = new Extension("http://hl7.org/fhir/StructureDefinition/patient-birthPlace", location.Address);
                 var patient = new SanteDB.Core.Model.Roles.Patient();
 
-                Assert.Throws<KeyNotFoundException>(() => birthPlaceExtension.Parse(extensionFortest, patient));
+                Assert.Throws<FhirException>(() => birthPlaceExtension.Parse(extensionFortest, patient));
             }
         }
 

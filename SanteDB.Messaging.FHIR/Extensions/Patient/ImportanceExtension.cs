@@ -52,9 +52,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public IEnumerable<Extension> Construct(IIdentifiedData modelObject)
         {
-            if (modelObject is Core.Model.Roles.Patient patient && patient.VipStatusKey.HasValue)
+            if (modelObject is Core.Model.Roles.Patient patient && (patient.VipStatusKey.HasValue || patient.VipStatus != null))
             {
-                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.VipStatusKey));
+                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.VipStatusKey ?? patient.VipStatus?.Key));
             }
         }
 

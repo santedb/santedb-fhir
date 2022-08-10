@@ -11,10 +11,12 @@ using SanteDB.Core;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.DataTypes;
+using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 
@@ -261,7 +263,19 @@ namespace SanteDB.Messaging.FHIR.Test
                 // but the MapToFhir does not map the status when the code is obsolete. See line 82 in the ImmunizationResourceHandler class.
                 var deletedImmunization = (Immunization)immunizationResourceHandler.Delete(retrievedImmunization.Id, TransactionMode.Commit);
 
-                Assert.IsNull(deletedImmunization.Status);
+                try
+                {
+                    immunizationResourceHandler.Read(retrievedImmunization.Id, null);
+                    Assert.Fail("Should throw appropriate exception");
+                }
+                catch(FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone)
+                {
+
+                }
+                catch
+                {
+                    Assert.Fail("Improper exception thrown");
+                }
             }
         }
 
@@ -277,7 +291,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var randomGuidKey = Guid.NewGuid();
 
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService);
+            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>() );
 
             //check to ensure immunization instance can be mapped
             var result = immunizationResourceHandler.CanMapObject(new Immunization());
@@ -290,32 +304,23 @@ namespace SanteDB.Messaging.FHIR.Test
             //check to ensure substance instance can be mapped with valid type keys
             var substanceAdministration = new SubstanceAdministration()
             {
-                TypeConcept = new Concept() { Key = initialImmunizationKey }
+                TypeConceptKey = initialImmunizationKey
             };
             result = immunizationResourceHandler.CanMapObject(substanceAdministration);
             Assert.True(result);
 
             //check to ensure substance instance can be mapped with valid type keys
-            substanceAdministration.TypeConcept = new Concept()
-            {
-                Key = boosterImmunizationKey
-            };
+            substanceAdministration.TypeConceptKey = boosterImmunizationKey;
             result = immunizationResourceHandler.CanMapObject(substanceAdministration);
             Assert.True(result);
 
             //check to ensure substance instance can be mapped with valid type keys
-            substanceAdministration.TypeConcept = new Concept()
-            {
-                Key = immunizationKey
-            };
+            substanceAdministration.TypeConceptKey = immunizationKey;
             result = immunizationResourceHandler.CanMapObject(substanceAdministration);
             Assert.True(result);
 
             //check to ensure substance instance cannot be mapped without valid key 
-            substanceAdministration.TypeConcept = new Concept()
-            {
-                Key = randomGuidKey
-            };
+            substanceAdministration.TypeConceptKey = randomGuidKey;
             result = immunizationResourceHandler.CanMapObject(substanceAdministration);
             Assert.False(result);
         }
@@ -327,7 +332,7 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestGetInteractions()
         {
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var immunizationResourceHandler = new ImmunizationResourceHandler(this.m_substanceAdministrationRepositoryService, localizationService);
+            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>());
             var methodInfo = typeof(ImmunizationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
             var interactions = methodInfo.Invoke(immunizationResourceHandler, null);
 
@@ -396,14 +401,14 @@ namespace SanteDB.Messaging.FHIR.Test
                 Patient = new ResourceReference(Guid.NewGuid().ToString())
             };
 
-            Assert.Throws<NotSupportedException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
+            Assert.Throws<FhirException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
 
             immunization = new Immunization()
             {
                 Encounter = new ResourceReference(Guid.NewGuid().ToString())
             };
 
-            Assert.Throws<NotSupportedException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
+            Assert.Throws<FhirException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
         }
 
         /// <summary>

@@ -28,8 +28,10 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
@@ -99,7 +101,7 @@ namespace SanteDB.Messaging.FHIR.Test
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
-                Assert.Throws<InvalidDataException>(() => organizationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => organizationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
             }
         }
 
@@ -128,7 +130,6 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Hamilton Health Sciences", actual.Name);
             Assert.IsTrue(actual.Alias.All(c => c == "hhs"));
             Assert.IsTrue(actual.Address.Count == 2);
-            Assert.IsTrue(actual.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/detectedIssue"));
             Assert.IsTrue(actual.Identifier.First().Value == "6324");
             Assert.AreEqual("http://santedb.org/fhir/test", actual.Identifier.First().System);
             Assert.IsTrue(actual.Identifier.Count == 1);
@@ -179,10 +180,9 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Hamilton Health Sciences",actualOrganization.Name);
             Assert.IsTrue(actualOrganization.Alias.All(c => c == "hhs"));
             Assert.IsTrue(actualOrganization.Address.Count == 2);
-            Assert.IsTrue(actualOrganization.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/detectedIssue"));
             Assert.IsTrue(actualOrganization.Identifier.First().Value == "6324");
             Assert.AreEqual("http://santedb.org/fhir/test", actualOrganization.Identifier.First().System);
-            Assert.IsTrue(actualOrganization.Identifier.Count == 1);
+            Assert.AreEqual(1, actualOrganization.Identifier.Count);
         }
 
         /// <summary>
@@ -220,36 +220,18 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
                 result = organizationResourceHandler.Delete(result.Id, TransactionMode.Commit);
+
+                try
+                {
+                    organizationResourceHandler.Read(result.Id, null);
+                    Assert.Fail("Should have thrown 410 gone");
+                }
+                catch(FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone) { }
+                catch
+                {
+                    Assert.Fail("Threw wrong exception");
+                }
             }
-
-            // assert deletion organizaiton successfully
-            Assert.NotNull(result);
-            Assert.IsInstanceOf<Organization>(result);
-            readOrganization = (Organization) result;
-
-            // ensure the organization is NOT active
-            Assert.IsFalse(readOrganization.Active);
-
-            // ensure the deleted organization is the created one
-            Assert.IsTrue(readOrganization.Name == "Hamilton Health Sciences");
-            Assert.AreEqual(2, readOrganization.Address.Count());
-            Assert.AreEqual("hhs", readOrganization.Alias.First());
-            Assert.IsTrue(readOrganization.Identifier.First().Value == "6324");
-            Assert.AreEqual("http://santedb.org/fhir/test", readOrganization.Identifier.First().System);
-            Assert.IsTrue(readOrganization.Identifier.Count == 1);
-
-            // read the organization
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
-            {
-                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
-                result = organizationResourceHandler.Read(result.Id, readOrganization.VersionId);
-            }
-
-            Assert.NotNull(result);
-            Assert.IsInstanceOf<Organization>(result);
-            readOrganization = (Organization) result;
-            // ensure the organization is NOT active
-            Assert.IsFalse(readOrganization.Active);
         }
 
         /// <summary>
@@ -282,7 +264,6 @@ namespace SanteDB.Messaging.FHIR.Test
             organization.Name = "Hamilton Health Science";
             organization.Address.RemoveAt(1);
             organization.Identifier.First().Value = "2021";
-            organization.Extension.RemoveAt(0);
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {

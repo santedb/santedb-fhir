@@ -193,7 +193,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>Returns the constructed model instance.</returns>
         protected override CodedObservation MapToModel(Condition resource)
         {
-            var retVal = new CodedObservation();
+            var retVal = new CodedObservation()
+            {
+                Relationships = new List<ActRelationship>(),
+                Participations = new List<ActParticipation>(),
+
+            };
             
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
 

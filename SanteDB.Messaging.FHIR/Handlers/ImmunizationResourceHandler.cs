@@ -46,12 +46,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private readonly Guid IMMUNIZATION = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
         private readonly Guid BOOSTER_IMMUNIZATION = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ImmunizationResourceHandler));
+        private readonly IRepositoryService<Material> m_materialRepository;
+        private readonly IRepositoryService<ManufacturedMaterial> m_manufacturedMaterialRepository;
 
         /// <summary>
         /// Create a new resource handler
         /// </summary>
-        public ImmunizationResourceHandler(IRepositoryService<SubstanceAdministration> repo, ILocalizationService localizationService) : base(repo, localizationService)
+        public ImmunizationResourceHandler(IRepositoryService<SubstanceAdministration> repo, ILocalizationService localizationService, IRepositoryService<Material> materialService, IRepositoryService<ManufacturedMaterial> manufactedMaterialService) : base(repo, localizationService)
         {
+            this.m_materialRepository = materialService;
+            this.m_manufacturedMaterialRepository = manufactedMaterialService;
         }
 
         /// <summary>
@@ -94,8 +98,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Material
-            var matPtcpt = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Consumable) ??
-                model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product);
+            var matPtcpt = model.LoadProperty(o=>o.Participations).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Consumable) ??
+                model.LoadProperty(o=>o.Participations).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product);
             if (matPtcpt != null)
             {
                 var matl = matPtcpt.LoadProperty<Material>(nameof(ActParticipation.PlayerEntity));
@@ -120,7 +124,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }));
 
             // Protocol
-            foreach (var itm in model.Protocols)
+            foreach (var itm in model.LoadProperty(o=>o.Protocols))
             {
                 Immunization.ProtocolAppliedComponent protocol = new Immunization.ProtocolAppliedComponent();
                 var dbProtocol = itm.LoadProperty<Protocol>(nameof(ActProtocol.Protocol));
@@ -155,6 +159,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 IsNegated = resource.Status == Immunization.ImmunizationStatusCodes.NotDone,
                 RouteKey = DataTypeConverter.ToConcept(resource.Route)?.Key,
                 SiteKey = DataTypeConverter.ToConcept(resource.Site)?.Key,
+                Participations = new List<ActParticipation>(),
+                Relationships = new List<ActRelationship>()
             };
 
             Guid key;
@@ -166,36 +172,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Patient
             if (resource.Patient != null)
             {
-                // Is the subject a uuid
-                if (resource.Patient.Reference.StartsWith("urn:uuid:"))
-                    substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Patient.Reference.Substring(9))));
-                else
-                {
-                    this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedExeption.paramOnlySupported", new
-                    {
-                        param = "UUID"
-                    }));
-                }
+                var patient = DataTypeConverter.ResolveEntity<SanteDB.Core.Model.Roles.Patient>(resource.Patient, resource);
+                substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKeys.RecordTarget, patient));
+
             }
 
             // Encounter
             if (resource.Encounter != null)
             {
-                // Is the subject a uuid
-                if (resource.Encounter.Reference.StartsWith("urn:uuid:"))
-                    substanceAdministration.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, substanceAdministration.Key)
-                    {
-                        SourceEntityKey = Guid.Parse(resource.Encounter.Reference.Substring(9))
-                    });
-                else
+                var encounter = DataTypeConverter.ResolveEntity<PatientEncounter>(resource.Encounter, resource);
+                substanceAdministration.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, substanceAdministration.Key)
                 {
-                    this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedExeption.paramOnlySupported", new
-                    {
-                        param = "UUID"
-                    }));
-                }
+                    SourceEntityKey = encounter.Key
+                });
             }
 
             substanceAdministration.Participations.AddRange(resource.Performer.Select(c => new ActParticipation(ActParticipationKeys.Performer, Guid.Parse(c.Actor.Reference.Substring(9)))));
@@ -212,7 +201,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
 
                 // Get the material
-                var material = ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>().Find(m => m.TypeConceptKey == concept.Key).FirstOrDefault();
+                var material = this.m_materialRepository.Find(m => m.TypeConceptKey == concept.Key).FirstOrDefault();
                 if (material == null)
                 {
                     this.m_traceSource.TraceWarning("Ignoring administration {0} don't have material registered for {1}", resource.VaccineCode, concept?.Mnemonic);
@@ -224,7 +213,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 if (resource.LotNumber != null)
                 {
                     // TODO: Need to also find where the GTIN is kept
-                    var manufacturedMaterial = ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>()
+                    var manufacturedMaterial = this.m_manufacturedMaterialRepository
                         .Find(o => o.LotNumber == resource.LotNumber && o.Relationships.Any(r => r.SourceEntityKey == material.Key && r.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance))
                         .FirstOrDefault();
 
@@ -232,7 +221,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         substanceAdministration.Participations.Add(new ActParticipation(ActParticipationKeys.Consumable, manufacturedMaterial.Key) { Quantity = 1 });
                     }
-                        
+
                 }
 
                 // Get dose units
@@ -242,7 +231,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     substanceAdministration.DoseUnitKey = material.QuantityConceptKey;
                 }
 
-                substanceAdministration.TypeConceptKey = this.IMMUNIZATION; 
+                substanceAdministration.TypeConceptKey = this.IMMUNIZATION;
             }
 
             return substanceAdministration;

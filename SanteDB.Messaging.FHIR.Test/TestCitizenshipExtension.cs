@@ -18,7 +18,7 @@
  * User: Zhiping Yu
  * Date: 2021-11-30
  */
-
+using SanteDB.Core.Model;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
@@ -150,7 +150,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsNotNull(patient.Relationships);
                 Assert.IsTrue(patient.Relationships.Count() == 1);
                 Assert.IsInstanceOf<Place>(patient.Relationships.Single().TargetEntity);
-                Assert.AreEqual("NF", patient.Relationships.Single().TargetEntity.Identifiers.Single().Value);
+                Assert.AreEqual("NF", patient.LoadProperty(o=>o.Relationships).Single().TargetEntity.LoadProperty(o=>o.Identifiers).Single().Value);
                 Assert.IsTrue(patient.Relationships.Single().RelationshipTypeKey == EntityRelationshipTypeKeys.Citizen);
                 Assert.IsTrue(patient.Relationships.Single().TargetEntity.Identifiers.Any(c => c.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode));
             }
@@ -173,7 +173,8 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 citizenshipExtension.Parse(extensionForTest, patient);
 
-                Assert.IsEmpty(patient.Relationships);
+                // JF: New pattern is that unloaded data is null
+                Assert.IsNull(patient.Relationships);
             }
         }
 

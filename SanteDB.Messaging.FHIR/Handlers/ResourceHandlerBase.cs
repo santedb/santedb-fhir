@@ -23,11 +23,13 @@ using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -168,27 +170,30 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (target == null)
             {
                 this.m_traceSource.TraceError($"Argument {nameof(target)} null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
-            else if (!(target is TFhirResource))
-                throw new InvalidDataException(this.m_localizationService.GetString("error.type.InvalidDataException"));
+            else if(target is TFhirResource fhirResource)
+            {
+                target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Create, this.ResourceType, target);
 
-            target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Create, this.ResourceType, target);
+                // We want to map from TFhirResource to TModel
+                var modelInstance = this.MapToModel(fhirResource);
 
-            // We want to map from TFhirResource to TModel
-            var modelInstance = this.MapToModel(target as TFhirResource);
+                if (modelInstance == null)
+                    throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
+                    {
+                        param = "Model"
+                    }));
 
-            if (modelInstance == null)
-                throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
-                {
-                    param = "Model"
-                }));
+                var result = this.Create(modelInstance, mode);
 
-            var result = this.Create(modelInstance, mode);
+                // Return fhir operation result
+                var retVal = this.MapToFhir(result);
+                return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, this.ResourceType, retVal);
+            }
+            else 
+                throw new ArgumentException(nameof(target), String.Format(ErrorMessages.ARGUMENT_INVALID_TYPE, typeof(TFhirResource), target.GetType()));
 
-            // Return fhir operation result
-            var retVal = this.MapToFhir(result);
-            return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, this.ResourceType, retVal);
         }
 
         /// <summary>
@@ -204,7 +209,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (String.IsNullOrEmpty(id))
             {
                 this.m_traceSource.TraceError($"Argument {nameof(id)} is null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
 
             this.m_traceSource.TraceInfo("Deleting resource {0}/{1}", this.ResourceType, id);
@@ -271,7 +276,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (parameters == null)
             {
                 this.m_traceSource.TraceError($"Argument {nameof(parameters)} null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
 
             Core.Model.Query.NameValueCollection hdsiQuery = null;
@@ -349,7 +354,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (String.IsNullOrEmpty(id))
             {
                 this.m_traceSource.TraceError($"Argument {nameof(id)} null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
 
             Guid guidId = Guid.Empty, versionGuidId = Guid.Empty;
@@ -369,6 +374,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 this.m_traceSource.TraceError($"{this.ResourceType}/{id} not found");
                 throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
+            }
+            else if(result is BaseEntityData bed && bed.ObsoletionTime.HasValue &&
+                versionGuidId == Guid.Empty) // The resource is logically deleted FHIR requires 410 gone
+            {
+                this.m_traceSource.TraceWarning($"{this.ResourceType}/{id} was deleted");
+                throw new FhirException(System.Net.HttpStatusCode.Gone, OperationOutcome.IssueType.Deleted, $"{result} deleted on {bed.ObsoletionTime:o}");
             }
 
             // FHIR Operation result
@@ -396,10 +407,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (target == null)
             {
                 this.m_traceSource.TraceError($"Argument {nameof(target)} is null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(nameof(target), ErrorMessages.ARGUMENT_NULL);
             }
             else if (!(target is TFhirResource))
-                throw new InvalidDataException(this.m_localizationService.GetString("error.type.InvalidDataException"));
+                throw new ArgumentException(nameof(target), String.Format(ErrorMessages.ARGUMENT_INCOMPATIBLE_TYPE, typeof(TFhirResource), target?.GetType()));
 
             target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Update, this.ResourceType, target);
 
@@ -506,7 +517,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (String.IsNullOrEmpty(id))
             {
                 this.m_traceSource.TraceError($"Argument {nameof(id)} null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
 
             Guid guidId = Guid.Empty;

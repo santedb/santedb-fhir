@@ -20,6 +20,7 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
@@ -98,7 +99,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             else if (asyncParameter?.Value.GetValueOrDefault() == true)
             {
                 this.m_tracer.TraceError("Asynchronous messaging is not supported by this repository");
-                throw new InvalidOperationException(m_localizationService.GetString("error.type.NotSupportedException"));
+                throw new InvalidOperationException(ErrorMessages.NOT_SUPPORTED);
             }
 
             // Message must have a message header
@@ -116,7 +117,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 if (handler == null)
                 {
                     this.m_tracer.TraceError($"There is no message handler for event {eventUri}");
-                    throw new NotSupportedException(m_localizationService.GetString("error.type.NotSupportedException"));
+                    throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
                 }
 
                 var retVal = new Bundle(); // Return for operation

@@ -130,7 +130,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal = new Core.Model.Entities.Organization()
                 {
-                    Key = Guid.NewGuid()
+                    Key = Guid.NewGuid(), 
+                    Relationships = new List<EntityRelationship>(),
+                    Participations = new List<Core.Model.Acts.ActParticipation>()
                 };
             }
 
@@ -157,7 +159,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
 
                 // point the child organization entity at the target organization entity with a relationship of parent 
-                retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
+                retVal.LoadProperty(o=>o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
             }
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
             return retVal;
