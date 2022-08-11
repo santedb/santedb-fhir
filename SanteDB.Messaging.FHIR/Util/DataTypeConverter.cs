@@ -780,6 +780,10 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 throw new ArgumentNullException(nameof(fhirExtension), "Value cannot be null");
             }
+            else if (fhirExtension.Url == ExtensionTypeKeys.DataQualityExtensionName || fhirExtension.Url == ExtensionTypeKeys.JpegPhotoExtensionName)
+            {
+                return null;
+            }
 
             // First attempt to parse the extension using a parser
             if (!fhirExtension.TryApplyExtension(context))
@@ -1358,7 +1362,9 @@ namespace SanteDB.Messaging.FHIR.Util
                 CreationTime = DateTimeOffset.Now,
                 // TODO: Gender (after refactor)
                 Names = patientContact.Name != null ? new List<EntityName>() { ToEntityName(patientContact.Name) } : null,
-                Telecoms = patientContact.Telecom?.Select(ToEntityTelecomAddress).ToList()
+                Telecoms = patientContact.Telecom?.Select(ToEntityTelecomAddress).ToList(),
+                Extensions = new List<EntityExtension>(),
+                Relationships = new List<EntityRelationship>()
             })
             {
                 ClassificationKey = RelationshipClassKeys.ContainedObjectLink,

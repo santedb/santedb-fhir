@@ -27,6 +27,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -92,7 +93,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
 
                 // expect that the create method throws an InvalidDataException
-                Assert.Throws<InvalidDataException>(() => practitionerResourceHandler.Create(new Account(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => practitionerResourceHandler.Create(new Account(), TransactionMode.Commit));
             }
         }
 
@@ -286,7 +287,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 actual = (Practitioner) result;
 
                 //ensure read is not successful
-                Assert.Throws<KeyNotFoundException>(() => practitionerResourceHandler.Read(actual.Id, null));
+                Assert.Throws<FhirException>(() => practitionerResourceHandler.Read(actual.Id, null));
             }
         }
 

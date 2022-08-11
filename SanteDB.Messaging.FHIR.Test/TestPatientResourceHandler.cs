@@ -28,6 +28,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -227,7 +228,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
 
                 // create the patient using the resource handler
-                Assert.Throws<InvalidDataException>(() => patientResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => patientResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
             }
         }
 
@@ -385,7 +386,8 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 result = patientResourceHandler.Delete(actual.Id, TransactionMode.Commit);
 
-                Assert.Throws<KeyNotFoundException>(() => patientResourceHandler.Read(result.Id, result.VersionId));
+                Assert.IsNotNull(patientResourceHandler.Read(result.Id, result.VersionId)); // Should return since we're asking for a specific version of a deleted resource
+                Assert.Throws<FhirException>(() => patientResourceHandler.Read(result.Id, null)); // Should throw GONE since we're just doing a regular read
             }
         }
 
@@ -684,7 +686,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var patientResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Patient);
 
                 // create the patient using the resource handler
-                Assert.Throws<InvalidDataException>(() => patientResourceHandler.Update(actual.Id, new Practitioner(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => patientResourceHandler.Update(actual.Id, new Practitioner(), TransactionMode.Commit));
             }
         }
 

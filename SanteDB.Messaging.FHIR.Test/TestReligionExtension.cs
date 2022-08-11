@@ -22,6 +22,7 @@
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
+using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
@@ -75,17 +76,14 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             var patient = new Patient
             {
-                ReligiousAffiliation = new Concept
-                {
-                    Mnemonic = "Talos", Key = Guid.NewGuid()
-                }
+                ReligiousAffiliationKey = ReligionKeys.Agnostic
             };
 
             var constructedReligion = this.m_extension.Construct(patient).ToArray();
             Assert.AreEqual(1, constructedReligion.Length);
             Assert.IsInstanceOf<CodeableConcept>(constructedReligion.First().Value);
             var codeableConcept = (CodeableConcept) constructedReligion.First().Value;
-            Assert.AreEqual("Talos", codeableConcept.Coding.First().Code);
+            Assert.AreEqual("AGN", codeableConcept.Coding.First().Code);
         }
 
         /// <summary>

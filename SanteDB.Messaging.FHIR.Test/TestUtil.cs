@@ -80,7 +80,7 @@ namespace SanteDB.Messaging.FHIR.Test
                     aa = new AssigningAuthority(nsid, nsid, oid)
                     {
                         AssigningApplicationKey = app.Key,
-                        IsUnique = false,
+                        IsUnique = true,
                         Url = url
                     };
                     metadataService.Insert(aa);
