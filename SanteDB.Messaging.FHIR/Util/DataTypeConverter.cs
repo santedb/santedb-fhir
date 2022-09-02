@@ -886,11 +886,11 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts a <see cref="FhirUri"/> instance to an <see cref="AssigningAuthority"/> instance.
+        /// Converts a <see cref="FhirUri"/> instance to an <see cref="IdentityDomain"/> instance.
         /// </summary>
         /// <param name="fhirSystem">The FHIR system.</param>
         /// <returns>Returns the converted instance.</returns>
-        public static AssigningAuthority ToAssigningAuthority(FhirUri fhirSystem)
+        public static IdentityDomain ToAssigningAuthority(FhirUri fhirSystem)
         {
             return fhirSystem == null ? null : ToAssigningAuthority(fhirSystem.Value);
         }
@@ -898,11 +898,11 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Convert to assigning authority
         /// </summary>
-        public static AssigningAuthority ToAssigningAuthority(String fhirSystem)
+        public static IdentityDomain ToAssigningAuthority(String fhirSystem)
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping assigning authority");
 
-            var oidRegistrar = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
+            var oidRegistrar = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
             var oid = oidRegistrar.Get(new Uri(fhirSystem));
 
             if (oid == null)
@@ -1595,7 +1595,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 return null;
             }
 
-            var imetaService = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
+            var imetaService = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
             var authority = imetaService.Get(identifier.AuthorityKey.Value);
             var retVal = new Identifier
             {

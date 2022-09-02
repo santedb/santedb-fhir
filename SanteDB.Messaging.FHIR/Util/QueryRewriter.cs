@@ -418,7 +418,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 // Might be a URL
                                 if (Uri.TryCreate(segs[0], UriKind.Absolute, out Uri data))
                                 {
-                                    var aa = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>().Get(data);
+                                    var aa = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>().Get(data);
                                     if (aa == null)
                                     {
                                         throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotFound, $"No authority for {data} found");

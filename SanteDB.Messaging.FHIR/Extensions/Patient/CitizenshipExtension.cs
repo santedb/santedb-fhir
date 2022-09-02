@@ -75,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 foreach (var citizenshipExtension in patient.LoadCollection(o => o.Relationships).Where(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Citizen))
                 {
                     var citizenPlace = citizenshipExtension.LoadProperty(o => o.TargetEntity);
-                    var isoCode = citizenPlace.GetIdentifiers().FirstOrDefault(o => o.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode);
+                    var isoCode = citizenPlace.GetIdentifiers().FirstOrDefault(o => o.AuthorityKey == IdentityDomainKeys.Iso3166CountryCode);
 
                     if (isoCode != null)
                     {
@@ -96,7 +96,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
                 if (isoCode != null)
                 {
-                    var country = this.m_placeRepository.Find(o => o.Identifiers.Where(a => a.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode).Any(i => i.Value == isoCode.Code) && StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value)).SingleOrDefault();
+                    var country = this.m_placeRepository.Find(o => o.Identifiers.Where(a => a.AuthorityKey == IdentityDomainKeys.Iso3166CountryCode).Any(i => i.Value == isoCode.Code) && StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value)).SingleOrDefault();
 
                     if (country != null && !patient.LoadProperty(o => o.Relationships).Any(c => c.TargetEntityKey == country.Key))
                     {

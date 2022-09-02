@@ -42,7 +42,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var securityDevService = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityDevice>>();
             var securityAppService = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityApplication>>();
             var securityPipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
-            var metadataService = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
+            var metadataService = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
 
             using (AuthenticationContext.EnterSystemContext())
             {
@@ -77,9 +77,16 @@ namespace SanteDB.Messaging.FHIR.Test
                 var aa = metadataService.Get(nsid);
                 if (aa == null)
                 {
-                    aa = new AssigningAuthority(nsid, nsid, oid)
+                    aa = new IdentityDomain(nsid, nsid, oid)
                     {
-                        AssigningApplicationKey = app.Key,
+                        AssigningAuthority = new System.Collections.Generic.List<AssigningAuthority>()
+                        {
+                            new AssigningAuthority()
+                            {
+                                AssigningApplicationKey = app.Key, 
+                                Reliability = IdentifierReliability.Authoritative
+                            }
+                        },
                         IsUnique = true,
                         Url = url
                     };

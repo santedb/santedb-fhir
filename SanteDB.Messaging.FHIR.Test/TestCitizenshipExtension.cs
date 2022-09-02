@@ -102,7 +102,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Identifiers = new List<EntityIdentifier>
                 {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
+                    new EntityIdentifier(IdentityDomainKeys.Iso3166CountryCode, "NF")
                 }
             };
 
@@ -152,7 +152,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsInstanceOf<Place>(patient.Relationships.Single().TargetEntity);
                 Assert.AreEqual("NF", patient.LoadProperty(o=>o.Relationships).Single().TargetEntity.LoadProperty(o=>o.Identifiers).Single().Value);
                 Assert.IsTrue(patient.Relationships.Single().RelationshipTypeKey == EntityRelationshipTypeKeys.Citizen);
-                Assert.IsTrue(patient.Relationships.Single().TargetEntity.Identifiers.Any(c => c.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode));
+                Assert.IsTrue(patient.Relationships.Single().TargetEntity.Identifiers.Any(c => c.AuthorityKey == IdentityDomainKeys.Iso3166CountryCode));
             }
         }
 
@@ -190,7 +190,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Identifiers = new List<EntityIdentifier>
                 {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
+                    new EntityIdentifier(IdentityDomainKeys.Iso3166CountryCode, "NF")
                 }
             };
 
@@ -248,7 +248,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Identifiers = new List<EntityIdentifier>
                 {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
+                    new EntityIdentifier(IdentityDomainKeys.Iso3166CountryCode, "NF")
                 }
             };
 
