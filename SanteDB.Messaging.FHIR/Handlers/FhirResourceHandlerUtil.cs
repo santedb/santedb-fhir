@@ -91,7 +91,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             if (string.IsNullOrEmpty(resourceType))
             {
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(resourceType));
             }
 
             var rtEnum = EnumUtility.ParseLiteral<ResourceType>(resourceType);
