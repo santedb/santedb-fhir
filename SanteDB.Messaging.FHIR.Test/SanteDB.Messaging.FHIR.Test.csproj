@@ -83,6 +83,9 @@
     <EmbeddedResource Include="Resources\CreateDeceasedPatientPartialDate.json" />
     <EmbeddedResource Include="Resources\CreateImmunization.json" />
     <EmbeddedResource Include="Resources\ParentOrganization.json" />
+    <None Include="..\..\SanteDB.licenseheader">
+      <Link>SanteDB.licenseheader</Link>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.2" />
