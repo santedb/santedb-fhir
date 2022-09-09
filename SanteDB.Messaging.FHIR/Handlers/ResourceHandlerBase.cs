@@ -575,14 +575,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 switch (retVal)
                 {
                     case IResourceCollection irc:
-                        irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+                        irc.AddAnnotationToAll(SanteDBModelConstants.NoDynamicLoadAnnotation);
                         break;
                     case ITargetedAssociation tra:
-                        (tra.TargetEntity as IdentifiedData)?.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
-                        (tra.SourceEntity as IdentifiedData)?.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        (tra.TargetEntity as IdentifiedData)?.AddAnnotation(SanteDBModelConstants.NoDynamicLoadAnnotation);
+                        (tra.SourceEntity as IdentifiedData)?.AddAnnotation(SanteDBModelConstants.NoDynamicLoadAnnotation);
                         break;
                     default:
-                        retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        retVal.AddAnnotation(SanteDBModelConstants.NoDynamicLoadAnnotation);
                         break;
                 }
 

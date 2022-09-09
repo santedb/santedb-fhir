@@ -59,6 +59,7 @@ using System.Security;
 using System.Security.Authentication;
 using System.Data.Common;
 using System.IO;
+using SanteDB.Rest.Common.Security;
 
 namespace SanteDB.Messaging.FHIR.Util
 {

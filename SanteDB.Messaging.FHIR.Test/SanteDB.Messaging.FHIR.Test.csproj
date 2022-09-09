@@ -91,7 +91,7 @@
     <PackageReference Include="NUnit" Version="3.13.2" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.2.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
-    <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="8.5.4" />
+    <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="9.0.2" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\ComplexPatient.json" />
