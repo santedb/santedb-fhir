@@ -30,6 +30,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Exceptions;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -259,7 +260,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Re-writes the FHIR query parameter to HDSI query parameter format
         /// </summary>
         /// <returns></returns>
-        public static FhirQuery RewriteFhirQuery(Type fhirType, Type modelType, System.Collections.Specialized.NameValueCollection fhirQuery, out NameValueCollection hdsiQuery)
+        public static FhirQuery RewriteFhirQuery(Type fhirType, Type modelType, NameValueCollection fhirQuery, out NameValueCollection hdsiQuery)
         {
             // Try parse
             if (fhirQuery == null) throw new ArgumentNullException(nameof(fhirQuery));
@@ -294,7 +295,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 ExactTotal = fhirQuery["_total"] == "exact"
             };
 
-            hdsiQuery = new NameValueCollection();
+            var hdsiInternal = hdsiQuery = new NameValueCollection();
 
             var resourceType = fhirType.GetResourceType();
             var map = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
@@ -434,10 +435,10 @@ namespace SanteDB.Messaging.FHIR.Util
                         }
                         break;
                     case QueryParameterRewriteType.Indicator:
-                        var mq = NameValueCollection.ParseQueryString(parmMap.ModelQuery);
-                        foreach(var itm in mq)
+                        var mq = parmMap.ModelQuery.ParseQueryString();
+                        foreach(var itm in mq.AllKeys)
                         {
-                            hdsiQuery.Add(itm.Key, itm.Value);
+                            Array.ForEach(mq.GetValues(itm), v=> hdsiInternal.Add(itm, v));
                         }
                         break;
                     case QueryParameterRewriteType.Concept:
@@ -498,7 +499,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         break;
 
                     default:
-                        hdsiQuery.Add(parmMap.ModelQuery, value);
+                        value.ForEach(o=>hdsiInternal.Add(parmMap.ModelQuery, o));
                         break;
                 }
             }

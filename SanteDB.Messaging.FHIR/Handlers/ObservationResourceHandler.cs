@@ -344,8 +344,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 throw new ArgumentNullException(nameof(parameters), ErrorMessages.ARGUMENT_NULL);
             }
 
-            Core.Model.Query.NameValueCollection hdsiQuery = null;
-            var query = QueryRewriter.RewriteFhirQuery(typeof(Observation), typeof(Core.Model.Acts.Observation), parameters, out hdsiQuery);
+            var query = QueryRewriter.RewriteFhirQuery(typeof(Observation), typeof(Core.Model.Acts.Observation), parameters, out var hdsiQuery);
 
             IQueryResultSet hdsiResults = null;
 

@@ -37,6 +37,7 @@ using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
 using SanteDB.Core.Model;
 using SanteDB.Core.i18n;
+using System.Collections.Specialized;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -116,12 +117,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var hdsiQuery = new NameValueCollection();
             if (!String.IsNullOrEmpty(queryObject.Query))
             {
-                QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, NameValueCollection.ParseQueryString(queryObject.Query.Substring(1)).ToNameValueCollection(), out hdsiQuery);
+                QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, queryObject.Query.Substring(1).ParseQueryString(), out hdsiQuery);
             }
 
             // Create the pub-sub definition
             var channel = this.CreateChannel($"Channel for {subscription.Id}", subscription.Channel, mode);
-            var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete | PubSubEventType.Merge, hdsiQuery.ToString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
+            var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete | PubSubEventType.Merge, hdsiQuery.ToHttpString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
 
             if (subscription.Status == Subscription.SubscriptionStatus.Active)
                 retVal = this.m_pubSubManager.ActivateSubscription(retVal.Key.Value, true);
@@ -201,8 +202,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (parameters == null)
                 throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
 
-            Core.Model.Query.NameValueCollection hdsiQuery = null;
-            FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Subscription), typeof(PubSubSubscriptionDefinition), parameters, out hdsiQuery);
+            FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Subscription), typeof(PubSubSubscriptionDefinition), parameters, out var hdsiQuery);
             hdsiQuery.Add("obsoletionTime", "null");
             // Do the query
             var predicate = QueryExpressionParser.BuildLinqExpression<PubSubSubscriptionDefinition>(hdsiQuery);
@@ -272,10 +272,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
             }
 
-            QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, NameValueCollection.ParseQueryString(queryObject.Query.Substring(1)).ToNameValueCollection(), out NameValueCollection hdsiQuery);
+            QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, queryObject.Query.Substring(1).ParseQueryString(), out NameValueCollection hdsiQuery);
 
             // Update the channel
-            var retVal = this.m_pubSubManager.UpdateSubscription(key.Value, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete, hdsiQuery.ToString(), supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
+            var retVal = this.m_pubSubManager.UpdateSubscription(key.Value, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete, hdsiQuery.ToHttpString(), supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
             this.m_pubSubManager.ActivateSubscription(key.Value, subscription.Status == Subscription.SubscriptionStatus.Active);
 
             var settings = subscription.Channel.Header.Select(o => o.Split(':')).ToDictionary(o => o[0], o => o[1]);
