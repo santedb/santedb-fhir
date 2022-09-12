@@ -160,6 +160,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
+    <Compile Include="FhirTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestMessageUtil.cs" />
     <Compile Include="TestAdverseEventResourceHandler.cs" />

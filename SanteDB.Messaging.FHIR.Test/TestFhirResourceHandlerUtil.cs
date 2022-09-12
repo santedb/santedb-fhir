@@ -36,20 +36,9 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Contains tests for the <see cref="FhirResourceHandlerUtil"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestFhirResourceHandlerUtil
+    public class TestFhirResourceHandlerUtil : FhirTest
     {
-        /// <summary>
-        /// Runs setup before each test execution.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestFhirResourceHandlerUtil).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-        }
-
+       
         /// <summary>
         /// Tests the retrieval of a resource handler in the <see cref="FhirResourceHandlerUtil"/> class.
         /// </summary>

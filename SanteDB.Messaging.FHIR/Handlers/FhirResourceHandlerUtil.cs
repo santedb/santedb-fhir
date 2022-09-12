@@ -137,14 +137,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Initialize based on configuration
         /// </summary>
-        public static void Initialize(FhirServiceConfigurationSection m_configuration, IServiceManager serviceManager)
+        public static void Initialize(FhirServiceConfigurationSection configuration, IServiceManager serviceManager)
         {
             // Configuration 
-            if (m_configuration.Resources?.Any() == true)
+            if (configuration.Resources?.Any() == true)
             {
                 foreach (var t in serviceManager.CreateInjectedOfAll<IFhirResourceHandler>())
                 {
-                    if (m_configuration.Resources.Any(r => r == t.ResourceType.ToString()))
+                    if (configuration.Resources.Any(r => r == t.ResourceType.ToString()))
                     {
                         RegisterResourceHandler(t);
                     }
@@ -154,10 +154,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 }
             }
-            else
+            else if(configuration.ResourceHandlers?.Any() == true)
             {
                 // Old configuration
-                foreach (var t in m_configuration.ResourceHandlers.Select(o => o.Type).Where(c => c != null))
+                foreach (var t in configuration.ResourceHandlers.Select(o => o.Type).Where(c => c != null))
                 {
                     var rh = serviceManager.CreateInjected(t);
 
@@ -166,6 +166,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         RegisterResourceHandler(resourceHandler);
                     }
                 }
+            }
+            else
+            {
+                AppDomain.CurrentDomain.GetAllTypes().Where(t=>typeof(IFhirResourceHandler).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface).ToList().ForEach(o =>
+                {
+                    try
+                    {
+                        RegisterResourceHandler(serviceManager.CreateInjected(o) as IFhirResourceHandler);
+                    }
+                    catch
+                    {
+
+                    }
+                });
             }
         }
 

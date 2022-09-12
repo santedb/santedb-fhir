@@ -42,42 +42,13 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Tests the <see cref="PractitionerResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestPractitionerResourceHandler : DataTest
+    public class TestPractitionerResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Practitioner"
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// Tests the create functionality using invalid resource in <see cref="PractitionerResourceHandler"/> class.

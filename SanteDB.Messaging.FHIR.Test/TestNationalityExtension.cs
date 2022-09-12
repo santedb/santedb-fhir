@@ -42,26 +42,17 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestNationalityExtension
+    public class TestNationalityExtension : FhirTest
     {
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
+      
         /// <summary>
         /// The extension under test.
         /// </summary>
         private IFhirExtensionHandler m_extension;
 
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_extension = this.m_serviceManager.CreateInjected<NationalityExtension>();
         }

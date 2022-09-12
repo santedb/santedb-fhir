@@ -42,57 +42,13 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Contains tests for the <see cref="AdverseEventResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestAdverseEventResourceHandler : DataTest
+    public class TestAdverseEventResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        /// <summary>
-        /// Set up method to initialize services.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient",
-                    "Practitioner",
-                    "AdverseEvent",
-                    "Location"
-                },
-                OperationHandlers = new List<TypeReferenceConfiguration>(),
-                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
-                ProfileHandlers = new List<TypeReferenceConfiguration>(),
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(PractitionerResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(AdverseEventResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(PatientResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(LocationResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         [Test]
         public void TestCreateAdverseEvent()

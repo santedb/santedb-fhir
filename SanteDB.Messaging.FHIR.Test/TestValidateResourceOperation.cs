@@ -41,48 +41,17 @@ namespace SanteDB.Messaging.FHIR.Test
 {
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestValidateResourceOperation
+    public class TestValidateResourceOperation : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        /// <summary>
-        /// Runs setup before each test execution.
-        /// </summary>
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            TestApplicationContext.TestAssembly = typeof(TestOrganizationResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
             TestApplicationContext.Current.AddBusinessRule<Core.Model.Roles.Patient>(typeof(SamplePatientBusinessRulesService));
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient"
-                },
-                
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(PatientResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
         }
 
         /// <summary>

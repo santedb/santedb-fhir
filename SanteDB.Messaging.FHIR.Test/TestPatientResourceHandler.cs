@@ -44,56 +44,14 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Tests the <see cref="PatientResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    internal class TestPatientResourceHandler : DataTest
+    internal class TestPatientResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        /// <summary>
-        /// Set up method for the test methods.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient",
-                    "Organization",
-                    "Practitioner"
-                },
-                OperationHandlers = new List<TypeReferenceConfiguration>(),
-                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
-                ProfileHandlers = new List<TypeReferenceConfiguration>(),
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(PractitionerResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(PatientResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
-
+      
         /// <summary>
         /// Tests the creation of a deceased patient in the <see cref="PatientResourceHandler"/> class.
         /// </summary>

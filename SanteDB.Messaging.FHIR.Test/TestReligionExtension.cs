@@ -41,25 +41,17 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestReligionExtension
+    public class TestReligionExtension : FhirTest
     {
         /// <summary>
         /// Runs setup before each test execution.
         /// </summary>
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_extension = this.m_serviceManager.CreateInjected<ReligionExtension>();
         }
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
 
         /// <summary>
         /// The extension under test.

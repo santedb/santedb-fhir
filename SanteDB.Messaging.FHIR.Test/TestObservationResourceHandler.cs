@@ -41,18 +41,14 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Contains tests for the <see cref="ObservationResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestObservationResourceHandler : DataTest
+    public class TestObservationResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
+      
         private Observation m_observation;
 
         private Patient m_patient;
@@ -63,28 +59,14 @@ namespace SanteDB.Messaging.FHIR.Test
         /// Runs setup before each test execution.
         /// </summary>
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient",
-                    "Practitioner",
-                    "Observation"
-                }
-            };
+        
 
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (AuthenticationContext.EnterSystemContext())
             {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-
+               
                 //add practitioner to be used as performer
                 var practitioner = TestUtil.GetFhirMessage("ObservationPerformer") as Practitioner;
 

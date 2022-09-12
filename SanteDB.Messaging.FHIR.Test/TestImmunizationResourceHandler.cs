@@ -46,7 +46,7 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Contains tests for the <see cref="ImmunizationResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestImmunizationResourceHandler : DataTest
+    public class TestImmunizationResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
@@ -58,41 +58,6 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private IRepositoryService<Core.Model.Acts.SubstanceAdministration> m_substanceAdministrationRepositoryService;
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestOrganizationResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Immunization",
-                    "Patient",
-                    "Encounter",
-                    "Practitioner"
-                },
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(ImmunizationResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// Tests the create functionality in <see cref="ImmunizationResourceHandler" /> class.

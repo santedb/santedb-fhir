@@ -47,7 +47,7 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Test complex relationships
     /// </summary
     [ExcludeFromCodeCoverage]
-    public class TestRelatedPersonResourceHandler : DataTest
+    public class TestRelatedPersonResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
@@ -60,47 +60,12 @@ namespace SanteDB.Messaging.FHIR.Test
 
         private IRepositoryService<EntityRelationship> m_relationshipRepository;
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_patientRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Patient>>();
             this.m_personRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Person>>();
             this.m_relationshipRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient",
-                    "RelatedPerson",
-                    "Bundle"
-                },
-                OperationHandlers = new List<TypeReferenceConfiguration>(),
-                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
-                ProfileHandlers = new List<TypeReferenceConfiguration>(),
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(PatientResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(RelatedPersonResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
         }
 
         /// <summary>

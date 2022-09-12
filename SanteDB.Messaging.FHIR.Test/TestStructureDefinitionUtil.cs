@@ -33,17 +33,9 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestStructureDefinitionUtil
+    public class TestStructureDefinitionUtil : FhirTest
     {
-        /// <summary>
-        /// Runs setup before each test execution.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            TestApplicationContext.TestAssembly = typeof(TestFhirResourceHandlerUtil).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-        }
+      
 
         /// <summary>
         /// Tests the retrieval generation of a <see cref="StructureDefinition"/> instance.
