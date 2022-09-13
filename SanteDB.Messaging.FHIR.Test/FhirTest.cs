@@ -30,9 +30,14 @@ using SanteDB.Messaging.FHIR.Extensions.Patient;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
+    /// <summary>
+    /// Base class for testing FHIR resources
+    /// </summary>
+    [ExcludeFromCodeCoverage]
     public class FhirTest : DataTest
     {
 
