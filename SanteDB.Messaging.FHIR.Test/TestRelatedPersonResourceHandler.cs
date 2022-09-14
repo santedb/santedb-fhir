@@ -236,7 +236,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(sdbRelationship.TargetEntityKey, equivRel.TargetEntityKey);
 
                 // Ensure that there is a separate PERSON and separate PATIENT with the same identity 
-                var relatedPersons = this.m_personRepository.Find(o => o.Identifiers.Any(id => id.Authority.Url == "http://santedb.org/fhir/test" && id.Value == "FHR-4321"));
+                var relatedPersons = this.m_personRepository.Find(o => o.Identifiers.Any(id => id.IdentityDomain.Url == "http://santedb.org/fhir/test" && id.Value == "FHR-4321"));
                 Assert.AreEqual(2, relatedPersons.Count());
                 Assert.AreEqual(1, relatedPersons.OfType<Patient>().Count());
 

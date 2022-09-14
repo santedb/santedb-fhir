@@ -1278,13 +1278,13 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 // Already exists in SDB bundle?
                 var identifier = DataTypeConverter.ToEntityIdentifier(resourceRef.Identifier);
-                retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.AuthorityKey && i.Value == identifier.Value)).FirstOrDefault();
+                retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.IdentityDomainKey && i.Value == identifier.Value)).FirstOrDefault();
                 if (retVal == null) // Not been processed in bundle
                 {
-                    retVal = repo.Find(o => o.Identifiers.Any(a => a.Authority.Key == identifier.AuthorityKey && a.Value == identifier.Value)).SingleOrDefault();
+                    retVal = repo.Find(o => o.Identifiers.Any(a => a.Authority.Key == identifier.IdentityDomainKey && a.Value == identifier.Value)).SingleOrDefault();
                     if (retVal == null)
                     {
-                        throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.Authority.Url ?? identifier.Authority.Oid}");
+                        throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.IdentityDomain.Url ?? identifier.IdentityDomain.Oid}");
                     }
                 }
             }
@@ -1597,7 +1597,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             var imetaService = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
-            var authority = imetaService.Get(identifier.AuthorityKey.Value);
+            var authority = imetaService.Get(identifier.IdentityDomainKey.Value);
             var retVal = new Identifier
             {
                 System = authority?.Url ?? $"urn:oid:{authority?.Oid}",

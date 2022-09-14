@@ -282,10 +282,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
-                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
                     {
-                        person = this.m_patientRepository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault() ??
-                            this.m_personRepository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                        person = this.m_patientRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault() ??
+                            this.m_personRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (person != null)
                     {

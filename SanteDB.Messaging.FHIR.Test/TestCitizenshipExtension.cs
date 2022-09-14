@@ -116,7 +116,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsInstanceOf<Place>(patient.Relationships.Single().TargetEntity);
                 Assert.AreEqual("NF", patient.LoadProperty(o=>o.Relationships).Single().TargetEntity.LoadProperty(o=>o.Identifiers).Single().Value);
                 Assert.IsTrue(patient.Relationships.Single().RelationshipTypeKey == EntityRelationshipTypeKeys.Citizen);
-                Assert.IsTrue(patient.Relationships.Single().TargetEntity.Identifiers.Any(c => c.AuthorityKey == IdentityDomainKeys.Iso3166CountryCode));
+                Assert.IsTrue(patient.Relationships.Single().TargetEntity.Identifiers.Any(c => c.IdentityDomainKey == IdentityDomainKeys.Iso3166CountryCode));
             }
         }
 
