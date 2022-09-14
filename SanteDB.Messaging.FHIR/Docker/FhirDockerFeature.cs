@@ -286,7 +286,7 @@ namespace SanteDB.Messaging.FHIR.Docker
             if(!serviceConfiguration.Any(s=>s.Type == typeof(FhirMessageHandler)))
             {
                 serviceConfiguration.Add(new TypeReferenceConfiguration(typeof(FhirMessageHandler)));
-                serviceConfiguration.Add(new TypeReferenceConfiguration(typeof(FhirDataInitializationService)));
+                serviceConfiguration.Add(new TypeReferenceConfiguration(typeof(FhirDatasetProvider)));
             }
 
         }

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0"?>
-<dataset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="Import FHIR Code System service-type" xmlns="http://santedb.org/data">
+<dataset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="FHIR service-type" xmlns="http://santedb.org/data">
   <update skipIfError="false" insertIfNotExists="true">
     <CodeSystem xmlns="http://santedb.org/model">
       <id>8ab0391d-e939-45fa-9cc6-b7f58c95b631</id>
