@@ -57,6 +57,12 @@ namespace SanteDB.Messaging.FHIR
     [ApiServiceProvider("HL7 FHIR R4 API Endpoint", typeof(FhirServiceBehavior), configurationType: typeof(FhirServiceConfigurationSection))]
     public class FhirMessageHandler : IDaemonService, IApiEndpointProvider
     {
+
+        /// <summary>
+        /// Configuration name as it appear in the rest configuration section
+        /// </summary>
+        public const string ConfigurationName = "FHIR";
+
         /// <summary>
         /// Gets the service name
         /// </summary>
@@ -124,7 +130,7 @@ namespace SanteDB.Messaging.FHIR
                 {
                     using (AuthenticationContext.EnterSystemContext())
                     {
-                        this.m_webHost = ApplicationServiceContext.Current.GetService<IRestServiceFactory>().CreateService(typeof(FhirServiceBehavior));
+                        this.m_webHost = ApplicationServiceContext.Current.GetService<IRestServiceFactory>().CreateService(ConfigurationName);
                         this.m_webHost.AddServiceBehavior(new FhirErrorEndpointBehavior());
                         foreach (var endpoint in this.m_webHost.Endpoints)
                         {
