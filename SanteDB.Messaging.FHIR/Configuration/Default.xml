@@ -27,6 +27,7 @@
     <behaviors>
       <add type="SanteDB.Rest.Common.Behavior.MessageLoggingEndpointBehavior, SanteDB.Rest.Common"/>
       <add type="SanteDB.Rest.Common.Behavior.MessageCompressionEndpointBehavior, SanteDB.Rest.Common"/>
+      <add type="SanteDB.Rest.Common.Behavior.AcceptLanguageEndpointBehavior, SanteDB.Rest.Common"/>
       <add type="SanteDB.Rest.Common.Behavior.CorsEndpointBehavior, SanteDB.Rest.Common"/>
     </behaviors>
   </endpoint>

@@ -26,6 +26,7 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Rest.Behavior;
 using SanteDB.Messaging.FHIR.Util;
+using SanteDB.Rest.Common.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -177,7 +178,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                         Resource = outcome
                     });
 
-                    throw new FhirException((System.Net.HttpStatusCode)FhirErrorEndpointBehavior.ClassifyErrorCode(e), retVal, m_localizationService.GetString("error.type.FhirException"), e);
+                    throw new FhirException(e.GetHttpStatusCode(), retVal, m_localizationService.GetString("error.type.FhirException"), e);
                 }
                 finally
                 {

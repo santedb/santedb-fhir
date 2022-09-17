@@ -51,7 +51,7 @@ namespace SanteDB.Messaging.FHIR.Test
         [SetUp]
         public void DoSetup()
         {
-            TestApplicationContext.Current.AddBusinessRule<Core.Model.Roles.Patient>(typeof(SamplePatientBusinessRulesService));
+            ApplicationServiceContext.Current.AddBusinessRule<Core.Model.Roles.Patient>(typeof(SamplePatientBusinessRulesService));
         }
 
         /// <summary>

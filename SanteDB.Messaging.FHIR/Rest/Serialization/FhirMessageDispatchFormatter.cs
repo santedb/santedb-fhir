@@ -205,7 +205,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 }
                 else if (result == null)
                 {
-                    responseMessage.StatusCode = 204; // no content
+                    responseMessage.StatusCode = HttpStatusCode.NoContent; // no content
                 }
                 else
                 {
@@ -213,7 +213,6 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 }
 
                 RestOperationContext.Current.OutgoingResponse.ContentType = contentType;
-                RestOperationContext.Current.OutgoingResponse.AppendHeader("X-PoweredBy", string.Format("{0} v{1} ({2})", Assembly.GetEntryAssembly().GetName().Name, Assembly.GetEntryAssembly().GetName().Version, Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion));
                 RestOperationContext.Current.OutgoingResponse.AppendHeader("X-GeneratedOn", DateTime.Now.ToString("o"));
             }
             catch (Exception e)
