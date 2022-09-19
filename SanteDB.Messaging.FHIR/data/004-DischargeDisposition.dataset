@@ -22,7 +22,7 @@
     </ReferenceTerm>
   </update>
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>499f18c5-56c4-496e-9e23-e5cf862cfab8</source>
       <term>d5bd2863-b92f-4272-9f5d-24258c08d33e</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
@@ -52,7 +52,7 @@
   </update>
 
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>1a117ead-3882-4692-9ecc-e660adbc6d8c</source>
       <term>eca74bab-6bba-4196-821c-e1940b8c4711</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
@@ -60,7 +60,7 @@
   </update>
   
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>01f28777-fc6c-40bd-a50b-e0c98d15892d</source>
       <term>eca74bab-6bba-4196-821c-e1940b8c4711</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
@@ -92,7 +92,7 @@
 
 
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>fef28777-fc6c-40bd-a50b-e0c98d15892d</source>
       <term>536bd5eb-f3cc-4d9f-be9f-a151074e8e5e</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
@@ -112,7 +112,7 @@
   </update>
 
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>ee99c69d-bfc4-4363-abec-28d8cbfe9976</source>
       <term>3cfe6ce2-fa70-4699-a1f4-2f56774a1bf2</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
@@ -132,7 +132,7 @@
   </update>
   
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>6df3720b-857f-4ba2-826f-b7f1d3c3adbb</source>
       <term>57b37ffd-ba73-4274-b032-39f405018bde</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
@@ -153,7 +153,7 @@
 
 
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>7347937e-8d0e-43d7-92c0-b0a410173079</source>
       <term>be619cf6-e3c8-4063-bd24-745187ba4fb9</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
@@ -174,7 +174,7 @@
 
 
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>fba28777-fc6c-40bd-a50b-e0c98d15892d</source>
       <term>14694cf5-0e56-45bd-838c-f76b20846b98</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
@@ -208,7 +208,7 @@
 
 
   <update skipIfError="false" insertIfNotExists="true">
-    <ConceptReferenceTerm>
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>6052712A-340E-4480-AD6B-409BA320DB4F</source>
       <term>047e94eb-967b-47be-8ba8-0f8581de2ca8</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
