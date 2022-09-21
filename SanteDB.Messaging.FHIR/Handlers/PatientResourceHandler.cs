@@ -19,6 +19,7 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
@@ -39,9 +40,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class PatientResourceHandler : RepositoryResourceHandlerBase<Patient, Core.Model.Roles.Patient>
     {
-        // IDs of family members
-        private readonly Guid MDM_MASTER_LINK = Guid.Parse("97730a52-7e30-4dcd-94cd-fd532d111578");
-
         // ER repository
         private IRepositoryService<EntityRelationship> m_erRepository;
         private readonly IAdhocCacheService m_adhocCacheService;
@@ -236,13 +234,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso));
-                else if (rel.RelationshipTypeKey == MDM_MASTER_LINK) // HACK: MDM Master Record
-                {
-                    if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
-                        retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso));
-                    else // Is a local
-                        retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
-                }
+
                 else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
                 else if (partOfBundle != null) // This is part of a bundle and we need to include it
@@ -260,8 +252,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
+            // MDM links
+            model.Relationships.GetManagedReferenceLinks().ToList().ForEach(rel =>
+            {
+                if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso));
+                else // Is a local
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
+            });
+            
             // Reverse relationships of family member?
-            var uuids = model.Relationships.Where(r => r.RelationshipTypeKey == MDM_MASTER_LINK).Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
+            var uuids = model.Relationships.GetManagedReferenceLinks().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
             var familyMemberConcepts = this.GetFamilyMemberUuids();
             var reverseRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
 
@@ -519,12 +520,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             {
                                 patient.Key = referee.Key;
                             }
-                            else if (referee.LoadCollection(o => o.Relationships).Any(r => r.RelationshipTypeKey == MDM_MASTER_LINK)
+                            else if (referee.LoadCollection(o => o.Relationships).GetManagedReferenceLinks().Any()
                                 && referee.GetTag("$mdm.type") == "M") // HACK: This is a master and someone is attempting to point another record at it
                             {
                                 patient.Relationships.Add(new EntityRelationship()
                                 {
-                                    RelationshipTypeKey = MDM_MASTER_LINK,
+                                    RelationshipTypeKey = referee.LoadCollection(o => o.Relationships).GetManagedReferenceLinks().First().RelationshipTypeKey,
+                                    RelationshipRoleKey = referee.LoadCollection(o => o.Relationships).GetManagedReferenceLinks().First().RelationshipRoleKey,
                                     SourceEntityKey = referee.Key,
                                     TargetEntityKey = patient.Key
                                 });
@@ -539,7 +541,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             var referee = DataTypeConverter.ResolveEntity<Entity>(lnk.Other, resource);
                             if (referee.GetTag("$mdm.type") == "M") // HACK: MDM User is attempting to point this at another Master (note: THE MDM LAYER WON'T LIKE THIS)
-                                patient.Relationships.Add(new EntityRelationship(MDM_MASTER_LINK, referee));
+                                patient.AddManagedReferenceLink(referee);
                             else
                             {
                                 this.m_tracer.TraceError($"Setting refer relationships to source of truth is not supported");
