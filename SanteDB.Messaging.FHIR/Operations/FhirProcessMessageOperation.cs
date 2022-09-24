@@ -26,10 +26,10 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Rest.Behavior;
 using SanteDB.Messaging.FHIR.Util;
-using SanteDB.Rest.Common.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using SanteDB.Rest.Common;
 
 namespace SanteDB.Messaging.FHIR.Operations
 {

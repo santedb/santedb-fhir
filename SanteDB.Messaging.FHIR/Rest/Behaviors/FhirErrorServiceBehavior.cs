@@ -35,7 +35,6 @@ using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Rest.Serialization;
 using SanteDB.Messaging.FHIR.Util;
-using SanteDB.Rest.Common.Util;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -49,6 +48,7 @@ using System.Linq;
 using System.Net;
 using System.Security;
 using static Hl7.Fhir.Model.OperationOutcome;
+using SanteDB.Rest.Common;
 
 namespace SanteDB.Messaging.FHIR.Rest.Behavior
 {
