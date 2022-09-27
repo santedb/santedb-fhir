@@ -172,7 +172,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 this.m_traceSource.TraceError($"Argument {nameof(target)} null or empty");
                 throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
-            else if(target is TFhirResource fhirResource)
+            else if (target is TFhirResource fhirResource)
             {
                 target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Create, this.ResourceType, target);
 
@@ -191,7 +191,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var retVal = this.MapToFhir(result);
                 return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, this.ResourceType, retVal);
             }
-            else 
+            else
                 throw new ArgumentException(nameof(target), String.Format(ErrorMessages.ARGUMENT_INVALID_TYPE, typeof(TFhirResource), target.GetType()));
 
         }
@@ -288,30 +288,31 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<TModel>();
 
             var auth = AuthenticationContext.Current;
-           
-            var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
+
+            using (DataPersistenceControlContext.Create(LoadMode.SyncLoad))
             {
-                Results = results.Select(o =>
+                var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
                 {
-                    using (AuthenticationContext.EnterContext(auth.Principal))
+                    Results = results.ToArray().AsParallel().Select(o =>
                     {
-                        return new Bundle.EntryComponent()
+                        using (AuthenticationContext.EnterContext(auth.Principal))
                         {
-                            Resource = this.MapToFhir(o),
-                            Search = new Bundle.SearchComponent()
+                            return new Bundle.EntryComponent()
                             {
-                                Mode = Bundle.SearchEntryMode.Match
-                            }
-                        };
-                    }
-                }).ToList(),
-                Query = query,
-                TotalResults = totalResults
-            };
-
-            this.ProcessIncludes(hdsiResults, parameters, retVal);
-
-            return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
+                                Resource = this.MapToFhir(o),
+                                Search = new Bundle.SearchComponent()
+                                {
+                                    Mode = Bundle.SearchEntryMode.Match
+                                }
+                            };
+                        }
+                    }).ToList(),
+                    Query = query,
+                    TotalResults = totalResults
+                };
+                this.ProcessIncludes(hdsiResults, parameters, retVal);
+                return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
+            }
         }
 
         /// <summary>
@@ -374,7 +375,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 this.m_traceSource.TraceError($"{this.ResourceType}/{id} not found");
                 throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
             }
-            else if(result is BaseEntityData bed && bed.ObsoletionTime.HasValue &&
+            else if (result is BaseEntityData bed && bed.ObsoletionTime.HasValue &&
                 versionGuidId == Guid.Empty) // The resource is logically deleted FHIR requires 410 gone
             {
                 this.m_traceSource.TraceWarning($"{this.ResourceType}/{id} was deleted");

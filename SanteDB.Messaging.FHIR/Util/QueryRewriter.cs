@@ -69,7 +69,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 new SearchParamComponent() { Name = "_stateid", Type = SearchParamType.Token },
                 new SearchParamComponent() { Name = "_id", Type = SearchParamType.Token },
                 new SearchParamComponent() { Name = "_pretty", Type = SearchParamType.Token },
-                new SearchParamComponent() { Name = "_summary", Type = SearchParamType.Token }
+                new SearchParamComponent() { Name = "_summary", Type = SearchParamType.Token },
+                new SearchParamComponent() { Name = "_total", Type = SearchParamType.Token }
             };
 
         /// <summary>
@@ -267,7 +268,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // Count and offset parameters
             int count = 0, offset = 0, page = 0;
-            if (!Int32.TryParse(fhirQuery["_count"] ?? "100" , out count))
+            if (!Int32.TryParse(fhirQuery["_count"] ?? "25" , out count))
                 throw new ArgumentException("_count");
             if (!Int32.TryParse(fhirQuery["_offset"] ?? "0", out offset))
                 throw new ArgumentException("_offset");
