@@ -267,9 +267,9 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // Count and offset parameters
             int count = 0, offset = 0, page = 0;
-            if (!Int32.TryParse(fhirQuery["_count"] , out count))
+            if (!Int32.TryParse(fhirQuery["_count"] ?? "100" , out count))
                 throw new ArgumentException("_count");
-            if (!Int32.TryParse(fhirQuery["_offset"] , out offset))
+            if (!Int32.TryParse(fhirQuery["_offset"] ?? "0", out offset))
                 throw new ArgumentException("_offset");
             if (fhirQuery["_page"] != null && Int32.TryParse(fhirQuery["_page"], out page))
                 offset = page * count;

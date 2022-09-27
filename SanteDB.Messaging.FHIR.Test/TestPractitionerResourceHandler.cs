@@ -104,7 +104,6 @@ namespace SanteDB.Messaging.FHIR.Test
             //and cause issues with following communication asserts
             Assert.IsTrue(actual.Communication.Any(c => c.Coding.Any(x => x.Code == "en-US")));
             Assert.IsTrue(actual.Communication.Any(c => c.Coding.Any(x => x.Code == "fr-CA")));
-            Assert.IsTrue(actual.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/detectedIssue"));
             Assert.IsTrue(actual.Photo.Any());
             Assert.IsTrue(actual.BirthDate == new DateTime(1980, 12, 1).ToString("yyyy-MM-dd"));
             Assert.IsTrue(actual.Telecom.First().Value == "905 555 1234");

@@ -101,6 +101,7 @@
            autoInsertChildren="true"
            prepareStatements="true">
 
+    <validation unique="off" scope="off" format="off" checkDigit="off" authority="off"/>
   </section>
   <section xsi:type="ApplicationServiceContextConfigurationSection" allowUnsignedAssemblies="true" threadPoolSize="4">
     <serviceProviders>
