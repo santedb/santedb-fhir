@@ -18,28 +18,22 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using SanteDB.Core.Services;
 using RestSrvr;
 using SanteDB.Core;
+using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Interop;
-
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Rest;
 using SanteDB.Messaging.FHIR.Rest.Behavior;
-using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using SanteDB.Core.Diagnostics;
-using System.Diagnostics.Tracing;
-using SanteDB.Core.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
-using SanteDB.Core.Security;
+using System;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.Tracing;
+using System.Linq;
 
 namespace SanteDB.Messaging.FHIR
 {
@@ -49,7 +43,7 @@ namespace SanteDB.Messaging.FHIR
     /// <remarks>
     /// <para>The FHIR based message handler is responsible for starting the <see cref="IFhirServiceContract"/> REST service and 
     /// enables SanteDB's <see href="https://help.santesuite.org/developers/service-apis/hl7-fhir">FHIR REST</see> services. Consult the
-    /// <see cref="https://help.santesuite.org/developers/service-apis/hl7-fhir/enabling-fhir-interfaces">Enabling FHIR Interfaces</see> documentation
+    /// <see href="https://help.santesuite.org/developers/service-apis/hl7-fhir/enabling-fhir-interfaces">Enabling FHIR Interfaces</see> documentation
     /// for more information on enabling these services in SanteDB.</para>
     /// </remarks>
     [ExcludeFromCodeCoverage]

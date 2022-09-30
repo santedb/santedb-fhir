@@ -20,7 +20,6 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -78,7 +77,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent
-                {Code = o});
+            { Code = o });
         }
 
         /// <summary>
@@ -149,7 +148,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // body sites?
             var sites = actRelationshipService.Query(o => o.SourceEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.FindingSite, AuthenticationContext.Current.Principal);
 
-            retVal.BodySite = sites.ToArray().Select(o => DataTypeConverter.ToFhirCodeableConcept((o.LoadProperty(t=>t.TargetAct) as CodedObservation).ValueKey)).ToList();
+            retVal.BodySite = sites.ToArray().Select(o => DataTypeConverter.ToFhirCodeableConcept((o.LoadProperty(t => t.TargetAct) as CodedObservation).ValueKey)).ToList();
 
             // Subject
             var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
@@ -199,10 +198,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Participations = new List<ActParticipation>(),
 
             };
-            
+
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
 
-            switch(resource.ClinicalStatus.TypeName)
+            switch (resource.ClinicalStatus.TypeName)
             {
                 case "active":
                     retVal.StatusConceptKey = StatusKeys.Active;
@@ -214,15 +213,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.StatusConceptKey = StatusKeys.Inactive;
                     break;
             }
-            
+
             if (resource.VerificationStatus.TypeName == "entered-in-error")
+            {
                 retVal.StatusConceptKey = StatusKeys.Nullified;
+            }
 
             // Code
             retVal.Value = DataTypeConverter.ToConcept(resource.Code);
 
             // Severity
-            if(resource.Severity != null)
+            if (resource.Severity != null)
             {
                 var severityTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Severity.Coding.FirstOrDefault(), "http://hl7.org/fhir/ValueSet/condition-severity"), TypeConceptKey = ObservationTypeKeys.Severity };
                 retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, severityTarget));
@@ -260,7 +261,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             retVal.Value = DataTypeConverter.ToConcept(resource.Code);
-          
+
             return retVal;
         }
 

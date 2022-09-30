@@ -21,20 +21,14 @@
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 using Newtonsoft.Json;
-using SanteDB.Core;
 using SanteDB.Core.Data.Initialization;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Security;
-using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text;
 using System.Xml;
 
 namespace SanteDB.Messaging.FHIR
@@ -57,7 +51,7 @@ namespace SanteDB.Messaging.FHIR
         public IEnumerable<Dataset> GetDatasets()
         {
             var dataDirectory = Path.Combine(Path.GetDirectoryName(typeof(FhirDatasetProvider).Assembly.Location), "data", "fhir");
-            if(Directory.Exists(dataDirectory))
+            if (Directory.Exists(dataDirectory))
             {
                 var fhirXmlParser = new FhirXmlParser();
                 var fhirJsonParser = new FhirJsonParser();
@@ -111,7 +105,8 @@ namespace SanteDB.Messaging.FHIR
                             }
                         };
                     }
-                    else { 
+                    else
+                    {
                         throw new InvalidOperationException($"This instance of SanteDB does not support {rt}");
                     }
                 }

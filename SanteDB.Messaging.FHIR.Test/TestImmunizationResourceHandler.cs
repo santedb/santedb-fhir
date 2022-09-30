@@ -18,27 +18,20 @@
  * User: fyfej
  * Date: 2022-5-30
  */
+using Hl7.Fhir.Model;
+using NUnit.Framework;
+using SanteDB.Core;
+using SanteDB.Core.Model.Acts;
+using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
+using SanteDB.Messaging.FHIR.Handlers;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
-using FirebirdSql.Data.FirebirdClient;
-using Hl7.Fhir.Model;
-using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Model.Acts;
-using SanteDB.Core.Model.DataTypes;
-using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Security;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
-using SanteDB.Messaging.FHIR.Exceptions;
-using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -117,7 +110,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
                 var immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
-                
+
                 actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
                 actualPractitioner = (Practitioner)practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
                 encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
@@ -133,14 +126,14 @@ namespace SanteDB.Messaging.FHIR.Test
                 };
                 actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
                 var retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
-                
+
                 Assert.AreEqual(retrievedImmunization.Id, actualImmunization.Id);
                 Assert.AreEqual(12, retrievedImmunization.DoseQuantity.Value);
 
                 immunization.DoseQuantity.Value = 24;
                 immunization.Status = Immunization.ImmunizationStatusCodes.NotDone;
                 immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
-                actualImmunization = immunizationResourceHandler.Update(actualImmunization.Id,immunization, TransactionMode.Commit);
+                actualImmunization = immunizationResourceHandler.Update(actualImmunization.Id, immunization, TransactionMode.Commit);
                 retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
 
                 Assert.AreEqual(24, retrievedImmunization.DoseQuantity.Value);
@@ -253,7 +246,7 @@ namespace SanteDB.Messaging.FHIR.Test
                     immunizationResourceHandler.Read(retrievedImmunization.Id, null);
                     Assert.Fail("Should throw appropriate exception");
                 }
-                catch(FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone)
+                catch (FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone)
                 {
 
                 }
@@ -276,7 +269,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var randomGuidKey = Guid.NewGuid();
 
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>() );
+            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>());
 
             //check to ensure immunization instance can be mapped
             var result = immunizationResourceHandler.CanMapObject(new Immunization());

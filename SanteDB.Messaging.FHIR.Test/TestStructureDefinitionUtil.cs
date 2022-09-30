@@ -18,10 +18,8 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -35,7 +33,7 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public class TestStructureDefinitionUtil : FhirTest
     {
-      
+
 
         /// <summary>
         /// Tests the retrieval generation of a <see cref="StructureDefinition"/> instance.

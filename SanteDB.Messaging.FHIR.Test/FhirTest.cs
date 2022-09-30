@@ -26,7 +26,6 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Configuration;
-using SanteDB.Messaging.FHIR.Extensions.Patient;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System.Collections.Generic;
@@ -53,14 +52,14 @@ namespace SanteDB.Messaging.FHIR.Test
         [OneTimeSetUp]
         public void Setup()
         {
-            var p = FbCharset.Ascii;
+            FbCharset.Ascii.ToString();
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
 
             var testConfiguration = new FhirServiceConfigurationSection
             {
-                Resources = new List<string>(), 
+                Resources = new List<string>(),
                 OperationHandlers = new List<TypeReferenceConfiguration>(),
                 ExtensionHandlers = new List<TypeReferenceConfiguration>(),
                 ProfileHandlers = new List<TypeReferenceConfiguration>(),

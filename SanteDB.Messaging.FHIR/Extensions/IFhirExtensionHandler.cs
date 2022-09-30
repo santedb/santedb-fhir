@@ -18,14 +18,11 @@
  * User: fyfej
  * Date: 2022-5-30
  */
+using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Hl7.Fhir.Model;
-using SanteDB.Core.Model.Interfaces;
 
 namespace SanteDB.Messaging.FHIR.Extensions
 {

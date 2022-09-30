@@ -75,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             foreach (var itm in map.Map)
             {
-                var myMapping = this.Map.FirstOrDefault(p => p.ResourceSpecified == itm.ResourceSpecified && p.Resource == itm.Resource );
+                var myMapping = this.Map.FirstOrDefault(p => p.ResourceSpecified == itm.ResourceSpecified && p.Resource == itm.Resource);
 
                 // I have a local mapping
                 if (myMapping != null)
@@ -86,8 +86,9 @@ namespace SanteDB.Messaging.FHIR.Util
                     myMapping.Map.AddRange(itm.Map);
                 }
                 else // we just add
+                {
                     this.Map.Add(itm);
-
+                }
             }
         }
     }
@@ -116,11 +117,13 @@ namespace SanteDB.Messaging.FHIR.Util
         /// The model type
         /// </summary>
         [XmlAttribute("model")]
-        public String SourceTypeXml {
+        public String SourceTypeXml
+        {
             get => null;
-            set { 
+            set
+            {
                 var resourceType = Type.GetType(value);
-                if(resourceType == null)
+                if (resourceType == null)
                 {
                     this.ResourceSpecified = true;
                     var inst = Activator.CreateInstance(resourceType) as Resource;

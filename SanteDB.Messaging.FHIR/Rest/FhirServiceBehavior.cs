@@ -22,11 +22,11 @@ using Hl7.Fhir.Model;
 using RestSrvr;
 using RestSrvr.Attributes;
 using SanteDB.Core;
-using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Interop;
 using SanteDB.Core.Interop.Description;
+using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Security.Audit;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
@@ -71,7 +71,9 @@ namespace SanteDB.Messaging.FHIR.Rest
             XmlSchemaExporter exporter = new XmlSchemaExporter(schemaCollection);
 
             foreach (var cls in typeof(FhirServiceBehavior).Assembly.GetTypes().Where(o => o.GetCustomAttribute<XmlRootAttribute>() != null && !o.IsGenericTypeDefinition))
+            {
                 exporter.ExportTypeMapping(importer.ImportTypeMapping(cls, "http://hl7.org/fhir"));
+            }
 
             return schemaCollection[schemaId];
         }
@@ -106,7 +108,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                     }
                 }
                 else
+                {
                     return typeof(FhirServiceBehavior).Assembly.GetManifestResourceStream("SanteDB.Messaging.FHIR.index.htm");
+                }
             }
             catch (IOException)
             {
@@ -170,7 +174,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Create or update?
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
                 if (handler == null)
+                {
                     throw new FileNotFoundException(); // endpoint not found!
+                }
 
                 var result = handler.Update(id, target, TransactionMode.Commit);
 
@@ -206,7 +212,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Create or update?
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
                 if (handler == null)
+                {
                     throw new FileNotFoundException(); // endpoint not found!
+                }
 
                 var result = handler.Delete(id, TransactionMode.Commit);
 
@@ -234,7 +242,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Create or update?
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
                 if (handler == null)
+                {
                     throw new FileNotFoundException(); // endpoint not found!
+                }
 
                 var result = handler.Create(target, TransactionMode.Commit);
                 RestOperationContext.Current.OutgoingResponse.StatusCode = (int)HttpStatusCode.Created;
@@ -272,7 +282,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Create or update?
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
                 if (handler == null)
+                {
                     throw new FileNotFoundException(); // endpoint not found!
+                }
 
                 var result = handler.Update(id, target, TransactionMode.Rollback);
                 if (result == null) // Create
@@ -314,7 +326,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(DateTime.Now);
 
                 if (resourceProcessor == null) // Unsupported resource
+                {
                     throw new FileNotFoundException();
+                }
 
                 // TODO: Appropriately format response
                 // Process incoming request
@@ -432,7 +446,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 var resourceProcessor = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
 
                 if (resourceProcessor == null) // Unsupported resource
+                {
                     throw new FileNotFoundException("Specified resource type is not found");
+                }
 
                 // TODO: Appropriately format response
                 // Process incoming request
@@ -487,7 +503,9 @@ namespace SanteDB.Messaging.FHIR.Rest
                 var resourceProcessor = FhirResourceHandlerUtil.GetResourceHandler(resourceType);
 
                 if (resourceProcessor == null) // Unsupported resource
+                {
                     throw new FileNotFoundException("Specified resource type is not found");
+                }
 
                 // TODO: Appropriately format response
                 // Process incoming request
@@ -549,7 +567,9 @@ namespace SanteDB.Messaging.FHIR.Rest
         private void ThrowIfNotReady()
         {
             if (!ApplicationServiceContext.Current.IsRunning)
+            {
                 throw new DomainStateException();
+            }
         }
 
         /// <summary>
@@ -570,7 +590,9 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 // No handler?
                 if (handler == null)
+                {
                     throw new FileNotFoundException(); // endpoint not found!
+                }
 
                 var result = handler.Invoke(parameters);
                 this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.Success, result);
@@ -601,7 +623,9 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 // No handler?
                 if (handler == null)
+                {
                     throw new FileNotFoundException(); // endpoint not found!
+                }
 
                 var result = handler.Invoke(null);
                 this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.Success, result);

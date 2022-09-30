@@ -22,15 +22,9 @@ using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.BusinessRules;
-using SanteDB.Core.Configuration;
 using SanteDB.Core.Model.Query;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
-using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Operations;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -66,9 +60,9 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var validateResourceOperation = this.m_serviceManager.CreateInjected<FhirValidateResourceOperation>();
 
-               Assert.Throws<NotSupportedException>(() => validateResourceOperation.Invoke(new Parameters
-               {
-                   Parameter = new List<Parameters.ParameterComponent>
+                Assert.Throws<NotSupportedException>(() => validateResourceOperation.Invoke(new Parameters
+                {
+                    Parameter = new List<Parameters.ParameterComponent>
                    {
                        new Parameters.ParameterComponent
                        {
@@ -76,7 +70,7 @@ namespace SanteDB.Messaging.FHIR.Test
                            Resource = new DummyResource()
                        }
                    }
-               }));
+                }));
             }
         }
 
@@ -99,7 +93,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var validateResourceOperation = this.m_serviceManager.CreateInjected<FhirValidateResourceOperation>();
 
-                actual =  validateResourceOperation.Invoke(new Parameters
+                actual = validateResourceOperation.Invoke(new Parameters
                 {
                     Parameter = new List<Parameters.ParameterComponent>
                     {
@@ -115,7 +109,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(actual);
             Assert.IsInstanceOf<OperationOutcome>(actual);
 
-            var actualOperationOutcome = (OperationOutcome) actual;
+            var actualOperationOutcome = (OperationOutcome)actual;
 
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Severity == OperationOutcome.IssueSeverity.Error));
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Code == OperationOutcome.IssueType.NoStore));
@@ -247,7 +241,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Called after query
         /// </summary>
-        public IQueryResultSet AfterQuery(IQueryResultSet  results)
+        public IQueryResultSet AfterQuery(IQueryResultSet results)
         {
             throw new NotImplementedException();
         }

@@ -121,13 +121,13 @@ namespace SanteDB.Messaging.FHIR.Docker
         public void Configure(SanteDBConfiguration configuration, IDictionary<string, string> settings)
         {
             var restConfiguration = configuration.GetSection<SanteDB.Rest.Common.Configuration.RestConfigurationSection>();
-            if(restConfiguration == null)
+            if (restConfiguration == null)
             {
                 throw new ConfigurationException("Error retrieving REST configuration", configuration);
             }
 
             var fhirRestConfiguration = restConfiguration.Services.FirstOrDefault(o => o.ServiceType == typeof(IFhirServiceContract));
-            if(fhirRestConfiguration == null) // add fhir rest config
+            if (fhirRestConfiguration == null) // add fhir rest config
             {
                 fhirRestConfiguration = new RestServiceConfiguration()
                 {
@@ -147,7 +147,7 @@ namespace SanteDB.Messaging.FHIR.Docker
             }
 
             var fhirConfiguration = configuration.GetSection<FhirServiceConfigurationSection>();
-            if(fhirConfiguration == null)
+            if (fhirConfiguration == null)
             {
                 fhirConfiguration = new FhirServiceConfigurationSection()
                 {
@@ -158,9 +158,9 @@ namespace SanteDB.Messaging.FHIR.Docker
             }
 
             // Listen address
-            if(settings.TryGetValue(ListenUriSetting, out string listen))
+            if (settings.TryGetValue(ListenUriSetting, out string listen))
             {
-                if(!Uri.TryCreate(listen, UriKind.Absolute, out Uri listenUri))
+                if (!Uri.TryCreate(listen, UriKind.Absolute, out Uri listenUri))
                 {
                     throw new ArgumentOutOfRangeException($"{listen} is not a valid URL");
                 }
@@ -181,9 +181,9 @@ namespace SanteDB.Messaging.FHIR.Docker
             }
 
             // Authentication
-            if(settings.TryGetValue(AuthenticationSetting, out string auth))
+            if (settings.TryGetValue(AuthenticationSetting, out string auth))
             {
-                if(!this.authSettings.TryGetValue(auth.ToUpperInvariant(), out Type authType))
+                if (!this.authSettings.TryGetValue(auth.ToUpperInvariant(), out Type authType))
                 {
                     throw new ArgumentOutOfRangeException($"Don't understand auth option {auth} allowed values {String.Join(",", this.authSettings.Keys)}");
                 }
@@ -202,13 +202,13 @@ namespace SanteDB.Messaging.FHIR.Docker
             // Has the user set CORS?
             if (settings.TryGetValue(CorsSetting, out string cors))
             {
-                if(!Boolean.TryParse(cors, out bool enabled))
+                if (!Boolean.TryParse(cors, out bool enabled))
                 {
                     throw new ArgumentOutOfRangeException($"{cors} is not a valid boolean value");
                 }
 
                 // Cors is disabled?
-                if(!enabled)
+                if (!enabled)
                 {
                     fhirRestConfiguration.Endpoints.ForEach(ep => ep.Behaviors.RemoveAll(o => o.Type == typeof(CorsEndpointBehavior)));
                 }
@@ -223,18 +223,18 @@ namespace SanteDB.Messaging.FHIR.Docker
             }
 
             // Base URI
-            if(settings.TryGetValue(BaseUriSetting, out string baseUri))
+            if (settings.TryGetValue(BaseUriSetting, out string baseUri))
             {
                 fhirConfiguration.ResourceBaseUri = baseUri;
             }
 
             // Custom resource list?
-            if(settings.TryGetValue(ResourceSetting, out string resource))
+            if (settings.TryGetValue(ResourceSetting, out string resource))
             {
                 fhirConfiguration.Resources = new List<string>();
-                foreach(var res in resource.Split(';'))
+                foreach (var res in resource.Split(';'))
                 {
-                    if(!Enum.TryParse<Hl7.Fhir.Model.ResourceType>(res, out Hl7.Fhir.Model.ResourceType rt))
+                    if (!Enum.TryParse<Hl7.Fhir.Model.ResourceType>(res, out Hl7.Fhir.Model.ResourceType rt))
                     {
                         throw new ArgumentOutOfRangeException($"{res} is not a valid FHIR resource");
                     }
@@ -263,10 +263,10 @@ namespace SanteDB.Messaging.FHIR.Docker
                 }
             }
             // Custom settings
-            if(settings.TryGetValue(ExtensionSetting, out string extensions))
+            if (settings.TryGetValue(ExtensionSetting, out string extensions))
             {
                 fhirConfiguration.Extensions = new List<string>();
-                foreach(var res in extensions.Split(';'))
+                foreach (var res in extensions.Split(';'))
                 {
                     fhirConfiguration.Extensions.Add(res);
                 }
@@ -283,7 +283,7 @@ namespace SanteDB.Messaging.FHIR.Docker
 
             // Add services
             var serviceConfiguration = configuration.GetSection<ApplicationServiceContextConfigurationSection>().ServiceProviders;
-            if(!serviceConfiguration.Any(s=>s.Type == typeof(FhirMessageHandler)))
+            if (!serviceConfiguration.Any(s => s.Type == typeof(FhirMessageHandler)))
             {
                 serviceConfiguration.Add(new TypeReferenceConfiguration(typeof(FhirMessageHandler)));
                 serviceConfiguration.Add(new TypeReferenceConfiguration(typeof(FhirDatasetProvider)));

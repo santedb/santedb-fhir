@@ -76,7 +76,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Gets the mapper for <paramref name="resourceOrModelType"/>
+        /// Gets the mapper for <paramref name="resourceType"/>
         /// </summary>
         /// <returns>The mapper (if present)</returns>
         public static IEnumerable<IFhirResourceMapper> GetMappersFor(ResourceType resourceType)
@@ -154,7 +154,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 }
             }
-            else if(configuration.ResourceHandlers?.Any() == true)
+            else if (configuration.ResourceHandlers?.Any() == true)
             {
                 // Old configuration
                 foreach (var t in configuration.ResourceHandlers.Select(o => o.Type).Where(c => c != null))
@@ -169,7 +169,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else
             {
-                AppDomain.CurrentDomain.GetAllTypes().Where(t=>typeof(IFhirResourceHandler).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface).ToList().ForEach(o =>
+                AppDomain.CurrentDomain.GetAllTypes().Where(t => typeof(IFhirResourceHandler).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface).ToList().ForEach(o =>
                 {
                     try
                     {

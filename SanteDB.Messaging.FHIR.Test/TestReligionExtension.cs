@@ -20,16 +20,11 @@
  */
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
 using SanteDB.Core.Model.Constants;
-using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Roles;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
-using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Patient = SanteDB.Core.Model.Roles.Patient;
@@ -73,7 +68,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var constructedReligion = this.m_extension.Construct(patient).ToArray();
             Assert.AreEqual(1, constructedReligion.Length);
             Assert.IsInstanceOf<CodeableConcept>(constructedReligion.First().Value);
-            var codeableConcept = (CodeableConcept) constructedReligion.First().Value;
+            var codeableConcept = (CodeableConcept)constructedReligion.First().Value;
             Assert.AreEqual("AGN", codeableConcept.Coding.First().Code);
         }
 

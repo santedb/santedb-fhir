@@ -30,7 +30,6 @@ using SanteDB.Core.Services;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -103,7 +102,7 @@ namespace SanteDB.Messaging.FHIR.Test
                         {
                             new AssigningAuthority()
                             {
-                                AssigningApplicationKey = app.Key, 
+                                AssigningApplicationKey = app.Key,
                                 Reliability = IdentifierReliability.Authoritative
                             }
                         },

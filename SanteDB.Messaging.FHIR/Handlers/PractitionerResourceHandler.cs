@@ -19,10 +19,8 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
-using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
@@ -107,8 +105,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Birthdate
             retVal.BirthDateElement = DataTypeConverter.ToFhirDate(provider?.DateOfBirth ?? model.DateOfBirth);
 
-            var photo = (provider?.LoadProperty(o=>o.Extensions) ?? model.LoadProperty(o=>o.Extensions))?.FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+            var photo = (provider?.LoadProperty(o => o.Extensions) ?? model.LoadProperty(o => o.Extensions))?.FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
             if (photo != null)
+            {
                 retVal.Photo = new List<Attachment>() {
                     new Attachment()
                     {
@@ -116,9 +115,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         Data = photo.ExtensionValueXml
                     }
                 };
+            }
 
             // Load the koala-fication
-            
+
             retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept((provider ?? model).SpecialtyKey) } };
 
             // Language of communication

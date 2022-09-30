@@ -19,9 +19,7 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
-using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
@@ -69,7 +67,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.SearchType,
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
-            }.Select(o => new ResourceInteractionComponent {Code = o});
+            }.Select(o => new ResourceInteractionComponent { Code = o });
         }
 
         /// <summary>
@@ -91,7 +89,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Code of medication code
             retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://snomed.info/sct");
-            retVal.Identifier = model.LoadProperty(o=>o.Identifiers).Select(DataTypeConverter.ToFhirIdentifier).ToList();
+            retVal.Identifier = model.LoadProperty(o => o.Identifiers).Select(DataTypeConverter.ToFhirIdentifier).ToList();
 
             switch (model.StatusConceptKey.ToString().ToUpper())
             {
@@ -108,7 +106,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Is brand?
-            var manufacturer = model.LoadProperty(o=>o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct);
+            var manufacturer = model.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct);
 
             if (manufacturer != null)
             {
@@ -173,7 +171,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (resource.Manufacturer != null)
             {
-                manufacturedMaterial.LoadProperty(o=>o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.ManufacturedProduct, DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.Manufacturer, resource)));
+                manufacturedMaterial.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.ManufacturedProduct, DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.Manufacturer, resource)));
             }
 
             return manufacturedMaterial;

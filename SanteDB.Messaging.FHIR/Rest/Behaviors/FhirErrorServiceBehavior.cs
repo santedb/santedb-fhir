@@ -18,37 +18,18 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using Hl7.Fhir.Model;
-using Microsoft.IdentityModel.Tokens;
 using RestSrvr;
-using RestSrvr.Exceptions;
 using RestSrvr.Message;
-using SanteDB.Core;
-using SanteDB.Core.BusinessRules;
-using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Exceptions;
-using SanteDB.Core.Model.Security;
-using SanteDB.Core.Security;
-using SanteDB.Core.Services;
-using SanteDB.Messaging.FHIR.Configuration;
-using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Rest.Serialization;
 using SanteDB.Messaging.FHIR.Util;
+using SanteDB.Rest.Common;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Data.Common;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
-using System.IO;
 using System.Linq;
 using System.Net;
-using System.Security;
-using static Hl7.Fhir.Model.OperationOutcome;
-using SanteDB.Rest.Common;
 
 namespace SanteDB.Messaging.FHIR.Rest.Behavior
 {

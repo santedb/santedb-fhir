@@ -18,13 +18,13 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using System;
-using System.Collections.Generic;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
 using Person = SanteDB.Core.Model.Entities.Person;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient

@@ -21,20 +21,15 @@
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
-using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions;
 
-using SanteDB.Messaging.FHIR.Extensions;
-
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Util
@@ -73,51 +68,71 @@ namespace SanteDB.Messaging.FHIR.Util
                    .ToList();
             }
             else
+            {
                 s_behaviorModifiers = svcManager
                     .CreateInjectedOfAll<IFhirRestBehaviorModifier>()
                     .ToList();
+            }
 
             if (configuration.ExtensionHandlers?.Any() == true)
+            {
                 s_extensionHandlers = configuration.ExtensionHandlers.Select(t => svcManager.CreateInjected(t.Type))
                     .OfType<IFhirExtensionHandler>()
                     .ToList();
+            }
             else if (configuration.Extensions?.Any() == true)
+            {
                 s_extensionHandlers = svcManager.CreateInjectedOfAll<IFhirExtensionHandler>()
                     .Where(o => configuration.Extensions.Contains(o.Uri.ToString()))
                     .ToList();
+            }
             else
+            {
                 s_extensionHandlers = svcManager
                     .CreateInjectedOfAll<IFhirExtensionHandler>()
                     .ToList();
+            }
 
             if (configuration.OperationHandlers?.Any() == true)
+            {
                 s_operationHandlers = configuration.OperationHandlers.Select(t => svcManager.CreateInjected(t.Type))
                     .OfType<IFhirOperationHandler>()
                     .Union(svcManager.CreateInjectedOfAll<IFhirOperationHandler>(typeof(ExtensionUtil).Assembly))
                     .ToList();
+            }
             else if (configuration.Operations?.Any() == true)
+            {
                 s_operationHandlers = svcManager
                     .CreateInjectedOfAll<IFhirOperationHandler>()
                     .Where(o => configuration.Operations.Contains(o.Uri.ToString()) || configuration.Operations.Contains(o.Name))
                     .ToList();
+            }
             else
+            {
                 s_operationHandlers = svcManager
                     .CreateInjectedOfAll<IFhirOperationHandler>()
                     .ToList();
+            }
 
             if (configuration.ProfileHandlers?.Any() == true)
+            {
                 s_profileHandlers = configuration.ProfileHandlers.Select(t => svcManager.CreateInjected(t.Type))
                     .OfType<IFhirProfileValidationHandler>()
                     .ToList();
+            }
             else if (configuration.Profiles?.Any() == true)
+            {
                 s_profileHandlers = svcManager
                     .CreateInjectedOfAll<IFhirProfileValidationHandler>()
                     .Where(o => configuration.Profiles.Contains(o.ProfileUri.ToString()))
                     .ToList();
+            }
             else
+            {
                 s_profileHandlers = svcManager
                     .CreateInjectedOfAll<IFhirProfileValidationHandler>()
                     .ToList();
+            }
 
             s_behaviorModifiers = svcManager
                 .CreateInjectedOfAll<IFhirRestBehaviorModifier>()
@@ -125,18 +140,24 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // Message operations
             if (configuration.MessageHandlers?.Any() == true)
+            {
                 s_messageOperations = configuration.MessageHandlers.Select(t => svcManager.CreateInjected(t.Type))
                     .OfType<IFhirMessageOperation>()
                     .ToDictionary(o => o.EventUri, o => o);
+            }
             else if (configuration.Messages?.Any() == true)
+            {
                 s_messageOperations = svcManager
                     .CreateInjectedOfAll<IFhirMessageOperation>()
                     .Where(o => configuration.Messages.Contains(o.EventUri.ToString()))
                     .ToDictionary(o => o.EventUri, o => o);
+            }
             else
+            {
                 s_messageOperations = svcManager
                     .CreateInjectedOfAll<IFhirMessageOperation>()
                     .ToDictionary(o => o.EventUri, o => o);
+            }
         }
 
         /// <summary>
@@ -214,11 +235,16 @@ namespace SanteDB.Messaging.FHIR.Util
         public static IFhirOperationHandler GetOperation(string resourceType, string operationName)
         {
             if (resourceType == null)
+            {
                 return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo == null || o.AppliesTo == null) && o.Name == operationName);
+            }
             else
             {
                 if (!Enum.TryParse<ResourceType>(resourceType, out ResourceType rtEnum))
+                {
                     throw new KeyNotFoundException($"Resource {resourceType} is not valid");
+                }
+
                 return s_operationHandlers.FirstOrDefault(o => (o.AppliesTo?.Contains(rtEnum) == true) && o.Name == operationName);
             }
         }
@@ -233,7 +259,10 @@ namespace SanteDB.Messaging.FHIR.Util
         public static Resource ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction interaction, ResourceType resourceType, Resource resource)
         {
             foreach (var behavior in s_behaviorModifiers.Where(o => o.CanApply(interaction, resource)))
+            {
                 resource = behavior.BeforeSendResponse(interaction, resourceType, resource);
+            }
+
             return resource;
         }
 
@@ -247,7 +276,10 @@ namespace SanteDB.Messaging.FHIR.Util
         public static Resource ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction interaction, ResourceType resourceType, Resource resource)
         {
             foreach (var behavior in s_behaviorModifiers.Where(o => o.CanApply(interaction, resource)))
+            {
                 resource = behavior.AfterReceiveRequest(interaction, resourceType, resource);
+            }
+
             return resource;
         }
     }

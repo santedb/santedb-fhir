@@ -19,16 +19,13 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Rest;
-using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Interfaces;
+using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Rest;
 using SanteDB.Messaging.FHIR.Util;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Auditing
@@ -44,7 +41,7 @@ namespace SanteDB.Messaging.FHIR.Auditing
     /// as authenticators or proxy information.</para>
     /// </remarks>
     [ExcludeFromCodeCoverage]
-	public class FhirAuditDispatcher : IAuditDispatchService
+    public class FhirAuditDispatcher : IAuditDispatchService
     {
         // Get tracer for the audit dispatcher
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirAuditDispatcher));

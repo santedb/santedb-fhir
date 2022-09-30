@@ -19,12 +19,9 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
-using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
@@ -32,7 +29,6 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -68,7 +64,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Maps the substance administration to FHIR.
         /// </summary>
         /// <param name="model">The model.</param>
-        /// <param name="restOperationContext">The operation context in which this method is being called</param>
         /// <returns>Returns the mapped FHIR resource.</returns>
         protected override Immunization MapToFhir(SubstanceAdministration model)
         {
@@ -87,9 +82,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 case StatusKeyStrings.Completed:
                     if (model.IsNegated)
+                    {
                         retVal.Status = Immunization.ImmunizationStatusCodes.NotDone;
+                    }
                     else
+                    {
                         retVal.Status = Immunization.ImmunizationStatusCodes.Completed;
+                    }
+
                     break;
 
                 case StatusKeyStrings.Nullified:
@@ -98,8 +98,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Material
-            var matPtcpt = model.LoadProperty(o=>o.Participations).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Consumable) ??
-                model.LoadProperty(o=>o.Participations).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product);
+            var matPtcpt = model.LoadProperty(o => o.Participations).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Consumable) ??
+                model.LoadProperty(o => o.Participations).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product);
             if (matPtcpt != null)
             {
                 var matl = matPtcpt.LoadProperty<Material>(nameof(ActParticipation.PlayerEntity));
@@ -108,7 +108,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.LotNumber = (matl as ManufacturedMaterial)?.LotNumber;
             }
             else
+            {
                 retVal.ExpirationDate = null;
+            }
 
             // RCT
             var rct = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
@@ -124,7 +126,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }));
 
             // Protocol
-            foreach (var itm in model.LoadProperty(o=>o.Protocols))
+            foreach (var itm in model.LoadProperty(o => o.Protocols))
             {
                 Immunization.ProtocolAppliedComponent protocol = new Immunization.ProtocolAppliedComponent();
                 var dbProtocol = itm.LoadProperty<Protocol>(nameof(ActProtocol.Protocol));
@@ -142,7 +144,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Map an immunization FHIR resource to a substance administration.
         /// </summary>
         /// <param name="resource">The resource.</param>
-        /// <param name="restOperationContext">The operation context in which this method is being called</param>
         /// <returns>Returns the mapped model.</returns>
         protected override SubstanceAdministration MapToModel(Immunization resource)
         {

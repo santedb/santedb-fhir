@@ -19,9 +19,7 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -123,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
             relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value) && model.ObsoleteVersionSequenceId.HasValue == false;
-            relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" ) };
+            relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode") };
             relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.GenderConceptKey, "http://hl7.org/fhir/administrative-gender");
             relative.Identifier = relModel.LoadCollection(o => o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();

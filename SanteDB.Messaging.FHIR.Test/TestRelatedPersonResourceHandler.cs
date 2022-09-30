@@ -18,20 +18,13 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -52,7 +45,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
         private IRepositoryService<Patient> m_patientRepository;
 
@@ -166,7 +159,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var deletedRelatedPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Delete(sourceRelatedPerson.Id, TransactionMode.Commit);
                 Assert.NotNull(deletedRelatedPerson);
                 Assert.IsInstanceOf<RelatedPerson>(deletedRelatedPerson);
-                var actual = (RelatedPerson) deletedRelatedPerson;
+                var actual = (RelatedPerson)deletedRelatedPerson;
                 // ensure the related person is NOT active
                 Assert.IsFalse(actual.Active);
 
@@ -174,7 +167,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var readPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Read(deletedRelatedPerson.Id, deletedRelatedPerson.VersionId);
                 Assert.NotNull(readPerson);
                 Assert.IsInstanceOf<RelatedPerson>(readPerson);
-                var readRelatedPerson = (RelatedPerson) readPerson;
+                var readRelatedPerson = (RelatedPerson)readPerson;
                 Assert.AreEqual(Address.AddressUse.Old, readRelatedPerson.Address.First().Use);
                 Assert.IsFalse(readRelatedPerson.Telecom.Any());
                 // ensure the related person is NOT active

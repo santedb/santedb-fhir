@@ -21,7 +21,6 @@
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -54,7 +53,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
         }
 
-       
+
         /// <summary>
         /// Get interactions
         /// </summary>
@@ -70,7 +69,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Create,
                 TypeRestfulInteraction.Update
             }.Select(o => new ResourceInteractionComponent
-                {Code = o});
+            { Code = o });
         }
 
         /// <summary>
@@ -87,7 +86,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override Observation MapToFhir(Core.Model.Acts.Observation model)
         {
             var retVal = DataTypeConverter.CreateResource<Observation>(model);
-            retVal.Identifier = model.LoadProperty(o=>o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
+            retVal.Identifier = model.LoadProperty(o => o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
 
             switch (model.StatusConceptKey.ToString().ToUpper())
             {
@@ -105,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
 
                 case StatusKeyStrings.Completed:
-                    if (model.LoadProperty(o=>o.Relationships).Any(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.Replaces)) // was amended
+                    if (model.LoadProperty(o => o.Relationships).Any(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.Replaces)) // was amended
                     {
                         retVal.Status = ObservationStatus.Amended;
                     }
@@ -141,7 +140,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Performer
-            retVal.Performer = model.LoadProperty(o=>o.Participations).Where(o => o.ParticipationRoleKey == ActParticipationKeys.Performer)
+            retVal.Performer = model.LoadProperty(o => o.Participations).Where(o => o.ParticipationRoleKey == ActParticipationKeys.Performer)
                 .Select(o => DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity))))
                 .ToList();
 
@@ -251,7 +250,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case ObservationStatus.Unknown:
                     retVal.StatusConceptKey = StatusKeys.Obsolete;
                     break;
-                
+
             }
 
             //Effective 
@@ -275,7 +274,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             //issued
             if (resource.Issued.HasValue)
             {
-                retVal.CreationTime = (DateTimeOffset) resource.Issued;
+                retVal.CreationTime = (DateTimeOffset)resource.Issued;
             }
 
             //interpretation
@@ -291,8 +290,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 // if the subject is a UUID then add the record target key
                 // otherwise attempt to resolve the reference
-                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? 
-                    new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : 
+                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ?
+                    new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) :
                     new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
                 //else 
                 //{
@@ -391,6 +390,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-       
+
     }
 }

@@ -18,13 +18,13 @@
  * User: fyfej
  * Date: 2022-5-30
  */
+using SanteDB.Core.Configuration;
+using SanteDB.Core.Model.Attributes;
+using SanteDB.Messaging.FHIR.Rest;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Xml.Serialization;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Model.Attributes;
-using SanteDB.Messaging.FHIR.Rest;
 
 namespace SanteDB.Messaging.FHIR.Configuration
 {

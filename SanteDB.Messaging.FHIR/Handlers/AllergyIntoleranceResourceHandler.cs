@@ -19,19 +19,16 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
-using SanteDB.Core.Security;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
-using SanteDB.Core.Model.Query;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {

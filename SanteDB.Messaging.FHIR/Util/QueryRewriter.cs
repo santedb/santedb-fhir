@@ -18,12 +18,9 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
-using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Serialization;
 using SanteDB.Core.Services;
@@ -31,17 +28,15 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Xml.Serialization;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
-   
+
     /// <summary>
     /// A class which is responsible for translating a series of Query Parmaeters to a LINQ expression
     /// to be passed to the persistence layer
@@ -82,8 +77,12 @@ namespace SanteDB.Messaging.FHIR.Util
             var externMap = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FhirParameterMap.xml");
 
             if (File.Exists(externMap))
+            {
                 using (var s = File.OpenRead(externMap))
+                {
                     OpenMapping(s);
+                }
+            }
         }
 
         /// <summary>
@@ -94,7 +93,9 @@ namespace SanteDB.Messaging.FHIR.Util
             XmlSerializer xsz = XmlModelSerializerFactory.Current.CreateSerializer(typeof(QueryParameterMap));
 
             if (s_map == null)
+            {
                 s_map = xsz.Deserialize(stream) as QueryParameterMap;
+            }
             else
             {
                 // Merge
@@ -113,9 +114,13 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var resourceType = typeof(TFhirResource).GetResourceType();
             var map = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
-            
-            if (map == null) return s_defaultParameters;
+
+            if (map == null)
+            {
+                return s_defaultParameters;
+            }
             else
+            {
                 return map.Map.Select(o => new SearchParamComponent()
                 {
                     Name = o.FhirQuery,
@@ -123,9 +128,9 @@ namespace SanteDB.Messaging.FHIR.Util
                     Documentation = new Markdown(o.Description),
                     Definition = $"/Profile/SanteDB#search-{map.Resource}.{o.FhirQuery}"
                 }).Union(s_defaultParameters);
-
+            }
         }
-        
+
         /// <summary>
         /// Add search parameters
         /// </summary>
@@ -133,7 +138,7 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var resourceType = typeof(TFhirResource).GetResourceType();
             var mapConfig = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
-            if(mapConfig == null)
+            if (mapConfig == null)
             {
                 mapConfig = new QueryParameterType() { Resource = resourceType.Value, ResourceSpecified = resourceType.HasValue };
                 s_map.Map.Add(mapConfig);
@@ -141,7 +146,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // parm config
             var parmConfig = mapConfig.Map.FirstOrDefault(o => o.FhirQuery == fhirQueryParameter);
-            if(parmConfig == null)
+            if (parmConfig == null)
             {
                 parmConfig = new QueryParameterMapProperty()
                 {
@@ -173,7 +178,7 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var resourceType = typeof(TFhirResource).GetResourceType();
             var mapConfig = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
-            if(mapConfig == null)
+            if (mapConfig == null)
             {
                 mapConfig.Map.RemoveAll(o => o.FhirQuery == fhirQuery);
             }
@@ -237,9 +242,13 @@ namespace SanteDB.Messaging.FHIR.Util
                 // Get actual path
                 var vPath = path;
                 if (vPath.Contains("["))
+                {
                     vPath = vPath.Substring(0, vPath.IndexOf("["));
+                }
                 else if (vPath.Contains("@"))
+                {
                     vPath = vPath.Substring(0, vPath.IndexOf("@"));
+                }
 
                 if (path.Contains("@")) // cast? 
                 {
@@ -250,7 +259,10 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     var property = scopeType.GetQueryProperty(vPath, true);
                     if (property == null)
+                    {
                         return scopeType;
+                    }
+
                     scopeType = property.PropertyType.StripGeneric();
                 }
             }
@@ -264,24 +276,41 @@ namespace SanteDB.Messaging.FHIR.Util
         public static FhirQuery RewriteFhirQuery(Type fhirType, Type modelType, NameValueCollection fhirQuery, out NameValueCollection hdsiQuery)
         {
             // Try parse
-            if (fhirQuery == null) throw new ArgumentNullException(nameof(fhirQuery));
+            if (fhirQuery == null)
+            {
+                throw new ArgumentNullException(nameof(fhirQuery));
+            }
 
             // Count and offset parameters
             int count = 0, offset = 0, page = 0;
-            if (!Int32.TryParse(fhirQuery["_count"] ?? "25" , out count))
+            if (!Int32.TryParse(fhirQuery["_count"] ?? "25", out count))
+            {
                 throw new ArgumentException("_count");
+            }
+
             if (!Int32.TryParse(fhirQuery["_offset"] ?? "0", out offset))
+            {
                 throw new ArgumentException("_offset");
+            }
+
             if (fhirQuery["_page"] != null && Int32.TryParse(fhirQuery["_page"], out page))
+            {
                 offset = page * count;
+            }
 
             Guid queryId = Guid.Empty;
             if (fhirQuery["_stateid"] != null)
+            {
                 queryId = Guid.Parse(fhirQuery["_stateid"]);
+            }
             else if (fhirQuery["_total"] == "accurate") // to get an accurate total we have to persist query state
+            {
                 queryId = Guid.NewGuid();
+            }
             else
+            {
                 queryId = Guid.Empty;
+            }
 
             // Return new query
             FhirQuery retVal = new FhirQuery()
@@ -311,27 +340,38 @@ namespace SanteDB.Messaging.FHIR.Util
                 // Is the name extension?
                 var parmMap = map?.Map.FirstOrDefault(o => o.FhirQuery == parmComponents[0]);
                 if (parmMap == null)
+                {
                     parmMap = s_default.Map.FirstOrDefault(o => o.FhirQuery == parmComponents[0]);
+                }
+
                 if (parmMap == null && kv == "extension")
+                {
                     parmMap = new QueryParameterMapProperty()
                     {
                         FhirQuery = "extension",
                         ModelQuery = "extension",
                         FhirType = QueryParameterRewriteType.Tag
                     };
+                }
                 else if (parmMap == null)
+                {
                     continue;
+                }
 
                 // Valuse
                 foreach (var v in fhirQuery.GetValues(kv))
                 {
-                    if (String.IsNullOrEmpty(v)) continue;
+                    if (String.IsNullOrEmpty(v))
+                    {
+                        continue;
+                    }
 
                     // Operands
                     bool chop = false;
                     string opValue = String.Empty;
                     string filterValue = v;
                     if (v.Length > 2)
+                    {
                         switch (v.Substring(0, 2))
                         {
                             case "ap":
@@ -364,9 +404,11 @@ namespace SanteDB.Messaging.FHIR.Util
                             default:
                                 break;
                         }
+                    }
 
-                    if(parmComponents.Length > 1)
-                        switch(parmComponents[1])
+                    if (parmComponents.Length > 1)
+                    {
+                        switch (parmComponents[1])
                         {
                             case "fuzzy":
                             case "approx":
@@ -384,8 +426,8 @@ namespace SanteDB.Messaging.FHIR.Util
                                 filterValue = "null";
                                 chop = false;
                                 break;
-                            default: 
-                                switch(parmMap.FhirType)
+                            default:
+                                switch (parmMap.FhirType)
                                 {
                                     case QueryParameterRewriteType.String: // Default string matching is wonky in FHIR but meh we can mimic it at least
                                         opValue = "~";
@@ -394,16 +436,19 @@ namespace SanteDB.Messaging.FHIR.Util
                                 }
                                 break;
                         }
+                    }
 
                     retVal.ActualParameters.Add(kv, filterValue);
                     value.Add(opValue + filterValue.Substring(chop ? 2 : 0));
                 }
 
                 if (value.Count(o => !String.IsNullOrEmpty(o)) == 0)
+                {
                     continue;
+                }
 
                 // Apply a function
-                if(!String.IsNullOrEmpty(parmMap.Function))
+                if (!String.IsNullOrEmpty(parmMap.Function))
                 {
                     value = value.Select(o => parmMap.Function.Replace("$1", o)).ToList();
                 }
@@ -428,18 +473,21 @@ namespace SanteDB.Messaging.FHIR.Util
                                     hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
                                 }
                                 else
+                                {
                                     hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, segs[0]), segs[1]);
-
+                                }
                             }
                             else
+                            {
                                 hdsiQuery.Add(parmMap.ModelQuery + ".value", itm);
+                            }
                         }
                         break;
                     case QueryParameterRewriteType.Indicator:
                         var mq = parmMap.ModelQuery.ParseQueryString();
-                        foreach(var itm in mq.AllKeys)
+                        foreach (var itm in mq.AllKeys)
                         {
-                            Array.ForEach(mq.GetValues(itm), v=> hdsiInternal.Add(itm, v));
+                            Array.ForEach(mq.GetValues(itm), v => hdsiInternal.Add(itm, v));
                         }
                         break;
                     case QueryParameterRewriteType.Concept:
@@ -458,20 +506,29 @@ namespace SanteDB.Messaging.FHIR.Util
                                     codeSystem = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.DataTypes.CodeSystem>>().Find(o => o.Oid == codeSystemUri).FirstOrDefault();
                                 }
                                 else if (codeSystemUri.StartsWith("urn:") || codeSystemUri.StartsWith("http:"))
+                                {
                                     codeSystem = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.DataTypes.CodeSystem>>().Find(o => o.Url == codeSystemUri).FirstOrDefault();
+                                }
                                 else
+                                {
                                     codeSystem = ApplicationServiceContext.Current.GetService<IRepositoryService<Core.Model.DataTypes.CodeSystem>>().Find(o => o.Name == codeSystemUri).FirstOrDefault();
-
+                                }
 
                                 s_tracer.TraceInfo("Have translated FHIR domain {0} to {1}", codeSystemUri, codeSystem?.Name);
 
                                 if (codeSystem != null)
+                                {
                                     hdsiQuery.Add(String.Format("{0}.referenceTerm[{1}].term.mnemonic", parmMap.ModelQuery, codeSystem.Name), segs[1]);
+                                }
                                 else
+                                {
                                     hdsiQuery.Add(String.Format("{0}.mnemonic", parmMap.ModelQuery), segs[1]);
+                                }
                             }
                             else
+                            {
                                 hdsiQuery.Add(parmMap.ModelQuery + ".referenceTerm.term.mnemonic", itm);
+                            }
                         }
                         break;
                     case QueryParameterRewriteType.Reference:
@@ -483,7 +540,9 @@ namespace SanteDB.Messaging.FHIR.Util
                                 hdsiQuery.Add(parmMap.ModelQuery, segs[1]);
                             }
                             else
+                            {
                                 hdsiQuery.Add(parmMap.ModelQuery, itm);
+                            }
                         }
                         break;
                     case QueryParameterRewriteType.Tag:
@@ -495,12 +554,14 @@ namespace SanteDB.Messaging.FHIR.Util
                                 hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, segs[0]), segs[1]);
                             }
                             else
+                            {
                                 hdsiQuery.Add(parmMap.ModelQuery, itm);
+                            }
                         }
                         break;
 
                     default:
-                        value.ForEach(o=>hdsiInternal.Add(parmMap.ModelQuery, o));
+                        value.ForEach(o => hdsiInternal.Add(parmMap.ModelQuery, o));
                         break;
                 }
             }
