@@ -20,25 +20,17 @@
  */
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
-using SanteDB.Messaging.FHIR.Extensions;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Organization = SanteDB.Core.Model.Entities.Organization;
 using Patient = SanteDB.Core.Model.Roles.Patient;
-using SanteDB.Core.Model;
-using SanteDB.Messaging.FHIR.Exceptions;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -282,7 +274,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             birthPlaceExtension.Parse(extensionforTest, patient);
 
-            Assert.IsFalse(patient.LoadProperty(o=>o.Relationships).Any(c => c.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace));
+            Assert.IsFalse(patient.LoadProperty(o => o.Relationships).Any(c => c.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace));
         }
     }
 }

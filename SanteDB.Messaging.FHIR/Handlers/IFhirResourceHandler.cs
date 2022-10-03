@@ -20,8 +20,6 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Services;
-using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 
 namespace SanteDB.Messaging.FHIR.Handlers

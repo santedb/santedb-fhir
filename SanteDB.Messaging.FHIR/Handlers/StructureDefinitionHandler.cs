@@ -19,8 +19,6 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using SanteDB.Core;
-using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;

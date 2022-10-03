@@ -44,7 +44,7 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// </summary>
         public ResourceType[] AppliesTo => FhirResourceHandlerUtil.ResourceHandlers.Select(o => o.ResourceType).Distinct().ToArray();
 
-        
+
         /// <summary>
         /// Gets the URI to the definition
         /// </summary>
@@ -75,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             var retVal = new OperationOutcome();
 
             // Get the profile handler for the specified profile, if no profile then just perform a profile mode
-            if(!resource.Resource.TryDeriveResourceType(out ResourceType rt))
+            if (!resource.Resource.TryDeriveResourceType(out ResourceType rt))
             {
                 retVal.Issue.Add(new OperationOutcome.IssueComponent()
                 {
@@ -84,21 +84,26 @@ namespace SanteDB.Messaging.FHIR.Operations
                     Diagnostics = $"Resource {resource.Resource.TypeName} not supported"
                 });
             }
-            else { 
+            else
+            {
                 var hdlr = FhirResourceHandlerUtil.GetResourceHandler(rt);
                 if (hdlr == null)
+                {
                     retVal.Issue.Add(new OperationOutcome.IssueComponent()
                     {
                         Code = OperationOutcome.IssueType.NotSupported,
                         Severity = OperationOutcome.IssueSeverity.Fatal,
                         Diagnostics = $"Resource {resource.Resource.TypeName} not supported"
                     });
+                }
                 else
                 {
                     // Find all profiles and validate
                     if (profile?.Value != null)
+                    {
                         retVal.Issue = ExtensionUtil.ProfileHandlers.Where(o => (profile.Value as FhirUri).Value == o.ProfileUri.ToString()).Select(o => o.Validate(resource.Resource))
                             .SelectMany(i => i.Select(o => DataTypeConverter.ToIssue(o))).ToList();
+                    }
 
                     try
                     {

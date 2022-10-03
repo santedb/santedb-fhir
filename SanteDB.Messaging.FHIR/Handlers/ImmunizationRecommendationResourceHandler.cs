@@ -19,8 +19,6 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
-using SanteDB.Core;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
@@ -49,36 +47,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
         }
 
-        /// <summary>
-        /// Creates the specified model instance.
-        /// </summary>
-        /// <param name="modelInstance">The model instance.</param>
-        /// <param name="issues">The issues.</param>
-        /// <param name="mode">The mode.</param>
-        /// <returns>Returns the created model.</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <inheritdoc/>
+
         protected override SubstanceAdministration Create(SubstanceAdministration modelInstance, TransactionMode mode)
         {
             throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
-        /// <summary>
-        /// Deletes the specified model identifier.
-        /// </summary>
-        /// <param name="modelId">The model identifier.</param>
-        /// <param name="details">The details.</param>
-        /// <returns>Returns the deleted model.</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <inheritdoc/>
         protected override SubstanceAdministration Delete(Guid modelId)
         {
             throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
-        /// <summary>
-        /// Maps the outbound resource to FHIR.
-        /// </summary>
-        /// <param name="model">The model.</param>
-        /// <returns>Returns the mapped FHIR resource.</returns>
+        /// <inheritdoc/>
         protected override ImmunizationRecommendation MapToFhir(SubstanceAdministration model)
         {
             ImmunizationRecommendation retVal = new ImmunizationRecommendation();
@@ -89,17 +71,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget)?.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity));
             if (rct != null)
+            {
                 retVal.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(rct);
+            }
 
             var mat = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product).PlayerEntity;
 
-			// Recommend
-			string status = (model.StopTime ?? model.ActTime) < DateTimeOffset.Now ? "overdue" : "due";
-			var recommendation = new ImmunizationRecommendation.RecommendationComponent()
-			{
-				DoseNumber = new PositiveInt(model.SequenceId),
-				VaccineCode = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(mat?.TypeConceptKey) },
-				ForecastStatus = new CodeableConcept("http://hl7.org/fhir/conceptset/immunization-recommendation-status", status),
+            // Recommend
+            string status = (model.StopTime ?? model.ActTime) < DateTimeOffset.Now ? "overdue" : "due";
+            var recommendation = new ImmunizationRecommendation.RecommendationComponent()
+            {
+                DoseNumber = new PositiveInt(model.SequenceId),
+                VaccineCode = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(mat?.TypeConceptKey) },
+                ForecastStatus = new CodeableConcept("http://hl7.org/fhir/conceptset/immunization-recommendation-status", status),
                 DateCriterion = new List<ImmunizationRecommendation.DateCriterionComponent>()
                 {
                     new ImmunizationRecommendation.DateCriterionComponent()
@@ -110,38 +94,34 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             };
             if (model.StartTime.HasValue)
+            {
                 recommendation.DateCriterion.Add(new ImmunizationRecommendation.DateCriterionComponent()
                 {
                     Code = new CodeableConcept("http://hl7.org/fhir/conceptset/immunization-recommendation-date-criterion", "earliest"),
                     ValueElement = new FhirDateTime(model.StartTime.Value)
                 });
+            }
+
             if (model.StopTime.HasValue)
+            {
                 recommendation.DateCriterion.Add(new ImmunizationRecommendation.DateCriterionComponent()
                 {
                     Code = new CodeableConcept("http://hl7.org/fhir/conceptset/immunization-recommendation-date-criterion", "overdue"),
                     ValueElement = new FhirDateTime(model.StopTime.Value)
                 });
+            }
 
             retVal.Recommendation = new List<ImmunizationRecommendation.RecommendationComponent>() { recommendation };
             return retVal;
         }
 
-        /// <summary>
-        /// Maps a FHIR resource to a model instance.
-        /// </summary>
-        /// <param name="resource">The resource.</param>
-        /// <returns>Returns the mapped model.</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <inheritdoc/>
         protected override SubstanceAdministration MapToModel(ImmunizationRecommendation resource)
         {
             throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-        /// <summary>
-        /// Query for immunization recommendations.
-        /// </summary>
-        /// <param name="query">The query.</param>
-        /// <returns>Returns the list of models which match the given parameters.</returns>
+        /// <inheritdoc/>
         protected override IQueryResultSet<SubstanceAdministration> Query(Expression<Func<SubstanceAdministration, bool>> query)
         {
             // TODO: Hook this up to the forecaster
@@ -152,34 +132,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return null;
         }
 
-        /// <summary>
-        /// Reads the specified identifier.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        /// <param name="details">The details.</param>
-        /// <returns>Returns the model which matches the given id.</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <inheritdoc/>
+
         protected override SubstanceAdministration Read(Guid id, Guid versionId)
         {
             throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-        /// <summary>
-        /// Updates the specified model.
-        /// </summary>
-        /// <param name="model">The model.</param>
-        /// <param name="details">The details.</param>
-        /// <param name="mode">The mode.</param>
-        /// <returns>Returns the updated model.</returns>
-        /// <exception cref="System.NotImplementedException"></exception>
+        /// <inheritdoc/>
         protected override SubstanceAdministration Update(SubstanceAdministration model, TransactionMode mode)
         {
             throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
-        /// <summary>
-        /// Get interactions
-        /// </summary>
+        /// <inheritdoc/>
         protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
         {
             return new TypeRestfulInteraction[]
@@ -189,20 +155,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
-        /// <summary>
-        /// Get included resources
-        /// </summary>
+        /// <inheritdoc/>
         protected override IEnumerable<Resource> GetIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+            throw new NotImplementedException(ErrorMessages.NOT_SUPPORTED_IMPLEMENTATION);
         }
 
-        /// <summary>
-        /// Get reverse includes
-        /// </summary>
+        /// <inheritdoc/>
         protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+            throw new NotImplementedException(ErrorMessages.NOT_SUPPORTED_IMPLEMENTATION);
         }
     }
 }

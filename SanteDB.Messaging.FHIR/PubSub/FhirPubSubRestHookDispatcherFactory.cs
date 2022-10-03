@@ -23,7 +23,6 @@ using Hl7.Fhir.Rest;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
-using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.PubSub;
 using SanteDB.Core.Services;
@@ -33,8 +32,6 @@ using SanteDB.Messaging.FHIR.Rest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SanteDB.Messaging.FHIR.PubSub
 {
@@ -97,7 +94,9 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 });
 
                 foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
+                {
                     this.m_client.RequestHeaders.Add(kv.Key, kv.Value);
+                }
 
                 if (this.m_configuration?.Authenticator != null)
                 {

@@ -19,11 +19,6 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Extensions

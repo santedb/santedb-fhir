@@ -152,7 +152,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 
                 var mergeService = ApplicationServiceContext.Current.GetService(typeof(IRecordMergingService<>).MakeGenericType(handler.CanonicalType)) as IRecordMergingService;
 
-                var configBase = this.m_matchConfigurationService.Configurations.Where(c=>c.AppliesTo.Contains(modelInstance.GetType()) && c.Metadata.State == MatchConfigurationStatus.Active);
+                var configBase = this.m_matchConfigurationService.Configurations.Where(c => c.AppliesTo.Contains(modelInstance.GetType()) && c.Metadata.State == MatchConfigurationStatus.Active);
                 if (!configBase.Any())
                 {
                     this.m_tracer.TraceError($"No resource merge configuration for {modelInstance.GetType()} available. Use either ?_configurationName parameter to add a ResourceManagementConfigurationSection to your configuration file");
@@ -163,7 +163,9 @@ namespace SanteDB.Messaging.FHIR.Operations
 
                 // Only certain matches
                 if (onlyCertainMatches?.Value == true)
+                {
                     results = results.Where(o => o.Classification == RecordMatchClassification.Match).ToArray();
+                }
 
 
                 // Iterate through the resources and convert them to FHIR

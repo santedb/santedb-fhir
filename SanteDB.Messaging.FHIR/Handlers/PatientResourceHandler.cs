@@ -21,7 +21,6 @@
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -62,7 +61,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private Guid[] GetRelatedPersonConceptUuids()
         {
             var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.relatedPersonsUuids");
-            if(retVal == null)
+            if (retVal == null)
             {
                 retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(o => o.Key.Value).ToArray();
                 this.m_adhocCacheService?.Add("fhir.patient.relatedPersonsUuids", retVal);
@@ -82,7 +81,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 this.m_adhocCacheService?.Add("fhir.patient.familyMemberUuids", retVal);
             }
             return retVal;
-            
+
         }
 
         /// <summary>
@@ -102,6 +101,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Address = model.GetAddresses().Select(DataTypeConverter.ToFhirAddress).ToList();
 
             if (model.DateOfBirth.HasValue)
+            {
                 switch (model.DateOfBirthPrecision.GetValueOrDefault())
                 {
                     case DatePrecision.Day:
@@ -116,6 +116,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         retVal.BirthDate = model.DateOfBirth.Value.ToString("yyyy");
                         break;
                 }
+            }
 
             // Deceased precision
             if (model.DeceasedDate.HasValue)
@@ -233,10 +234,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
+                {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso));
-
+                }
                 else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
+                {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
+                }
                 else if (partOfBundle != null) // This is part of a bundle and we need to include it
                 {
                     // HACK: This piece of code is used to add any RelatedPersons to the container bundle if it is part of a bundle
@@ -256,11 +260,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
             model.Relationships.GetManagedReferenceLinks().ToList().ForEach(rel =>
             {
                 if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
+                {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso));
+                }
                 else // Is a local
+                {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
+                }
             });
-            
+
             // Reverse relationships of family member?
             var uuids = model.Relationships.GetManagedReferenceLinks().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
             var familyMemberConcepts = this.GetFamilyMemberUuids();
@@ -541,7 +549,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             var referee = DataTypeConverter.ResolveEntity<Entity>(lnk.Other, resource);
                             if (referee.GetTag("$mdm.type") == "M") // HACK: MDM User is attempting to point this at another Master (note: THE MDM LAYER WON'T LIKE THIS)
+                            {
                                 patient.AddManagedReferenceLink(referee);
+                            }
                             else
                             {
                                 this.m_tracer.TraceError($"Setting refer relationships to source of truth is not supported");

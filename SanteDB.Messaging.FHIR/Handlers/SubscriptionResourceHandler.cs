@@ -19,8 +19,8 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.PubSub;
 using SanteDB.Core.Security;
@@ -29,15 +29,9 @@ using SanteDB.Messaging.FHIR.PubSub;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-using SanteDB.Core;
-using static Hl7.Fhir.Model.CapabilityStatement;
-using SanteDB.Core.Model;
-using SanteDB.Core.i18n;
 using System.Collections.Specialized;
+using System.Linq;
+using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -125,9 +119,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete | PubSubEventType.Merge, hdsiQuery.ToHttpString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
 
             if (subscription.Status == Subscription.SubscriptionStatus.Active)
+            {
                 retVal = this.m_pubSubManager.ActivateSubscription(retVal.Key.Value, true);
+            }
 
-            return this.MapToFhir(retVal, RestOperationContext.Current);
+            return this.MapToFhir(retVal);
         }
 
         /// <summary>
@@ -149,7 +145,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 this.m_pubSubManager.RemoveChannel(retVal.ChannelKey);
             }
 
-            return this.MapToFhir(retVal, RestOperationContext.Current);
+            return this.MapToFhir(retVal);
         }
 
         /// <summary>
@@ -200,7 +196,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
         {
             if (parameters == null)
+            {
                 throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
+            }
 
             FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Subscription), typeof(PubSubSubscriptionDefinition), parameters, out var hdsiQuery);
             hdsiQuery.Add("obsoletionTime", "null");
@@ -209,19 +207,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             IQueryResultSet hdsiResults = this.m_pubSubManager.FindSubscription(predicate);
             var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<PubSubSubscriptionDefinition>();
 
-            var restOperationContext = RestOperationContext.Current;
-
             var auth = AuthenticationContext.Current.Principal;
             // Return FHIR query result
             var retVal = new FhirQueryResult(nameof(Subscription))
             {
-                Results = results.Select(o =>
+                Results = results.AsParallel().Select(o =>
                 {
                     using (AuthenticationContext.EnterContext(auth))
                     {
                         return new Bundle.EntryComponent()
                         {
-                            Resource = this.MapToFhir(o, restOperationContext),
+                            Resource = this.MapToFhir(o),
                             Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match }
                         };
                     }
@@ -238,7 +234,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Resource Read(string id, string versionId)
         {
             var retVal = this.m_pubSubManager.GetSubscriptionByName(id);
-            return this.MapToFhir(retVal, RestOperationContext.Current);
+            return this.MapToFhir(retVal);
         }
 
         /// <summary>
@@ -281,12 +277,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var settings = subscription.Channel.Header.Select(o => o.Split(':')).ToDictionary(o => o[0], o => o[1]);
             settings.Add("Content-Type", subscription.Channel.Payload);
             this.m_pubSubManager.UpdateChannel(retVal.ChannelKey, $"Channel for {subscription.Id}", new Uri(subscription.Channel.Endpoint), settings);
-            return this.MapToFhir(retVal, RestOperationContext.Current);
+            return this.MapToFhir(retVal);
         }
 
         /// <summary>
         /// Map the model pub-sub description to FHIR
-        private Subscription MapToFhir(PubSubSubscriptionDefinition model, RestOperationContext restOperationContext)
+        /// </summary>
+        private Subscription MapToFhir(PubSubSubscriptionDefinition model)
         {
             // Construct the return subscription
             var retVal = DataTypeConverter.CreateResource<Subscription>(model);
@@ -301,9 +298,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Status = model.IsActive ? Subscription.SubscriptionStatus.Active : Subscription.SubscriptionStatus.Off;
             if (model.NotBefore > DateTime.Now)
+            {
                 retVal.Status = Subscription.SubscriptionStatus.Requested;
+            }
+
             if (model.NotAfter.HasValue)
+            {
                 retVal.End = model.NotAfter.Value;
+            }
 
             var channel = this.m_pubSubManager.GetChannel(model.ChannelKey);
             // Map channel information

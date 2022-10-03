@@ -18,11 +18,9 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Handlers;
 using System;
 using System.Collections.Generic;
@@ -38,7 +36,7 @@ namespace SanteDB.Messaging.FHIR.Test
     [ExcludeFromCodeCoverage]
     public class TestFhirResourceHandlerUtil : FhirTest
     {
-       
+
         /// <summary>
         /// Tests the retrieval of a resource handler in the <see cref="FhirResourceHandlerUtil"/> class.
         /// </summary>

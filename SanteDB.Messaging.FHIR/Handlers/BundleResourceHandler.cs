@@ -20,26 +20,15 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Serialization;
-
-using System.Reflection;
-
-using SanteDB.Core.Diagnostics;
-using RestSrvr;
-using static Hl7.Fhir.Model.CapabilityStatement;
 using System.Collections.Specialized;
-using SanteDB.Core.i18n;
+using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -213,7 +202,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             foreach (var entry in sdbBundle.Item)
             {
                 var handler = FhirResourceHandlerUtil.GetMapperForInstance(entry);
-                if (handler == null) continue; // TODO: Warn
+                if (handler == null)
+                {
+                    continue; // TODO: Warn
+                }
+
                 retVal.Entry.Add(new Hl7.Fhir.Model.Bundle.EntryComponent()
                 {
                     Resource = handler.MapToFhir(entry)

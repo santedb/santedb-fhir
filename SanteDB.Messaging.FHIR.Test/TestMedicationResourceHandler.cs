@@ -20,14 +20,8 @@
  */
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -84,7 +78,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(actual);
             Assert.IsInstanceOf<Medication>(actual);
 
-            var actualMedication = (Medication) actual;
+            var actualMedication = (Medication)actual;
 
             Assert.AreEqual(medication.Id, actualMedication.Id);
             Assert.AreEqual(Medication.MedicationStatusCodes.Active, actualMedication.Status);

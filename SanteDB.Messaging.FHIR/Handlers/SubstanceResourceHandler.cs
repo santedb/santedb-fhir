@@ -20,9 +20,7 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
-using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
@@ -63,7 +61,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent
-                {Code = o});
+            { Code = o });
         }
 
         protected override IEnumerable<Resource> GetReverseIncludes(Material resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
@@ -136,7 +134,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Maps a FHIR based resource to a model based resource
         /// </summary>
         /// <param name="resource">The resource to be mapped</param>
-        /// <param name="restOperationContext">The operation context under which this method is being called</param>
         /// <returns>The mapped material</returns>
         protected override Material MapToModel(Substance resource)
         {

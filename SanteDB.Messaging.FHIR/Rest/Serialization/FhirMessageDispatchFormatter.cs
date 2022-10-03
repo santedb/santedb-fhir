@@ -35,7 +35,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Xml;
 using Formatting = Newtonsoft.Json.Formatting;
@@ -197,7 +196,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                             break;
 
                         default:
-                            throw new FhirException((HttpStatusCode) 406, OperationOutcome.IssueType.NotSupported, $"{contentType} not supported");
+                            throw new FhirException((HttpStatusCode)406, OperationOutcome.IssueType.NotSupported, $"{contentType} not supported");
                     }
 
                     ms.Seek(0, SeekOrigin.Begin);

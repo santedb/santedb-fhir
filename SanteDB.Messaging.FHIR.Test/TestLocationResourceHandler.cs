@@ -18,29 +18,17 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security;
-using System.Security.Authentication;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -56,7 +44,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-      
+
 
         /// <summary>
         /// Tests the create functionality for the <see cref="LocationResourceHandler"/> class.
@@ -181,7 +169,7 @@ namespace SanteDB.Messaging.FHIR.Test
                     locationResourceHandler.Read(deletedLocation.Id, null);
                     Assert.Fail("Should throw exception");
                 }
-                catch(FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone)
+                catch (FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone)
                 {
 
                 }

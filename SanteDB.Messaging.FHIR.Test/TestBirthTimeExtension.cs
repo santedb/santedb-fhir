@@ -18,17 +18,12 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Person = SanteDB.Core.Model.Entities.Person;

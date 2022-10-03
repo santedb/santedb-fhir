@@ -20,14 +20,10 @@
  */
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -48,7 +44,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-      
+
         private Observation m_observation;
 
         private Patient m_patient;
@@ -61,12 +57,12 @@ namespace SanteDB.Messaging.FHIR.Test
         [SetUp]
         public void DoSetup()
         {
-        
+
 
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (AuthenticationContext.EnterSystemContext())
             {
-               
+
                 //add practitioner to be used as performer
                 var practitioner = TestUtil.GetFhirMessage("ObservationPerformer") as Practitioner;
 
@@ -133,7 +129,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var qty = actual.Value as Quantity;
             Assert.AreEqual(12, qty.Value);
-            
+
             //Due to time zone not being supported by current version of test database
             //this following assert will only work if original effective time has local timezone
             //Assert.AreEqual(effectiveTime, actual.Effective);
@@ -163,7 +159,7 @@ namespace SanteDB.Messaging.FHIR.Test
                     retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
                     Assert.Fail("Should throw exception");
                 }
-                catch(FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone) { }
+                catch (FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone) { }
                 catch
                 {
                     Assert.Fail("Threw wrong exception type");
@@ -259,7 +255,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //update observation
                 retrievedObservation.Value = new Quantity(10, "mmHg");
-                
+
                 retrievedObservation.Effective = updatedEffectiveTime;
 
                 _ = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
@@ -303,7 +299,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 //update status to amended
                 retrievedObservation.Status = ObservationStatus.Amended;
                 Assert.Throws<NotSupportedException>(() => observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit));
-                
+
                 //update status to corrected
                 retrievedObservation.Status = ObservationStatus.Corrected;
                 Assert.Throws<NotSupportedException>(() => observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit));
@@ -359,7 +355,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
                 var codeValue = retrievedObservation.Value as CodeableConcept;
                 Assert.AreEqual(1, codeValue.Coding.Count);
-                Assert.AreEqual("H",  codeValue.Coding.First().Code);
+                Assert.AreEqual("H", codeValue.Coding.First().Code);
             }
         }
     }

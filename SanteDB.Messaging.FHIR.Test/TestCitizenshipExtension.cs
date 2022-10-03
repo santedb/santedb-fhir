@@ -18,21 +18,12 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using SanteDB.Core.Model;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Security;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
-using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -51,7 +42,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
 
         /// <summary>
@@ -114,7 +105,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsNotNull(patient.Relationships);
                 Assert.IsTrue(patient.Relationships.Count() == 1);
                 Assert.IsInstanceOf<Place>(patient.Relationships.Single().TargetEntity);
-                Assert.AreEqual("NF", patient.LoadProperty(o=>o.Relationships).Single().TargetEntity.LoadProperty(o=>o.Identifiers).Single().Value);
+                Assert.AreEqual("NF", patient.LoadProperty(o => o.Relationships).Single().TargetEntity.LoadProperty(o => o.Identifiers).Single().Value);
                 Assert.IsTrue(patient.Relationships.Single().RelationshipTypeKey == EntityRelationshipTypeKeys.Citizen);
                 Assert.IsTrue(patient.Relationships.Single().TargetEntity.Identifiers.Any(c => c.IdentityDomainKey == IdentityDomainKeys.Iso3166CountryCode));
             }

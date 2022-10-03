@@ -20,7 +20,6 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -84,7 +83,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent
-                {Code = o});
+            { Code = o });
         }
 
         /// <summary>
@@ -103,7 +102,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = DataTypeConverter.CreateResource<MedicationAdministration>(model);
 
             retVal.Identifier = model.LoadCollection<ActIdentifier>(nameof(Act.Identifiers)).Select(DataTypeConverter.ToFhirIdentifier).ToList();
-            retVal.StatusReason = new List<CodeableConcept> {DataTypeConverter.ToFhirCodeableConcept(model.ReasonConceptKey)};
+            retVal.StatusReason = new List<CodeableConcept> { DataTypeConverter.ToFhirCodeableConcept(model.ReasonConceptKey) };
 
             switch (model.StatusConceptKey.ToString().ToUpper())
             {
@@ -156,7 +155,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Encounter
             var erService = ApplicationServiceContext.Current.GetService<IDataPersistenceService<EntityRelationship>>();
-            int tr = 0;
             var enc = erService.Query(o => o.TargetEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.ObsoleteVersionSequenceId == null, AuthenticationContext.Current.Principal);
             if (enc != null)
             {
@@ -201,11 +199,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query for substance administrations that aren't immunizations
         /// </summary>
-        /// <param name="query">The query.</param>
-        /// <param name="offset">The offset.</param>
-        /// <param name="count">The count.</param>
-        /// <param name="totalResults">The total results.</param>
-        /// <param name="queryId">The unique query state identifier</param>
+        /// <param name="query">The query which should be executed</param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
 		protected override IQueryResultSet<SubstanceAdministration> Query(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query)
         {

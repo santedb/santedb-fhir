@@ -23,7 +23,6 @@ using RestSrvr.Attributes;
 using SanteDB.Rest.Common;
 using System;
 using System.IO;
-using System.Xml.Schema;
 
 namespace SanteDB.Messaging.FHIR.Rest
 {

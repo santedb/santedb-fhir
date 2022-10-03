@@ -37,7 +37,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Get primary code
         /// </summary>
         public static Coding GetCoding(this CodeableConcept me) => me.Coding.FirstOrDefault();
-        
+
         /// <summary>
         /// Get the resource type
         /// </summary>

@@ -18,23 +18,15 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -51,7 +43,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-      
+
         /// <summary>
         /// Tests the creation of a deceased patient in the <see cref="PatientResourceHandler"/> class.
         /// </summary>
@@ -73,7 +65,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsNotNull(actual);
             Assert.IsInstanceOf<Patient>(actual);
 
-            var createdPatient = (Patient) actual;
+            var createdPatient = (Patient)actual;
 
             Assert.IsNotNull(createdPatient.Deceased);
         }
@@ -157,7 +149,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(result);
             Assert.IsInstanceOf<Patient>(result);
 
-            var actual = (Patient) result;
+            var actual = (Patient)result;
 
             Assert.AreEqual("Webber", actual.Name.Single().Family);
             Assert.AreEqual("Jordan", actual.Name.Single().Given.Single());
@@ -268,7 +260,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsInstanceOf<Patient>(actualPatient);
             Assert.IsInstanceOf<Practitioner>(actualPractitioner);
 
-            var createdPatient = (Patient) actualPatient;
+            var createdPatient = (Patient)actualPatient;
 
             Assert.IsNotNull(createdPatient.GeneralPractitioner.First());
         }
@@ -339,7 +331,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.NotNull(result);
                 Assert.IsInstanceOf<Patient>(result);
 
-                var actual = (Patient) result;
+                var actual = (Patient)result;
 
                 result = patientResourceHandler.Delete(actual.Id, TransactionMode.Commit);
 
@@ -373,7 +365,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.NotNull(result);
                 Assert.IsInstanceOf<Patient>(result);
 
-                var actual = (Patient) result;
+                var actual = (Patient)result;
 
                 Assert.Throws<KeyNotFoundException>(() => patientResourceHandler.Delete(Guid.NewGuid().ToString(), TransactionMode.Commit));
             }
@@ -408,7 +400,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.NotNull(queryResult);
                 Assert.IsInstanceOf<Bundle>(queryResult);
 
-                var queriedPatient = (Patient) queryResult.Entry.Single().Resource;
+                var queriedPatient = (Patient)queryResult.Entry.Single().Resource;
 
                 Assert.NotNull(queriedPatient);
                 Assert.IsInstanceOf<Patient>(queriedPatient);
@@ -572,7 +564,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(result);
             Assert.IsInstanceOf<Patient>(result);
 
-            var actual = (Patient) result;
+            var actual = (Patient)result;
 
             Assert.AreEqual("Jessica", actual.Name.Single().Given.Single());
             Assert.AreEqual(AdministrativeGender.Female, actual.Gender);
@@ -596,7 +588,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(result);
             Assert.IsInstanceOf<Patient>(result);
 
-            actual = (Patient) result;
+            actual = (Patient)result;
 
             Assert.AreEqual(AdministrativeGender.Male, actual.Gender);
             Assert.IsFalse(actual.Active);
@@ -628,7 +620,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(result);
             Assert.IsInstanceOf<Patient>(result);
 
-            var actual = (Patient) result;
+            var actual = (Patient)result;
 
             Assert.AreEqual("Jessica", actual.Name.Single().Given.Single());
             Assert.AreEqual(AdministrativeGender.Female, actual.Gender);
@@ -654,10 +646,10 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestUpdatePatientContactRole()
         {
             var patient = TestUtil.GetFhirMessage("UpdatePatient") as Patient;
-            
+
             //create a contact person for test
             var personContacts = new List<Patient.ContactComponent>()
-            { 
+            {
                 new Patient.ContactComponent()
                 {
                     Name = new HumanName()
@@ -681,7 +673,7 @@ namespace SanteDB.Messaging.FHIR.Test
                     },
                     Relationship = new List<CodeableConcept>() { new CodeableConcept("http://terminology.hl7.org/CodeSystem/v2-0131", "N") },
                 }
-            }; 
+            };
 
             patient.Contact = personContacts;
 
@@ -707,16 +699,16 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual("Person", contact.Name.Family);
                 Assert.AreEqual("123 Test Street", contact.Address.Line.First());
                 Assert.AreEqual("222 222 2222", contact.Telecom.First().Value);
-                Assert.IsNotEmpty(contact.Relationship); 
+                Assert.IsNotEmpty(contact.Relationship);
                 var relationshipConcept = contact.Relationship.First();
                 Assert.AreEqual("N", relationshipConcept.Coding.First().Code);
 
                 //update contact to same value
                 actual.Contact = personContacts;
-                result= patientResourceHandler.Update(actual.Id, actual, TransactionMode.Commit);
+                result = patientResourceHandler.Update(actual.Id, actual, TransactionMode.Commit);
 
                 //query for patient
-                var patientBundle =  patientResourceHandler.Query(new NameValueCollection()
+                var patientBundle = patientResourceHandler.Query(new NameValueCollection()
                 {
                     { "_id", result.Id }
                 });
@@ -726,7 +718,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(1, updatedPatient.Contact.Count);
                 contact = updatedPatient.Contact.First();
                 Assert.AreEqual("123 Test Street", contact.Address.Line.First());
-                Assert.IsNotEmpty(contact.Relationship); 
+                Assert.IsNotEmpty(contact.Relationship);
                 relationshipConcept = contact.Relationship.First();
                 Assert.AreEqual("N", relationshipConcept.Coding.First().Code);
 
@@ -743,8 +735,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 var orgResult = organizationResourceHandler.Create(organization, TransactionMode.Commit);
 
                 //create contact
-                var orgContacts =  new List<Patient.ContactComponent>()
-                { 
+                var orgContacts = new List<Patient.ContactComponent>()
+                {
                     new Patient.ContactComponent()
                     {
                         Organization = new ResourceReference($"urn:uuid:{orgResult.Id}")
@@ -754,10 +746,10 @@ namespace SanteDB.Messaging.FHIR.Test
                 //update contact
                 readPatient.Contact = orgContacts;
                 result = patientResourceHandler.Update(readPatient.Id, readPatient, TransactionMode.Commit);
-                
+
                 //Ensure read is returning single contact of organization
                 actual = (Patient)patientResourceHandler.Read(result.Id, result.VersionId);
-                 
+
                 //confirm organization detail
                 Assert.AreEqual(1, actual.Contact.Count);
                 contact = actual.Contact.First();
@@ -768,7 +760,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsNull(contact.Address);
 
                 //Ensure query is also returning single contact of organization
-                patientBundle =  patientResourceHandler.Query(new NameValueCollection()
+                patientBundle = patientResourceHandler.Query(new NameValueCollection()
                 {
                     { "_id", result.Id }
                 });

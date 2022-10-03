@@ -113,7 +113,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                     // Take the first wrung of the address hierarchy
                     var loadedPlaces = placeClasses.First();
                     if (loadedPlaces.Count() > 1) // Still more than one type of place
+                    {
                         throw new KeyNotFoundException("Cannot find unique birth place registration.");
+                    }
                     else
                     {
                         patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, loadedPlaces.First()));
@@ -123,10 +125,13 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 {
                     if (birthPlaceRelationship == null)
                     {
-                        patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, places.Select(o=>o.Key).First()));
-                    }  
+                        patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, places.Select(o => o.Key).First()));
+                    }
                     else
+                    {
                         birthPlaceRelationship.TargetEntityKey = places.Select(o => o.Key).First();
+                    }
+
                     return true;
                 }
                 else

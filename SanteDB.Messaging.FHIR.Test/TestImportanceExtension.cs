@@ -20,16 +20,12 @@
  */
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Roles;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
-using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Patient = SanteDB.Core.Model.Roles.Patient;

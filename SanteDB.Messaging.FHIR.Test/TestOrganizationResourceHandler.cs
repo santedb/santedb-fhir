@@ -18,22 +18,14 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -48,7 +40,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
 
         /// <summary>
@@ -88,7 +80,7 @@ namespace SanteDB.Messaging.FHIR.Test
             // assert create organization successfully
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
-            var actual = (Organization) result;
+            var actual = (Organization)result;
             Assert.AreEqual("Hamilton Health Sciences", actual.Name);
             Assert.IsTrue(actual.Alias.All(c => c == "hhs"));
             Assert.IsTrue(actual.Address.Count == 2);
@@ -123,7 +115,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(actual);
             Assert.IsInstanceOf<Organization>(actual);
 
-            var createdOrganization= (Organization) actual;
+            var createdOrganization = (Organization)actual;
             Assert.IsNotNull(createdOrganization);
 
             Resource readOrganization;
@@ -136,10 +128,10 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsNotNull(readOrganization);
             Assert.IsInstanceOf<Organization>(readOrganization);
 
-            var actualOrganization = (Organization) readOrganization;
+            var actualOrganization = (Organization)readOrganization;
 
             Assert.IsNotNull(actualOrganization.Address);
-            Assert.AreEqual("Hamilton Health Sciences",actualOrganization.Name);
+            Assert.AreEqual("Hamilton Health Sciences", actualOrganization.Name);
             Assert.IsTrue(actualOrganization.Alias.All(c => c == "hhs"));
             Assert.IsTrue(actualOrganization.Address.Count == 2);
             Assert.IsTrue(actualOrganization.Identifier.First().Value == "6324");
@@ -169,7 +161,7 @@ namespace SanteDB.Messaging.FHIR.Test
             // assert create organization successfully
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
-            var readOrganization = (Organization) result;
+            var readOrganization = (Organization)result;
 
             // ensure the organization is active
             Assert.IsTrue(readOrganization.Active);
@@ -188,7 +180,7 @@ namespace SanteDB.Messaging.FHIR.Test
                     organizationResourceHandler.Read(result.Id, null);
                     Assert.Fail("Should have thrown 410 gone");
                 }
-                catch(FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone) { }
+                catch (FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone) { }
                 catch
                 {
                     Assert.Fail("Threw wrong exception");
@@ -217,7 +209,7 @@ namespace SanteDB.Messaging.FHIR.Test
             // assert create organization successfully
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
-            var actual = (Organization) result;
+            var actual = (Organization)result;
             Assert.AreEqual("Hamilton Health Sciences", actual.Name);
             Assert.IsTrue(actual.Alias.All(c => c == "hhs"));
             Assert.IsTrue(actual.Address.Count == 2);
@@ -237,7 +229,7 @@ namespace SanteDB.Messaging.FHIR.Test
             // assert update organization successfully
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
-            actual = (Organization) result;
+            actual = (Organization)result;
             Assert.AreEqual("Hamilton Health Science", actual.Name);
             Assert.IsTrue(actual.Address.Count == 1);
             Assert.IsFalse(actual.Extension.Any());

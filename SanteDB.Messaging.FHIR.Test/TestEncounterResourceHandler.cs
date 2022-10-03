@@ -18,22 +18,14 @@
  * User: fyfej
  * Date: 2022-5-30
  */
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using Patient = Hl7.Fhir.Model.Patient;
@@ -143,7 +135,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var createdEncounter = (Encounter)actualEncounter;
 
-            Resource actual; 
+            Resource actual;
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
             {
@@ -155,7 +147,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 Assert.IsInstanceOf<Encounter>(actual);
 
-                var retrievedEncounter = (Encounter) actual;
+                var retrievedEncounter = (Encounter)actual;
 
                 var result = encounterResourceHandler.Delete(retrievedEncounter.Id, TransactionMode.Commit);
 
@@ -164,7 +156,7 @@ namespace SanteDB.Messaging.FHIR.Test
                     result = encounterResourceHandler.Read(result.Id, null);
                     Assert.Fail("Should throw gone exception");
                 }
-                catch(FhirException f) when (f.Status == System.Net.HttpStatusCode.Gone)
+                catch (FhirException f) when (f.Status == System.Net.HttpStatusCode.Gone)
                 {
 
                 }

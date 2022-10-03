@@ -22,7 +22,6 @@ using Hl7.Fhir.Rest;
 using SanteDB.Messaging.FHIR.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Rest
 {

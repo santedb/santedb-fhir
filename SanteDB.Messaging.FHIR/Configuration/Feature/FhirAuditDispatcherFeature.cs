@@ -95,7 +95,7 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
         public FeatureInstallState QueryState(SanteDBConfiguration configuration)
         {
             var fhirServiceConfig = configuration.GetSection<FhirDispatcherConfigurationSection>();
-            if(fhirServiceConfig == null)
+            if (fhirServiceConfig == null)
             {
                 fhirServiceConfig = new FhirDispatcherConfigurationSection();
                 configuration.AddSection(fhirServiceConfig);
@@ -103,7 +103,7 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
 
             // Get the configuration
             var tConfiguration = this.m_configuration = fhirServiceConfig.Targets.Find(o => o.Name.Equals("audit", StringComparison.OrdinalIgnoreCase));
-            if(this.m_configuration == null)
+            if (this.m_configuration == null)
             {
                 this.m_configuration = new FhirDispatcherTargetConfiguration()
                 {
@@ -113,7 +113,7 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
 
             var service = configuration.GetSection<ApplicationServiceContextConfigurationSection>().ServiceProviders.Any(r => r.Type == typeof(FhirAuditDispatcher));
             return service && tConfiguration != null ? FeatureInstallState.Installed : tConfiguration != null || service ? FeatureInstallState.PartiallyInstalled : FeatureInstallState.NotInstalled;
-            
+
         }
     }
 
@@ -151,7 +151,7 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
         /// Progress has changed
         /// </summary>
         public event EventHandler<ProgressChangedEventArgs> ProgressChanged;
-        
+
         /// <summary>
         /// Execute the removal of the feature
         /// </summary>
@@ -220,7 +220,7 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
         public bool Execute(SanteDBConfiguration configuration)
         {
             var dispatcherConfiguration = configuration.GetSection<FhirDispatcherConfigurationSection>();
-            if(dispatcherConfiguration == null)
+            if (dispatcherConfiguration == null)
             {
                 dispatcherConfiguration = new FhirDispatcherConfigurationSection();
                 configuration.AddSection(dispatcherConfiguration);
