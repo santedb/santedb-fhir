@@ -337,29 +337,27 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// </summary>
         private void AuditDataAction(TypeRestfulInteraction type, OutcomeIndicator outcome, params Resource[] objects)
         {
-            AuditEventData audit = new AuditEventData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(type), "http://hl7.org/fhir/ValueSet/type-restful-interaction"));
+            var audit = ApplicationServiceContext.Current.GetAuditService().Audit(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(type), "http://hl7.org/fhir/ValueSet/type-restful-interaction"))
+                .WithLocalDevice()
+                .WithUser();
             AuditableObjectLifecycle lifecycle = AuditableObjectLifecycle.NotSet;
             switch (type)
             {
                 case TypeRestfulInteraction.Create:
-                    audit.ActionCode = ActionType.Create;
-                    audit.EventIdentifier = EventIdentifierType.Import;
+                    audit = audit.WithAction(ActionType.Create).WithEventIdentifier(EventIdentifierType.Import);
                     lifecycle = AuditableObjectLifecycle.Creation;
                     break;
 
                 case TypeRestfulInteraction.Delete:
-                    audit.ActionCode = ActionType.Delete;
-                    audit.EventIdentifier = EventIdentifierType.Import;
+                    audit = audit.WithAction(ActionType.Delete).WithEventIdentifier(EventIdentifierType.Import);
                     lifecycle = AuditableObjectLifecycle.LogicalDeletion;
                     break;
 
                 case TypeRestfulInteraction.HistoryInstance:
                 case TypeRestfulInteraction.HistoryType:
                 case TypeRestfulInteraction.SearchType:
-                    audit.ActionCode = ActionType.Execute;
-                    audit.EventIdentifier = EventIdentifierType.Query;
                     lifecycle = AuditableObjectLifecycle.Disclosure;
-                    audit.AuditableObjects.Add(new AuditableObject()
+                    audit = audit.WithAction(ActionType.Execute).WithEventIdentifier(EventIdentifierType.Query).WithAuditableObjects(new AuditableObject()
                     {
                         QueryData = RestOperationContext.Current?.IncomingRequest.Url.ToString(),
                         Role = AuditableObjectRole.Query,
@@ -370,17 +368,14 @@ namespace SanteDB.Messaging.FHIR.Rest
 
                 case TypeRestfulInteraction.Update:
                 case TypeRestfulInteraction.Patch:
-                    audit.ActionCode = ActionType.Update;
-                    audit.EventIdentifier = EventIdentifierType.Import;
+                    audit = audit.WithAction(ActionType.Update).WithEventIdentifier(EventIdentifierType.Import);
                     lifecycle = AuditableObjectLifecycle.Amendment;
                     break;
 
                 case TypeRestfulInteraction.Vread:
                 case TypeRestfulInteraction.Read:
-                    audit.ActionCode = ActionType.Read;
-                    audit.EventIdentifier = EventIdentifierType.Query;
                     lifecycle = AuditableObjectLifecycle.Disclosure;
-                    audit.AuditableObjects.Add(new AuditableObject()
+                    audit = audit.WithAction(ActionType.Read).WithEventIdentifier(EventIdentifierType.Query).WithAuditableObjects(new AuditableObject()
                     {
                         QueryData = RestOperationContext.Current?.IncomingRequest.Url.ToString(),
                         Role = AuditableObjectRole.Query,
@@ -390,12 +385,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                     break;
             }
 
-            AuditUtil.AddLocalDeviceActor(audit);
-            AuditUtil.AddUserActor(audit);
-
-            audit.AuditableObjects.AddRange(objects.SelectMany(o => this.CreateAuditObjects(o, lifecycle)));
-
-            AuditUtil.SendAudit(audit);
+            audit.WithAuditableObjects(objects.SelectMany(o => this.CreateAuditObjects(o, lifecycle))).Send();
         }
 
         /// <summary>
@@ -621,24 +611,21 @@ namespace SanteDB.Messaging.FHIR.Rest
         /// </summary>
         private void AuditOperationAction(string resourceType, string operationName, OutcomeIndicator outcome, params Resource[] objects)
         {
-            var audit = new AuditEventData(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(SystemRestfulInteraction.Batch), "http://hl7.org/fhir/ValueSet/system-restful-interaction"));
-            AuditUtil.AddLocalDeviceActor(audit);
-            AuditUtil.AddUserActor(audit);
-
             var handler = ExtensionUtil.GetOperation(resourceType, operationName);
-
-            audit.AuditableObjects.Add(new AuditableObject()
-            {
-                IDTypeCode = AuditableObjectIdType.Uri,
-                ObjectId = handler?.Uri.ToString() ?? $"urn:uuid:{Guid.Empty}",
-                QueryData = RestOperationContext.Current?.IncomingRequest.Url.ToString(),
-                ObjectData = RestOperationContext.Current?.IncomingRequest.Headers.AllKeys.Select(o => new ObjectDataExtension(o, RestOperationContext.Current.IncomingRequest.Headers.Get(o))).ToList(),
-                Role = AuditableObjectRole.Job,
-                Type = AuditableObjectType.SystemObject
-            });
-
-            audit.AuditableObjects.AddRange(objects.SelectMany(o => this.CreateAuditObjects(o, AuditableObjectLifecycle.NotSet)));
-            AuditUtil.SendAudit(audit);
+            ApplicationServiceContext.Current.GetAuditService().Audit(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(SystemRestfulInteraction.Batch), "http://hl7.org/fhir/ValueSet/system-restful-interaction"))
+                .WithLocalDevice()
+                .WithUser()
+                .WithAuditableObjects(new AuditableObject()
+                {
+                    IDTypeCode = AuditableObjectIdType.Uri,
+                    ObjectId = handler?.Uri.ToString() ?? $"urn:uuid:{Guid.Empty}",
+                    QueryData = RestOperationContext.Current?.IncomingRequest.Url.ToString(),
+                    ObjectData = RestOperationContext.Current?.IncomingRequest.Headers.AllKeys.Select(o => new ObjectDataExtension(o, RestOperationContext.Current.IncomingRequest.Headers.Get(o))).ToList(),
+                    Role = AuditableObjectRole.Job,
+                    Type = AuditableObjectType.SystemObject
+                })
+                .WithAuditableObjects(objects.SelectMany(o => this.CreateAuditObjects(o, AuditableObjectLifecycle.NotSet)))
+                .Send();
         }
 
         /// <summary>
