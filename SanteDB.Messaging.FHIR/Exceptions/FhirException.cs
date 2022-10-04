@@ -19,6 +19,7 @@
  * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
+using RestSrvr.Exceptions;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Net;
@@ -30,7 +31,7 @@ namespace SanteDB.Messaging.FHIR.Exceptions
     /// Represents an exception with a specific code and severity
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class FhirException : Exception
+    public class FhirException : FaultException
     {
 
         /// <summary>
@@ -51,7 +52,7 @@ namespace SanteDB.Messaging.FHIR.Exceptions
         /// <param name="fhirCode">The FHIR text</param>
         /// <param name="diagnostics">The diagnostic text</param>
         /// <param name="innerException">The cause of this exception</param>
-        public FhirException(HttpStatusCode statusCode, IssueType fhirCode, String diagnostics, Exception innerException) : base(diagnostics, innerException)
+        public FhirException(HttpStatusCode statusCode, IssueType fhirCode, String diagnostics, Exception innerException) : base(statusCode, diagnostics, innerException)
         {
             this.Status = statusCode;
             this.Code = fhirCode;
@@ -62,7 +63,9 @@ namespace SanteDB.Messaging.FHIR.Exceptions
         /// </summary>
         /// <param name="statusCode">The HTTP status code</param>
         /// <param name="diagnostics">The diagnostic text</param>
-        public FhirException(HttpStatusCode statusCode, Resource responseResource, String diagnostics, Exception innerException) : base(diagnostics, innerException)
+        /// <param name="innerException">The exception that caused this exception to be thrown</param>
+        /// <param name="responseResource">The response resource</param>
+        public FhirException(HttpStatusCode statusCode, Resource responseResource, String diagnostics, Exception innerException) : base(statusCode, diagnostics, innerException)
         {
             this.Status = statusCode;
             this.Resource = responseResource;

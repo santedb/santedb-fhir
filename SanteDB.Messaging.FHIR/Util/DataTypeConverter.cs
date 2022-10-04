@@ -34,6 +34,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Model.Security;
 using SanteDB.Core.Security;
 using SanteDB.Core.Security.Claims;
+using SanteDB.Core.Security.Services;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
@@ -65,6 +66,9 @@ namespace SanteDB.Messaging.FHIR.Util
 
         // Source device
         private static SecurityDevice m_sourceDevice;
+
+        // Policy information service
+        private static IPolicyInformationService m_pipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
 
         // CX Devices
         private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?");
@@ -660,12 +664,9 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             // TODO: Configure this namespace / coding scheme
-            if (resource is ISecurable securable)
-            {
-                retVal.Meta.Security = securable?.Policies?.Where(o => o.GrantType == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding("http://santedb.org/security/policy", o.Policy.Oid)).ToList();
-                retVal.Meta.Security.Add(new Coding("http://santedb.org/security/policy", PermissionPolicyIdentifiers.ReadClinicalData));
-            }
-
+            m_pipService.GetPolicies(resource).Where(o => o.Rule == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding("http://santedb.org/security/policy", o.Policy.Oid)).ToList();
+            //retVal.Meta.Security.Add(new Coding("http://santedb.org/security/policy", PermissionPolicyIdentifiers.ReadClinicalData));
+            
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
             {
                 DataTypeConverter.AddExtensions(extendableObject, fhirExtendable);

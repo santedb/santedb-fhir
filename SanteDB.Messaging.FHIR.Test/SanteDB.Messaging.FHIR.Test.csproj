@@ -55,7 +55,7 @@
     </None>
   </ItemGroup>
   <!-- Test Framework via Nuget does this automagically -->
-  <Import Condition="$(SolutionName.Contains('-ext'))" Project="$(SolutionDir)\santedb-api\SanteDB.Core.TestFramework\SanteDB.Core.TestFramework.targets"/>
+  <Import Condition="$(SolutionName.Contains('-ext'))" Project="$(SolutionDir)\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.targets"/>
 
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.3" />
@@ -81,6 +81,8 @@
         <ProjectReference Include="..\..\santedb-data\SanteDB.Persistence.Data\SanteDB.Persistence.Data.csproj" />
 		    <ProjectReference Include="..\..\santedb-api\SanteDB.Core.TestFramework\SanteDB.Core.TestFramework.csproj">
         </ProjectReference>
+        <ProjectReference Include="..\..\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.csproj"/>
+        
       </ItemGroup>
     </When>
     <Otherwise>
@@ -91,6 +93,7 @@
         <PackageReference Include="SanteDB.Rest.Common" Version="$(VersionNumber)" />
         <PackageReference Include="SanteDB.OrmLite" Version="$(VersionNumber)" />
         <PackageReference Include="SanteDB.Core.TestFramework" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.Core.TestFramework.FirebirdSQL" Version="$(VersionNumber)" />
         <PackageReference Include="SanteDB.Persistence.Data" Version="$(VersionNumber)" />
         <PackageReference Include="SanteDB.Persistence.MDM" Version="$(VersionNumber)" />
       </ItemGroup>
