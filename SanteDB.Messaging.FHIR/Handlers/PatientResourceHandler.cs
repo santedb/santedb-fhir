@@ -257,7 +257,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // MDM links
-            model.Relationships.GetManagedReferenceLinks().ToList().ForEach(rel =>
+            model.Relationships.FilterManagedReferenceLinks().ToList().ForEach(rel =>
             {
                 if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
                 {
@@ -270,7 +270,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             });
 
             // Reverse relationships of family member?
-            var uuids = model.Relationships.GetManagedReferenceLinks().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
+            var uuids = model.Relationships.FilterManagedReferenceLinks().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
             var familyMemberConcepts = this.GetFamilyMemberUuids();
             var reverseRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
 
@@ -528,13 +528,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             {
                                 patient.Key = referee.Key;
                             }
-                            else if (referee.LoadCollection(o => o.Relationships).GetManagedReferenceLinks().Any()
+                            else if (referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks().Any()
                                 && referee.GetTag("$mdm.type") == "M") // HACK: This is a master and someone is attempting to point another record at it
                             {
+                                var managedLink = referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks().First() as EntityRelationship;
                                 patient.Relationships.Add(new EntityRelationship()
                                 {
-                                    RelationshipTypeKey = referee.LoadCollection(o => o.Relationships).GetManagedReferenceLinks().First().RelationshipTypeKey,
-                                    RelationshipRoleKey = referee.LoadCollection(o => o.Relationships).GetManagedReferenceLinks().First().RelationshipRoleKey,
+                                    RelationshipTypeKey = managedLink.RelationshipTypeKey,
+                                    RelationshipRoleKey = managedLink.RelationshipRoleKey,
                                     SourceEntityKey = referee.Key,
                                     TargetEntityKey = patient.Key
                                 });
