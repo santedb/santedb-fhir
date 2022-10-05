@@ -387,6 +387,20 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     throw new DataDispatchException($"Error sending update notification to {this.Endpoint}", e);
                 }
             }
+
+            /// <inheritdoc/>
+            public void NotifyLinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
+            {
+                this.NotifyUpdated(holder);
+                this.NotifyUpdated(target);
+            }
+
+            /// <inheritdoc/>
+            public void NotifyUnlinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
+            {
+                this.NotifyUpdated(holder);
+                this.NotifyUpdated(target);
+            }
         }
 
         /// <summary>

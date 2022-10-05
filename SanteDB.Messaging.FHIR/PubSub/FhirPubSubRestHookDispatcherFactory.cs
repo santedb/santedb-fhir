@@ -202,6 +202,18 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     throw new DataDispatchException($"Could not send REST update to {this.Endpoint}", e);
                 }
             }
+
+            /// <inheritdoc/>
+            public void NotifyLinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
+            {
+                this.NotifyUpdated(holder);
+            }
+
+            /// <inheritdoc/>
+            public void NotifyUnlinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
+            {
+                this.NotifyUpdated(holder);
+            }
         }
 
         /// <summary>
