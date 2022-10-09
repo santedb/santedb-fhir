@@ -126,11 +126,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected virtual IQueryResultSet<TReturn> QueryEx<TReturn>(Expression<Func<TReturn, bool>> query)
             where TReturn : IdentifiedData
         {
-            if (typeof(IHasState).IsAssignableFrom(typeof(TReturn)))
-            {
-                var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.NotEqual, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(TReturn).GetProperty(nameof(Entity.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(StatusKeys.Obsolete));
-                query = System.Linq.Expressions.Expression.Lambda<Func<TReturn, bool>>(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), query.Parameters);
-            }
+            // Obsoletion State is not used anymore
+            //if (typeof(IHasState).IsAssignableFrom(typeof(TReturn)))
+            //{
+            //    var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.NotEqual, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(TReturn).GetProperty(nameof(Entity.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(StatusKeys.Obsolete));
+            //    query = System.Linq.Expressions.Expression.Lambda<Func<TReturn, bool>>(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), query.Parameters);
+            //}
 
             var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TReturn>>();
             return repo.Find(query);

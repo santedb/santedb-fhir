@@ -287,7 +287,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(TFhirResource), typeof(TModel), parameters, out var hdsiQuery);
 
             // Do the query
-            var predicate = QueryExpressionParser.BuildLinqExpression<TModel>(hdsiQuery);
+            var predicate = QueryExpressionParser.BuildLinqExpression<TModel>(hdsiQuery, null, false, false);
 
             var hdsiResults = this.Query(predicate);
             var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<TModel>();

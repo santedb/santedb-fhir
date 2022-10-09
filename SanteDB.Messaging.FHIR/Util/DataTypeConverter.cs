@@ -384,10 +384,10 @@ namespace SanteDB.Messaging.FHIR.Util
             // Add an identifier to the object
             if (targetEntity is IHasIdentifiers ident)
             {
-                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.Authority.IsUnique);
+                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.IdentityDomain.IsUnique);
                 if (uqIdentifier != null)
                 {
-                    refer.Identifier = new Identifier(uqIdentifier.Authority.Url, uqIdentifier.Value);
+                    refer.Identifier = new Identifier(uqIdentifier.IdentityDomain.Url, uqIdentifier.Value);
                 }
             }
 
@@ -415,10 +415,10 @@ namespace SanteDB.Messaging.FHIR.Util
             // Add an identifier to the object
             if (targetEntity is IHasIdentifiers ident)
             {
-                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.Authority.IsUnique);
+                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.IdentityDomain.IsUnique);
                 if (uqIdentifier != null)
                 {
-                    refer.Identifier = new Identifier(uqIdentifier.Authority.Url, uqIdentifier.Value);
+                    refer.Identifier = new Identifier(uqIdentifier.IdentityDomain.Url, uqIdentifier.Value);
                 }
             }
 
@@ -1327,10 +1327,10 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 // Already exists in SDB bundle?
                 var identifier = DataTypeConverter.ToEntityIdentifier(resourceRef.Identifier);
-                retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.IdentityDomainKey && i.Value == identifier.Value)).FirstOrDefault();
+                retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.IdentityDomain.Key == identifier.IdentityDomainKey && i.Value == identifier.Value)).FirstOrDefault();
                 if (retVal == null) // Not been processed in bundle
                 {
-                    retVal = repo.Find(o => o.Identifiers.Any(a => a.Authority.Key == identifier.IdentityDomainKey && a.Value == identifier.Value)).SingleOrDefault();
+                    retVal = repo.Find(o => o.Identifiers.Any(a => a.IdentityDomain.Key == identifier.IdentityDomainKey && a.Value == identifier.Value)).SingleOrDefault();
                     if (retVal == null)
                     {
                         throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.IdentityDomain.Url ?? identifier.IdentityDomain.Oid}");
