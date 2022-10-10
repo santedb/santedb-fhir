@@ -1606,7 +1606,7 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
                 Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
-                Value = telecomAddress.IETFValue
+                Value = telecomAddress.Value
             };
         }
     }
