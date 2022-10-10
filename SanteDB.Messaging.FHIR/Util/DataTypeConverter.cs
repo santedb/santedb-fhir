@@ -903,7 +903,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             var cs = referenceTerm.LoadProperty(o => o.CodeSystem);
-            return new Coding(cs.Url ?? $"urn:oid:{cs.Oid}", referenceTerm.Mnemonic)
+            return new Coding(cs?.Url ?? $"urn:oid:{cs?.Oid}", referenceTerm.Mnemonic)
             {
                 Display = referenceTerm.GetDisplayName()
             };

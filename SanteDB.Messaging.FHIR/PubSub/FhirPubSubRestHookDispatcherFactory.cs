@@ -195,7 +195,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 try
                 {
                     var resource = this.ConvertToResource(data);
-                    this.m_client.Update(resource);
+                    this.m_client.Update<Patient>((Patient)resource);
                 }
                 catch (Exception e)
                 {
