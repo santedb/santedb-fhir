@@ -353,7 +353,7 @@ namespace SanteDB.Messaging.FHIR.Rest
         {
             var audit = ApplicationServiceContext.Current.GetAuditService().Audit(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(type), "http://hl7.org/fhir/ValueSet/type-restful-interaction"))
                 .WithLocalDevice()
-                .WithUser();
+                .WithPrincipal();
             AuditableObjectLifecycle lifecycle = AuditableObjectLifecycle.NotSet;
             switch (type)
             {
@@ -638,7 +638,7 @@ namespace SanteDB.Messaging.FHIR.Rest
             var handler = ExtensionUtil.GetOperation(resourceType, operationName);
             ApplicationServiceContext.Current.GetAuditService().Audit(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(SystemRestfulInteraction.Batch), "http://hl7.org/fhir/ValueSet/system-restful-interaction"))
                 .WithLocalDevice()
-                .WithUser()
+                .WithPrincipal()
                 .WithAuditableObjects(new AuditableObject()
                 {
                     IDTypeCode = AuditableObjectIdType.Uri,
