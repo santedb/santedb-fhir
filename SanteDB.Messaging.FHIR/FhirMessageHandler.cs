@@ -48,7 +48,7 @@ namespace SanteDB.Messaging.FHIR
     /// </remarks>
     [ExcludeFromCodeCoverage]
     [Description("Allows SanteDB iCDR to send and receive HL7 FHIR R4 messages")]
-    [ApiServiceProvider("HL7 FHIR R4 API Endpoint", typeof(FhirServiceBehavior), configurationType: typeof(FhirServiceConfigurationSection))]
+    [ApiServiceProvider("HL7 FHIR R4 API Endpoint", typeof(FhirServiceBehavior), ServiceEndpointType.Hl7FhirInterface, configurationType: typeof(FhirServiceConfigurationSection))]
     public class FhirMessageHandler : IDaemonService, IApiEndpointProvider
     {
 

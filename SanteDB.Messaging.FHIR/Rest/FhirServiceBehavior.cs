@@ -51,7 +51,7 @@ namespace SanteDB.Messaging.FHIR.Rest
     /// </summary>
     /// <remarks>SanteSB Server implementation of the HL7 FHIR R4 Contract</remarks>
     [ExcludeFromCodeCoverage]
-    [ServiceBehavior(Name = "FHIR", InstanceMode = ServiceInstanceMode.Singleton)]
+    [ServiceBehavior(Name = FhirMessageHandler.ConfigurationName, InstanceMode = ServiceInstanceMode.Singleton)]
     public class FhirServiceBehavior : IFhirServiceContract, IServiceBehaviorMetadataProvider
     {
         private readonly Tracer m_tracer = new Tracer(FhirConstants.TraceSourceName);
