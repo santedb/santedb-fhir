@@ -27,6 +27,7 @@ using SanteDB.Core.Exceptions;
 using SanteDB.Core.Interop;
 using SanteDB.Core.Interop.Description;
 using SanteDB.Core.Model.Audit;
+using SanteDB.Core.Security;
 using SanteDB.Core.Security.Audit;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
@@ -352,7 +353,8 @@ namespace SanteDB.Messaging.FHIR.Rest
         private void AuditDataAction(TypeRestfulInteraction type, OutcomeIndicator outcome, params Resource[] objects)
         {
             var audit = ApplicationServiceContext.Current.GetAuditService().Audit(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(type), "http://hl7.org/fhir/ValueSet/type-restful-interaction"))
-                .WithLocalDevice()
+                .WithRemoteSource(RemoteEndpointUtil.Current.GetRemoteClient())
+                .WithLocalDestination()
                 .WithPrincipal();
             AuditableObjectLifecycle lifecycle = AuditableObjectLifecycle.NotSet;
             switch (type)
@@ -637,7 +639,8 @@ namespace SanteDB.Messaging.FHIR.Rest
         {
             var handler = ExtensionUtil.GetOperation(resourceType, operationName);
             ApplicationServiceContext.Current.GetAuditService().Audit(DateTime.Now, ActionType.Execute, outcome, EventIdentifierType.ApplicationActivity, new AuditCode(Hl7.Fhir.Utility.EnumUtility.GetLiteral(SystemRestfulInteraction.Batch), "http://hl7.org/fhir/ValueSet/system-restful-interaction"))
-                .WithLocalDevice()
+                .WithRemoteSource(RemoteEndpointUtil.Current.GetRemoteClient())
+                .WithLocalDestination()
                 .WithPrincipal()
                 .WithAuditableObjects(new AuditableObject()
                 {

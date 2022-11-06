@@ -82,7 +82,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override Practitioner MapToFhir(Provider model)
         {
             // Is there a provider that matches this user?
-            var provider = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.AssignedEntity)?.LoadProperty(o => o.TargetEntity) as Provider;
+            var provider = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.EquivalentEntity && o.ClassificationKey == RelationshipClassKeys.PlayedRoleLink)?.LoadProperty(o => o.TargetEntity) as Provider;
             model = provider ?? model;
 
             var retVal = DataTypeConverter.CreateResource<Practitioner>(model);
