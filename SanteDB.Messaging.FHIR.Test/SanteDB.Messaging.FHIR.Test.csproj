@@ -55,11 +55,11 @@
     </None>
   </ItemGroup>
   <!-- Test Framework via Nuget does this automagically -->
-  <Import Condition="$(SolutionName.Contains('-ext'))" Project="$(SolutionDir)\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.targets"/>
+  <Import Condition="$(SolutionName.Contains('-ext'))" Project="$(SolutionDir)\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.targets" />
 
   <ItemGroup>
     <PackageReference Include="NUnit" Version="3.13.3" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.3.0" />
     <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="9.0.2" />
   </ItemGroup>
   <ItemGroup>
@@ -81,7 +81,7 @@
         <ProjectReference Include="..\..\santedb-data\SanteDB.Persistence.Data\SanteDB.Persistence.Data.csproj" />
 		    <ProjectReference Include="..\..\santedb-api\SanteDB.Core.TestFramework\SanteDB.Core.TestFramework.csproj">
         </ProjectReference>
-        <ProjectReference Include="..\..\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.csproj"/>
+        <ProjectReference Include="..\..\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.csproj" />
         
       </ItemGroup>
     </When>
