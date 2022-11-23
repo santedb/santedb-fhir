@@ -50,7 +50,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// <summary>
         /// Construct the extension
         /// </summary>
-        public IEnumerable<Extension> Construct(IIdentifiedData modelObject)
+        public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && patient.NationalityKey.HasValue)
             {

@@ -629,7 +629,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>TResource.</returns>
         public static TResource CreateResource<TResource>(IVersionedData resource) where TResource : Resource, new()
         {
-            var retVal = CreateResource<TResource>((IIdentifiedData)resource);
+            var retVal = CreateResource<TResource>((IAnnotatedResource)resource);
             retVal.VersionId = resource.VersionKey.ToString();
             retVal.Meta.VersionId = resource.VersionKey?.ToString();
 
@@ -640,7 +640,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Create non versioned resource
         /// </summary>
-        public static TResource CreateResource<TResource>(IIdentifiedData resource) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IAnnotatedResource resource) where TResource : Resource, new()
         {
             var retVal = new TResource();
 
@@ -687,7 +687,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
-                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IIdentifiedData, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
+                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IAnnotatedResource, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
             else

@@ -212,7 +212,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <param name="appliedExtensions">The extensions that were applied to the object</param>
         /// <param name="applyTo">The object to which the extensions are being applied</param>
         /// <param name="me">The SanteDB canonical model to apply to</param>
-        public static IEnumerable<Extension> CreateExtensions(this IIdentifiedData me, ResourceType applyTo, out IEnumerable<IFhirExtensionHandler> appliedExtensions)
+        public static IEnumerable<Extension> CreateExtensions(this IAnnotatedResource me, ResourceType applyTo, out IEnumerable<IFhirExtensionHandler> appliedExtensions)
         {
             appliedExtensions = s_extensionHandlers.Where(o => o.AppliesTo == null || o.AppliesTo == applyTo);
             return appliedExtensions.SelectMany(o => o.Construct(me));
