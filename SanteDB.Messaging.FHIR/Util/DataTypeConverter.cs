@@ -152,7 +152,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             // POU?
-            var pou = audit.AuditableObjects.Find(o => o.ObjectId == SanteDBClaimTypes.PurposeOfUse)?.NameData;
+            var pou = audit.AuditableObjects.FirstOrDefault(o => o.ObjectId == SanteDBClaimTypes.PurposeOfUse)?.NameData;
             if (pou != null && Guid.TryParse(pou, out Guid pouKey))
             {
                 retVal.PurposeOfEvent = new List<CodeableConcept>() { ToFhirCodeableConcept(pouKey) };
