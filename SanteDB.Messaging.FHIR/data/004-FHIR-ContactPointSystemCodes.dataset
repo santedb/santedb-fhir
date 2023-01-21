@@ -5,6 +5,7 @@
       <id>0cb5d972-ace6-4cf5-8485-9963eac0c5cf</id>
       <name>FHIR Contact Point System Codes</name>
       <oid>2.16.840.1.113883.4.642.1.65</oid>
+      <authority>ContactPointSystem</authority>
       <url>http://hl7.org/fhir/contact-point-system</url>
     </CodeSystem>
   </update>

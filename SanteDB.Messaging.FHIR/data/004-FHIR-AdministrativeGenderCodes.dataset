@@ -5,6 +5,7 @@
       <id>24a1862d-1594-4c78-bfab-5b3d918e30e0</id>
       <name>FHIR Administrative Gender Codes</name>
       <oid>2.16.840.1.113883.4.642.1.2</oid>
+      <authority>AdministrativeGender</authority>
       <url>http://hl7.org/fhir/administrative-gender</url>
     </CodeSystem>
   </update>
