@@ -44,7 +44,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
             EntityClassKeys.ServiceDeliveryLocation,
             EntityClassKeys.CityOrTown,
             EntityClassKeys.CountyOrParish,
-            EntityClassKeys.State,
+            EntityClassKeys.StateOrProvince,
             EntityClassKeys.Country,
             EntityClassKeys.Place
         };
