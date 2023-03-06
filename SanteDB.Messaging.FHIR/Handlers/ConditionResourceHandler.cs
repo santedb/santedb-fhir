@@ -247,12 +247,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.StartTime = DataTypeConverter.ToDateTimeOffset(((Period)resource.Onset).StartElement);
                 retVal.StopTime = DataTypeConverter.ToDateTimeOffset(((Period)resource.Onset).EndElement);
+                
             }
 
             // Author
             if (resource.Asserter != null)
             {
-                retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
+                retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Authororiginator, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
             }
 
             if (resource.RecordedDateElement != null)

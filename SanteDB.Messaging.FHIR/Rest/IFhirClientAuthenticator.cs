@@ -31,7 +31,7 @@ namespace SanteDB.Messaging.FHIR.Rest
     public interface IFhirClientAuthenticator
     {
         /// <summary>
-        /// Attache to the client and authenticate on each request
+        /// Attach to the client and authenticate on each request
         /// </summary>
         void AttachClient(FhirClient client, FhirDispatcherTargetConfiguration dispatchConfiguration, IDictionary<String, String> settings);
 

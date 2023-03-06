@@ -141,7 +141,6 @@
     <map fhir="clinical-status" model="statusConcept" type="concept"/>
     <map fhir="code" model="value" type="concept"/>
     <map fhir="criticality" model="relationship[HasComponent].target[ObservationType-Severity].value" type="concept" defaultCodeSystem="http://hl7.org/fhir/allergy-intolerance-criticality"/>
-    <map fhir="severity" model="relationship[HasComponent].target[ObservationType-Severity].value" type="concept"/>
     <map fhir="type" model="typeConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/allergy-intolerance-type"/>
     <map fhir="date" model="actTime"/>
     <map fhir="identifier" model="identifier" type="identifier"/>

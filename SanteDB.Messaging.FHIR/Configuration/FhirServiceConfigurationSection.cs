@@ -185,17 +185,4 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [DisplayName("Default Format"), Description("The default format to use when the client does not specify a perferred format")]
         public FhirResponseFormatConfiguration DefaultResponseFormat { get; set; }
     }
-
-    /// <summary>
-    /// FHIR Response format configuration
-    /// </summary>
-    [XmlType(nameof(FhirResponseFormatConfiguration), Namespace = "http://santedb.org/configuration")]
-    public enum FhirResponseFormatConfiguration
-    {
-        [XmlEnum("application/fhir+json")]
-        Json,
-
-        [XmlEnum("application/fhir+xml")]
-        Xml
-    }
 }
