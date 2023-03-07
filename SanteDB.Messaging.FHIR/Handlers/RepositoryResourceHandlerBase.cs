@@ -16,10 +16,9 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
@@ -27,7 +26,10 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Model.Query;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Rest.Common.Attributes;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -102,45 +104,37 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Perform a delete operation
         /// </summary>
+        [Demand(PermissionPolicyIdentifiers.LoginAsService)]
         protected override TModel Delete(Guid modelId)
         {
-            return this.m_repository.Obsolete(modelId);
+            return this.m_repository.Delete(modelId);
         }
 
         /// <summary>
         /// Query for patients.
         /// </summary>
         /// <param name="query">The query.</param>
-        /// <param name="issues">The issues.</param>
-        /// <param name="offset">The offset.</param>
-        /// <param name="count">The count.</param>
-        /// <param name="totalResults">The total results.</param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected override IEnumerable<TModel> Query(Expression<Func<TModel, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        protected override IQueryResultSet<TModel> Query(Expression<Func<TModel, bool>> query)
         {
-            return this.QueryEx<TModel>(query, queryId, offset, count, out totalResults);
+            return this.QueryEx<TModel>(query);
         }
 
         /// <summary>
-        /// Represents the predicate model
+        /// A query function which allows for changing of the return  type
         /// </summary>
-        protected virtual IEnumerable<TPredicate> QueryEx<TPredicate>(Expression<Func<TPredicate, bool>> query, Guid queryId, int offset, int count, out int totalResults)
-            where TPredicate : IdentifiedData
+        protected virtual IQueryResultSet<TReturn> QueryEx<TReturn>(Expression<Func<TReturn, bool>> query)
+            where TReturn : IdentifiedData
         {
-            if (typeof(TPredicate).GetProperty(nameof(Entity.StatusConceptKey)) != null)
-            {
-                foreach (var itm in StatusKeys.InactiveStates)
-                {
-                    var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.NotEqual, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(TPredicate).GetProperty(nameof(Entity.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(itm));
-                    query = System.Linq.Expressions.Expression.Lambda<Func<TPredicate, bool>>(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), query.Parameters);
-                }
-            }
+            // Obsoletion State is not used anymore
+            //if (typeof(IHasState).IsAssignableFrom(typeof(TReturn)))
+            //{
+            //    var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.NotEqual, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(TReturn).GetProperty(nameof(Entity.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(StatusKeys.Obsolete));
+            //    query = System.Linq.Expressions.Expression.Lambda<Func<TReturn, bool>>(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), query.Parameters);
+            //}
 
-            var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TPredicate>>();
-            if (queryId == Guid.Empty)
-                return repo.Find(query, offset, count, out totalResults);
-            else
-                return (repo as IPersistableQueryRepositoryService<TPredicate>).Find(query, offset, count, out totalResults, queryId);
+            var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TReturn>>();
+            return repo.Find(query);
         }
 
         /// <summary>
@@ -148,6 +142,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override TModel Read(Guid id, Guid versionId)
         {
+
             return this.m_repository.Get(id, versionId);
         }
 

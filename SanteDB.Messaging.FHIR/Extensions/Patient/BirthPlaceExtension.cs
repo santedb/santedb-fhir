@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core;
@@ -26,6 +26,7 @@ using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -43,7 +44,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
             EntityClassKeys.ServiceDeliveryLocation,
             EntityClassKeys.CityOrTown,
             EntityClassKeys.CountyOrParish,
-            EntityClassKeys.State,
+            EntityClassKeys.StateOrProvince,
             EntityClassKeys.Country,
             EntityClassKeys.Place
         };
@@ -78,7 +79,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// <summary>
         /// Construct the extension
         /// </summary>
-        public IEnumerable<Extension> Construct(IIdentifiedEntity modelObject)
+        public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient)
             {
@@ -101,30 +102,41 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && fhirExtension.Value is Hl7.Fhir.Model.Address address)
             {
-                // TODO: Cross reference birthplace to an entity relationship (see the HL7v2 PID segment handler for example)
-                var birthPlaceRelationship = patient.Relationships.FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace);
-                var places = ApplicationServiceContext.Current.GetService<IDataPersistenceService<Place>>()?.Query(o => o.Names.Any(c => c.NameUseKey == NameUseKeys.Search && c.Component.Any(a => a.Value == address.Text)), AuthenticationContext.SystemPrincipal);
-                if (places.Count() > 1)
+                // TODO: Update this to use the new more efficient method of getting data from database
+                // Something like: Query by names, then order by the address hierarchy?
+                var birthPlaceRelationship = patient.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace);
+                var places = ApplicationServiceContext.Current.GetService<IDataPersistenceService<Place>>()?.Query(o => o.Names.Any(c => c.Component.Any(a => a.Value == address.Text)), AuthenticationContext.SystemPrincipal);
+                var placeCount = places.Count();
+                if (placeCount > 1)
                 {
-                    var placeClasses = places.GroupBy(o => o.ClassConceptKey).OrderBy(o => Array.IndexOf(AddressHierarchy, o.Key.Value));
+                    var placeClasses = places.ToArray().GroupBy(o => o.ClassConceptKey).OrderBy(o => Array.IndexOf(AddressHierarchy, o.Key.Value));
                     // Take the first wrung of the address hierarchy
-                    places = placeClasses.First();
-                    if (places.Count() > 1) // Still more than one type of place
-                        places = places.Where(p => p.LoadCollection<EntityAddress>(nameof(Entity.Addresses)).Any(a => a.Component.All(a2 => patient.LoadCollection<EntityAddress>(nameof(Entity.Addresses)).Any(pa => pa.Component.Any(pc => pc.Value == a2.Value && pc.ComponentTypeKey == a2.ComponentTypeKey)))));
+                    var loadedPlaces = placeClasses.First();
+                    if (loadedPlaces.Count() > 1) // Still more than one type of place
+                    {
+                        throw new KeyNotFoundException("Cannot find unique birth place registration.");
+                    }
+                    else
+                    {
+                        patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, loadedPlaces.First()));
+                    }
                 }
-                if (places.Count() == 1)
+                if (placeCount == 1)
                 {
                     if (birthPlaceRelationship == null)
                     {
-                        patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, places.First()));
-                    }  
+                        patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, places.Select(o => o.Key).First()));
+                    }
                     else
-                        birthPlaceRelationship.TargetEntityKey = places.First().Key;
+                    {
+                        birthPlaceRelationship.TargetEntityKey = places.Select(o => o.Key).First();
+                    }
+
                     return true;
                 }
                 else
                 {
-                    throw new KeyNotFoundException("Cannot find unique birth place registration.");
+                    throw new FhirException((System.Net.HttpStatusCode)422, OperationOutcome.IssueType.MultipleMatches, "Cannot find unique birth place registration.");
                 }
             }
             return false;

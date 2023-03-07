@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,14 +15,11 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: Nityan Khanna
- * Date: 2021-11-29
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Diagnostics.CodeAnalysis;
@@ -34,17 +31,9 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestStructureDefinitionUtil
+    public class TestStructureDefinitionUtil : FhirTest
     {
-        /// <summary>
-        /// Runs setup before each test execution.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            TestApplicationContext.TestAssembly = typeof(TestFhirResourceHandlerUtil).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-        }
+
 
         /// <summary>
         /// Tests the retrieval generation of a <see cref="StructureDefinition"/> instance.

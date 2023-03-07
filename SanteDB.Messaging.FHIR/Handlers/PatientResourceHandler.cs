@@ -16,11 +16,11 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -39,9 +39,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class PatientResourceHandler : RepositoryResourceHandlerBase<Patient, Core.Model.Roles.Patient>
     {
-        // IDs of family members
-        private readonly Guid MDM_MASTER_LINK = Guid.Parse("97730a52-7e30-4dcd-94cd-fd532d111578");
-
         // ER repository
         private IRepositoryService<EntityRelationship> m_erRepository;
         private readonly IAdhocCacheService m_adhocCacheService;
@@ -64,9 +61,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private Guid[] GetRelatedPersonConceptUuids()
         {
             var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.relatedPersonsUuids");
-            if(retVal == null)
+            if (retVal == null)
             {
-                retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"), 0, 1000, out _).Select(o => o.Key.Value).ToArray();
+                retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(o => o.Key.Value).ToArray();
                 this.m_adhocCacheService?.Add("fhir.patient.relatedPersonsUuids", retVal);
             }
             return retVal;
@@ -80,11 +77,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.familyMemberUuids");
             if (retVal == null)
             {
-                retVal = this.m_conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember"), 0, 1000, out _).Select(o => o.Key.Value).ToArray();
+                retVal = this.m_conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember")).Select(o => o.Key.Value).ToArray();
                 this.m_adhocCacheService?.Add("fhir.patient.familyMemberUuids", retVal);
             }
             return retVal;
-            
+
         }
 
         /// <summary>
@@ -104,6 +101,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Address = model.GetAddresses().Select(DataTypeConverter.ToFhirAddress).ToList();
 
             if (model.DateOfBirth.HasValue)
+            {
                 switch (model.DateOfBirthPrecision.GetValueOrDefault())
                 {
                     case DatePrecision.Day:
@@ -118,6 +116,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         retVal.BirthDate = model.DateOfBirth.Value.ToString("yyyy");
                         break;
                 }
+            }
 
             // Deceased precision
             if (model.DeceasedDate.HasValue)
@@ -235,16 +234,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso));
-                else if (rel.RelationshipTypeKey == MDM_MASTER_LINK) // HACK: MDM Master Record
                 {
-                    if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
-                        retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso));
-                    else // Is a local
-                        retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso));
                 }
                 else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
+                {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
+                }
                 else if (partOfBundle != null) // This is part of a bundle and we need to include it
                 {
                     // HACK: This piece of code is used to add any RelatedPersons to the container bundle if it is part of a bundle
@@ -260,8 +256,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
+            // MDM links
+            model.Relationships.FilterManagedReferenceLinks().ToList().ForEach(rel =>
+            {
+                if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
+                {
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso));
+                }
+                else // Is a local
+                {
+                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
+                }
+            });
+
             // Reverse relationships of family member?
-            var uuids = model.Relationships.Where(r => r.RelationshipTypeKey == MDM_MASTER_LINK).Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
+            var uuids = model.Relationships.FilterManagedReferenceLinks().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
             var familyMemberConcepts = this.GetFamilyMemberUuids();
             var reverseRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
 
@@ -349,9 +358,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
-                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
                     {
-                        patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                        patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (patient != null)
                     {
@@ -428,7 +437,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     if (referenceKey == null)
                     {
                         this.m_tracer.TraceError("Can't locate a registered general practitioner");
-                        throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.cannotLocateRegistered", new
+                        throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.cannotLocateRegistered", new
                         {
                             param = "general practitioner"
                         }));
@@ -444,8 +453,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 if (referenceKey == null)
                 {
                     this.m_tracer.TraceError("Can't locate a registered managing organization");
-
-                    throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.cannotLocateRegistered", new
+                    throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.cannotLocateRegistered", new
                     {
                         param = "managing organization"
                     }));
@@ -480,7 +488,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             if (replacee == null)
                             {
                                 this.m_tracer.TraceError($"Cannot locate patient referenced by {lnk.Type} relationship");
-                                throw new KeyNotFoundException(m_localizationService.FormatString("error.messaging.fhir.patientResource.cannotLocatePatient", new
+                                throw new KeyNotFoundException(m_localizationService.GetString("error.messaging.fhir.patientResource.cannotLocatePatient", new
                                 {
                                     param = lnk.Type
                                 }));
@@ -498,7 +506,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             if (replacer == null)
                             {
                                 this.m_tracer.TraceError($"Cannot locate patient referenced by {lnk.Type} relationship");
-                                throw new KeyNotFoundException(m_localizationService.FormatString("error.messaging.fhir.patientResource.cannotLocatePatient", new
+                                throw new KeyNotFoundException(m_localizationService.GetString("error.messaging.fhir.patientResource.cannotLocatePatient", new
                                 {
                                     param = lnk.Type
                                 }));
@@ -520,12 +528,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             {
                                 patient.Key = referee.Key;
                             }
-                            else if (referee.LoadCollection(o => o.Relationships).Any(r => r.RelationshipTypeKey == MDM_MASTER_LINK)
+                            else if (referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks().Any()
                                 && referee.GetTag("$mdm.type") == "M") // HACK: This is a master and someone is attempting to point another record at it
                             {
+                                var managedLink = referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks().First() as EntityRelationship;
                                 patient.Relationships.Add(new EntityRelationship()
                                 {
-                                    RelationshipTypeKey = MDM_MASTER_LINK,
+                                    RelationshipTypeKey = managedLink.RelationshipTypeKey,
+                                    RelationshipRoleKey = managedLink.RelationshipRoleKey,
                                     SourceEntityKey = referee.Key,
                                     TargetEntityKey = patient.Key
                                 });
@@ -540,7 +550,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             var referee = DataTypeConverter.ResolveEntity<Entity>(lnk.Other, resource);
                             if (referee.GetTag("$mdm.type") == "M") // HACK: MDM User is attempting to point this at another Master (note: THE MDM LAYER WON'T LIKE THIS)
-                                patient.Relationships.Add(new EntityRelationship(MDM_MASTER_LINK, referee));
+                            {
+                                patient.AddManagedReferenceLink(referee);
+                            }
                             else
                             {
                                 this.m_tracer.TraceError($"Setting refer relationships to source of truth is not supported");
@@ -601,7 +613,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                                 default:
                                     this.m_tracer.TraceError($"Cannot determine how to include {includeInstruction}");
-                                    throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidOperation.cannotDetermine", new
+                                    throw new InvalidOperationException(this.m_localizationService.GetString("error.type.InvalidOperation.cannotDetermine", new
                                     {
                                         param = includeInstruction
                                     }));
@@ -630,7 +642,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                                 default:
                                     this.m_tracer.TraceError($"Cannot determine how to include {includeInstruction}");
-                                    throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidOperation.cannotDetermine", new
+                                    throw new InvalidOperationException(this.m_localizationService.GetString("error.type.InvalidOperation.cannotDetermine", new
                                     {
                                         param = includeInstruction
                                     }));

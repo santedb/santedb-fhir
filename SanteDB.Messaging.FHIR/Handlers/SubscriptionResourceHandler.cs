@@ -16,11 +16,11 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.PubSub;
 using SanteDB.Core.Security;
@@ -29,13 +29,9 @@ using SanteDB.Messaging.FHIR.PubSub;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
-using SanteDB.Core;
 using static Hl7.Fhir.Model.CapabilityStatement;
-using SanteDB.Core.Model;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -51,7 +47,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private IConfigurationManager m_configurationManager;
 
         // Trace source
-        private Tracer m_tracer = Tracer.GetTracer(typeof(SubscriptionResourceHandler));
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(SubscriptionResourceHandler));
 
         //Localization service
         private readonly ILocalizationService m_localizationService;
@@ -85,7 +81,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!(target is Subscription subscription))
             {
                 this.m_tracer.TraceError("Subscription registration requires a subscription body");
-                throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                throw new ArgumentOutOfRangeException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "subscription body"
                 }));
@@ -109,23 +105,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (cdrType == null)
             {
                 this.m_tracer.TraceError($"Resource type {enumType.Value} is not supported by this service");
-                throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
             }
 
             var hdsiQuery = new NameValueCollection();
             if (!String.IsNullOrEmpty(queryObject.Query))
             {
-                QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, NameValueCollection.ParseQueryString(queryObject.Query.Substring(1)).ToNameValueCollection(), out hdsiQuery);
+                QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, queryObject.Query.Substring(1).ParseQueryString(), out hdsiQuery);
             }
 
             // Create the pub-sub definition
             var channel = this.CreateChannel($"Channel for {subscription.Id}", subscription.Channel, mode);
-            var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete | PubSubEventType.Merge, hdsiQuery.ToString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
+            var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete | PubSubEventType.Merge, hdsiQuery.ToHttpString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
 
             if (subscription.Status == Subscription.SubscriptionStatus.Active)
+            {
                 retVal = this.m_pubSubManager.ActivateSubscription(retVal.Key.Value, true);
+            }
 
-            return this.MapToFhir(retVal, RestOperationContext.Current);
+            return this.MapToFhir(retVal);
         }
 
         /// <summary>
@@ -147,7 +145,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 this.m_pubSubManager.RemoveChannel(retVal.ChannelKey);
             }
 
-            return this.MapToFhir(retVal, RestOperationContext.Current);
+            return this.MapToFhir(retVal);
         }
 
         /// <summary>
@@ -189,7 +187,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Bundle History(string id)
         {
             this.m_tracer.TraceError("Versioning is not supported on this object");
-            throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>
@@ -198,31 +196,28 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
         {
             if (parameters == null)
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+            {
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
+            }
 
-            Core.Model.Query.NameValueCollection hdsiQuery = null;
-            FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Subscription), typeof(PubSubSubscriptionDefinition), parameters, out hdsiQuery);
+            FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(Subscription), typeof(PubSubSubscriptionDefinition), parameters, out var hdsiQuery);
             hdsiQuery.Add("obsoletionTime", "null");
             // Do the query
-            int totalResults = 0;
-
-            // Add the queries for resource mappers
-            hdsiQuery.Add("resource", FhirResourceHandlerUtil.ResourceHandlers.OfType<IFhirResourceMapper>().Select(o => o.CanonicalType.GetSerializationName()).ToList());
             var predicate = QueryExpressionParser.BuildLinqExpression<PubSubSubscriptionDefinition>(hdsiQuery);
-            var hdsiResults = this.m_pubSubManager.FindSubscription(predicate, query.Start, query.Quantity, out totalResults);
-            var restOperationContext = RestOperationContext.Current;
+            IQueryResultSet hdsiResults = this.m_pubSubManager.FindSubscription(predicate);
+            var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<PubSubSubscriptionDefinition>();
 
             var auth = AuthenticationContext.Current.Principal;
             // Return FHIR query result
             var retVal = new FhirQueryResult(nameof(Subscription))
             {
-                Results = hdsiResults.Select(o =>
+                Results = results.AsParallel().Select(o =>
                 {
                     using (AuthenticationContext.EnterContext(auth))
                     {
                         return new Bundle.EntryComponent()
                         {
-                            Resource = this.MapToFhir(o, restOperationContext),
+                            Resource = this.MapToFhir(o),
                             Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match }
                         };
                     }
@@ -239,7 +234,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public Resource Read(string id, string versionId)
         {
             var retVal = this.m_pubSubManager.GetSubscriptionByName(id);
-            return this.MapToFhir(retVal, RestOperationContext.Current);
+            return this.MapToFhir(retVal);
         }
 
         /// <summary>
@@ -249,7 +244,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             if (!(target is Subscription subscription))
             {
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "subscription resource"
                 }));
@@ -270,24 +265,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (cdrType == null)
             {
                 this.m_tracer.TraceError($"Resource type {enumType.Value} is not supported by this service");
-                throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
             }
 
-            QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, NameValueCollection.ParseQueryString(queryObject.Query.Substring(1)).ToNameValueCollection(), out NameValueCollection hdsiQuery);
+            QueryRewriter.RewriteFhirQuery(cdrType.ResourceClrType, cdrType.CanonicalType, queryObject.Query.Substring(1).ParseQueryString(), out NameValueCollection hdsiQuery);
 
             // Update the channel
-            var retVal = this.m_pubSubManager.UpdateSubscription(key.Value, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete, hdsiQuery.ToString(), supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
+            var retVal = this.m_pubSubManager.UpdateSubscription(key.Value, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete, hdsiQuery.ToHttpString(), supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
             this.m_pubSubManager.ActivateSubscription(key.Value, subscription.Status == Subscription.SubscriptionStatus.Active);
 
             var settings = subscription.Channel.Header.Select(o => o.Split(':')).ToDictionary(o => o[0], o => o[1]);
             settings.Add("Content-Type", subscription.Channel.Payload);
             this.m_pubSubManager.UpdateChannel(retVal.ChannelKey, $"Channel for {subscription.Id}", new Uri(subscription.Channel.Endpoint), settings);
-            return this.MapToFhir(retVal, RestOperationContext.Current);
+            return this.MapToFhir(retVal);
         }
 
         /// <summary>
         /// Map the model pub-sub description to FHIR
-        private Subscription MapToFhir(PubSubSubscriptionDefinition model, RestOperationContext restOperationContext)
+        /// </summary>
+        private Subscription MapToFhir(PubSubSubscriptionDefinition model)
         {
             // Construct the return subscription
             var retVal = DataTypeConverter.CreateResource<Subscription>(model);
@@ -302,9 +298,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Status = model.IsActive ? Subscription.SubscriptionStatus.Active : Subscription.SubscriptionStatus.Off;
             if (model.NotBefore > DateTime.Now)
+            {
                 retVal.Status = Subscription.SubscriptionStatus.Requested;
+            }
+
             if (model.NotAfter.HasValue)
+            {
                 retVal.End = model.NotAfter.Value;
+            }
 
             var channel = this.m_pubSubManager.GetChannel(model.ChannelKey);
             // Map channel information
@@ -345,7 +346,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     // TODO: E-mail dispatcher
                     if (!fhirChannel.Endpoint.StartsWith("mailto:"))
                     {
-                        throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.messaging.fhir.subscription.emailScheme", new
+                        throw new ArgumentOutOfRangeException(this.m_localizationService.GetString("error.messaging.fhir.subscription.emailScheme", new
                         {
                             param = "mailto:"
                         }));
@@ -360,7 +361,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     // TODO: E-mail dispatcher
                     if (!fhirChannel.Endpoint.StartsWith("sms:"))
                     {
-                        throw new ArgumentOutOfRangeException(this.m_localizationService.FormatString("error.messaging.fhir.subscription.emailScheme", new
+                        throw new ArgumentOutOfRangeException(this.m_localizationService.GetString("error.messaging.fhir.subscription.emailScheme", new
                         {
                             param = "sms:"
                         }));
@@ -387,7 +388,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 default:
                     this.m_tracer.TraceError($"Resource channel type {fhirChannel.Type} not supported ");
-                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                    throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
             }
 
             return channel;

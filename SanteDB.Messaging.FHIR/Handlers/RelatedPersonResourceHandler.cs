@@ -16,15 +16,14 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -56,7 +55,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo, IRepositoryService<Core.Model.Roles.Patient> patientRepository, IRepositoryService<EntityRelationship> repo, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService) : base(repo, localizationService)
         {
-            this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode"), 0, 1000, out _).Select(c => c.Key.Value).ToList();
+            this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(c => c.Key.Value).ToList();
             this.m_patientRepository = patientRepository;
             this.m_personRepository = personRepo;
         }
@@ -114,7 +113,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!(relModel is Core.Model.Entities.Person person))
             {
                 m_tracer.TraceError("Cannot create unless source and target are Person");
-                throw new InvalidOperationException(m_localizationService.FormatString("error.type.InvalidOperation.cannotCreate", new
+                throw new InvalidOperationException(m_localizationService.GetString("error.type.InvalidOperation.cannotCreate", new
                 {
                     param = "Person"
                 }));
@@ -122,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
             relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value) && model.ObsoleteVersionSequenceId.HasValue == false;
-            relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode" ) };
+            relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode") };
             relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.GenderConceptKey, "http://hl7.org/fhir/administrative-gender");
             relative.Identifier = relModel.LoadCollection(o => o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
@@ -137,12 +136,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Query for substance administrations that aren't immunizations
         /// </summary>
         /// <param name="query">The query.</param>
-        /// <param name="offset">The offset.</param>
-        /// <param name="count">The count.</param>
-        /// <param name="totalResults">The total results.</param>
-        /// <param name="queryId">The unique query state identifier</param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected override IEnumerable<EntityRelationship> Query(System.Linq.Expressions.Expression<Func<EntityRelationship, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        protected override IQueryResultSet<EntityRelationship> Query(System.Linq.Expressions.Expression<Func<EntityRelationship, bool>> query)
         {
             System.Linq.Expressions.Expression typeReference = null;
             System.Linq.Expressions.Expression typeProperty = System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(EntityRelationship).GetProperty(nameof(EntityRelationship.RelationshipTypeKey)));
@@ -169,10 +164,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             query = System.Linq.Expressions.Expression.Lambda<Func<EntityRelationship, bool>>(System.Linq.Expressions.Expression.AndAlso(typeReference, System.Linq.Expressions.Expression.AndAlso(classReference, query.Body)), query.Parameters);
 
-            if (queryId == Guid.Empty)
-                return this.m_repository.Find(query, offset, count, out totalResults);
-            else
-                return (this.m_repository as IPersistableQueryRepositoryService<EntityRelationship>).Find(query, offset, count, out totalResults, queryId);
+            return this.m_repository.Find(query);
         }
 
         /// <summary>
@@ -235,7 +227,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (sourceEntity == null)
             {
                 this.m_tracer.TraceError($"Could not resolve {resource.Patient.Reference}");
-                throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.couldNotResolve", new
+                throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.couldNotResolve", new
                 {
                     param = resource.Patient.Reference
                 }));
@@ -261,7 +253,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     this.m_tracer.TraceError($"Cannot change the source of relationship from {relationship.SourceEntityKey} to {sourceEntity.Key}");
 
-                    throw new InvalidOperationException(m_localizationService.FormatString("error.type.InvalidOperation.cannotChange", new
+                    throw new InvalidOperationException(m_localizationService.GetString("error.type.InvalidOperation.cannotChange", new
                     {
                         param = relationship.SourceEntityKey,
                         param2 = sourceEntity.Key
@@ -288,10 +280,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
-                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
                     {
-                        person = this.m_patientRepository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault() ??
-                            this.m_personRepository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                        person = this.m_patientRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault() ??
+                            this.m_personRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (person != null)
                     {

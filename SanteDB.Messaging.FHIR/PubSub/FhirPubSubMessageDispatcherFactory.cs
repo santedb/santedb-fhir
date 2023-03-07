@@ -16,14 +16,13 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
-using SanteDB.Core.Interfaces;
 using SanteDB.Core.Model;
 using SanteDB.Core.PubSub;
 using SanteDB.Core.Services;
@@ -33,10 +32,7 @@ using SanteDB.Messaging.FHIR.Rest;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SanteDB.Messaging.FHIR.PubSub
 {
@@ -64,7 +60,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <summary>
             /// Tracer
             /// </summary>
-            private Tracer m_tracer = Tracer.GetTracer(typeof(Dispatcher));
+            private readonly Tracer m_tracer = Tracer.GetTracer(typeof(Dispatcher));
 
             // Client for FHIR
             private FhirClient m_client;
@@ -106,7 +102,9 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 });
 
                 foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
+                {
                     this.m_client.RequestHeaders.Add(kv.Key, kv.Value);
+                }
 
                 if (this.m_configuration?.Authenticator != null)
                 {
@@ -388,6 +386,20 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     this.m_tracer.TraceError("Could not send create to {0} for {1} - {2}", this.Endpoint, data, e);
                     throw new DataDispatchException($"Error sending update notification to {this.Endpoint}", e);
                 }
+            }
+
+            /// <inheritdoc/>
+            public void NotifyLinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
+            {
+                this.NotifyUpdated(holder);
+                this.NotifyUpdated(target);
+            }
+
+            /// <inheritdoc/>
+            public void NotifyUnlinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
+            {
+                this.NotifyUpdated(holder);
+                this.NotifyUpdated(target);
             }
         }
 

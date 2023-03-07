@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using RestSrvr;
 using SanteDB.Messaging.FHIR.Rest.Serialization;
@@ -38,7 +38,9 @@ namespace SanteDB.Messaging.FHIR.Rest.Behavior
         public void ApplyEndpointBehavior(ServiceEndpoint endpoint, EndpointDispatcher dispatcher)
         {
             foreach (var op in endpoint.Description.Contract.Operations)
+            {
                 op.AddOperationBehavior(this);
+            }
         }
 
         /// <summary>

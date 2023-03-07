@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,15 +15,12 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: Nityan Khanna
- * Date: 2021-11-27
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Handlers;
 using System;
 using System.Collections.Generic;
@@ -37,19 +34,8 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Contains tests for the <see cref="FhirResourceHandlerUtil"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestFhirResourceHandlerUtil
+    public class TestFhirResourceHandlerUtil : FhirTest
     {
-        /// <summary>
-        /// Runs setup before each test execution.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestFhirResourceHandlerUtil).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-        }
 
         /// <summary>
         /// Tests the retrieval of a resource handler in the <see cref="FhirResourceHandlerUtil"/> class.

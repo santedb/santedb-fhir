@@ -1,38 +1,29 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
- * User: Zhiping Yu
- * Date: 2021-11-30
+ *
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Security;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
-using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -46,49 +37,13 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Test class for <see cref="CitizenshipExtension"/>
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestCitizenshipExtension
+    public class TestCitizenshipExtension : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        /// <summary>
-        /// Set up method to initialize services.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient"
-                },
-                OperationHandlers = new List<TypeReferenceConfiguration>(),
-                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
-                ProfileHandlers = new List<TypeReferenceConfiguration>(),
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(BirthPlaceExtension))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// Tests the construct functionality in <see cref="CitizenshipExtension" /> class.
@@ -102,7 +57,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Identifiers = new List<EntityIdentifier>
                 {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
+                    new EntityIdentifier(IdentityDomainKeys.Iso3166CountryCode, "NF")
                 }
             };
 
@@ -150,9 +105,9 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsNotNull(patient.Relationships);
                 Assert.IsTrue(patient.Relationships.Count() == 1);
                 Assert.IsInstanceOf<Place>(patient.Relationships.Single().TargetEntity);
-                Assert.AreEqual("NF", patient.Relationships.Single().TargetEntity.Identifiers.Single().Value);
+                Assert.AreEqual("NF", patient.LoadProperty(o => o.Relationships).Single().TargetEntity.LoadProperty(o => o.Identifiers).Single().Value);
                 Assert.IsTrue(patient.Relationships.Single().RelationshipTypeKey == EntityRelationshipTypeKeys.Citizen);
-                Assert.IsTrue(patient.Relationships.Single().TargetEntity.Identifiers.Any(c => c.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode));
+                Assert.IsTrue(patient.Relationships.Single().TargetEntity.Identifiers.Any(c => c.IdentityDomainKey == IdentityDomainKeys.Iso3166CountryCode));
             }
         }
 
@@ -173,7 +128,8 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 citizenshipExtension.Parse(extensionForTest, patient);
 
-                Assert.IsEmpty(patient.Relationships);
+                // JF: New pattern is that unloaded data is null
+                Assert.IsNull(patient.Relationships);
             }
         }
 
@@ -189,7 +145,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Identifiers = new List<EntityIdentifier>
                 {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
+                    new EntityIdentifier(IdentityDomainKeys.Iso3166CountryCode, "NF")
                 }
             };
 
@@ -247,7 +203,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 Identifiers = new List<EntityIdentifier>
                 {
-                    new EntityIdentifier(AssigningAuthorityKeys.Iso3166CountryCode, "NF")
+                    new EntityIdentifier(IdentityDomainKeys.Iso3166CountryCode, "NF")
                 }
             };
 

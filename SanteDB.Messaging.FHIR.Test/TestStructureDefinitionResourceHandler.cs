@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,22 +15,14 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: Nityan Khanna
- * Date: 2021-12-01
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
-using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 
@@ -41,49 +33,14 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestStructureDefinitionResourceHandler
+    public class TestStructureDefinitionResourceHandler : FhirTest
     {
-        /// <summary>
-        /// Set up method to initialize services.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "StructureDefinition"
-                },
-                OperationHandlers = new List<TypeReferenceConfiguration>(),
-                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
-                ProfileHandlers = new List<TypeReferenceConfiguration>(),
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(StructureDefinitionHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
 
         /// <summary>
         /// Tests the create functionality of the <see cref="BundleResourceHandler"/> class.

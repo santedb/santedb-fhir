@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
@@ -35,7 +35,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.IO;
 using System.Net;
-using System.Reflection;
 using System.Text;
 using System.Xml;
 using Formatting = Newtonsoft.Json.Formatting;
@@ -45,13 +44,16 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
     /// <summary>
     /// Represents a dispatch message formatter which uses the JSON.NET serialization
     /// </summary>
-    /// <remarks>This serialization is used because the SanteDB FHIR resources have extra features not contained in the pure HL7 API provided by HL7 International (such as operators to/from primitiives, generation of text, etc.). This 
+    /// <remarks>This serialization is used because the SanteDB FHIR resources have extra features not contained in the pure HL7 API provided by HL7 International (such as operators to/from primitiives, generation of text, etc.). This
     /// dispatch formatter is responsible for the serialization and de-serialization of FHIR objects to/from JSON and XML using the SanteDB classes for FHIR resources.</remarks>
     [ExcludeFromCodeCoverage]
     public class FhirMessageDispatchFormatter : IDispatchMessageFormatter
     {
         // Configuration for the service
         private readonly FhirServiceConfigurationSection m_configuration;
+
+        // Trace source
+        private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         // Default settings
         private readonly ParserSettings m_settings = new ParserSettings
@@ -61,9 +63,6 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
             DisallowXsiAttributesOnRoot = false,
             PermissiveParsing = true
         };
-
-        // Trace source
-        private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         /// <summary>
         /// Creates a new instance of the FHIR message dispatch formatter
@@ -154,7 +153,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 contentType = accepts ?? contentType ?? formatParm;
 
                 // No specified content type
-                if (string.IsNullOrEmpty(contentType))
+                if (String.IsNullOrEmpty(contentType))
                 {
                     contentType = this.m_configuration.DefaultResponseFormat == FhirResponseFormatConfiguration.Json ? "application/fhir+json" : "application/fhir+xml";
                 }
@@ -179,6 +178,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                             }
 
                             break;
+
                         case "application/fhir+json":
                             using (var sw = new StreamWriter(ms, new UTF8Encoding(false), 1024, true))
                             using (var jw = new JsonTextWriter(sw)
@@ -194,8 +194,9 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                             }
 
                             break;
+
                         default:
-                            throw new FhirException((HttpStatusCode) 406, OperationOutcome.IssueType.NotSupported, $"{contentType} not supported");
+                            throw new FhirException((HttpStatusCode)406, OperationOutcome.IssueType.NotSupported, $"{contentType} not supported");
                     }
 
                     ms.Seek(0, SeekOrigin.Begin);
@@ -203,7 +204,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 }
                 else if (result == null)
                 {
-                    responseMessage.StatusCode = 204; // no content
+                    responseMessage.StatusCode = HttpStatusCode.NoContent; // no content
                 }
                 else
                 {
@@ -211,7 +212,6 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 }
 
                 RestOperationContext.Current.OutgoingResponse.ContentType = contentType;
-                RestOperationContext.Current.OutgoingResponse.AppendHeader("X-PoweredBy", string.Format("{0} v{1} ({2})", Assembly.GetEntryAssembly().GetName().Name, Assembly.GetEntryAssembly().GetName().Version, Assembly.GetEntryAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion));
                 RestOperationContext.Current.OutgoingResponse.AppendHeader("X-GeneratedOn", DateTime.Now.ToString("o"));
             }
             catch (Exception e)

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,24 +15,17 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: Zhiping Yu
- * Date: 2021-12-13
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -42,50 +35,13 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Tests the <see cref="OrganizationResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestOrganizationResourceHandler : DataTest
+    public class TestOrganizationResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        /// <summary>
-        /// Setup method for unit tests.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestOrganizationResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Organization"
-                },
-                OperationHandlers = new List<TypeReferenceConfiguration>(),
-                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
-                ProfileHandlers = new List<TypeReferenceConfiguration>(),
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(OrganizationResourceHandler))
-                }
-            };
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// /// <summary>
@@ -99,7 +55,7 @@ namespace SanteDB.Messaging.FHIR.Test
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
-                Assert.Throws<InvalidDataException>(() => organizationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => organizationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
             }
         }
 
@@ -124,11 +80,10 @@ namespace SanteDB.Messaging.FHIR.Test
             // assert create organization successfully
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
-            var actual = (Organization) result;
+            var actual = (Organization)result;
             Assert.AreEqual("Hamilton Health Sciences", actual.Name);
             Assert.IsTrue(actual.Alias.All(c => c == "hhs"));
             Assert.IsTrue(actual.Address.Count == 2);
-            Assert.IsTrue(actual.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/detectedIssue"));
             Assert.IsTrue(actual.Identifier.First().Value == "6324");
             Assert.AreEqual("http://santedb.org/fhir/test", actual.Identifier.First().System);
             Assert.IsTrue(actual.Identifier.Count == 1);
@@ -160,7 +115,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(actual);
             Assert.IsInstanceOf<Organization>(actual);
 
-            var createdOrganization= (Organization) actual;
+            var createdOrganization = (Organization)actual;
             Assert.IsNotNull(createdOrganization);
 
             Resource readOrganization;
@@ -173,16 +128,15 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.IsNotNull(readOrganization);
             Assert.IsInstanceOf<Organization>(readOrganization);
 
-            var actualOrganization = (Organization) readOrganization;
+            var actualOrganization = (Organization)readOrganization;
 
             Assert.IsNotNull(actualOrganization.Address);
-            Assert.AreEqual("Hamilton Health Sciences",actualOrganization.Name);
+            Assert.AreEqual("Hamilton Health Sciences", actualOrganization.Name);
             Assert.IsTrue(actualOrganization.Alias.All(c => c == "hhs"));
             Assert.IsTrue(actualOrganization.Address.Count == 2);
-            Assert.IsTrue(actualOrganization.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/detectedIssue"));
             Assert.IsTrue(actualOrganization.Identifier.First().Value == "6324");
             Assert.AreEqual("http://santedb.org/fhir/test", actualOrganization.Identifier.First().System);
-            Assert.IsTrue(actualOrganization.Identifier.Count == 1);
+            Assert.AreEqual(1, actualOrganization.Identifier.Count);
         }
 
         /// <summary>
@@ -207,7 +161,7 @@ namespace SanteDB.Messaging.FHIR.Test
             // assert create organization successfully
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
-            var readOrganization = (Organization) result;
+            var readOrganization = (Organization)result;
 
             // ensure the organization is active
             Assert.IsTrue(readOrganization.Active);
@@ -220,36 +174,18 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
                 result = organizationResourceHandler.Delete(result.Id, TransactionMode.Commit);
+
+                try
+                {
+                    organizationResourceHandler.Read(result.Id, null);
+                    Assert.Fail("Should have thrown 410 gone");
+                }
+                catch (FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone) { }
+                catch
+                {
+                    Assert.Fail("Threw wrong exception");
+                }
             }
-
-            // assert deletion organizaiton successfully
-            Assert.NotNull(result);
-            Assert.IsInstanceOf<Organization>(result);
-            readOrganization = (Organization) result;
-
-            // ensure the organization is NOT active
-            Assert.IsFalse(readOrganization.Active);
-
-            // ensure the deleted organization is the created one
-            Assert.IsTrue(readOrganization.Name == "Hamilton Health Sciences");
-            Assert.AreEqual(2, readOrganization.Address.Count());
-            Assert.AreEqual("hhs", readOrganization.Alias.First());
-            Assert.IsTrue(readOrganization.Identifier.First().Value == "6324");
-            Assert.AreEqual("http://santedb.org/fhir/test", readOrganization.Identifier.First().System);
-            Assert.IsTrue(readOrganization.Identifier.Count == 1);
-
-            // read the organization
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
-            {
-                var organizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Organization);
-                result = organizationResourceHandler.Read(result.Id, readOrganization.VersionId);
-            }
-
-            Assert.NotNull(result);
-            Assert.IsInstanceOf<Organization>(result);
-            readOrganization = (Organization) result;
-            // ensure the organization is NOT active
-            Assert.IsFalse(readOrganization.Active);
         }
 
         /// <summary>
@@ -273,7 +209,7 @@ namespace SanteDB.Messaging.FHIR.Test
             // assert create organization successfully
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
-            var actual = (Organization) result;
+            var actual = (Organization)result;
             Assert.AreEqual("Hamilton Health Sciences", actual.Name);
             Assert.IsTrue(actual.Alias.All(c => c == "hhs"));
             Assert.IsTrue(actual.Address.Count == 2);
@@ -282,7 +218,6 @@ namespace SanteDB.Messaging.FHIR.Test
             organization.Name = "Hamilton Health Science";
             organization.Address.RemoveAt(1);
             organization.Identifier.First().Value = "2021";
-            organization.Extension.RemoveAt(0);
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
@@ -294,7 +229,7 @@ namespace SanteDB.Messaging.FHIR.Test
             // assert update organization successfully
             Assert.NotNull(result);
             Assert.IsInstanceOf<Organization>(result);
-            actual = (Organization) result;
+            actual = (Organization)result;
             Assert.AreEqual("Hamilton Health Science", actual.Name);
             Assert.IsTrue(actual.Address.Count == 1);
             Assert.IsFalse(actual.Extension.Any());

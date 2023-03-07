@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
@@ -67,7 +67,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// <summary>
         /// Construct the extension
         /// </summary>
-        public IEnumerable<Extension> Construct(IIdentifiedEntity modelObject)
+        public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
             if (modelObject is Core.Model.Roles.Patient patient)
             {
@@ -75,11 +75,11 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 foreach (var citizenshipExtension in patient.LoadCollection(o => o.Relationships).Where(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Citizen))
                 {
                     var citizenPlace = citizenshipExtension.LoadProperty(o => o.TargetEntity);
-                    var isoCode = citizenPlace.GetIdentifiers().FirstOrDefault(o => o.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode);
+                    var isoCode = citizenPlace.GetIdentifiers().FirstOrDefault(o => o.IdentityDomainKey == IdentityDomainKeys.Iso3166CountryCode);
 
                     if (isoCode != null)
                     {
-                        yield return new Extension(this.Uri.ToString(), new CodeableConcept($"urn:oid:{isoCode.AuthorityXml.Oid}", isoCode.Value));
+                        yield return new Extension(this.Uri.ToString(), new CodeableConcept($"urn:oid:{isoCode.LoadProperty(o => o.IdentityDomain).Oid}", isoCode.Value));
                     }
                 }
             }
@@ -96,9 +96,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
                 if (isoCode != null)
                 {
-                    var country = this.m_placeRepository.Find(o => o.Identifiers.Where(a => a.AuthorityKey == AssigningAuthorityKeys.Iso3166CountryCode).Any(i => i.Value == isoCode.Code) && StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value)).SingleOrDefault();
+                    var country = this.m_placeRepository.Find(o => o.Identifiers.Where(a => a.IdentityDomainKey == IdentityDomainKeys.Iso3166CountryCode).Any(i => i.Value == isoCode.Code) && StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value)).SingleOrDefault();
 
-                    if (country != null && !patient.Relationships.Any(c => c.TargetEntityKey == country.Key))
+                    if (country != null && !patient.LoadProperty(o => o.Relationships).Any(c => c.TargetEntityKey == country.Key))
                     {
                         patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Citizen, country));
 

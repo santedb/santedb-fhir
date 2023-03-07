@@ -1,33 +1,29 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
- * User: khans
- * Date: 2021-11-15
+ *
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -41,17 +37,13 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Contains tests for the <see cref="ObservationResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestObservationResourceHandler : DataTest
+    public class TestObservationResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
 
         private Observation m_observation;
 
@@ -63,27 +55,13 @@ namespace SanteDB.Messaging.FHIR.Test
         /// Runs setup before each test execution.
         /// </summary>
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
 
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient",
-                    "Practitioner",
-                    "Observation"
-                }
-            };
 
             TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
             using (AuthenticationContext.EnterSystemContext())
             {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
 
                 //add practitioner to be used as performer
                 var practitioner = TestUtil.GetFhirMessage("ObservationPerformer") as Practitioner;
@@ -151,7 +129,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var qty = actual.Value as Quantity;
             Assert.AreEqual(12, qty.Value);
-            
+
             //Due to time zone not being supported by current version of test database
             //this following assert will only work if original effective time has local timezone
             //Assert.AreEqual(effectiveTime, actual.Effective);
@@ -176,10 +154,16 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 _ = observationResourceHandler.Delete(this.m_observation.Id, TransactionMode.Commit);
 
-                retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
-                
-                //ensure observation status is now unknown since deletion was performed
-                Assert.AreEqual(ObservationStatus.Unknown, retrievedObservation.Status);
+                try
+                {
+                    retrievedObservation = (Observation)observationResourceHandler.Read(this.m_observation.Id, null);
+                    Assert.Fail("Should throw exception");
+                }
+                catch (FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone) { }
+                catch
+                {
+                    Assert.Fail("Threw wrong exception type");
+                }
             }
         }
 
@@ -271,7 +255,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //update observation
                 retrievedObservation.Value = new Quantity(10, "mmHg");
-                
+
                 retrievedObservation.Effective = updatedEffectiveTime;
 
                 _ = observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit);
@@ -315,7 +299,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 //update status to amended
                 retrievedObservation.Status = ObservationStatus.Amended;
                 Assert.Throws<NotSupportedException>(() => observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit));
-                
+
                 //update status to corrected
                 retrievedObservation.Status = ObservationStatus.Corrected;
                 Assert.Throws<NotSupportedException>(() => observationResourceHandler.Update(retrievedObservation.Id, retrievedObservation, TransactionMode.Commit));
@@ -371,7 +355,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 retrievedObservation = (Observation)observationResourceHandler.Read(updatedObservation.Id, null);
                 var codeValue = retrievedObservation.Value as CodeableConcept;
                 Assert.AreEqual(1, codeValue.Coding.Count);
-                Assert.AreEqual("H",  codeValue.Coding.First().Code);
+                Assert.AreEqual("H", codeValue.Coding.First().Code);
             }
         }
     }

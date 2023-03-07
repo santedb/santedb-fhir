@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,21 +15,16 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: Shihab Khan
- * Date: 2021-11-30
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Model.DataTypes;
+using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Roles;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
-using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Patient = SanteDB.Core.Model.Roles.Patient;
@@ -41,25 +36,17 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestReligionExtension
+    public class TestReligionExtension : FhirTest
     {
         /// <summary>
         /// Runs setup before each test execution.
         /// </summary>
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_extension = this.m_serviceManager.CreateInjected<ReligionExtension>();
         }
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
 
         /// <summary>
         /// The extension under test.
@@ -75,17 +62,14 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             var patient = new Patient
             {
-                ReligiousAffiliation = new Concept
-                {
-                    Mnemonic = "Talos", Key = Guid.NewGuid()
-                }
+                ReligiousAffiliationKey = ReligionKeys.Agnostic
             };
 
             var constructedReligion = this.m_extension.Construct(patient).ToArray();
             Assert.AreEqual(1, constructedReligion.Length);
             Assert.IsInstanceOf<CodeableConcept>(constructedReligion.First().Value);
-            var codeableConcept = (CodeableConcept) constructedReligion.First().Value;
-            Assert.AreEqual("Talos", codeableConcept.Coding.First().Code);
+            var codeableConcept = (CodeableConcept)constructedReligion.First().Value;
+            Assert.AreEqual("AGN", codeableConcept.Coding.First().Code);
         }
 
         /// <summary>

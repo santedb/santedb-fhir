@@ -1,47 +1,14 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <SkipValidatePackageReferences>true</SkipValidatePackageReferences>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{059D74D5-FB36-41C6-ACCA-B3FFC5033C74}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SanteDB.Messaging.FHIR.Test</RootNamespace>
-    <AssemblyName>SanteDB.Messaging.FHIR.Test</AssemblyName>
-    <TargetFrameworkVersion>v4.7</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <ProjectTypeGuids>{3AC096D0-A1C2-E12C-1390-A8335801FDAB};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
-    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">15.0</VisualStudioVersion>
-    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)</VSToolsPath>
-    <ReferencePath>$(ProgramFiles)\Common Files\microsoft shared\VSTT\$(VisualStudioVersion)\UITestExtensionPackages</ReferencePath>
-    <IsCodedUITest>False</IsCodedUITest>
-    <TestProjectType>UnitTest</TestProjectType>
-    <NuGetPackageImportStamp>
-    </NuGetPackageImportStamp>
-    <TargetFrameworkProfile />
+    <TargetFramework>net48</TargetFramework>
+    <IsPackable>false</IsPackable>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <PlatformTarget>x64</PlatformTarget>
+
+  <PropertyGroup Condition="'$(VersionNumber)' == ''">
+    <VersionNumber>3.0-debug</VersionNumber>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>..\bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup>
-    <StartupObject />
-  </PropertyGroup>
+
   <ItemGroup>
     <None Remove="Resources\ComplexPatient.json" />
     <None Remove="Resources\ComplexPatientPatientRelationship.json" />
@@ -83,12 +50,17 @@
     <EmbeddedResource Include="Resources\CreateDeceasedPatientPartialDate.json" />
     <EmbeddedResource Include="Resources\CreateImmunization.json" />
     <EmbeddedResource Include="Resources\ParentOrganization.json" />
+    <None Include="..\..\SanteDB.licenseheader">
+      <Link>SanteDB.licenseheader</Link>
+    </None>
   </ItemGroup>
+  <!-- Test Framework via Nuget does this automagically -->
+  <Import Condition="$(SolutionName.Contains('-ext'))" Project="$(SolutionDir)\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.targets" />
+
   <ItemGroup>
-    <PackageReference Include="NUnit" Version="3.13.2" />
-    <PackageReference Include="NUnit3TestAdapter" Version="4.2.0" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.0.0" />
-    <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="8.5.4" />
+    <PackageReference Include="NUnit" Version="3.13.3" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.3.0" />
+    <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="9.0.2" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\ComplexPatient.json" />
@@ -101,83 +73,43 @@
         <ProjectReference Include="..\..\santedb-cache-memory\SanteDB.Caching.Memory\SanteDB.Caching.Memory.csproj">
         </ProjectReference>
         <ProjectReference Include="..\..\santedb-api\SanteDB.Core.Api\SanteDB.Core.Api.csproj">
-          <Project>{3A45F695-47A2-464C-ACE6-BDABBFA39FBC}</Project>
-          <Name>SanteDB.Core.Api</Name>
         </ProjectReference>
         <ProjectReference Include="..\..\santedb-model\SanteDB.Core.Model\SanteDB.Core.Model.csproj">
-          <Project>{F1A82A4F-4A57-47D7-AE76-444C8A4FF54A}</Project>
-          <Name>SanteDB.Core.Model</Name>
-        </ProjectReference>
-        <ProjectReference Include="..\..\SanteDB.Core\SanteDB.Server.Core.csproj">
-          <Project>{DB9BC05E-45F1-4F96-A161-F36BDECAF566}</Project>
-          <Name>SanteDB.Server.Core</Name>
-        </ProjectReference>
-        <ProjectReference Include="..\..\SanteDB.Persistence.Data.ADO\SanteDB.Persistence.Data.ADO.csproj">
-          <Project>{f38ed54c-e4e4-499a-882e-736289f332c0}</Project>
-          <Name>SanteDB.Persistence.Data.ADO</Name>
-        </ProjectReference>
-        <ProjectReference Include="..\..\SanteDB.Core.TestFramework\SanteDB.Core.TestFramework.csproj">
-          <Project>{ad73db46-cbb3-4746-b406-40fc435ab3db}</Project>
-          <Name>SanteDB.Core.TestFramework</Name>
         </ProjectReference>
         <ProjectReference Include="..\..\santedb-mdm\SanteDB.Persistence.MDM\SanteDB.Persistence.MDM.csproj">
-          <Project>{20960967-3647-41a2-9df6-3e15e2aa7019}</Project>
-          <Name>SanteDB.Persistence.MDM</Name>
         </ProjectReference>
+        <ProjectReference Include="..\..\santedb-data\SanteDB.Persistence.Data\SanteDB.Persistence.Data.csproj" />
+		    <ProjectReference Include="..\..\santedb-api\SanteDB.Core.TestFramework\SanteDB.Core.TestFramework.csproj">
+        </ProjectReference>
+        <ProjectReference Include="..\..\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.csproj" />
+        
       </ItemGroup>
     </When>
     <Otherwise>
       <ItemGroup>
-        <PackageReference Include="SanteDB.Core.Api" Version="2.1.11.0" />
-        <PackageReference Include="SanteDB.Core.Applets" Version="2.1.11.0" />
-        <PackageReference Include="SanteDB.Core.Model" Version="2.1.11.0" />
-        <PackageReference Include="SanteDB.Rest.Common" Version="2.1.11.0" />
-        <PackageReference Include="SanteDB.OrmLite" Version="2.1.3.0" />
-        <PackageReference Include="SanteDB.Core.TestFramework" Version="2.1.11.0" />
-        <PackageReference Include="SanteDB.Server.Plugin" Version="2.1.11.0" />
-        <PackageReference Include="SanteDB.Server.Plugin.Data" Version="2.1.11.0" />
-        <PackageReference Include="SanteDB.Persistence.MDM" Version="2.1.11.0" />
+        <PackageReference Include="SanteDB.Core.Api" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.Core.Applets" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.Core.Model" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.Rest.Common" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.OrmLite" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.Core.TestFramework" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.Core.TestFramework.FirebirdSQL" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.Persistence.Data" Version="$(VersionNumber)" />
+        <PackageReference Include="SanteDB.Persistence.MDM" Version="$(VersionNumber)" />
       </ItemGroup>
     </Otherwise>
   </Choose>
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent" Condition="$(SolutionName.Contains('-ext')) and '$(NoFirebird)' == ''">
-    <Exec Command="&quot;$(SolutionDir)\Solution Items\FirebirdSQL-3.0.3-Embedded.bat&quot; &quot;$(SolutionDir)\Solution Items&quot; &quot;$(TargetDir)&quot;" />
-    <Copy SourceFiles="$(SolutionDir)\Solution Items\santedb_test.fdb" DestinationFolder="$(TargetDir)" />
-  </Target>
+  
   <ItemGroup>
     <ProjectReference Include="..\SanteDB.Messaging.FHIR\SanteDB.Messaging.FHIR.csproj">
+      <Name>SanteDB.Messaging.FHIR</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="TestConfig.xml" />
   </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TestMessageUtil.cs" />
-    <Compile Include="TestAdverseEventResourceHandler.cs" />
-    <Compile Include="TestQueryRewriter.cs" />
-    <Compile Include="TestBirthTimeExtension.cs" />
-    <Compile Include="TestCitizenshipExtension.cs" />
-    <Compile Include="TestBundleResourceHandler.cs" />
-    <Compile Include="TestBirthPlaceExtension.cs" />
-    <Compile Include="TestEncounterResourceHandler.cs" />
-    <Compile Include="TestFhirResourceHandlerUtil.cs" />
-    <Compile Include="TestLocationResourceHandler.cs" />
-    <Compile Include="TestMedicationResourceHandler.cs" />
-    <Compile Include="TestModelExtensions.cs" />
-    <Compile Include="TestObservationResourceHandler.cs" />
-    <Compile Include="TestPatientResourceHandler.cs" />
-    <Compile Include="TestOrganizationResourceHandler.cs" />
-    <Compile Include="TestRelatedPersonResourceHandler.cs" />
-    <Compile Include="TestPractitionerResourceHandler.cs" />
-    <Compile Include="TestImmunizationResourceHandler.cs" />
-    <Compile Include="TestImportanceExtension.cs" />
-    <Compile Include="TestStructureDefinitionResourceHandler.cs" />
-    <Compile Include="TestStructureDefinitionUtil.cs" />
-    <Compile Include="TestNationalityExtension.cs" />
-    <Compile Include="TestReligionExtension.cs" />
-    <Compile Include="TestUtil.cs" />
-    <Compile Include="TestValidateResourceOperation.cs" />
+    <Folder Include="Properties\" />
   </ItemGroup>
+
 </Project>

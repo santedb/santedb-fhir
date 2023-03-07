@@ -1,14 +1,15 @@
 <?xml version="1.0"?>
 <dataset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="FHIR Contact Point System Codes" xmlns="http://santedb.org/data">
-  <insert>
+  <update insertIfNotExists="true">
     <CodeSystem xmlns="http://santedb.org/model">
       <id>0cb5d972-ace6-4cf5-8485-9963eac0c5cf</id>
       <name>FHIR Contact Point System Codes</name>
       <oid>2.16.840.1.113883.4.642.1.65</oid>
+      <authority>ContactPointSystem</authority>
       <url>http://hl7.org/fhir/contact-point-system</url>
     </CodeSystem>
-  </insert>
-  <insert>
+  </update>
+  <update insertIfNotExists="true">
     <ReferenceTerm xmlns="http://santedb.org/model">
       <id>c714211b-a6f4-445c-a56b-c602a53cc8e1</id>
       <mnemonic>phone</mnemonic>
@@ -19,16 +20,16 @@
         <phoneticAlgorithm xsi:nil="true" />
       </name>
     </ReferenceTerm>
-  </insert>
-  <insert>
+  </update>
+  <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>c1c0a4e9-4238-4044-b89b-9c9798995b99</source>
       <term>c714211b-a6f4-445c-a56b-c602a53cc8e1</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
     </ConceptReferenceTerm>
-  </insert>
+  </update>
   
-  <insert>
+  <update insertIfNotExists="true">
     <ReferenceTerm xmlns="http://santedb.org/model">
       <id>b478e5cf-95c5-457a-9d3d-ccbdeeac7ced</id>
       <mnemonic>fax</mnemonic>
@@ -39,17 +40,17 @@
         <phoneticAlgorithm xsi:nil="true" />
       </name>
     </ReferenceTerm>
-  </insert>
+  </update>
 
-  <insert>
+  <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>c1c0a4e9-4238-4044-b89b-9c9798995b92</source>
       <term>b478e5cf-95c5-457a-9d3d-ccbdeeac7ced</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
     </ConceptReferenceTerm>
-  </insert>
+  </update>
   
-  <insert>
+  <update insertIfNotExists="true">
     <ReferenceTerm xmlns="http://santedb.org/model">
       <id>90308bd2-b505-4ac0-8e27-aa75ba25941e</id>
       <mnemonic>email</mnemonic>
@@ -60,17 +61,17 @@
         <phoneticAlgorithm xsi:nil="true" />
       </name>
     </ReferenceTerm>
-  </insert>
+  </update>
 
-  <insert>
+  <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>c1c0a4ff-4238-4044-b89b-9c9798995b94</source>
       <term>90308bd2-b505-4ac0-8e27-aa75ba25941e</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
     </ConceptReferenceTerm>
-  </insert>
+  </update>
   
-  <insert>
+  <update insertIfNotExists="true">
     <ReferenceTerm xmlns="http://santedb.org/model">
       <id>94da349f-4514-4796-a962-25c259c7121c</id>
       <mnemonic>pager</mnemonic>
@@ -81,17 +82,17 @@
         <phoneticAlgorithm xsi:nil="true" />
       </name>
     </ReferenceTerm>
-  </insert>
+  </update>
 
-  <insert>
+  <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>788000b4-e37a-4055-a2aa-c650089ce3b1</source>
       <term>94da349f-4514-4796-a962-25c259c7121c</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
     </ConceptReferenceTerm>
-  </insert>
+  </update>
   
-  <insert>
+  <update insertIfNotExists="true">
     <ReferenceTerm xmlns="http://santedb.org/model">
       <id>fe047f8d-f247-4b8a-8df8-2f372edbf126</id>
       <mnemonic>url</mnemonic>
@@ -102,17 +103,17 @@
         <phoneticAlgorithm xsi:nil="true" />
       </name>
     </ReferenceTerm>
-  </insert>
+  </update>
   
-  <insert>
+  <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>c1c0a4e9-4238-4044-b89b-9c9798995b93</source>
       <term>fe047f8d-f247-4b8a-8df8-2f372edbf126</term>
       <relationshipType>ae8b4f2f-009f-4e0d-b35e-5a89555c5990</relationshipType>
     </ConceptReferenceTerm>
-  </insert>
+  </update>
   
-  <insert>
+  <update insertIfNotExists="true">
     <Concept xmlns="http://santedb.org/model">
       <id>ec1b3f17-929d-4780-8bde-839b597416ab</id>
       <version xsi:nil="true" />
@@ -130,9 +131,9 @@
         <value>URL</value>
       </name>
     </Concept>
-  </insert>
+  </update>
   
-  <insert>
+  <update insertIfNotExists="true">
     <ReferenceTerm xmlns="http://santedb.org/model">
       <id>ffff64ce-7ebc-4a70-af53-7ebc047e5b3a</id>
       <mnemonic>sms</mnemonic>
@@ -143,17 +144,17 @@
         <phoneticAlgorithm xsi:nil="true" />
       </name>
     </ReferenceTerm>
-  </insert>
+  </update>
 
-  <insert>
+  <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>c1c0a4e9-4238-4044-b89b-9c9798995b90</source>
       <term>ffff64ce-7ebc-4a70-af53-7ebc047e5b3a</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
     </ConceptReferenceTerm>
-  </insert>
+  </update>
   
-  <insert>
+  <update insertIfNotExists="true">
     <ReferenceTerm xmlns="http://santedb.org/model">
       <id>554f8c69-d0b5-481a-a3b1-40af00b44752</id>
       <mnemonic>other</mnemonic>
@@ -164,14 +165,14 @@
         <phoneticAlgorithm xsi:nil="true" />
       </name>
     </ReferenceTerm>
-  </insert>
+  </update>
 
-  <insert>
+  <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>6052712a-340e-4480-ad6b-409ba320db4f</source>
       <term>554f8c69-d0b5-481a-a3b1-40af00b44752</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
     </ConceptReferenceTerm>
-  </insert>
+  </update>
   
 </dataset>

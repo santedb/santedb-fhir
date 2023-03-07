@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,25 +15,17 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: webber
- * Date: 2021-11-18
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using Patient = Hl7.Fhir.Model.Patient;
@@ -44,56 +36,13 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Test class for <see cref="EncounterResourceHandler"/>
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestEncounterResourceHandler : DataTest
+    public class TestEncounterResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        /// <summary>
-        /// Set up method to initialize services.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Encounter",
-                    "Bundle",
-                    "Patient",
-                    "Organization"
-                },
-                OperationHandlers = new List<TypeReferenceConfiguration>(),
-                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
-                ProfileHandlers = new List<TypeReferenceConfiguration>(),
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(EncounterResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(PatientResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// Tests the create functionality in <see cref="EncounterResourceHandler"/> class.
@@ -186,7 +135,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var createdEncounter = (Encounter)actualEncounter;
 
-            Resource actual; 
+            Resource actual;
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", AUTH))
             {
@@ -198,17 +147,24 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 Assert.IsInstanceOf<Encounter>(actual);
 
-                var retrievedEncounter = (Encounter) actual;
+                var retrievedEncounter = (Encounter)actual;
 
                 var result = encounterResourceHandler.Delete(retrievedEncounter.Id, TransactionMode.Commit);
 
-                result = encounterResourceHandler.Read(result.Id, null);
+                try
+                {
+                    result = encounterResourceHandler.Read(result.Id, null);
+                    Assert.Fail("Should throw gone exception");
+                }
+                catch (FhirException f) when (f.Status == System.Net.HttpStatusCode.Gone)
+                {
 
-                Assert.IsInstanceOf<Encounter>(result);
+                }
+                catch
+                {
+                    Assert.Fail("Wrong exception type thrown!");
+                }
 
-                var obsoletedEncounter = (Encounter)result;
-
-                Assert.AreEqual(Encounter.EncounterStatus.Unknown, obsoletedEncounter.Status);
             }
         }
 
@@ -319,7 +275,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
 
                 // create the encounter using the resource handler with an incorrect resource
-                Assert.Throws<InvalidDataException>(() => encounterResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => encounterResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
 
             }
         }
@@ -369,7 +325,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
 
-                Assert.Throws<InvalidDataException>(() => updatedEncounter = encounterResourceHandler.Update(createdEncounter.Id, new Account(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => updatedEncounter = encounterResourceHandler.Update(createdEncounter.Id, new Account(), TransactionMode.Commit));
             }
         }
 

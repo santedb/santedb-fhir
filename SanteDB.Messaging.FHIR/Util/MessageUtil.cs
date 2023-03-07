@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model.Interfaces;
@@ -52,7 +52,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             string retVal = str;
             foreach (var itm in s_escapeChars)
+            {
                 retVal = retVal.Replace(itm.Key, itm.Value);
+            }
+
             return retVal;
         }
 
@@ -63,7 +66,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             string retVal = str;
             foreach (var itm in s_escapeChars)
+            {
                 retVal = retVal.Replace(itm.Value, itm.Key);
+            }
+
             return retVal;
         }
 
@@ -92,7 +98,9 @@ namespace SanteDB.Messaging.FHIR.Util
                 if (queryResult != null)
                 {
                     for (int i = 0; i < queryResult.Query.ActualParameters.Count; i++)
+                    {
                         foreach (var itm in queryResult.Query.ActualParameters.GetValues(i))
+                        {
                             switch (queryResult.Query.ActualParameters.GetKey(i))
                             {
                                 case "_stateid":
@@ -103,12 +111,16 @@ namespace SanteDB.Messaging.FHIR.Util
                                     queryUri += string.Format("{0}={1}&", queryResult.Query.ActualParameters.GetKey(i), itm);
                                     break;
                             }
+                        }
+                    }
 
                     if (!baseUri.Contains("_stateid=") && queryResult.Query.QueryId != Guid.Empty)
+                    {
                         queryUri += String.Format("_stateid={0}&", queryResult.Query.QueryId);
+                    }
                 }
 
-               
+
                 // Self URI
                 if (queryResult != null && queryResult.TotalResults > queryResult.Results.Count)
                 {
@@ -125,7 +137,9 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                 }
                 else
+                {
                     retVal.Link.Add(new Bundle.LinkComponent() { Url = queryUri, Relation = "self" });
+                }
             }
             else //History 
             {
@@ -140,25 +154,29 @@ namespace SanteDB.Messaging.FHIR.Util
             //retVal.Generator = "MARC-HI Service Core Framework";
 
             // HACK: Remove me
-            if(queryResult != null)
+            if (queryResult != null)
+            {
                 retVal.Total = queryResult.TotalResults;
+            }
 
-            
+
             // Results
             if (result.Results != null)
             {
                 retVal.Entry = result.Results.Select(itm =>
                 {
 
-                    itm.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = itm.Resource.HasVersionId ? $"{itm.Resource.TypeName}/{itm.Resource.Id}/_history/{itm.Resource.VersionId}" : $"{itm.Resource.TypeName}/{itm.Resource.Id}"  } };
+                    itm.Link = new List<Bundle.LinkComponent>() { new Bundle.LinkComponent() { Relation = "_self", Url = itm.Resource.HasVersionId ? $"{itm.Resource.TypeName}/{itm.Resource.Id}/_history/{itm.Resource.VersionId}" : $"{itm.Resource.TypeName}/{itm.Resource.Id}" } };
                     itm.FullUrl = itm.FullUrl ?? $"{GetBaseUri()}/{itm.Resource.TypeName}/{itm.Resource.Id}";
 
                     // Add confidence if the attribute permits
-                    if(itm.Search != null && itm.Search.Mode == Bundle.SearchEntryMode.Match) // Search data
+                    if (itm.Search != null && itm.Search.Mode == Bundle.SearchEntryMode.Match) // Search data
                     {
                         var confidence = itm.Annotations(typeof(ITag)).OfType<ITag>().FirstOrDefault(t => t.TagKey == "$conf");
                         if (confidence != null)
+                        {
                             itm.Search.Score = Decimal.Parse(confidence.Value);
+                        }
                     }
 
                     return itm;

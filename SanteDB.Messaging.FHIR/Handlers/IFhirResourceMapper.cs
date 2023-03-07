@@ -16,12 +16,11 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
 using System;
-using System.Collections.Generic;
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {

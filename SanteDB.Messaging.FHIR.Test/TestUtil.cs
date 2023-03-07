@@ -1,4 +1,24 @@
-﻿using Hl7.Fhir.Model;
+﻿/*
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * User: fyfej
+ * Date: 2022-5-30
+ */
+using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 using Newtonsoft.Json;
 using SanteDB.Core;
@@ -10,7 +30,6 @@ using SanteDB.Core.Services;
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -41,7 +60,8 @@ namespace SanteDB.Messaging.FHIR.Test
             // Create the test harness device / application
             var securityDevService = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityDevice>>();
             var securityAppService = ApplicationServiceContext.Current.GetService<IRepositoryService<SecurityApplication>>();
-            var metadataService = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
+            var securityPipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
+            var metadataService = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
 
             using (AuthenticationContext.EnterSystemContext())
             {
@@ -54,8 +74,8 @@ namespace SanteDB.Messaging.FHIR.Test
                         DeviceSecret = BitConverter.ToString(deviceSecret).Replace("-", ""),
                         Name = $"{applicationName}|TEST"
                     };
-                    device.AddPolicy(PermissionPolicyIdentifiers.LoginAsService);
                     device = securityDevService.Insert(device);
+                    securityPipService.AddPolicies(device, PolicyGrantType.Grant, AuthenticationContext.Current.Principal, PermissionPolicyIdentifiers.LoginAsService);
                 }
 
                 // Application
@@ -67,19 +87,25 @@ namespace SanteDB.Messaging.FHIR.Test
                         Name = applicationName,
                         ApplicationSecret = BitConverter.ToString(deviceSecret).Replace("-", "")
                     };
-                    app.AddPolicy(PermissionPolicyIdentifiers.LoginAsService);
-                    app.AddPolicy(PermissionPolicyIdentifiers.UnrestrictedClinicalData);
-                    app.AddPolicy(PermissionPolicyIdentifiers.UnrestrictedMetadata);
+
                     app = securityAppService.Insert(app);
+                    securityPipService.AddPolicies(app, PolicyGrantType.Grant, AuthenticationContext.Current.Principal, PermissionPolicyIdentifiers.LoginAsService, PermissionPolicyIdentifiers.UnrestrictedClinicalData, PermissionPolicyIdentifiers.UnrestrictedMetadata);
                 }
 
                 // Create AA
                 var aa = metadataService.Get(nsid);
                 if (aa == null)
                 {
-                    aa = new AssigningAuthority(nsid, nsid, oid)
+                    aa = new IdentityDomain(nsid, nsid, oid)
                     {
-                        AssigningApplicationKey = app.Key,
+                        AssigningAuthority = new System.Collections.Generic.List<AssigningAuthority>()
+                        {
+                            new AssigningAuthority()
+                            {
+                                AssigningApplicationKey = app.Key,
+                                Reliability = IdentifierReliability.Authoritative
+                            }
+                        },
                         IsUnique = true,
                         Url = url
                     };

@@ -1,22 +1,37 @@
-﻿using System;
+﻿/*
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * User: fyfej
+ * Date: 2022-5-30
+ */
+using Hl7.Fhir.Model;
+using NUnit.Framework;
+using SanteDB.Core;
+using SanteDB.Core.Model.Acts;
+using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
+using SanteDB.Messaging.FHIR.Handlers;
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
-using FirebirdSql.Data.FirebirdClient;
-using Hl7.Fhir.Model;
-using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Model.Acts;
-using SanteDB.Core.Model.DataTypes;
-using SanteDB.Core.Security;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
-using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -24,7 +39,7 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Contains tests for the <see cref="ImmunizationResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestImmunizationResourceHandler : DataTest
+    public class TestImmunizationResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
@@ -36,41 +51,6 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         private IRepositoryService<Core.Model.Acts.SubstanceAdministration> m_substanceAdministrationRepositoryService;
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestOrganizationResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Immunization",
-                    "Patient",
-                    "Encounter",
-                    "Practitioner"
-                },
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(ImmunizationResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// Tests the create functionality in <see cref="ImmunizationResourceHandler" /> class.
@@ -130,7 +110,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var encounterResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Encounter);
                 var immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
-                
+
                 actualPatient = patientResourceHandler.Create(patient, TransactionMode.Commit);
                 actualPractitioner = (Practitioner)practitionerResourceHandler.Create(practitioner, TransactionMode.Commit);
                 encounter.Subject = new ResourceReference($"urn:uuid:{actualPatient.Id}");
@@ -146,14 +126,14 @@ namespace SanteDB.Messaging.FHIR.Test
                 };
                 actualImmunization = immunizationResourceHandler.Create(immunization, TransactionMode.Commit);
                 var retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
-                
+
                 Assert.AreEqual(retrievedImmunization.Id, actualImmunization.Id);
                 Assert.AreEqual(12, retrievedImmunization.DoseQuantity.Value);
 
                 immunization.DoseQuantity.Value = 24;
                 immunization.Status = Immunization.ImmunizationStatusCodes.NotDone;
                 immunizationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Immunization);
-                actualImmunization = immunizationResourceHandler.Update(actualImmunization.Id,immunization, TransactionMode.Commit);
+                actualImmunization = immunizationResourceHandler.Update(actualImmunization.Id, immunization, TransactionMode.Commit);
                 retrievedImmunization = (Immunization)immunizationResourceHandler.Read(actualImmunization.Id, null);
 
                 Assert.AreEqual(24, retrievedImmunization.DoseQuantity.Value);
@@ -261,7 +241,19 @@ namespace SanteDB.Messaging.FHIR.Test
                 // but the MapToFhir does not map the status when the code is obsolete. See line 82 in the ImmunizationResourceHandler class.
                 var deletedImmunization = (Immunization)immunizationResourceHandler.Delete(retrievedImmunization.Id, TransactionMode.Commit);
 
-                Assert.IsNull(deletedImmunization.Status);
+                try
+                {
+                    immunizationResourceHandler.Read(retrievedImmunization.Id, null);
+                    Assert.Fail("Should throw appropriate exception");
+                }
+                catch (FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone)
+                {
+
+                }
+                catch
+                {
+                    Assert.Fail("Improper exception thrown");
+                }
             }
         }
 
@@ -277,7 +269,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var randomGuidKey = Guid.NewGuid();
 
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService);
+            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>());
 
             //check to ensure immunization instance can be mapped
             var result = immunizationResourceHandler.CanMapObject(new Immunization());
@@ -290,32 +282,23 @@ namespace SanteDB.Messaging.FHIR.Test
             //check to ensure substance instance can be mapped with valid type keys
             var substanceAdministration = new SubstanceAdministration()
             {
-                TypeConcept = new Concept() { Key = initialImmunizationKey }
+                TypeConceptKey = initialImmunizationKey
             };
             result = immunizationResourceHandler.CanMapObject(substanceAdministration);
             Assert.True(result);
 
             //check to ensure substance instance can be mapped with valid type keys
-            substanceAdministration.TypeConcept = new Concept()
-            {
-                Key = boosterImmunizationKey
-            };
+            substanceAdministration.TypeConceptKey = boosterImmunizationKey;
             result = immunizationResourceHandler.CanMapObject(substanceAdministration);
             Assert.True(result);
 
             //check to ensure substance instance can be mapped with valid type keys
-            substanceAdministration.TypeConcept = new Concept()
-            {
-                Key = immunizationKey
-            };
+            substanceAdministration.TypeConceptKey = immunizationKey;
             result = immunizationResourceHandler.CanMapObject(substanceAdministration);
             Assert.True(result);
 
             //check to ensure substance instance cannot be mapped without valid key 
-            substanceAdministration.TypeConcept = new Concept()
-            {
-                Key = randomGuidKey
-            };
+            substanceAdministration.TypeConceptKey = randomGuidKey;
             result = immunizationResourceHandler.CanMapObject(substanceAdministration);
             Assert.False(result);
         }
@@ -327,7 +310,7 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestGetInteractions()
         {
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var immunizationResourceHandler = new ImmunizationResourceHandler(this.m_substanceAdministrationRepositoryService, localizationService);
+            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>());
             var methodInfo = typeof(ImmunizationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
             var interactions = methodInfo.Invoke(immunizationResourceHandler, null);
 
@@ -396,14 +379,14 @@ namespace SanteDB.Messaging.FHIR.Test
                 Patient = new ResourceReference(Guid.NewGuid().ToString())
             };
 
-            Assert.Throws<NotSupportedException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
+            Assert.Throws<FhirException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
 
             immunization = new Immunization()
             {
                 Encounter = new ResourceReference(Guid.NewGuid().ToString())
             };
 
-            Assert.Throws<NotSupportedException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
+            Assert.Throws<FhirException>(() => immunizationResourceHandler.Create(immunization, TransactionMode.Commit));
         }
 
         /// <summary>

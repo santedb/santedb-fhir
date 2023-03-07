@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
@@ -76,7 +76,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Gets the mapper for <paramref name="resourceOrModelType"/>
+        /// Gets the mapper for <paramref name="resourceType"/>
         /// </summary>
         /// <returns>The mapper (if present)</returns>
         public static IEnumerable<IFhirResourceMapper> GetMappersFor(ResourceType resourceType)
@@ -91,7 +91,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             if (string.IsNullOrEmpty(resourceType))
             {
-                throw new ArgumentNullException();
+                throw new ArgumentNullException(nameof(resourceType));
             }
 
             var rtEnum = EnumUtility.ParseLiteral<ResourceType>(resourceType);
@@ -100,9 +100,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 return GetResourceHandler(rtEnum.Value);
             }
-
-            s_tracer.TraceError($"Resource type {resourceType} is invalid");
-            throw new KeyNotFoundException(s_localizationService.FormatString("error.messaging.fhir.handlers.invalidResourceType", new {param = resourceType}));
+            else
+            {
+                s_tracer.TraceError($"Resource type {resourceType} is invalid");
+                throw new KeyNotFoundException(s_localizationService.GetString("error.messaging.fhir.handlers.invalidResourceType", new { param = resourceType }));
+            }
         }
 
         /// <summary>
@@ -113,7 +115,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!s_messageProcessors.TryGetValue(resourceType, out var retVal))
             {
                 s_tracer.TraceError($"No handler registered for {resourceType}");
-                throw new NotSupportedException(s_localizationService.FormatString("error.messaging.fhir.handlers.noRegisteredHandler", new {param = resourceType}));
+                throw new NotSupportedException(s_localizationService.GetString("error.messaging.fhir.handlers.noRegisteredHandler", new { param = resourceType }));
             }
 
             return retVal;
@@ -135,14 +137,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Initialize based on configuration
         /// </summary>
-        public static void Initialize(FhirServiceConfigurationSection m_configuration, IServiceManager serviceManager)
+        public static void Initialize(FhirServiceConfigurationSection configuration, IServiceManager serviceManager)
         {
             // Configuration 
-            if (m_configuration.Resources?.Any() == true)
+            if (configuration.Resources?.Any() == true)
             {
                 foreach (var t in serviceManager.CreateInjectedOfAll<IFhirResourceHandler>())
                 {
-                    if (m_configuration.Resources.Any(r => r == t.ResourceType.ToString()))
+                    if (configuration.Resources.Any(r => r == t.ResourceType.ToString()))
                     {
                         RegisterResourceHandler(t);
                     }
@@ -152,10 +154,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 }
             }
-            else
+            else if (configuration.ResourceHandlers?.Any() == true)
             {
                 // Old configuration
-                foreach (var t in m_configuration.ResourceHandlers.Select(o => o.Type).Where(c => c != null))
+                foreach (var t in configuration.ResourceHandlers.Select(o => o.Type).Where(c => c != null))
                 {
                     var rh = serviceManager.CreateInjected(t);
 
@@ -164,6 +166,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         RegisterResourceHandler(resourceHandler);
                     }
                 }
+            }
+            else
+            {
+                AppDomain.CurrentDomain.GetAllTypes().Where(t => typeof(IFhirResourceHandler).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface).ToList().ForEach(o =>
+                {
+                    try
+                    {
+                        RegisterResourceHandler(serviceManager.CreateInjected(o) as IFhirResourceHandler);
+                    }
+                    catch
+                    {
+
+                    }
+                });
             }
         }
 

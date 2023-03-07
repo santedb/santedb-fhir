@@ -16,11 +16,11 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
+using SanteDB.Core.Model.Query;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 
 namespace SanteDB.Messaging.FHIR
 {
@@ -34,7 +34,7 @@ namespace SanteDB.Messaging.FHIR
         /// </summary>
         public FhirQuery()
         {
-            this.ActualParameters = new NameValueCollection();
+            this.ActualParameters = new System.Collections.Specialized.NameValueCollection();
             this.QueryId = Guid.Empty;
             this.IncludeHistory = false;
             this.MinimumDegreeMatch = 1.0f;
@@ -45,7 +45,7 @@ namespace SanteDB.Messaging.FHIR
         /// <summary>
         /// Get the actual parameters that could be serviced
         /// </summary>
-        public NameValueCollection ActualParameters { get; set; }
+        public System.Collections.Specialized.NameValueCollection ActualParameters { get; set; }
 
         /// <summary>
         /// Identifies the query identifier
@@ -85,6 +85,34 @@ namespace SanteDB.Messaging.FHIR
         /// <summary>
         /// The resource type
         /// </summary>
-        public String ResourceType { get; }
+        public String ResouceType { get; }
+
+        /// <summary>
+        /// True if exact total should be counted
+        /// </summary>
+        public bool ExactTotal { get; set; }
+
+        /// <summary>
+        /// Apply common query resuts to the specified <paramref name="hdsiResults"/>
+        /// </summary>
+        public IQueryResultSet ApplyCommonQueryControls(IQueryResultSet hdsiResults, out int totalResults)
+        {
+            // TODO: sorting
+            if (this.QueryId != Guid.Empty)
+            {
+                hdsiResults = hdsiResults.AsStateful(this.QueryId);
+                totalResults = hdsiResults.Count(); // it is a stateful query so we can just count them (no penalty to doing this)
+            }
+            else if (this.ExactTotal)
+            {
+                totalResults = hdsiResults.Count();
+            }
+            else
+            {
+                totalResults = hdsiResults.Skip(this.Start).Take(this.Quantity + 1).Count() + this.Start;
+            }
+
+            return hdsiResults.Skip(this.Start).Take(this.Quantity);
+        }
     }
 }

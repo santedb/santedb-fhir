@@ -16,10 +16,11 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
@@ -36,9 +37,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class BundleResourceHandler : IServiceImplementation, IFhirResourceHandler, IFhirResourceMapper
     {
-
         // Tracer
-        private Tracer m_tracer = Tracer.GetTracer(typeof(BundleResourceHandler));
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(BundleResourceHandler));
 
         //Localization service
         private ILocalizationService m_localizationService;
@@ -94,8 +94,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 case Hl7.Fhir.Model.Bundle.BundleType.Transaction:
                     {
-
-
                         var sdbResult = this.m_bundleRepository.Insert(this.MapToModel(target) as Core.Model.Collection.Bundle);
                         var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
                         retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;
@@ -104,7 +102,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     };
                 case Hl7.Fhir.Model.Bundle.BundleType.Message:
                     {
-
                         var processMessageHandler = ExtensionUtil.GetOperation(null, "process-message");
                         return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, processMessageHandler.Invoke(new Parameters()
                         {
@@ -125,7 +122,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 default:
                     this.m_tracer.TraceError($"Processing of bundles with type {fhirBundle.Type} is not supported");
-                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                    throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
             }
         }
 
@@ -135,7 +132,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <remarks>Not supported on this interface</remarks>
         public Resource Delete(string id, TransactionMode mode)
         {
-            throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>
@@ -176,7 +173,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Hl7.Fhir.Model.Bundle History(string id)
         {
-            throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>
@@ -187,10 +184,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!(modelInstance is Core.Model.Collection.Bundle sdbBundle))
             {
                 this.m_tracer.TraceError("Instance must be a bundle");
-                throw new ArgumentException(nameof(modelInstance), this.m_localizationService.FormatString("error.type.ArgumentException", new
-                    {
-                        param = "bundle"
-                    }));
+                throw new ArgumentException(nameof(modelInstance), this.m_localizationService.GetString("error.type.ArgumentException", new
+                {
+                    param = "bundle"
+                }));
             }
 
             var retVal = new Hl7.Fhir.Model.Bundle()
@@ -205,7 +202,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             foreach (var entry in sdbBundle.Item)
             {
                 var handler = FhirResourceHandlerUtil.GetMapperForInstance(entry);
-                if (handler == null) continue; // TODO: Warn
+                if (handler == null)
+                {
+                    continue; // TODO: Warn
+                }
+
                 retVal.Entry.Add(new Hl7.Fhir.Model.Bundle.EntryComponent()
                 {
                     Resource = handler.MapToFhir(entry)
@@ -223,10 +224,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (!(resourceInstance is Hl7.Fhir.Model.Bundle fhirBundle))
             {
                 this.m_tracer.TraceError("Argument must be a bundle");
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
-                    {
-                        param = "bundle"
-                    }));
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
+                {
+                    param = "bundle"
+                }));
             }
 
             var sdbBundle = new Core.Model.Collection.Bundle();
@@ -259,7 +260,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
                     taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
-
                 }
 
                 if (entry.Request != null)
@@ -273,11 +273,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Query 
+        /// Query
         /// </summary>
         public Hl7.Fhir.Model.Bundle Query(NameValueCollection parameters)
         {
-            throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>
@@ -285,15 +285,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Read(string id, string versionId)
         {
-            throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
 
         /// <summary>
-        /// Update 
+        /// Update
         /// </summary>
         public Resource Update(string id, Resource target, TransactionMode mode)
         {
-            throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
         }
     }
 }

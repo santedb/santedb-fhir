@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
@@ -37,7 +37,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Get primary code
         /// </summary>
         public static Coding GetCoding(this CodeableConcept me) => me.Coding.FirstOrDefault();
-        
+
         /// <summary>
         /// Get the resource type
         /// </summary>

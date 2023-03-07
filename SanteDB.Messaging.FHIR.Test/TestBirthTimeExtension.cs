@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,21 +15,15 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: Jordan Webber
- * Date: 2021-12-01
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Person = SanteDB.Core.Model.Entities.Person;
@@ -41,12 +35,8 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    class TestBirthTimeExtension
+    class TestBirthTimeExtension : FhirTest
     {
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
 
         /// <summary>
         /// The extension under test.
@@ -54,14 +44,9 @@ namespace SanteDB.Messaging.FHIR.Test
         private IFhirExtensionHandler m_extension;
 
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
             // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_extension = this.m_serviceManager.CreateInjected<BirthTimeExtension>();
         }
 

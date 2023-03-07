@@ -1,17 +1,30 @@
-using FirebirdSql.Data.FirebirdClient;
+/*
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * User: fyfej
+ * Date: 2022-5-30
+ */
 using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Entities;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -27,12 +40,12 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Test complex relationships
     /// </summary
     [ExcludeFromCodeCoverage]
-    public class TestRelatedPersonResourceHandler : DataTest
+    public class TestRelatedPersonResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
         private IRepositoryService<Patient> m_patientRepository;
 
@@ -40,47 +53,12 @@ namespace SanteDB.Messaging.FHIR.Test
 
         private IRepositoryService<EntityRelationship> m_relationshipRepository;
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_patientRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Patient>>();
             this.m_personRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<Person>>();
             this.m_relationshipRepository = ApplicationServiceContext.Current.GetService<IRepositoryService<EntityRelationship>>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient",
-                    "RelatedPerson",
-                    "Bundle"
-                },
-                OperationHandlers = new List<TypeReferenceConfiguration>(),
-                ExtensionHandlers = new List<TypeReferenceConfiguration>(),
-                ProfileHandlers = new List<TypeReferenceConfiguration>(),
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(PatientResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(BundleResourceHandler)),
-                    new TypeReferenceConfiguration(typeof(RelatedPersonResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
         }
 
         /// <summary>
@@ -181,7 +159,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var deletedRelatedPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Delete(sourceRelatedPerson.Id, TransactionMode.Commit);
                 Assert.NotNull(deletedRelatedPerson);
                 Assert.IsInstanceOf<RelatedPerson>(deletedRelatedPerson);
-                var actual = (RelatedPerson) deletedRelatedPerson;
+                var actual = (RelatedPerson)deletedRelatedPerson;
                 // ensure the related person is NOT active
                 Assert.IsFalse(actual.Active);
 
@@ -189,7 +167,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var readPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Read(deletedRelatedPerson.Id, deletedRelatedPerson.VersionId);
                 Assert.NotNull(readPerson);
                 Assert.IsInstanceOf<RelatedPerson>(readPerson);
-                var readRelatedPerson = (RelatedPerson) readPerson;
+                var readRelatedPerson = (RelatedPerson)readPerson;
                 Assert.AreEqual(Address.AddressUse.Old, readRelatedPerson.Address.First().Use);
                 Assert.IsFalse(readRelatedPerson.Telecom.Any());
                 // ensure the related person is NOT active
@@ -251,7 +229,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual(sdbRelationship.TargetEntityKey, equivRel.TargetEntityKey);
 
                 // Ensure that there is a separate PERSON and separate PATIENT with the same identity 
-                var relatedPersons = this.m_personRepository.Find(o => o.Identifiers.Any(id => id.Authority.Url == "http://santedb.org/fhir/test" && id.Value == "FHR-4321"));
+                var relatedPersons = this.m_personRepository.Find(o => o.Identifiers.Any(id => id.IdentityDomain.Url == "http://santedb.org/fhir/test" && id.Value == "FHR-4321"));
                 Assert.AreEqual(2, relatedPersons.Count());
                 Assert.AreEqual(1, relatedPersons.OfType<Patient>().Count());
 

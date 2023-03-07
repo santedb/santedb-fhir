@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
@@ -59,11 +59,13 @@ namespace SanteDB.Messaging.FHIR.Util
         public static CapabilityStatement GetConformanceStatement()
         {
             if (s_conformance == null)
+            {
                 lock (s_syncLock)
                 {
                     BuildConformanceStatement();
                     RestOperationContext.Current.OutgoingResponse.SetLastModified(DateTime.Now);
                 }
+            }
 
             return s_conformance;
         }
@@ -126,9 +128,14 @@ namespace SanteDB.Messaging.FHIR.Util
             //var m_masterConfig = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<RestConfigurationSection>();
             //var authorizationPolicy = m_masterConfig.Services.FirstOrDefault(o => o.Name == "FHIR").Behaviors.Select(o => o.GetCustomAttribute<AuthenticationSchemeDescriptionAttribute>()).FirstOrDefault(o => o != null)?.Scheme;
             if (ApplicationServiceContext.Current.GetService<FhirMessageHandler>().Capabilities.HasFlag(ServiceEndpointCapabilities.BasicAuth))
+            {
                 security = "Basic";
+            }
+
             if (ApplicationServiceContext.Current.GetService<FhirMessageHandler>().Capabilities.HasFlag(ServiceEndpointCapabilities.BearerAuth))
+            {
                 security = "OAuth";
+            }
 
             var retVal = new RestComponent()
             {
@@ -140,7 +147,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     Service = security == null ? null : new List<CodeableConcept>() { new CodeableConcept("http://hl7.org/fhir/restful-security-service", security) }
                 },
                 Resource = FhirResourceHandlerUtil.GetRestDefinition().ToList(),
-                Operation = ExtensionUtil.OperationHandlers.Where(o => o.AppliesTo == null).Select(o=> new OperationComponent()
+                Operation = ExtensionUtil.OperationHandlers.Where(o => o.AppliesTo == null).Select(o => new OperationComponent()
                 {
                     Name = o.Name,
                     Definition = o.Uri.ToString()

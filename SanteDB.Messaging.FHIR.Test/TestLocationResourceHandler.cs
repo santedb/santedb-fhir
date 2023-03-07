@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,32 +15,20 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: Jordan Webber
- * Date: 2021-12-01
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Security;
-using System.Security.Authentication;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SanteDB.Messaging.FHIR.Test
 {
@@ -49,48 +37,14 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    class TestLocationResourceHandler
+    class TestLocationResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
 
-        /// <summary>
-        /// Setup method for unit tests.
-        /// </summary>
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestLocationResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Location"
-                },
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(LocationResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// Tests the create functionality for the <see cref="LocationResourceHandler"/> class.
@@ -174,7 +128,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var locationResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Location);
 
-                Assert.Throws<InvalidDataException>(() => locationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => locationResourceHandler.Create(new Practitioner(), TransactionMode.Commit));
             }
         }
 
@@ -208,7 +162,21 @@ namespace SanteDB.Messaging.FHIR.Test
                 var deletedLocation = (Location)actualDeleted;
 
                 Assert.IsNotNull(deletedLocation);
-                Assert.AreEqual(Location.LocationStatus.Inactive, deletedLocation.Status);
+
+                // Try to fetch
+                try
+                {
+                    locationResourceHandler.Read(deletedLocation.Id, null);
+                    Assert.Fail("Should throw exception");
+                }
+                catch (FhirException e) when (e.Status == System.Net.HttpStatusCode.Gone)
+                {
+
+                }
+                catch
+                {
+                    Assert.Fail("Threw wrong type of exception");
+                }
             }
         }
 
@@ -325,7 +293,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 createdLocation.Mode = Location.LocationMode.Kind;
                 createdLocation.Address.State = "Alberta";
 
-                Assert.Throws<InvalidDataException>(() => locationResourceHandler.Update(createdLocation.Id, new Patient(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => locationResourceHandler.Update(createdLocation.Id, new Patient(), TransactionMode.Commit));
             }
         }
 

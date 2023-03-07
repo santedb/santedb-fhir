@@ -16,11 +16,10 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -76,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Delete,
                 TypeRestfulInteraction.Update,
             }.Select(o => new ResourceInteractionComponent
-                {Code = o});
+            { Code = o });
         }
 
         /// <summary>
@@ -154,7 +153,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var associated = model.LoadCollection<ActParticipation>("Participations").ToArray();
 
             // Subject of encounter
-            retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(associated.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget)?.LoadProperty<Entity>("PlayerEntity"));
+            retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(associated.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget)?.LoadProperty<Entity>("PlayerEntity"));
 
             // Locations
             retVal.Location = associated.Where(o => o.LoadProperty<Entity>("PlayerEntity") is Place).Select(o => new Encounter.LocationComponent
@@ -164,7 +163,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }).ToList();
 
             // Service provider
-            var cst = associated.FirstOrDefault(o => o.LoadProperty<Entity>("PlayerEntity") is Organization && o.ParticipationRoleKey == ActParticipationKey.Custodian);
+            var cst = associated.FirstOrDefault(o => o.LoadProperty<Entity>("PlayerEntity") is Organization && o.ParticipationRoleKey == ActParticipationKeys.Custodian);
 
             if (cst != null)
             {
@@ -206,7 +205,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 MoodConceptKey = status == Encounter.EncounterStatus.Planned ? ActMoodKeys.Intent : ActMoodKeys.Eventoccurrence,
                 ReasonConcept = DataTypeConverter.ToConcept(resource.ReasonCode.FirstOrDefault()),
                 StartTime = DataTypeConverter.ToDateTimeOffset(resource.Period.Start),
-                StopTime = DataTypeConverter.ToDateTimeOffset(resource.Period.End)
+                StopTime = DataTypeConverter.ToDateTimeOffset(resource.Period.End),
+                Participations = new List<ActParticipation>()
             };
 
             if (!Guid.TryParse(resource.Id, out var key))
@@ -221,25 +221,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 // if the subject is a UUID then add the record target key
                 // otherwise attempt to resolve the reference
-                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                var target = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource);
+                retVal.Participations.Add(new ActParticipation(ActParticipationKeys.RecordTarget, target));
             }
 
             // Attempt to resolve organization
             if (resource.ServiceProvider != null)
             {
-                // Is the subject a uuid
-                if (resource.ServiceProvider.Reference.StartsWith("urn:uuid:"))
-                {
-                    retVal.Participations.Add(new ActParticipation(ActParticipationKey.Custodian, Guid.Parse(resource.ServiceProvider.Reference.Substring(9))));
-                }
-                else
-                {
-                    this.m_tracer.TraceError("Only UUID references are supported");
-                    throw new NotSupportedException(this.m_localizationService.FormatString("error.type.NotSupportedException.paramOnlySupported", new
-                    {
-                        param = "UUID"
-                    }));
-                }
+                var target = DataTypeConverter.ResolveEntity<Organization>(resource.ServiceProvider, resource);
+                retVal.Participations.Add(new ActParticipation(ActParticipationKeys.Custodian, target));
             }
 
             // TODO : Other Participations

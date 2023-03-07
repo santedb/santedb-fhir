@@ -16,15 +16,15 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
@@ -77,7 +77,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 TypeRestfulInteraction.Vread,
                 TypeRestfulInteraction.Delete
             }.Select(o => new ResourceInteractionComponent
-                {Code = o});
+            { Code = o });
         }
 
         /// <summary>
@@ -148,10 +148,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // body sites?
             var sites = actRelationshipService.Query(o => o.SourceEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.FindingSite, AuthenticationContext.Current.Principal);
 
-            retVal.BodySite = sites.Select(o => DataTypeConverter.ToFhirCodeableConcept(o.LoadProperty<CodedObservation>("TargetAct").ValueKey)).ToList();
+            retVal.BodySite = sites.ToArray().Select(o => DataTypeConverter.ToFhirCodeableConcept((o.LoadProperty(t => t.TargetAct) as CodedObservation).ValueKey)).ToList();
 
             // Subject
-            var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.RecordTarget);
+            var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
 
             if (recordTarget != null)
             {
@@ -175,7 +175,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.RecordedDateElement = DataTypeConverter.ToFhirDateTime(model.CreationTime);
 
-            var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKey.Authororiginator);
+            var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Authororiginator);
 
             if (author != null)
             {
@@ -192,11 +192,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>Returns the constructed model instance.</returns>
         protected override CodedObservation MapToModel(Condition resource)
         {
-            var retVal = new CodedObservation();
-            
+            var retVal = new CodedObservation()
+            {
+                Relationships = new List<ActRelationship>(),
+                Participations = new List<ActParticipation>(),
+
+            };
+
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
 
-            switch(resource.ClinicalStatus.TypeName)
+            switch (resource.ClinicalStatus.TypeName)
             {
                 case "active":
                     retVal.StatusConceptKey = StatusKeys.Active;
@@ -208,15 +213,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.StatusConceptKey = StatusKeys.Inactive;
                     break;
             }
-            
+
             if (resource.VerificationStatus.TypeName == "entered-in-error")
+            {
                 retVal.StatusConceptKey = StatusKeys.Nullified;
+            }
 
             // Code
             retVal.Value = DataTypeConverter.ToConcept(resource.Code);
 
             // Severity
-            if(resource.Severity != null)
+            if (resource.Severity != null)
             {
                 var severityTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Severity.Coding.FirstOrDefault(), "http://hl7.org/fhir/ValueSet/condition-severity"), TypeConceptKey = ObservationTypeKeys.Severity };
                 retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, severityTarget));
@@ -232,7 +239,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Subject
             if (resource.Subject != null)
             {
-                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKey.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
             }
 
             // Time
@@ -240,12 +247,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.StartTime = DataTypeConverter.ToDateTimeOffset(((Period)resource.Onset).StartElement);
                 retVal.StopTime = DataTypeConverter.ToDateTimeOffset(((Period)resource.Onset).EndElement);
+                
             }
 
             // Author
             if (resource.Asserter != null)
             {
-                retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKey.RecordTarget, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKey.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
+                retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Authororiginator, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
             }
 
             if (resource.RecordedDateElement != null)
@@ -254,19 +262,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             retVal.Value = DataTypeConverter.ToConcept(resource.Code);
-          
+
             return retVal;
         }
 
         /// <summary>
         /// Query filter
         /// </summary>
-        protected override IEnumerable<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query, Guid queryId, int offset, int count, out int totalResults)
+        protected override IQueryResultSet<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query)
         {
             var anyRef = this.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]);
             query = Expression.Lambda<Func<CodedObservation, bool>>(Expression.AndAlso(query.Body, anyRef), query.Parameters);
 
-            return base.Query(query, queryId, offset, count, out totalResults);
+            return base.Query(query);
         }
     }
 }

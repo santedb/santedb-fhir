@@ -16,13 +16,12 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Rest;
 using SanteDB.Messaging.FHIR.Configuration;
 using System;
 using System.Collections.Generic;
-using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Rest
 {
@@ -32,7 +31,7 @@ namespace SanteDB.Messaging.FHIR.Rest
     public interface IFhirClientAuthenticator
     {
         /// <summary>
-        /// Attache to the client and authenticate on each request
+        /// Attach to the client and authenticate on each request
         /// </summary>
         void AttachClient(FhirClient client, FhirDispatcherTargetConfiguration dispatchConfiguration, IDictionary<String, String> settings);
 

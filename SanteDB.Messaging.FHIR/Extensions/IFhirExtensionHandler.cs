@@ -16,16 +16,13 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
+using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Hl7.Fhir.Model;
-using SanteDB.Core.Model.Interfaces;
 
 namespace SanteDB.Messaging.FHIR.Extensions
 {
@@ -59,7 +56,7 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// </summary>
         /// <param name="modelObject">The object which the construction occurs from</param>
         /// <returns>The constructed FHIR extension</returns>
-        IEnumerable<Extension> Construct(IIdentifiedEntity modelObject);
+        IEnumerable<Extension> Construct(IAnnotatedResource modelObject);
 
         /// <summary>
         /// Parse the specified extension

@@ -16,15 +16,15 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
-using System;
-using System.Collections.Generic;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
 using Person = SanteDB.Core.Model.Entities.Person;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
@@ -52,7 +52,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// <summary>
         /// Construct the extension
         /// </summary>
-        public IEnumerable<Extension> Construct(IIdentifiedEntity modelObject)
+        public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
             if (modelObject is Person person && person.DateOfBirthPrecision > DatePrecision.Day)
             {

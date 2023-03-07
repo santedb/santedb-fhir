@@ -1,38 +1,31 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); you 
- * may not use this file except in compliance with the License. You may 
- * obtain a copy of the License at 
- * 
- * http://www.apache.org/licenses/LICENSE-2.0 
- * 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
- * License for the specific language governing permissions and limitations under 
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
  * the License.
- * 
- * User: khannan
- * Date: 2021-11-10
+ *
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
-using FirebirdSql.Data.FirebirdClient;
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
-using SanteDB.Core.Security;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Handlers;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 
@@ -42,42 +35,13 @@ namespace SanteDB.Messaging.FHIR.Test
     /// Tests the <see cref="PractitionerResourceHandler"/> class.
     /// </summary>
     [ExcludeFromCodeCoverage]
-    public class TestPractitionerResourceHandler : DataTest
+    public class TestPractitionerResourceHandler : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
-        private readonly byte[] AUTH = {0x01, 0x02, 0x03, 0x04, 0x05};
+        private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        [SetUp]
-        public void Setup()
-        {
-            // Force load of the DLL
-            var p = FbCharset.Ascii;
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Practitioner"
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, this.m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
-        }
 
         /// <summary>
         /// Tests the create functionality using invalid resource in <see cref="PractitionerResourceHandler"/> class.
@@ -92,7 +56,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var practitionerResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.Practitioner);
 
                 // expect that the create method throws an InvalidDataException
-                Assert.Throws<InvalidDataException>(() => practitionerResourceHandler.Create(new Account(), TransactionMode.Commit));
+                Assert.Throws<ArgumentException>(() => practitionerResourceHandler.Create(new Account(), TransactionMode.Commit));
             }
         }
 
@@ -124,7 +88,7 @@ namespace SanteDB.Messaging.FHIR.Test
             //assert the results are correct
             Assert.NotNull(result);
             Assert.IsInstanceOf<Practitioner>(result);
-            var actual = (Practitioner) result;
+            var actual = (Practitioner)result;
             var numOfIdentifiers = actual.Identifier.FindAll(i => i.Value == "6324").Count;
             Assert.AreEqual(1, numOfIdentifiers);
             Assert.AreEqual("Practitioner", actual.Name.Single().Family);
@@ -133,7 +97,6 @@ namespace SanteDB.Messaging.FHIR.Test
             //and cause issues with following communication asserts
             Assert.IsTrue(actual.Communication.Any(c => c.Coding.Any(x => x.Code == "en-US")));
             Assert.IsTrue(actual.Communication.Any(c => c.Coding.Any(x => x.Code == "fr-CA")));
-            Assert.IsTrue(actual.Extension.Any(e => e.Url == "http://santedb.org/extensions/core/detectedIssue"));
             Assert.IsTrue(actual.Photo.Any());
             Assert.IsTrue(actual.BirthDate == new DateTime(1980, 12, 1).ToString("yyyy-MM-dd"));
             Assert.IsTrue(actual.Telecom.First().Value == "905 555 1234");
@@ -167,7 +130,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //check if the practitioner is saved properly
                 resultOne = practitionerResourceHandler.Read(pracOne.Id, pracOne.VersionId);
-                actualPracOne = (Practitioner) resultOne;
+                actualPracOne = (Practitioner)resultOne;
                 Assert.AreEqual("Practitioner", actualPracOne.Name.Single().Family);
                 Assert.AreEqual("Test", actualPracOne.Name.Single().Given.Single());
                 Assert.NotNull(resultOne);
@@ -178,7 +141,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //check if the practitioner is saved properly
                 resultTwo = practitionerResourceHandler.Read(pracTwo.Id, pracTwo.VersionId);
-                actualPracTwo = (Practitioner) resultTwo;
+                actualPracTwo = (Practitioner)resultTwo;
                 Assert.AreEqual("PracTwo", actualPracTwo.Name.Single().Family);
                 Assert.AreEqual("Second", actualPracTwo.Name.Single().Given.Single());
                 Assert.NotNull(resultTwo);
@@ -189,7 +152,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 // read first practitioner again and confirm that properties like name wasn't updated due to second create attempt
                 resultOne = practitionerResourceHandler.Read(pracOne.Id, pracOne.VersionId);
-                actualPracOne = (Practitioner) resultOne;
+                actualPracOne = (Practitioner)resultOne;
                 Assert.AreNotEqual(actualPracTwo.Name.Single().Family, actualPracOne.Name.Single().Family);
                 Assert.AreNotEqual(actualPracTwo.Name.Single().Given.Single(), actualPracOne.Name.Single().Given.Single());
             }
@@ -222,7 +185,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //check if the practitioner is saved properly
                 resultOne = practitionerResourceHandler.Read(pracOne.Id, pracOne.VersionId);
-                actualPracOne = (Practitioner) resultOne;
+                actualPracOne = (Practitioner)resultOne;
                 Assert.AreEqual("Practitioner", actualPracOne.Name.Single().Family);
                 Assert.AreEqual("Test", actualPracOne.Name.Single().Given.Single());
                 Assert.NotNull(resultOne);
@@ -233,7 +196,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //check if the practitioner is saved properly
                 resultTwo = practitionerResourceHandler.Read(pracTwo.Id, pracTwo.VersionId);
-                actualPracTwo = (Practitioner) resultTwo;
+                actualPracTwo = (Practitioner)resultTwo;
                 Assert.AreEqual("PracTwo", actualPracTwo.Name.Single().Family);
                 Assert.AreEqual("Second", actualPracTwo.Name.Single().Given.Single());
                 Assert.NotNull(resultTwo);
@@ -245,7 +208,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 //read first practitioner again and confirm that properties like name has been updated due to second create attempt with same identifier
                 resultOne = practitionerResourceHandler.Read(pracOne.Id, pracOne.VersionId);
-                actualPracOne = (Practitioner) resultOne;
+                actualPracOne = (Practitioner)resultOne;
                 Assert.AreEqual(actualPracTwo.Name.Single().Family, actualPracOne.Name.Single().Family);
                 Assert.AreEqual(actualPracTwo.Name.Single().Given.Single(), actualPracOne.Name.Single().Given.Single());
             }
@@ -276,17 +239,17 @@ namespace SanteDB.Messaging.FHIR.Test
                 //ensure practitioner was saved properly
                 Assert.NotNull(result);
                 Assert.IsInstanceOf<Practitioner>(result);
-                var actual = (Practitioner) result;
+                var actual = (Practitioner)result;
                 Assert.AreEqual("Test", actual.Name.Single().Given.Single());
                 Assert.AreEqual("Practitioner", actual.Name.Single().Family);
 
                 //delete practitioner
                 result = practitionerResourceHandler.Delete(actual.Id, TransactionMode.Commit);
 
-                actual = (Practitioner) result;
+                actual = (Practitioner)result;
 
                 //ensure read is not successful
-                Assert.Throws<KeyNotFoundException>(() => practitionerResourceHandler.Read(actual.Id, null));
+                Assert.Throws<FhirException>(() => practitionerResourceHandler.Read(actual.Id, null));
             }
         }
 
@@ -347,7 +310,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(result);
             Assert.IsInstanceOf<Practitioner>(result);
 
-            var actual = (Practitioner) result;
+            var actual = (Practitioner)result;
 
             Assert.AreEqual("Practitioner", actual.Name.Single().Family);
             Assert.AreEqual("Test", actual.Name.Single().Given.Single());
@@ -382,7 +345,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.NotNull(result);
                 Assert.IsInstanceOf<Practitioner>(result);
 
-                actual = (Practitioner) result;
+                actual = (Practitioner)result;
 
 
                 Assert.AreEqual("Test", actual.Name.Single().Given.Single());
@@ -404,7 +367,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 result = practitionerResourceHandler.Update(actual.Id, actual, TransactionMode.Commit);
             }
 
-            actual = (Practitioner) result;
+            actual = (Practitioner)result;
             Assert.AreEqual("UpdatedGiven", actual.Name.Single().Given.Single());
             Assert.AreEqual("UpdatedFamily", actual.Name.Single().Family);
 

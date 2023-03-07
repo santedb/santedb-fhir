@@ -17,16 +17,17 @@
  - the License.
  - 
  - User: fyfej
- - Date: 2021-10-29
+ - Date: 2022-5-30
  -->
 <RestServiceConfiguration xmlns="http://santedb.org/configuration" name="FHIR" >
   <behaviors>
-    <add type="SanteDB.Server.Core.Rest.Security.TokenAuthorizationAccessBehavior, SanteDB.Server.Core"/>
+    <add type="SanteDB.Rest.Common.Security.TokenAuthorizationAccessBehavior, SanteDB.Rest.Common"/>
   </behaviors>
   <endpoint address="http://0.0.0.0:8080/fhir" contract="SanteDB.Messaging.FHIR.Rest.IFhirServiceContract, SanteDB.Messaging.FHIR">
     <behaviors>
       <add type="SanteDB.Rest.Common.Behavior.MessageLoggingEndpointBehavior, SanteDB.Rest.Common"/>
       <add type="SanteDB.Rest.Common.Behavior.MessageCompressionEndpointBehavior, SanteDB.Rest.Common"/>
+      <add type="SanteDB.Rest.Common.Behavior.AcceptLanguageEndpointBehavior, SanteDB.Rest.Common"/>
       <add type="SanteDB.Rest.Common.Behavior.CorsEndpointBehavior, SanteDB.Rest.Common"/>
     </behaviors>
   </endpoint>

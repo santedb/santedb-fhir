@@ -1,15 +1,30 @@
-﻿using Hl7.Fhir.Model;
+﻿/*
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you
+ * may not use this file except in compliance with the License. You may
+ * obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations under
+ * the License.
+ *
+ * User: fyfej
+ * Date: 2022-5-30
+ */
+using Hl7.Fhir.Model;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.BusinessRules;
-using SanteDB.Core.Configuration;
-using SanteDB.Core.Security;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
-using SanteDB.Messaging.FHIR.Configuration;
-using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Operations;
-using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
@@ -20,48 +35,17 @@ namespace SanteDB.Messaging.FHIR.Test
 {
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestValidateResourceOperation
+    public class TestValidateResourceOperation : FhirTest
     {
         /// <summary>
         /// The authentication key.
         /// </summary>
         private readonly byte[] AUTH = { 0x01, 0x02, 0x03, 0x04, 0x05 };
 
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
-
-        /// <summary>
-        /// Runs setup before each test execution.
-        /// </summary>
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            TestApplicationContext.TestAssembly = typeof(TestOrganizationResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-            m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
-
-            TestApplicationContext.Current.AddBusinessRule<Core.Model.Roles.Patient>(typeof(SamplePatientBusinessRulesService));
-
-            var testConfiguration = new FhirServiceConfigurationSection
-            {
-                Resources = new List<string>
-                {
-                    "Patient"
-                },
-                
-                MessageHandlers = new List<TypeReferenceConfiguration>
-                {
-                    new TypeReferenceConfiguration(typeof(PatientResourceHandler))
-                }
-            };
-
-            using (AuthenticationContext.EnterSystemContext())
-            {
-                FhirResourceHandlerUtil.Initialize(testConfiguration, m_serviceManager);
-                ExtensionUtil.Initialize(testConfiguration);
-            }
+            ApplicationServiceContext.Current.AddBusinessRule<Core.Model.Roles.Patient>(typeof(SamplePatientBusinessRulesService));
         }
 
         /// <summary>
@@ -76,9 +60,9 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var validateResourceOperation = this.m_serviceManager.CreateInjected<FhirValidateResourceOperation>();
 
-               Assert.Throws<NotSupportedException>(() => validateResourceOperation.Invoke(new Parameters
-               {
-                   Parameter = new List<Parameters.ParameterComponent>
+                Assert.Throws<NotSupportedException>(() => validateResourceOperation.Invoke(new Parameters
+                {
+                    Parameter = new List<Parameters.ParameterComponent>
                    {
                        new Parameters.ParameterComponent
                        {
@@ -86,7 +70,7 @@ namespace SanteDB.Messaging.FHIR.Test
                            Resource = new DummyResource()
                        }
                    }
-               }));
+                }));
             }
         }
 
@@ -109,7 +93,7 @@ namespace SanteDB.Messaging.FHIR.Test
             {
                 var validateResourceOperation = this.m_serviceManager.CreateInjected<FhirValidateResourceOperation>();
 
-                actual =  validateResourceOperation.Invoke(new Parameters
+                actual = validateResourceOperation.Invoke(new Parameters
                 {
                     Parameter = new List<Parameters.ParameterComponent>
                     {
@@ -125,7 +109,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.NotNull(actual);
             Assert.IsInstanceOf<OperationOutcome>(actual);
 
-            var actualOperationOutcome = (OperationOutcome) actual;
+            var actualOperationOutcome = (OperationOutcome)actual;
 
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Severity == OperationOutcome.IssueSeverity.Error));
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Code == OperationOutcome.IssueType.NoStore));
@@ -163,7 +147,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// </summary>
         /// <param name="data"></param>
         /// <returns></returns>
-        public Core.Model.Roles.Patient AfterObsolete(Core.Model.Roles.Patient data)
+        public Core.Model.Roles.Patient AfterDelete(Core.Model.Roles.Patient data)
         {
             throw new NotImplementedException();
         }
@@ -171,7 +155,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Called after query
         /// </summary>
-        public IEnumerable<Core.Model.Roles.Patient> AfterQuery(IEnumerable<Core.Model.Roles.Patient> results)
+        public IQueryResultSet<Core.Model.Roles.Patient> AfterQuery(IQueryResultSet<Core.Model.Roles.Patient> results)
         {
             throw new NotImplementedException();
         }
@@ -203,7 +187,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Called before obsolete
         /// </summary>
-        public Core.Model.Roles.Patient BeforeObsolete(Core.Model.Roles.Patient data)
+        public Core.Model.Roles.Patient BeforeDelete(Core.Model.Roles.Patient data)
         {
             throw new NotImplementedException();
         }
@@ -257,7 +241,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// Called after query
         /// </summary>
-        public IEnumerable<object> AfterQuery(IEnumerable<object> results)
+        public IQueryResultSet AfterQuery(IQueryResultSet results)
         {
             throw new NotImplementedException();
         }

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2021, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  *
@@ -15,21 +15,17 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  *
- * User: Zhiping Yu
- * Date: 2021-12-10
+ * User: fyfej
+ * Date: 2022-5-30
  */
-
 using Hl7.Fhir.Model;
 using NUnit.Framework;
-using SanteDB.Core;
+using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Roles;
-using SanteDB.Core.Services;
-using SanteDB.Core.TestFramework;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Extensions.Patient;
-using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using Patient = SanteDB.Core.Model.Roles.Patient;
@@ -41,25 +37,16 @@ namespace SanteDB.Messaging.FHIR.Test
     /// </summary>
     [TestFixture]
     [ExcludeFromCodeCoverage]
-    public class TestImportanceExtension
+    public class TestImportanceExtension : FhirTest
     {
         /// <summary>
         /// Runs setup before each test execution.
         /// </summary>
         [SetUp]
-        public void Setup()
+        public void DoSetup()
         {
-            TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
-            TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
-
-            this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
             this.m_extension = this.m_serviceManager.CreateInjected<ImportanceExtension>();
         }
-
-        /// <summary>
-        /// The service manager.
-        /// </summary>
-        private IServiceManager m_serviceManager;
 
         /// <summary>
         /// The extension under test.
@@ -78,7 +65,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 VipStatus = new Concept
                 {
                     Mnemonic = "VIPStatus-ForeignDignitary",
-                    Key = Guid.NewGuid(),
+                    Key = VipStatusKeys.ForeignDignitary
                 }
             };
 
@@ -86,7 +73,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual(1, constructedVipStatus.Length);
             Assert.IsInstanceOf<CodeableConcept>(constructedVipStatus.First().Value);
             var codeableConcept = (CodeableConcept)constructedVipStatus.First().Value;
-            Assert.AreEqual("VIPStatus-ForeignDignitary", codeableConcept.Coding.First().Code);
+            Assert.AreEqual("FOR", codeableConcept.Coding.First().Code);
         }
 
         /// <summary>

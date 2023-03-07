@@ -16,12 +16,11 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Rest;
-using SanteDB.Core.Auditing;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Interfaces;
+using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Rest;
@@ -42,11 +41,10 @@ namespace SanteDB.Messaging.FHIR.Auditing
     /// as authenticators or proxy information.</para>
     /// </remarks>
     [ExcludeFromCodeCoverage]
-	public class FhirAuditDispatcher : IAuditDispatchService
+    public class FhirAuditDispatcher : IAuditDispatchService
     {
-
         // Get tracer for the audit dispatcher
-        private Tracer m_tracer = Tracer.GetTracer(typeof(FhirAuditDispatcher));
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirAuditDispatcher));
 
         // Configuration for the audit dispatcher
         private FhirDispatcherTargetConfiguration m_configuration;
@@ -97,7 +95,7 @@ namespace SanteDB.Messaging.FHIR.Auditing
         /// <summary>
         /// Send an audit to the repository
         /// </summary>
-        public void SendAudit(AuditData audit)
+        public void SendAudit(AuditEventData audit)
         {
             try
             {

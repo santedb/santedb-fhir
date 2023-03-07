@@ -16,14 +16,14 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
-using System;
-using System.Collections.Generic;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
+using System;
+using System.Collections.Generic;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
@@ -50,11 +50,11 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// <summary>
         /// Construct the extension
         /// </summary>
-        public IEnumerable<Extension> Construct(IIdentifiedEntity modelObject)
+        public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
-            if (modelObject is Core.Model.Roles.Patient patient && patient.VipStatusKey.HasValue)
+            if (modelObject is Core.Model.Roles.Patient patient && (patient.VipStatusKey.HasValue || patient.VipStatus != null))
             {
-                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.VipStatusKey));
+                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.VipStatusKey ?? patient.VipStatus?.Key));
             }
         }
 

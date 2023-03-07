@@ -16,13 +16,11 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
-using RestSrvr;
-using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -76,30 +74,38 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
-            retVal.Name = model.LoadCollection<EntityName>("Names").FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value;
-            retVal.Alias = model.LoadCollection<EntityName>("Names").Where(o => o.NameUseKey != NameUseKeys.OfficialRecord)?.Select(n => n.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value).ToList();
+            retVal.Name = model.LoadProperty(o => o.Names).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value;
+            retVal.Alias = model.LoadProperty(o => o.Names).Where(o => o.NameUseKey != NameUseKeys.OfficialRecord)?.Select(n => n.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value).ToList();
 
             // Convert the determiner code
             if (model.DeterminerConceptKey == DeterminerKeys.Described)
+            {
                 retVal.Mode = Location.LocationMode.Kind;
+            }
             else
+            {
                 retVal.Mode = Location.LocationMode.Instance;
+            }
 
             retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://hl7.org/fhir/ValueSet/v3-ServiceDeliveryLocationRoleType") };
-            retVal.Telecom = model.LoadCollection<EntityTelecomAddress>("Telecoms").Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
-            retVal.Address = DataTypeConverter.ToFhirAddress(model.LoadCollection<EntityAddress>("Addresses").FirstOrDefault());
+            retVal.Telecom = model.LoadProperty(o => o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+            retVal.Address = DataTypeConverter.ToFhirAddress(model.LoadProperty(o => o.Addresses).FirstOrDefault());
 
-            if (model.GeoTag != null)
+            if (model.LoadProperty(o => o.GeoTag) != null)
+            {
                 retVal.Position = new Location.PositionComponent()
                 {
                     Latitude = (decimal)model.GeoTag.Lat,
                     Longitude = (decimal)model.GeoTag.Lng
                 };
+            }
 
             // Part of?
-            var parent = model.LoadCollection<EntityRelationship>(nameof(Entity.Relationships)).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
+            var parent = model.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
             if (parent != null)
-                retVal.PartOf = DataTypeConverter.CreateVersionedReference<Location>(parent.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)));
+            {
+                retVal.PartOf = DataTypeConverter.CreateVersionedReference<Location>(parent.LoadProperty(o => o.TargetEntity));
+            }
 
             return retVal;
         }
@@ -117,7 +123,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 place = this.m_repository.Get(key);
 
-                if(place == null)
+                if (place == null)
                 {
                     place = new Place
                     {
@@ -129,9 +135,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
-                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
                     {
-                        place = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                        place = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (place != null)
                     {
@@ -161,7 +167,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     place.StatusConceptKey = StatusKeys.Active;
                     break;
                 case Location.LocationStatus.Suspended:
-                    throw new NotSupportedException(this.m_localizationService.GetString("error.type.NotSupportedException"));
+                    throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
                 case Location.LocationStatus.Inactive:
                     place.StatusConceptKey = StatusKeys.Inactive;
                     break;
@@ -171,26 +177,31 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // see the BirthPlaceExtension class
             if (!string.IsNullOrEmpty(resource.Address?.Text))
             {
-                place.Names.Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
+                place.LoadProperty(o => o.Names).Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
             }
 
-            place.Names.Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
-            place.Names.AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
+            place.LoadProperty(o => o.Names).Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
+            place.LoadProperty(o => o.Names).AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
 
             if (resource.Mode == Location.LocationMode.Kind)
+            {
                 place.DeterminerConceptKey = DeterminerKeys.Described;
+            }
             else
+            {
                 place.DeterminerConceptKey = DeterminerKeys.Specific;
+            }
 
             place.TypeConcept = DataTypeConverter.ToConcept(resource.Type.FirstOrDefault());
             place.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
             place.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
 
             if (resource.Address != null)
+            {
                 place.Addresses = new List<EntityAddress>() { DataTypeConverter.ToEntityAddress(resource.Address) };
+            }
 
-            
-            if(resource.Position != null)
+            if (resource.Position != null)
             {
                 place.GeoTag = new GeoTag
                 {
@@ -205,14 +216,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 if (reference == null)
                 {
                     this.m_tracer.TraceError($"Could not resolve {resource.PartOf.Reference}");
-                    throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.couldNotResolve", new
+                    throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.couldNotResolve", new
                     {
                         param = resource.PartOf.Reference
                     }));
                 }
 
                 // point the child place entity at the target place entity with a relationship of parent 
-                place.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
+                place.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
             }
 
             return place;

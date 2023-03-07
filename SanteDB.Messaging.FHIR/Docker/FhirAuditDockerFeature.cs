@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using SanteDB.Core.Configuration;
 using SanteDB.Docker.Core;
@@ -44,7 +44,7 @@ namespace SanteDB.Messaging.FHIR.Docker
         /// Setting ID for resources
         /// </summary>
         public const string EndpointSetting = "EP";
-        
+
         /// <summary>
         /// Message settings
         /// </summary>
@@ -78,7 +78,7 @@ namespace SanteDB.Messaging.FHIR.Docker
                 configuration.AddSection(fhirConfiguration);
             }
 
-            if(!settings.TryGetValue(EndpointSetting, out string endpoint))
+            if (!settings.TryGetValue(EndpointSetting, out string endpoint))
             {
                 throw new ArgumentNullException($"SDB_FHIR_AUDIT_EP is required");
             }
@@ -86,13 +86,13 @@ namespace SanteDB.Messaging.FHIR.Docker
             dispatcher.Name = "audit";
             dispatcher.Endpoint = endpoint;
 
-            if(settings.TryGetValue(UserSetting, out string user) && settings.TryGetValue(PasswordSetting, out string password))
+            if (settings.TryGetValue(UserSetting, out string user) && settings.TryGetValue(PasswordSetting, out string password))
             {
                 dispatcher.UserName = user;
                 dispatcher.Password = password;
             }
 
-            if(settings.TryGetValue(AuthenticatorSetting, out string authenticator))
+            if (settings.TryGetValue(AuthenticatorSetting, out string authenticator))
             {
                 dispatcher.Authenticator = new TypeReferenceConfiguration(authenticator);
             }

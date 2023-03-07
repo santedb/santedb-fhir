@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using System;
@@ -24,14 +24,14 @@ using System.Collections.Generic;
 
 namespace SanteDB.Messaging.FHIR.Extensions
 {
-	/// <summary>
-	/// Represents an extension point 
-	/// </summary>
-	/// <remarks>
-	/// This interface is used to extend the FHIR interface for FHIR operations (like $validate, $match, etc.)
-	/// and allows plugins to add behaviors to the API layer.
-	/// </remarks>
-	public interface IFhirOperationHandler
+    /// <summary>
+    /// Represents an extension point 
+    /// </summary>
+    /// <remarks>
+    /// This interface is used to extend the FHIR interface for FHIR operations (like $validate, $match, etc.)
+    /// and allows plugins to add behaviors to the API layer.
+    /// </remarks>
+    public interface IFhirOperationHandler
     {
 
         /// <summary>

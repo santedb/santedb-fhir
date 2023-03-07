@@ -16,22 +16,23 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -51,13 +52,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
     {
         /// <summary>
-        /// Include instruction
+        /// Include instruction informs the FHIR handler of other resources to include in the result (_include=Patient:target)
         /// </summary>
         protected struct IncludeInstruction
         {
             /// <summary>
             /// Create an include instruction
             /// </summary>
+            /// <param name="path">The path passed by the REST caller</param>
+            /// <param name="type">The type of resource to include</param>
             public IncludeInstruction(ResourceType type, String path)
             {
                 this.Type = type;
@@ -65,8 +68,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             /// <summary>
-            /// Query instruction
+            /// Parse from a query instruction passed on the REST API
             /// </summary>
+            /// <param name="queryInstruction">The query instruction (example: ?_include=Patient:target)</param>
             public IncludeInstruction(String queryInstruction)
             {
                 var parsed = queryInstruction.Split(':');
@@ -76,7 +80,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     var tracer = Tracer.GetTracer(typeof(ResourceHandlerBase<TFhirResource, TModel>));
 
                     tracer.TraceError($"{queryInstruction} is not a valid include instruction");
-                    throw new ArgumentOutOfRangeException(localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                    throw new ArgumentOutOfRangeException(localizationService.GetString("error.type.InvalidDataException.userMessage", new
                     {
                         param = "include instruction"
                     }));
@@ -105,7 +109,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// The trace source instance.
         /// </summary>
-        protected Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
+        protected readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         /// <summary>
         /// The localization service.
@@ -123,7 +127,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (typeAttribute == null || !typeAttribute.IsResource || !Enum.TryParse<ResourceType>(typeAttribute.Name, out ResourceType resourceType))
             {
                 this.m_traceSource.TraceError($"Type of {typeof(TFhirResource)} is not a resource");
-                throw new InvalidOperationException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                throw new InvalidOperationException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "resource"
                 }));
@@ -138,12 +142,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public ResourceType ResourceType { get; }
 
         /// <summary>
-        /// Gets the canonical type
+        /// Gets the canonical type (the type SanteDB uses)
         /// </summary>
         public Type CanonicalType => typeof(TModel);
 
         /// <summary>
-        /// Gets the CLR type
+        /// Gets the CLR type of the FHIR resource
         /// </summary>
         public Type ResourceClrType => typeof(TFhirResource);
 
@@ -153,58 +157,62 @@ namespace SanteDB.Messaging.FHIR.Handlers
         public string ServiceName => "Resource Handler Base";
 
         /// <summary>
-        /// Create the specified resource.
+        /// Create the specified resource in the repository layer
         /// </summary>
-        /// <param name="target">The target.</param>
-        /// <param name="mode">The mode.</param>
-        /// <returns>FhirOperationResult.</returns>
-        /// <exception cref="System.ArgumentNullException">target</exception>
-        /// <exception cref="System.IO.InvalidDataException"></exception>
-        /// <exception cref="System.Data.SyntaxErrorException"></exception>
-        public virtual Resource Create(Resource target, TransactionMode mode)
+        /// <param name="resource">The resource which should be created</param>
+        /// <param name="mode">The mode in which the transaction should be committed</param>
+        /// <returns>The created resource</returns>
+        /// <exception cref="System.ArgumentNullException">When the resource is null</exception>
+        /// <exception cref="ArgumentException">When the resource is not the correct type</exception>
+        public virtual Resource Create(Resource resource, TransactionMode mode)
         {
-            this.m_traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceType, target);
+            this.m_traceSource.TraceInfo("Creating resource {0} ({1})", this.ResourceType, resource);
 
-            if (target == null)
+            if (resource == null)
             {
-                this.m_traceSource.TraceError($"Argument {nameof(target)} null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                this.m_traceSource.TraceError($"Argument {nameof(resource)} null or empty");
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
-            else if (!(target is TFhirResource))
-                throw new InvalidDataException(this.m_localizationService.GetString("error.type.InvalidDataException"));
+            else if (resource is TFhirResource fhirResource)
+            {
+                resource = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Create, this.ResourceType, resource);
 
-            target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Create, this.ResourceType, target);
+                // We want to map from TFhirResource to TModel
+                var modelInstance = this.MapToModel(fhirResource);
 
-            // We want to map from TFhirResource to TModel
-            var modelInstance = this.MapToModel(target as TFhirResource);
-
-            if (modelInstance == null)
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+                if (modelInstance == null)
                 {
-                    param = "Model"
-                }));
+                    throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
+                    {
+                        param = "Model"
+                    }));
+                }
 
-            var result = this.Create(modelInstance, mode);
+                var result = this.Create(modelInstance, mode);
 
-            // Return fhir operation result
-            var retVal = this.MapToFhir(result);
-            return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, this.ResourceType, retVal);
+                // Return fhir operation result
+                var retVal = this.MapToFhir(result);
+                return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, this.ResourceType, retVal);
+            }
+            else
+            {
+                throw new ArgumentException(nameof(resource), String.Format(ErrorMessages.ARGUMENT_INVALID_TYPE, typeof(TFhirResource), resource.GetType()));
+            }
         }
 
         /// <summary>
         /// Deletes a specified resource.
         /// </summary>
-        /// <param name="id">The identifier.</param>
-        /// <param name="mode">The mode.</param>
-        /// <returns>FhirOperationResult.</returns>
-        /// <exception cref="System.ArgumentNullException">id</exception>
-        /// <exception cref="System.ArgumentException"></exception>
+        /// <param name="id">The identifier of the resource to delete</param>
+        /// <param name="mode">The method of deletion</param>
+        /// <returns>The resource that was deleted</returns>
+        /// <exception cref="System.ArgumentNullException">The identifier is not available or is in the incorrect format</exception>
         public Resource Delete(string id, TransactionMode mode)
         {
             if (String.IsNullOrEmpty(id))
             {
                 this.m_traceSource.TraceError($"Argument {nameof(id)} is null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
 
             this.m_traceSource.TraceInfo("Deleting resource {0}/{1}", this.ResourceType, id);
@@ -212,10 +220,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Delete
             var guidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException(m_localizationService.FormatString("error.type.ArgumentException", new
+            {
+                throw new ArgumentException(m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "id"
                 }));
+            }
 
             // Do the deletion
             var result = this.Delete(guidId);
@@ -237,7 +247,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 ConditionalDelete = ConditionalDeleteStatus.NotSupported,
                 ReadHistory = true,
                 UpdateCreate = true,
-                Versioning = typeof(IVersionedEntity).IsAssignableFrom(typeof(TModel)) ?
+                Versioning = typeof(IVersionedData).IsAssignableFrom(typeof(TModel)) ?
                     ResourceVersionPolicy.Versioned :
                     ResourceVersionPolicy.NoVersion,
                 Interaction = this.GetInteractions().ToList(),
@@ -263,60 +273,60 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Queries for a specified resource.
         /// </summary>
-        /// <param name="parameters">The parameters.</param>
-        /// <returns>Returns the FHIR query result containing the results of the query.</returns>
-        /// <exception cref="System.ArgumentNullException">parameters</exception>
+        /// <param name="parameters">The parameters for the queyr in FHIR format</param>
+        /// <returns>Returns the FHIR query result containing the results of the query</returns>
+        /// <exception cref="System.ArgumentNullException">Parameters have not been passed</exception>
         public virtual Bundle Query(System.Collections.Specialized.NameValueCollection parameters)
         {
             if (parameters == null)
             {
                 this.m_traceSource.TraceError($"Argument {nameof(parameters)} null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
 
-            Core.Model.Query.NameValueCollection hdsiQuery = null;
-            FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(TFhirResource), typeof(TModel), parameters, out hdsiQuery);
+            FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(TFhirResource), typeof(TModel), parameters, out var hdsiQuery);
 
             // Do the query
-            int totalResults = 0;
-            var predicate = QueryExpressionParser.BuildLinqExpression<TModel>(hdsiQuery);
-            var hdsiResults = this.Query(predicate, query.QueryId, query.Start, query.Quantity, out totalResults);
+            var predicate = QueryExpressionParser.BuildLinqExpression<TModel>(hdsiQuery, null, false, false);
+
+            var hdsiResults = this.Query(predicate);
+            var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<TModel>();
 
             var auth = AuthenticationContext.Current;
-            // Return FHIR query result
-            if(Environment.ProcessorCount > 4)
-            {
-                hdsiResults = hdsiResults.AsParallel().AsOrdered();
-            }
 
-            var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
+            using (DataPersistenceControlContext.Create(LoadMode.SyncLoad))
             {
-                Results = hdsiResults.Select(o =>
+                var retVal = new FhirQueryResult(typeof(TFhirResource).Name)
                 {
-                    using (AuthenticationContext.EnterContext(auth.Principal))
+                    Results = results.ToArray().AsParallel().Select(o =>
                     {
-                        return new Bundle.EntryComponent()
+
+                        using (AuthenticationContext.EnterContext(auth.Principal))
                         {
-                            Resource = this.MapToFhir(o),
-                            Search = new Bundle.SearchComponent()
+                            return new Bundle.EntryComponent()
                             {
-                                Mode = Bundle.SearchEntryMode.Match
-                            }
-                        };
-                    }
-                }).ToList(),
-                Query = query,
-                TotalResults = totalResults
-            };
-
-            this.ProcessIncludes(hdsiResults, parameters, retVal);
-
-            return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
+                                Resource = this.MapToFhir(o),
+                                Search = new Bundle.SearchComponent()
+                                {
+                                    Mode = Bundle.SearchEntryMode.Match
+                                }
+                            };
+                        }
+                    }).ToList(),
+                    Query = query,
+                    TotalResults = totalResults
+                };
+                this.ProcessIncludes(hdsiResults, parameters, retVal);
+                return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
+            }
         }
 
         /// <summary>
         /// Process includes for the specified result set
         /// </summary>
+        /// <param name="parameters">The parameters on the original query</param>
+        /// <param name="queryResult">The query results control which dictate how related data should be loaded</param>
+        /// <param name="results">The primary result set returned from the persistence layer</param>
         protected virtual void ProcessIncludes(IEnumerable<TModel> results, System.Collections.Specialized.NameValueCollection parameters, FhirQueryResult queryResult)
         {
             // Include or ref include?
@@ -341,38 +351,48 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Retrieves a specific resource.
         /// </summary>
-        /// <param name="id">The identifier.</param>
-        /// <param name="versionId">The version identifier.</param>
+        /// <param name="id">The identifier of the resource to retrieve</param>
+        /// <param name="versionId">The version of the resource</param>
         /// <returns>Returns the FHIR operation result containing the retrieved resource.</returns>
-        /// <exception cref="System.ArgumentNullException">id</exception>
-        /// <exception cref="System.ArgumentException">
-        /// </exception>
-        /// <exception cref="System.Collections.Generic.KeyNotFoundException"></exception>
+        /// <exception cref="System.ArgumentNullException">The identifier is not present</exception>
+        /// <exception cref="System.ArgumentException">The identifier is not a UUID</exception>
+        /// <exception cref="System.Collections.Generic.KeyNotFoundException">The specified object could not be found</exception>
         public Resource Read(string id, string versionId)
         {
             if (String.IsNullOrEmpty(id))
             {
                 this.m_traceSource.TraceError($"Argument {nameof(id)} null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
 
             Guid guidId = Guid.Empty, versionGuidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+            {
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "id"
                 }));
+            }
+
             if (!String.IsNullOrEmpty(versionId) && !Guid.TryParse(versionId, out versionGuidId))
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+            {
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "versionId"
                 }));
+            }
 
             var result = this.Read(guidId, versionGuidId);
             if (result == null)
             {
                 this.m_traceSource.TraceError($"{this.ResourceType}/{id} not found");
                 throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
+            }
+            else if (result is BaseEntityData bed && bed.ObsoletionTime.HasValue &&
+                versionGuidId == Guid.Empty) // The resource is logically deleted FHIR requires 410 gone
+            {
+                this.m_traceSource.TraceWarning($"{this.ResourceType}/{id} was deleted");
+                throw new FhirException(System.Net.HttpStatusCode.Gone, OperationOutcome.IssueType.Deleted, $"{result} deleted on {bed.ObsoletionTime:o}");
             }
 
             // FHIR Operation result
@@ -381,54 +401,63 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Updates the specified resource.
+        /// Updates the specified resource with new data in <paramref name="resource"/>
         /// </summary>
-        /// <param name="id">The identifier.</param>
-        /// <param name="target">The target.</param>
-        /// <param name="mode">The mode.</param>
+        /// <param name="id">The identifier of the resource to update</param>
+        /// <param name="resource">The The resource to update</param>
+        /// <param name="mode">The mode of update (commit or rollback)</param>
         /// <returns>Returns the FHIR operation result containing the updated resource.</returns>
-        /// <exception cref="System.ArgumentNullException">target</exception>
-        /// <exception cref="System.IO.InvalidDataException"></exception>
-        /// <exception cref="System.Data.SyntaxErrorException"></exception>
-        /// <exception cref="System.ArgumentException"></exception>
-        /// <exception cref="System.Reflection.AmbiguousMatchException"></exception>
-        /// <exception cref="System.Collections.Generic.KeyNotFoundException"></exception>
-        public Resource Update(string id, Resource target, TransactionMode mode)
+        /// <exception cref="System.ArgumentNullException">The resource has not been passed to the function</exception>
+        /// <exception cref="System.IO.InvalidDataException">The resource is not valid according to its business constraints</exception>
+        /// <exception cref="System.ArgumentException">The resource or id are in an invalid format</exception>
+        /// <exception cref="System.Reflection.AmbiguousMatchException">There are multiple resources which could be the target of this update</exception>
+        /// <exception cref="System.Collections.Generic.KeyNotFoundException">The specified resource could not be found</exception>
+        public Resource Update(string id, Resource resource, TransactionMode mode)
         {
-            this.m_traceSource.TraceInfo("Updating resource {0}/{1} ({2})", this.ResourceType, id, target);
+            this.m_traceSource.TraceInfo("Updating resource {0}/{1} ({2})", this.ResourceType, id, resource);
 
-            if (target == null)
+            if (resource == null)
             {
-                this.m_traceSource.TraceError($"Argument {nameof(target)} is null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                this.m_traceSource.TraceError($"Argument {nameof(resource)} is null or empty");
+                throw new ArgumentNullException(nameof(resource), ErrorMessages.ARGUMENT_NULL);
             }
-            else if (!(target is TFhirResource))
-                throw new InvalidDataException(this.m_localizationService.GetString("error.type.InvalidDataException"));
+            else if (!(resource is TFhirResource))
+            {
+                throw new ArgumentException(nameof(resource), String.Format(ErrorMessages.ARGUMENT_INCOMPATIBLE_TYPE, typeof(TFhirResource), resource?.GetType()));
+            }
 
-            target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Update, this.ResourceType, target);
+            resource = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Update, this.ResourceType, resource);
 
             // We want to map from TFhirResource to TModel
-            target.Id = id;
-            var modelInstance = this.MapToModel(target as TFhirResource);
+            resource.Id = id;
+            var modelInstance = this.MapToModel(resource as TFhirResource);
             if (modelInstance == null)
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.InvalidDataException.userMessage", new
+            {
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
                 {
                     param = "Request"
                 }));
+            }
 
             // Guid identifier
             var guidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+            {
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "id"
                 }));
+            }
 
             // Model instance key does not equal path
             if (modelInstance.Key != Guid.Empty && modelInstance.Key != guidId)
+            {
                 throw new InvalidOperationException(this.m_localizationService.GetString("error.messaging.fhir.resourceBase.key"));
+            }
             else if (modelInstance.Key == Guid.Empty)
+            {
                 modelInstance.Key = guidId;
+            }
 
             var result = this.Update(modelInstance, mode);
 
@@ -440,18 +469,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Creates the specified model instance.
         /// </summary>
-        /// <param name="modelInstance">The model instance.</param>
-        /// <param name="issues">The issues.</param>
-        /// <param name="mode">The mode.</param>
-        /// <returns>Returns the created model.</returns>
+        /// <param name="modelInstance">The model instance to create</param>
+        /// <param name="mode">The mode of creation (rollback or commit)</param>
+        /// <returns>Returns the created model</returns>
         protected abstract TModel Create(TModel modelInstance, TransactionMode mode);
 
         /// <summary>
-        /// Deletes the specified model identifier.
+        /// Deletes the specified model
         /// </summary>
-        /// <param name="modelId">The model identifier.</param>
-        /// <param name="details">The details.</param>
-        /// <returns>Returns the deleted model.</returns>
+        /// <param name="modelId">The model identifier</param>
+        /// <returns>Returns the deleted object</returns>
         protected abstract TModel Delete(Guid modelId);
 
         /// <summary>
@@ -469,70 +496,74 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected abstract TModel MapToModel(TFhirResource resource);
 
         /// <summary>
-        /// Gets includes
+        /// Gets includes specified by the caller
         /// </summary>
+        /// <param name="includePaths">The include paths to retrieve</param>
+        /// <param name="resource">The primary resource on which includes are being retrieved</param>
         protected abstract IEnumerable<Resource> GetIncludes(TModel resource, IEnumerable<IncludeInstruction> includePaths);
 
         /// <summary>
-        /// Gets the revers include paths
+        /// Gets the reverse include paths
         /// </summary>
+        /// <param name="resource">The resource on which the reverse includes are being retrieved</param>
+        /// <param name="reverseIncludePaths">The paths of reverse includes</param>
         protected abstract IEnumerable<Resource> GetReverseIncludes(TModel resource, IEnumerable<IncludeInstruction> reverseIncludePaths);
 
         /// <summary>
-        /// Queries the specified query.
+        /// Execute the specified query
         /// </summary>
-        /// <param name="query">The query.</param>
-        /// <param name="issues">The issues.</param>
-        /// <param name="offset">The offset.</param>
-        /// <param name="count">The count.</param>
-        /// <param name="totalResults">The total results.</param>
+        /// <param name="query">The query filter</param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected abstract IEnumerable<TModel> Query(Expression<Func<TModel, bool>> query, Guid queryId, int offset, int count, out int totalResults);
+        protected abstract IQueryResultSet<TModel> Query(Expression<Func<TModel, bool>> query);
 
         /// <summary>
-        /// Reads the specified identifier.
+        /// Read the specified FHIR object.
         /// </summary>
-        /// <param name="id">The identifier.</param>
-        /// <param name="details">The details.</param>
+        /// <param name="id">The identifier of the object</param>
+        /// <param name="versionId">The version of the object to retrieve</param>
         /// <returns>Returns the model which matches the given id.</returns>
         protected abstract TModel Read(Guid id, Guid versionId);
 
         /// <summary>
-        /// Updates the specified model.
+        /// Updates the specified fhir resource
         /// </summary>
-        /// <param name="model">The model.</param>
-        /// <param name="details">The details.</param>
-        /// <param name="mode">The mode.</param>
+        /// <param name="model">The resource to update</param>
+        /// <param name="mode">The mode of update</param>
         /// <returns>Returns the updated model.</returns>
         protected abstract TModel Update(TModel model, TransactionMode mode);
 
         /// <summary>
         /// Reads the complete history of the specified identifier
         /// </summary>
+        /// <param name="id">The identifier of the object to read history for</param>
         public Bundle History(string id)
         {
             if (String.IsNullOrEmpty(id))
             {
                 this.m_traceSource.TraceError($"Argument {nameof(id)} null or empty");
-                throw new ArgumentNullException(this.m_localizationService.GetString("error.type.ArgumentNullException"));
+                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
             }
 
             Guid guidId = Guid.Empty;
             if (!Guid.TryParse(id, out guidId))
-                throw new ArgumentException(this.m_localizationService.FormatString("error.type.ArgumentException", new
+            {
+                throw new ArgumentException(this.m_localizationService.GetString("error.type.ArgumentException", new
                 {
                     param = "id"
                 }));
+            }
 
             var result = this.Read(guidId, Guid.Empty);
             if (result == null)
+            {
                 throw new KeyNotFoundException(this.m_localizationService.GetString("error.type.KeyNotFoundException"));
+            }
 
             // Results
             List<TModel> results = new List<TModel>() { result };
-            while ((result as IVersionedEntity)?.PreviousVersionKey.HasValue == true)
+            while ((result as IVersionedData)?.PreviousVersionKey.HasValue == true)
             {
-                result = this.Read(guidId, (result as IVersionedEntity).PreviousVersionKey.Value);
+                result = this.Read(guidId, (result as IVersionedData).PreviousVersionKey.Value);
                 results.Add(result);
             }
 
@@ -555,6 +586,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map to FHIR
         /// </summary>
+        /// <param name="modelInstance">The SanteDB model instance which should be mapped to FHIR</param>
         public Resource MapToFhir(IdentifiedData modelInstance)
         {
             return this.MapToFhir((TModel)modelInstance);
@@ -563,6 +595,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map the object to model
         /// </summary>
+        /// <param name="resourceInstance">The FHIR resource which should be mapped to SanteDB</param>
         public IdentifiedData MapToModel(Resource resourceInstance)
         {
             using (AuthenticationContext.EnterSystemContext()) // All queries under the mapping process are performed by the SYSTEM
@@ -572,14 +605,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 switch (retVal)
                 {
                     case IResourceCollection irc:
-                        irc.AddAnnotationToAll(SanteDBConstants.NoDynamicLoadAnnotation);
+                        irc.AddAnnotationToAll(SanteDBModelConstants.NoDynamicLoadAnnotation);
                         break;
                     case ITargetedAssociation tra:
-                        (tra.TargetEntity as IdentifiedData)?.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
-                        (tra.SourceEntity as IdentifiedData)?.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        (tra.TargetEntity as IdentifiedData)?.AddAnnotation(SanteDBModelConstants.NoDynamicLoadAnnotation);
+                        (tra.SourceEntity as IdentifiedData)?.AddAnnotation(SanteDBModelConstants.NoDynamicLoadAnnotation);
                         break;
                     default:
-                        retVal.AddAnnotation(SanteDBConstants.NoDynamicLoadAnnotation);
+                        retVal.AddAnnotation(SanteDBModelConstants.NoDynamicLoadAnnotation);
                         break;
                 }
 
@@ -590,6 +623,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// True if this handler can process the object
         /// </summary>
+        /// <param name="instance">The instance to test for applicability for mapping</param>
         public virtual bool CanMapObject(object instance) => instance is TModel || instance is TFhirResource;
     }
 }

@@ -16,11 +16,10 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
-using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -116,9 +115,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
-                    if (ii.LoadProperty(o => o.Authority).IsUnique)
+                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
                     {
-                        retVal = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                        retVal = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (retVal != null)
                     {
@@ -130,7 +129,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal = new Core.Model.Entities.Organization()
                 {
-                    Key = Guid.NewGuid()
+                    Key = Guid.NewGuid(),
+                    Relationships = new List<EntityRelationship>(),
+                    Participations = new List<Core.Model.Acts.ActParticipation>()
                 };
             }
 
@@ -151,14 +152,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 if (reference == null)
                 {
                     this.m_tracer.TraceError($"Could not resolve {resource.PartOf.Reference}");
-                    throw new KeyNotFoundException(m_localizationService.FormatString("error.type.KeyNotFoundException.couldNotResolve", new
+                    throw new KeyNotFoundException(m_localizationService.GetString("error.type.KeyNotFoundException.couldNotResolve", new
                     {
                         param = resource.PartOf.Reference
                     }));
                 }
 
                 // point the child organization entity at the target organization entity with a relationship of parent 
-                retVal.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
+                retVal.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
             }
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
             return retVal;

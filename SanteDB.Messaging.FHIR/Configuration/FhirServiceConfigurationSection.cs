@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2022-5-30
  */
 using Newtonsoft.Json;
 using SanteDB.Core.Configuration;
@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Xml.Serialization;
 
 namespace SanteDB.Messaging.FHIR.Configuration
@@ -185,18 +184,5 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [XmlAttribute("defaultContentType"), JsonProperty("defaultContentType")]
         [DisplayName("Default Format"), Description("The default format to use when the client does not specify a perferred format")]
         public FhirResponseFormatConfiguration DefaultResponseFormat { get; set; }
-    }
-
-    /// <summary>
-    /// FHIR Response format configuration
-    /// </summary>
-    [XmlType(nameof(FhirResponseFormatConfiguration), Namespace = "http://santedb.org/configuration")]
-    public enum FhirResponseFormatConfiguration
-    {
-        [XmlEnum("application/fhir+json")]
-        Json,
-
-        [XmlEnum("application/fhir+xml")]
-        Xml
     }
 }
