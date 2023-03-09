@@ -259,7 +259,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     if (resource.Outcome.Coding.Any(o => o.Code == "fatal"))
                     {
-                        retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.IsCauseOf, new CodedObservation { TypeConceptKey = ObservationTypeKeys.ClinicalState, ValueKey = Guid.Parse("6df3720b-857f-4ba2-826f-b7f1d3c3adbb") }));
+                        retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.IsCauseOf, new CodedObservation { TypeConceptKey = ObservationTypeKeys.ClinicalState, ValueKey = DischargeDispositionKeys.Died }));
                     }
                     else if (resource.Outcome.Coding.Any(o => o.Code == "ongoing"))
                     {

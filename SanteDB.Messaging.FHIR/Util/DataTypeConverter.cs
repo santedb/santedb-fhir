@@ -427,6 +427,26 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Convert to a fhir code from a codeable concept.
+        /// </summary>
+        /// <typeparam name="T">The code type to convert to.</typeparam>
+        /// <param name="conceptKey">The concept key to convert.</param>
+        /// <param name="preferredCodeSystem">Any preferred code systems to use to retrieve the representation from.</param>
+        /// <returns>A <see cref="Code{T}"/> instance for the concept.</returns>
+        public static Code<T> ToFhirCode<T>(Guid? conceptKey, params string[] preferredCodeSystem) where T: struct
+        {
+            if (null == conceptKey)
+            {
+                return null;
+            }
+
+            return new Code<T>
+            {
+                ObjectValue = ToFhirCodeableConcept(conceptKey, preferredCodeSystem)?.Text
+            };
+        }
+
+        /// <summary>
         /// Convert to issue
         /// </summary>
         internal static OperationOutcome.IssueComponent ToIssue(Core.BusinessRules.DetectedIssue issue)

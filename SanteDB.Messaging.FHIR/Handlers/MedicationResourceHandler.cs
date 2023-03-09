@@ -43,6 +43,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="localizationService">The localization service.</param>
         public MedicationResourceHandler(IRepositoryService<ManufacturedMaterial> repositoryService, ILocalizationService localizationService) : base(repositoryService, localizationService)
         {
+            
         }
 
         /// <summary>

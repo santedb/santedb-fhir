@@ -65,128 +65,148 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
 		protected override AllergyIntolerance MapToFhir(CodedObservation model)
         {
-            var retVal = DataTypeConverter.CreateResource<AllergyIntolerance>(model);
+            using (var datactx = DataPersistenceControlContext.Create(loadMode: LoadMode.FullLoad).WithName("FHIR"))
+            {
+                var retVal = DataTypeConverter.CreateResource<AllergyIntolerance>(model);
 
-            retVal.Identifier = model.LoadCollection<ActIdentifier>(nameof(model.Identifiers)).Select(DataTypeConverter.ToFhirIdentifier).ToList();
+                retVal.Identifier = model.LoadCollection<ActIdentifier>(nameof(model.Identifiers)).Select(DataTypeConverter.ToFhirIdentifier).ToList();
 
 
-            string status = null;
-            if (model.StatusConceptKey == StatusKeys.Active)
-            {
-                status = "active";
-            }
-            else if (model.StatusConceptKey == StatusKeys.Completed)
-            {
-                status = "resolved";
-            }
-            else if (model.StatusConceptKey == StatusKeys.Inactive || model.StatusConceptKey == StatusKeys.Obsolete)
-            {
-                status = "inactive";
-            }
-
-            if (model.StatusConceptKey == StatusKeys.Nullified)
-            {
-                retVal.VerificationStatus = new CodeableConcept("http://hl7.org/fhir/ValueSet/allergyintolerance-verification", "entered-in-error");
-            }
-            else if (null != status)
-            {
-                retVal.ClinicalStatus = new CodeableConcept("http://hl7.org/fhir/ValueSet/allergyintolerance-clinical", status);
-            }
-
-            if (model.StartTime.HasValue || model.StopTime.HasValue)
-            {
-                retVal.Onset = new Period
+                string status = null;
+                if (model.StatusConceptKey == StatusKeys.Active)
                 {
-                    StartElement = model.StartTime.HasValue ? DataTypeConverter.ToFhirDateTime(model.StartTime) : null,
-                    EndElement = model.StopTime.HasValue ? DataTypeConverter.ToFhirDateTime(model.StopTime) : null
-                };
-            }
-            else
-            {
-                retVal.Onset = DataTypeConverter.ToFhirDateTime(model.ActTime);
-            }
-
-            retVal.RecordedDateElement = DataTypeConverter.ToFhirDateTime(model.CreationTime);
-
-            var participations = model.LoadCollection<ActParticipation>(nameof(model.Participations));
-
-            var recordtarget = participations.FirstOrDefault(p => p.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
-
-            if (null != recordtarget)
-            {
-                retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(recordtarget.LoadProperty<Entity>(nameof(recordtarget.PlayerEntity)));
-            }
-
-            var asserter = participations.FirstOrDefault(p => p.ParticipationRoleKey == ActParticipationKeys.Authororiginator);
-
-            if (null != asserter)
-            {
-                retVal.Asserter = DataTypeConverter.CreateVersionedReference<Practitioner>(asserter.LoadProperty<Entity>(nameof(asserter.PlayerEntity)));
-            }
-
-            if (model.TypeConceptKey == IntoleranceObservationTypeKeys.OtherIntolerance)
-            {
-                retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
-                retVal.CategoryElement.Clear();
-            }
-            else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.DrugIntolerance)
-            {
-                retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Allergy;
-                retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Medication };
-            }
-            else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.DrugNonAllergyIntolerance)
-            {
-                retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
-                retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Medication };
-            }
-            else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.FoodIntolerance)
-            {
-                retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Allergy;
-                retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Food };
-            }
-            else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.FoodNonAllergyIntolerance)
-            {
-                retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
-                retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Food };
-            }
-            else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.EnvironmentalIntolerance)
-            {
-                retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Allergy;
-                retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Environment };
-            }
-            else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.EnvironmentalNonAllergyIntolerance)
-            {
-                retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
-                retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Environment };
-            }
-            else
-            {
-                //TODO: Throw exception here, cannot translate.
-            }
-
-            var actrelationshipservice = ApplicationServiceContext.Current.GetService<IDataPersistenceService<ActRelationship>>();
-
-            var criticality = actrelationshipservice.Query(actr => actr.SourceEntityKey == model.Key && actr.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && actr.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal);
-
-            if (null == criticality)
-            {
-                var contextAct = actrelationshipservice.Query(o => o.TargetActKey == model.Key, AuthenticationContext.Current.Principal).FirstOrDefault();
-
-                if (contextAct != null)
-                {
-                    criticality = actrelationshipservice.Query(o => o.SourceEntityKey == contextAct.SourceEntityKey && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal);
+                    status = "active";
                 }
+                else if (model.StatusConceptKey == StatusKeys.Completed)
+                {
+                    status = "resolved";
+                }
+                else if (model.StatusConceptKey == StatusKeys.Inactive || model.StatusConceptKey == StatusKeys.Obsolete)
+                {
+                    status = "inactive";
+                }
+
+                if (model.StatusConceptKey == StatusKeys.Nullified)
+                {
+                    retVal.VerificationStatus = new CodeableConcept("http://hl7.org/fhir/ValueSet/allergyintolerance-verification", "entered-in-error");
+                }
+                else if (null != status)
+                {
+                    retVal.ClinicalStatus = new CodeableConcept("http://hl7.org/fhir/ValueSet/allergyintolerance-clinical", status);
+                }
+
+                if (model.StartTime.HasValue || model.StopTime.HasValue)
+                {
+                    retVal.Onset = new Period
+                    {
+                        StartElement = model.StartTime.HasValue ? DataTypeConverter.ToFhirDateTime(model.StartTime) : null,
+                        EndElement = model.StopTime.HasValue ? DataTypeConverter.ToFhirDateTime(model.StopTime) : null
+                    };
+                }
+                else
+                {
+                    retVal.Onset = DataTypeConverter.ToFhirDateTime(model.ActTime);
+                }
+
+                retVal.RecordedDateElement = DataTypeConverter.ToFhirDateTime(model.CreationTime);
+
+                var participations = model.LoadCollection<ActParticipation>(nameof(model.Participations));
+
+                var recordtarget = participations.FirstOrDefault(p => p.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
+
+                if (null != recordtarget)
+                {
+                    retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(recordtarget.LoadProperty<Entity>(nameof(recordtarget.PlayerEntity)));
+                }
+
+                var asserter = participations.FirstOrDefault(p => p.ParticipationRoleKey == ActParticipationKeys.Authororiginator);
+
+                if (null != asserter)
+                {
+                    retVal.Asserter = DataTypeConverter.CreateVersionedReference<Practitioner>(asserter.LoadProperty<Entity>(nameof(asserter.PlayerEntity)));
+                }
+
+                if (model.TypeConceptKey == IntoleranceObservationTypeKeys.OtherIntolerance)
+                {
+                    retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
+                    retVal.CategoryElement.Clear();
+                }
+                else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.DrugIntolerance)
+                {
+                    retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Allergy;
+                    retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Medication };
+                }
+                else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.DrugNonAllergyIntolerance)
+                {
+                    retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
+                    retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Medication };
+                }
+                else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.FoodIntolerance)
+                {
+                    retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Allergy;
+                    retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Food };
+                }
+                else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.FoodNonAllergyIntolerance)
+                {
+                    retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
+                    retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Food };
+                }
+                else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.EnvironmentalIntolerance)
+                {
+                    retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Allergy;
+                    retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Environment };
+                }
+                else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.EnvironmentalNonAllergyIntolerance)
+                {
+                    retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
+                    retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Environment };
+                }
+                else
+                {
+                    //TODO: Throw exception here, cannot translate.
+                }
+
+                var actrelationshipservice = ApplicationServiceContext.Current.GetService<IDataPersistenceService<ActRelationship>>();
+
+                var criticality = actrelationshipservice.Query(actr => actr.SourceEntityKey == model.Key && actr.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && actr.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal)?.FirstOrDefault();
+
+                if (null == criticality)
+                {
+                    var contextAct = actrelationshipservice.Query(o => o.TargetActKey == model.Key, AuthenticationContext.Current.Principal).FirstOrDefault();
+
+                    if (contextAct != null)
+                    {
+                        criticality = actrelationshipservice.Query(o => o.SourceEntityKey == contextAct.SourceEntityKey && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal)?.FirstOrDefault();
+                    }
+                }
+
+                if (null != criticality)
+                {
+                    retVal.CriticalityElement = DataTypeConverter.ToFhirCode<AllergyIntolerance.AllergyIntoleranceCriticality>((criticality.TargetAct as CodedObservation).ValueKey, "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality");
+                }
+
+                var manifestations = (actrelationshipservice, model).GetRelatedActs<CodedObservation>(ActRelationshipTypeKeys.HasManifestation, ObservationTypeKeys.Symptom);
+
+                foreach (var manifestation in manifestations)
+                {
+                    var reaction = new AllergyIntolerance.ReactionComponent();
+
+                    reaction.OnsetElement = DataTypeConverter.ToFhirDateTime(manifestation.ActTime);
+                    reaction.Manifestation.Add(DataTypeConverter.ToFhirCodeableConcept(manifestation.ValueKey));
+
+                    var severity = (actrelationshipservice, manifestation).GetFirstOrDefaultRelatedAct<CodedObservation>(ActRelationshipTypeKeys.HasComponent, ObservationTypeKeys.Severity);
+                    if (null != severity)
+                    {
+                        reaction.SeverityElement = DataTypeConverter.ToFhirCode<AllergyIntolerance.AllergyIntoleranceSeverity>(severity?.ValueKey);
+                    }
+
+                    retVal.Reaction.Add(reaction);
+                }
+
+                retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.ValueKey);
+
+                return retVal;
             }
-
-            if (null != criticality)
-            {
-                var cc = DataTypeConverter.ToFhirCodeableConcept((criticality as CodedObservation).ValueKey, "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality");
-                retVal.CriticalityElement = new Code<AllergyIntolerance.AllergyIntoleranceCriticality> { ObjectValue = cc.Text };
-            }
-
-            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.ValueKey);
-
-            return retVal;
         }
 
         /// <summary>
@@ -198,7 +218,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Relationships = new List<ActRelationship>(),
                 Participations = new List<ActParticipation>(),
-                Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList()
+                Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList(),
+                MoodConceptKey = MoodConceptKeys.Eventoccurrence
             };
 
             switch (resource.ClinicalStatus.TypeName)
@@ -261,7 +282,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             bool isintolerance = resource.Type == AllergyIntolerance.AllergyIntoleranceType.Intolerance;
 
-            switch(resource.Category.Where(c=> null != c).FirstOrDefault())
+            switch (resource.Category.Where(c => null != c).FirstOrDefault())
             {
                 case AllergyIntolerance.AllergyIntoleranceCategory.Biologic:
                     retVal.TypeConceptKey = isintolerance ? IntoleranceObservationTypeKeys.OtherIntolerance : (Guid?)null;
@@ -284,9 +305,64 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var criticalityTarget = new CodedObservation
                 {
                     Value = DataTypeConverter.ToConcept(resource.CriticalityElement.TypeName, "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality"),
-                    TypeConceptKey = ObservationTypeKeys.Severity
+                    TypeConceptKey = ObservationTypeKeys.Severity,
+                    MoodConceptKey = MoodConceptKeys.Eventoccurrence
                 };
                 retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, criticalityTarget));
+            }
+
+            if (null != resource.Encounter)
+            {
+                retVal.Relationships.Add(new ActRelationship()
+                {
+                    SourceEntityKey = DataTypeConverter.ToActIdentifier(resource.Encounter.Identifier)?.SourceEntityKey,
+                    RelationshipTypeKey = ActRelationshipTypeKeys.HasComponent
+                });
+            }
+
+            if (resource.Reaction?.Any() == true)
+            {
+                foreach (var reaction in resource.Reaction)
+                {
+                    if (reaction.Manifestation?.Any() == true)
+                    {
+                        foreach (var manifestation in reaction.Manifestation)
+                        {
+                            var reactionTarget = new CodedObservation
+                            {
+                                MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                                TypeConceptKey = ObservationTypeKeys.Symptom,
+                                ActTime = Convert.ToDateTime(reaction.OnsetElement),
+                                Relationships = new List<ActRelationship>()
+                            };
+                            reactionTarget.Value = DataTypeConverter.ToConcept(manifestation);
+
+                            if (null != reaction.Substance)
+                            {
+                                //TODO: how to map a substance to an administration here?
+                            }
+
+                            if (null != reaction.Severity)
+                            {
+                                var severity = new CodedObservation
+                                {
+                                    MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                                    TypeConceptKey = ObservationTypeKeys.Severity
+                                };
+
+                                severity.Value = DataTypeConverter.ToConcept(reaction.SeverityElement?.ObjectValue?.ToString(), "http://hl7.org/fhir/ValueSet/reaction-event-severity");
+
+                                reactionTarget.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, severity));
+                            }
+
+                            retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasManifestation, reactionTarget));
+                        }
+
+                    }
+
+
+
+                }
             }
 
             retVal.Value = DataTypeConverter.ToConcept(resource.Code);
