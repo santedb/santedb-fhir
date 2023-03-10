@@ -25,8 +25,10 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
+using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -150,7 +152,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
             if (rct != null)
             {
-                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
+                retVal.Subject = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
             }
 
             // Encounter
@@ -193,7 +195,118 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override SubstanceAdministration MapToModel(MedicationAdministration resource)
         {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException"));
+            var retVal = new SubstanceAdministration
+            {
+                Relationships = new List<ActRelationship>(),
+                Participations = new List<ActParticipation>(),
+                Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList()
+            };
+
+            retVal.ReasonConcept = DataTypeConverter.ToConcept(resource.StatusReason.FirstOrDefault());
+
+            switch (resource.Status)
+            {
+                case MedicationAdministration.MedicationAdministrationStatusCodes.InProgress:
+                    retVal.StatusConceptKey = StatusKeys.Active;
+                    break;
+                case MedicationAdministration.MedicationAdministrationStatusCodes.Stopped:
+                    retVal.StatusConceptKey = StatusKeys.Cancelled;
+                    break;
+                case MedicationAdministration.MedicationAdministrationStatusCodes.EnteredInError:
+                    retVal.StatusConceptKey = StatusKeys.Nullified;
+                    break;
+                case MedicationAdministration.MedicationAdministrationStatusCodes.Completed:
+                    retVal.StatusConceptKey = StatusKeys.Completed;
+                    break;
+                case MedicationAdministration.MedicationAdministrationStatusCodes.Unknown:
+                    retVal.StatusConceptKey = StatusKeys.Obsolete;
+                    break;
+                case MedicationAdministration.MedicationAdministrationStatusCodes.NotDone:
+                    retVal.StatusConceptKey = StatusKeys.Cancelled;
+                    retVal.IsNegated = true;
+                    break;
+                default:
+                    throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.CodeInvalid, $"Status {resource.StatusElement.ObjectValue.ToString()} is not supported.");
+
+            }
+
+            retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Category);
+
+            if (resource.Medication is ResourceReference medicationreference)
+            {
+                var mmat = DataTypeConverter.ResolveEntity<ManufacturedMaterial>(medicationreference, resource);
+
+                if (null != mmat)
+                {
+                    retVal.Participations.Add(new ActParticipation(ActParticipationKeys.Consumable, mmat));
+                }
+                else
+                {
+                    var mat = DataTypeConverter.ResolveEntity<Material>(medicationreference, resource);
+
+                    if (null != mat)
+                    {
+                        retVal.Participations.Add(new ActParticipation(ActParticipationKeys.Product, mat));
+                    }
+                }
+            }
+            else if (resource.Medication is CodeableConcept medicationconcept)
+            {
+
+            }
+
+            if (null != resource.Subject)
+            {
+                var rectarget = DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource);
+
+                if (null != rectarget)
+                {
+                    retVal.Participations.Add(new ActParticipation(ActParticipationKeys.RecordTarget, rectarget));
+                }
+            }
+
+            //TODO: Encounter
+            if (resource.EventHistory?.Any() == true)
+            {
+                foreach(var evt in resource.EventHistory)
+                {
+                    retVal.Relationships.Add(new ActRelationship()
+                    {
+                        RelationshipTypeKey = ActRelationshipTypeKeys.HasComponent,
+                        SourceEntity = DataTypeConverter.ResolveEntity<Act>(evt, resource),
+                        TargetAct = retVal
+                    });
+                }
+            }
+
+            if (resource.Effective is Period effectiveperiod)
+            {
+                retVal.StartTime = DataTypeConverter.ToDateTimeOffset(effectiveperiod.Start);
+                retVal.StopTime = DataTypeConverter.ToDateTimeOffset(effectiveperiod.End);
+            }
+
+            if (resource.Performer?.Any() == true)
+            {
+                foreach(var performer in resource.Performer)
+                {
+                    var actor = DataTypeConverter.ResolveEntity<Entity>(performer.Actor, resource);
+
+                    if (null != actor)
+                    {
+                        retVal.Participations.Add(new ActParticipation(ActParticipationKeys.Performer, actor));
+                    }
+                }
+            }
+
+            if (null != resource.Dosage)
+            {
+                retVal.Site = DataTypeConverter.ToConcept(resource.Dosage.Site);
+                retVal.Route = DataTypeConverter.ToConcept(resource.Dosage.Route);
+                retVal.DoseQuantity = resource.Dosage.Dose.Value.GetValueOrDefault();
+                retVal.DoseUnit = DataTypeConverter.ToConcept(resource.Dosage.Dose.Unit, "http://hl7.org/fhir/sid/ucum");
+            }
+
+            return retVal;
         }
 
         /// <summary>
