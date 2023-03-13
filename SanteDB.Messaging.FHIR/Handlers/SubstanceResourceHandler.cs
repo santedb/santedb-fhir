@@ -212,7 +212,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         mat.Identifiers.Add(DataTypeConverter.ToEntityIdentifier(instance.Identifier));
                     }
 
-                    retVal.Relationships.Add(new EntityRelationship { TargetEntity = mat, RelationshipTypeKey = EntityRelationshipTypeKeys.Instance})
+                    retVal.Relationships.Add(new EntityRelationship { TargetEntity = mat, RelationshipTypeKey = EntityRelationshipTypeKeys.Instance });
                 }
             }
 
