@@ -21,8 +21,10 @@
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -101,22 +103,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
             };
 
             retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://snomed.info/sct");
-            retVal.Description = model.LoadCollection<EntityName>("Names").FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Components")?.FirstOrDefault()?.Value;
+            retVal.Description = model.LoadCollection<EntityName>(nameof(model.Names)).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>(nameof(EntityName.Component))?.FirstOrDefault()?.Value;
 
             // TODO: Instance or kind
             if (model.DeterminerConceptKey == DeterminerKeys.Described)
             {
-                retVal.Instance = model.GetRelationships().Where(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance).Select(s => s.LoadProperty<Material>(nameof(EntityRelationship.TargetEntity))).Select(m => new Substance.InstanceComponent
+                retVal.Instance = model.LoadCollection<EntityRelationship>(nameof(model.Relationships)).Where(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance).Select(s => s.LoadProperty<Material>(nameof(EntityRelationship.TargetEntity))).Select(m => new Substance.InstanceComponent
                 {
                     ExpiryElement = DataTypeConverter.ToFhirDateTime(model.ExpiryDate),
-                    Identifier = DataTypeConverter.ToFhirIdentifier(m.GetIdentifiers().FirstOrDefault()),
+                    Identifier = DataTypeConverter.ToFhirIdentifier(m.LoadCollection<EntityIdentifier>(nameof(m.Identifiers))?.FirstOrDefault()),
                     Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.QuantityConceptKey)
                 }).ToList();
             }
             else if (model.DeterminerConceptKey == DeterminerKeys.Specific)
             {
-                var conceptRepo = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
-
                 retVal.Instance = new List<Substance.InstanceComponent>
                 {
                     new Substance.InstanceComponent
@@ -137,7 +137,100 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>The mapped material</returns>
         protected override Material MapToModel(Substance resource)
         {
-            throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));
+            var retVal = new Material
+            {
+                Relationships = new List<EntityRelationship>(),
+                Participations = new List<Core.Model.Acts.ActParticipation>(),
+                Identifiers = resource.Identifier?.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
+                Names = new List<EntityName>()
+            };
+
+            switch (resource.Status)
+            {
+                case Substance.FHIRSubstanceStatus.Active:
+                    retVal.StatusConceptKey = StatusKeys.Active;
+                    break;
+                case Substance.FHIRSubstanceStatus.Inactive:
+                    retVal.StatusConceptKey = StatusKeys.Obsolete;
+                    break;
+                case Substance.FHIRSubstanceStatus.EnteredInError:
+                    retVal.StatusConceptKey = StatusKeys.Nullified;
+                    break;
+                default:
+                    throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.CodeInvalid, $"Status code {resource.Status} is invalid in the specification.");
+            }
+
+            if (resource.Code != null)
+            {
+                retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Code);
+            }
+            else if (resource.Category?.Any() == true) //apparently not correct in fhir mapping.
+            {
+                retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Category.First());
+            }
+
+            retVal.Names.Add(new EntityName
+            {
+                NameUseKey = NameUseKeys.OfficialRecord,
+                Component = new List<EntityNameComponent>() { new EntityNameComponent { Value = resource.Description, ComponentTypeKey = NameComponentKeys.Given } }
+            });
+
+            bool hasIdentifier = false;
+            var minexpiry = DateTimeOffset.MaxValue;
+
+            if (resource.Instance?.Any() == true)
+            {
+                foreach(var instance in resource.Instance)
+                {
+                    var mat = new Material();
+
+                    var exp = DataTypeConverter.ToDateTimeOffset(instance.ExpiryElement);
+
+                    if (null != exp)
+                    {
+                        mat.ExpiryDate = exp.Value.DateTime;
+
+                        if (exp < minexpiry)
+                        {
+                            minexpiry = exp.Value;
+                        }
+                    }
+
+                    if (null != instance.Quantity)
+                    {
+                        mat.Quantity = instance.Quantity.Value;
+                        mat.QuantityConcept = DataTypeConverter.ToConcept(instance.Quantity.Unit, "http://hl7.org/fhir/sid/ucum");
+                    }
+
+                    if (null != instance.Identifier)
+                    {
+                        hasIdentifier = true;
+                        if (null == mat.Identifiers)
+                        {
+                            mat.Identifiers = new List<EntityIdentifier>();
+                        }
+                        mat.Identifiers.Add(DataTypeConverter.ToEntityIdentifier(instance.Identifier));
+                    }
+
+                    retVal.Relationships.Add(new EntityRelationship { TargetEntity = mat, RelationshipTypeKey = EntityRelationshipTypeKeys.Instance})
+                }
+            }
+
+            if (minexpiry < DateTimeOffset.MaxValue)
+            {
+                retVal.ExpiryDate = minexpiry.DateTime;
+            }
+
+            if (hasIdentifier)
+            {
+                retVal.DeterminerConceptKey = DeterminerKeys.Specific;
+            }
+            else
+            {
+                retVal.DeterminerConceptKey = DeterminerKeys.Described;
+            }
+
+            return retVal;
         }
     }
 }
