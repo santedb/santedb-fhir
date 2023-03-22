@@ -166,7 +166,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else if (resource.Category?.Any() == true) //apparently not correct in fhir mapping.
             {
-                retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Category.First());
+                retVal.TypeConcept = resource.Category.Select(DataTypeConverter.ToConcept)?.Where(o => null != o)?.FirstOrDefault();
             }
 
             retVal.Names.Add(new EntityName

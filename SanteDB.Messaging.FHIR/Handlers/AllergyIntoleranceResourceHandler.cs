@@ -235,7 +235,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
-            if (resource.VerificationStatus.TypeName == "entered-in-error")
+            if (resource.VerificationStatus?.TypeName == "entered-in-error")
             {
                 retVal.StatusConceptKey = StatusKeys.Nullified;
             }
@@ -304,9 +304,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 var criticalityTarget = new CodedObservation
                 {
-                    Value = DataTypeConverter.ToConcept(resource.CriticalityElement.TypeName, "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality"),
+                    Value = DataTypeConverter.ToConcept(resource.CriticalityElement.ObjectValue.ToString(), "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality"),
                     TypeConceptKey = ObservationTypeKeys.Severity,
-                    MoodConceptKey = MoodConceptKeys.Eventoccurrence
+                    MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                    ActTime = retVal.ActTime,
+                    StartTime = retVal.StartTime,
+                    StopTime = retVal.StopTime
                 };
                 retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, criticalityTarget));
             }
@@ -387,6 +390,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             return new TypeRestfulInteraction[]
             {
+                TypeRestfulInteraction.Read,
+                TypeRestfulInteraction.Vread,
+                TypeRestfulInteraction.Update,
+                TypeRestfulInteraction.Delete,
+                TypeRestfulInteraction.HistoryInstance,
+                TypeRestfulInteraction.HistoryType,
+                TypeRestfulInteraction.Create,
+                TypeRestfulInteraction.SearchType
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 

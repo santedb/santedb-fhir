@@ -442,7 +442,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             return new Code<T>
             {
-                ObjectValue = ToFhirCodeableConcept(conceptKey, preferredCodeSystem)?.Text
+                ObjectValue = ToFhirCodeableConcept(conceptKey, preferredCodeSystem)?.Coding?.FirstOrDefault()?.Code
             };
         }
 

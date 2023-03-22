@@ -280,7 +280,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             //interpretation
             if (resource.Interpretation.Any())
             {
-                retVal.InterpretationConcept = DataTypeConverter.ToConcept(resource.Interpretation.First());
+                retVal.InterpretationConcept = resource.Interpretation.Select(DataTypeConverter.ToConcept).Where(c => null != c).FirstOrDefault();
             }
 
 

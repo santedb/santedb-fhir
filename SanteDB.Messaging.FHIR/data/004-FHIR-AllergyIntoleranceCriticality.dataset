@@ -1,0 +1,69 @@
+<?xml version="1.0"?>
+<dataset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="FHIR allergy-intolerance-criticality" xmlns="http://santedb.org/data">
+  <update insertIfNotExists="true">
+    <CodeSystem xmlns="http://santedb.org/model">
+      <id>DC338C84-1B5A-4232-9DEE-AAC73D871BE8</id>
+      <name>FHIR Allergy Intolerance Criticality</name>
+      <authority>FHIRAllergyIntoleranceCriticality</authority>
+      <oid>2.16.840.1.113883.4.642.3.129</oid>
+      <url>http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality</url>
+    </CodeSystem>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>3B6EA675-D74C-4192-8357-B5F73ECA70D2</id>
+      <mnemonic>low</mnemonic>
+      <codeSystem>DC338C84-1B5A-4232-9DEE-AAC73D871BE8</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Low Risk</value>
+        <phoneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <source>b09b4f76-df38-4825-86a9-e791cd37859b</source>
+			<relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      <term>3B6EA675-D74C-4192-8357-B5F73ECA70D2</term>
+    </ConceptReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>37898038-7F00-449A-8E8B-DCED7B61D2EA</id>
+      <mnemonic>high</mnemonic>
+      <codeSystem>DC338C84-1B5A-4232-9DEE-AAC73D871BE8</codeSystem>
+      <name>
+        <language>en</language>
+        <value>High Risk</value>
+        <phoneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <source>bac8d12f-1829-48e3-beed-bcc2ff0c1050</source>
+			<relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      <term>37898038-7F00-449A-8E8B-DCED7B61D2EA</term>
+    </ConceptReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>7FDBB06A-228E-48A8-B74C-93B11B55B474</id>
+      <mnemonic>unable-to-assess</mnemonic>
+      <codeSystem>DC338C84-1B5A-4232-9DEE-AAC73D871BE8</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Unable to Assess Risk</value>
+        <phoneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <source>31e01921-82dc-4622-b3db-21429ea9e406</source>
+			<relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      <term>7FDBB06A-228E-48A8-B74C-93B11B55B474</term>
+    </ConceptReferenceTerm>
+  </update>
+</dataset>
