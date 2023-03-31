@@ -49,7 +49,7 @@ namespace SanteDB.Messaging.FHIR.Test
         /// <summary>
         /// The observation repository service.
         /// </summary>
-        private IRepositoryService<Core.Model.Acts.SubstanceAdministration> m_substanceAdministrationRepositoryService;
+        private readonly IRepositoryService<Core.Model.Acts.SubstanceAdministration> m_substanceAdministrationRepositoryService;
 
 
         /// <summary>

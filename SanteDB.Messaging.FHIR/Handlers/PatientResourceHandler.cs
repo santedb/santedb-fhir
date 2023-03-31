@@ -32,6 +32,8 @@ using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 using DatePrecision = SanteDB.Core.Model.DataTypes.DatePrecision;
 
+#pragma warning disable CS0618
+
 namespace SanteDB.Messaging.FHIR.Handlers
 {
     /// <summary>
@@ -681,3 +683,4 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
     }
 }
+#pragma warning restore
