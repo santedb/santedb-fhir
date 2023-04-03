@@ -30,6 +30,8 @@ using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
+#pragma warning disable CS0618
+
     /// <summary>
     /// Represents a citizenship extension handler.
     /// </summary>
@@ -111,3 +113,4 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         }
     }
 }
+#pragma warning restore

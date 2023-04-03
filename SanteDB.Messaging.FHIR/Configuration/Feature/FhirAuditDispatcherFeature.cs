@@ -147,10 +147,12 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
         /// </summary>
         public string Name => "Remove FHIR Audit Dispatch";
 
+#pragma warning disable CS0067
         /// <summary>
         /// Progress has changed
         /// </summary>
         public event EventHandler<ProgressChangedEventArgs> ProgressChanged;
+#pragma warning restore
 
         /// <summary>
         /// Execute the removal of the feature
@@ -209,10 +211,12 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
         /// </summary>
         public string Name => "Install FHIR Audit Dispatch";
 
+#pragma warning disable CS0067
         /// <summary>
         /// Progress has changed
         /// </summary>
         public event EventHandler<ProgressChangedEventArgs> ProgressChanged;
+#pragma warning restore
 
         /// <summary>
         /// Execute the configuration option
