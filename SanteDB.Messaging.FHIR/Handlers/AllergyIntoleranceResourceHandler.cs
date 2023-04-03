@@ -182,7 +182,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 if (null != criticality)
                 {
-                    retVal.CriticalityElement = DataTypeConverter.ToFhirCode<AllergyIntolerance.AllergyIntoleranceCriticality>((criticality.TargetAct as CodedObservation).ValueKey, "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality");
+                    retVal.Criticality = DataTypeConverter.ToFhirEnumeration<AllergyIntolerance.AllergyIntoleranceCriticality>((criticality.TargetAct as CodedObservation).ValueKey, "http://hl7.org/fhir/ValueSet/allergy-intolerance-criticality");
                 }
 
                 var manifestations = (actrelationshipservice, model).GetRelatedActs<CodedObservation>(ActRelationshipTypeKeys.HasManifestation, ObservationTypeKeys.Symptom);
