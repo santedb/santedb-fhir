@@ -172,19 +172,19 @@
       <Link>SanteDB.licenseheader</Link>
     </None>
     <None Include="app.config" />
-    <None Include="data\004-FHIR-AddressUseCodes.dataset">
+    <None Include="Data\004-FHIR-AddressUseCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="data\004-FHIR-AdministrativeGenderCodes.dataset">
+    <None Include="Data\004-FHIR-AdministrativeGenderCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="data\004-FHIR-ContactPointSystemCodes.dataset">
+    <None Include="Data\004-FHIR-ContactPointSystemCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="data\004-FHIR-ContactPointUseCodes.dataset">
+    <None Include="Data\004-FHIR-ContactPointUseCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Include="data\004-FHIR-NameUseCodes.dataset">
+    <None Include="Data\004-FHIR-NameUseCodes.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
@@ -198,19 +198,19 @@
     <EmbeddedResource Include="Configuration\Default.xml" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="data\004-DischargeDisposition.dataset">
+    <None Update="Data\004-DischargeDisposition.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="data\004-FHIR-RoleCode.dataset">
+    <None Update="Data\004-FHIR-RoleCode.dataset">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="data\004-FHIR-AdverseEventSeverity.dataset">
+    <None Update="Data\004-FHIR-AdverseEventSeverity.dataset">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="data\004-FHIR-ServiceDeliveryLocationRoleType.dataset">
+    <None Update="Data\004-FHIR-ServiceDeliveryLocationRoleType.dataset">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
-    <None Update="data\004-FHIR-ServiceType.dataset">
+    <None Update="Data\004-FHIR-ServiceType.dataset">
       <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
