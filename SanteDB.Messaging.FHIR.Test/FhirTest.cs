@@ -18,7 +18,6 @@
  * User: fyfej
  * Date: 2023-3-10
  */
-using FirebirdSql.Data.FirebirdClient;
 using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
@@ -52,7 +51,6 @@ namespace SanteDB.Messaging.FHIR.Test
         [OneTimeSetUp]
         public void Setup()
         {
-            FbCharset.Ascii.ToString();
             TestApplicationContext.TestAssembly = typeof(TestRelatedPersonResourceHandler).Assembly;
             TestApplicationContext.Initialize(TestContext.CurrentContext.TestDirectory);
             this.m_serviceManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
