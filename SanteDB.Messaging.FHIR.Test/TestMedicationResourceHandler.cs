@@ -82,7 +82,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.AreEqual(medication.Id, actualMedication.Id);
             Assert.AreEqual(Medication.MedicationStatusCodes.Active, actualMedication.Status);
-            Assert.AreEqual("2022-12-01T00:00:00-05:00", actualMedication.Batch.ExpirationDateElement.Value);
+            Assert.AreEqual(new DateTime(2022, 12, 01, 0, 0, 0).ToString("o"), actualMedication.Batch.ExpirationDateElement.Value);
             Assert.AreEqual("12345", actualMedication.Batch.LotNumber);
         }
 
@@ -125,7 +125,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             Assert.AreEqual(medication.Id, actualMedication.Id);
             Assert.AreEqual(Medication.MedicationStatusCodes.Active, actualMedication.Status);
-            Assert.AreEqual("2022-12-01T00:00:00-05:00", actualMedication.Batch.ExpirationDateElement.Value);
+            Assert.AreEqual(new DateTime(2022, 12, 01, 0, 0, 0).ToString("o"), actualMedication.Batch.ExpirationDateElement.Value);
             Assert.AreEqual("12345", actualMedication.Batch.LotNumber);
 
             actualMedication.Status = Medication.MedicationStatusCodes.EnteredInError;
