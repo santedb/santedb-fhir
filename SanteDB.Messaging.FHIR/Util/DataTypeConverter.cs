@@ -1269,7 +1269,7 @@ namespace SanteDB.Messaging.FHIR.Util
             if (fhirId.System != null)
             {
                 retVal.IdentityDomain = DataTypeConverter.ToIdentityDomain(fhirId.System);
-                retVal.IdentifierTypeKey = retVal.IdentityDomain.Key;
+                retVal.IdentityDomainKey = retVal.IdentityDomain.Key;
             }
             else
             {
