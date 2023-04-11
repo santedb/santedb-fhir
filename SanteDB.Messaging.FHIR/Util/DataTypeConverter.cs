@@ -914,7 +914,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (fhirIdentifier.System != null)
             {
-                retVal = new ActIdentifier(ToAssigningAuthority(fhirIdentifier.System), fhirIdentifier.Value);
+                retVal = new ActIdentifier(ToIdentityDomain(fhirIdentifier.System), fhirIdentifier.Value);
             }
             else
             {
@@ -932,13 +932,13 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns the converted instance.</returns>
         public static IdentityDomain ToAssigningAuthority(FhirUri fhirSystem)
         {
-            return fhirSystem == null ? null : ToAssigningAuthority(fhirSystem.Value);
+            return fhirSystem == null ? null : ToIdentityDomain(fhirSystem.Value);
         }
 
         /// <summary>
         /// Convert to assigning authority
         /// </summary>
-        public static IdentityDomain ToAssigningAuthority(String fhirSystem)
+        public static IdentityDomain ToIdentityDomain(String fhirSystem)
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping assigning authority");
 
@@ -1251,28 +1251,37 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Convert a FhirIdentifier to an identifier
+        /// Convert a FHIR id
         /// </summary>
-        /// <param name="fhirId">The fhir identifier.</param>
-        /// <returns>Returns an entity identifier instance.</returns>
-        public static EntityIdentifier ToEntityIdentifier(Identifier fhirId)
+        /// <typeparam name="T"></typeparam>
+        /// <param name="fhirId"></param>
+        /// <returns></returns>
+        public static T ToIdentifier<T>(Identifier fhirId) where T : IExternalIdentifier, new()
         {
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR identifier");
 
             if (fhirId == null)
             {
-                return null;
+                return default(T);
             }
 
-            EntityIdentifier retVal;
+            T retVal = new T();
 
             if (fhirId.System != null)
             {
-                retVal = new EntityIdentifier(DataTypeConverter.ToAssigningAuthority(fhirId.System), fhirId.Value);
+                retVal.IdentityDomain = DataTypeConverter.ToIdentityDomain(fhirId.System);
             }
             else
             {
                 throw new ArgumentException("Identifier must carry a coding system");
+            }
+
+            if(!String.IsNullOrEmpty(fhirId.Value))
+            {
+                retVal.Value = fhirId.Value;
+            }
+            else
+            {
+                throw new ArgumentException("Identifier must carry a value");
             }
 
             if (fhirId.Period != null)
@@ -1291,9 +1300,38 @@ namespace SanteDB.Messaging.FHIR.Util
 
             }
 
+            switch(fhirId.Use.GetValueOrDefault())
+            {
+                case Identifier.IdentifierUse.Secondary:
+                    retVal.Reliability = IdentifierReliability.Informative;
+                    break;
+                case Identifier.IdentifierUse.Official:
+                    retVal.Reliability = IdentifierReliability.Authoritative;
+                    break;
+            }
+
+            // Identifier type 
+            if(fhirId.Type != null)
+            {
+                var identifierTypeResolution = ToConcept(fhirId.Type);
+                if(identifierTypeResolution == null)
+                {
+                    throw new KeyNotFoundException($"Cannot find identifier tyoe {fhirId.Type}");
+                }
+                retVal.IdentifierType = identifierTypeResolution;
+            }
+
             // TODO: Fill in use
             return retVal;
+
         }
+
+        /// <summary>
+        /// Convert a FhirIdentifier to an identifier
+        /// </summary>
+        /// <param name="fhirId">The fhir identifier.</param>
+        /// <returns>Returns an entity identifier instance.</returns>
+        public static EntityIdentifier ToEntityIdentifier(Identifier fhirId) => ToIdentifier<EntityIdentifier>(fhirId);
 
         /// <summary>
         /// Converts a <see cref="HumanName" /> instance to an <see cref="EntityName" /> instance.
@@ -1718,7 +1756,7 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = new Identifier
             {
                 System = authority?.Url ?? $"urn:oid:{authority?.Oid}",
-                Type = ToFhirCodeableConcept(identifier.LoadProperty<IdentifierType>(nameof(EntityIdentifier.IdentifierType))?.TypeConceptKey),
+                Type = ToFhirCodeableConcept(identifier.IdentifierTypeKey),
                 Value = identifier.Value
             };
 
