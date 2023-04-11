@@ -1269,6 +1269,7 @@ namespace SanteDB.Messaging.FHIR.Util
             if (fhirId.System != null)
             {
                 retVal.IdentityDomain = DataTypeConverter.ToIdentityDomain(fhirId.System);
+                retVal.IdentifierTypeKey = retVal.IdentityDomain.Key;
             }
             else
             {
@@ -1319,6 +1320,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     throw new KeyNotFoundException($"Cannot find identifier tyoe {fhirId.Type}");
                 }
                 retVal.IdentifierType = identifierTypeResolution;
+                retVal.IdentifierTypeKey = identifierTypeResolution.Key;
             }
 
             // TODO: Fill in use
