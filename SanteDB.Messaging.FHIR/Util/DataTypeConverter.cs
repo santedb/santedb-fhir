@@ -1173,36 +1173,67 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns an entity identifier instance.</returns>
         public static EntityIdentifier ToEntityIdentifier(Identifier fhirId)
         {
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR identifier");
 
             if (fhirId == null)
             {
                 return null;
             }
 
-            EntityIdentifier retVal;
+            var retVal = new EntityIdentifier();
 
             if (fhirId.System != null)
             {
-                retVal = new EntityIdentifier(DataTypeConverter.ToAssigningAuthority(fhirId.System), fhirId.Value);
+                retVal.Authority = DataTypeConverter.ToAssigningAuthority(fhirId.System);
             }
             else
             {
                 throw new ArgumentException("Identifier must carry a coding system");
             }
 
+            if (!String.IsNullOrEmpty(fhirId.Value))
+            {
+                retVal.Value = fhirId.Value;
+            }
+            else
+            {
+                throw new ArgumentException("Identifier must carry a value");
+            }
+
             if (fhirId.Period != null)
             {
 #pragma warning disable CS0618
                 if (fhirId.Period.StartElement != null)
+                {
                     retVal.IssueDate = fhirId.Period.StartElement.ToDateTimeOffset();
+                }
+
                 if (fhirId.Period.EndElement != null)
+                {
                     retVal.ExpiryDate = fhirId.Period.EndElement.ToDateTimeOffset();
+                }
 #pragma warning restore CS0618
 
             }
+
+            // Identifier type 
+            if (fhirId.Type != null)
+            {
+                var identifierTypeResolution = ToConcept(fhirId.Type);
+                if (identifierTypeResolution == null)
+                {
+                    throw new KeyNotFoundException($"Cannot find identifier tyoe {fhirId.Type}");
+                }
+                var idTypeRep = ApplicationServiceContext.Current.GetService<IRepositoryService<IdentifierType>>();
+                retVal.IdentifierTypeKey = idTypeRep.Find(o => o.TypeConceptKey == identifierTypeResolution.Key, 0, 1, out _).FirstOrDefault()?.Key;
+                if (retVal.IdentifierTypeKey == null)
+                {
+                    throw new KeyNotFoundException($"Cannot find identifier tyoe {fhirId.Type}");
+                }
+            }
+
             // TODO: Fill in use
             return retVal;
+
         }
 
         /// <summary>
