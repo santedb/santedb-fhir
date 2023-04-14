@@ -56,13 +56,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
         private readonly Tracer m_traceSource = new Tracer(FhirConstants.TraceSourceName);
 
         // Default settings
-        private readonly ParserSettings m_settings = new ParserSettings
-        {
-            AcceptUnknownMembers = false,
-            AllowUnrecognizedEnums = true,
-            DisallowXsiAttributesOnRoot = false,
-            PermissiveParsing = true
-        };
+        private readonly ParserSettings m_settings;
 
         /// <summary>
         /// Creates a new instance of the FHIR message dispatch formatter
@@ -70,6 +64,13 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
         public FhirMessageDispatchFormatter()
         {
             this.m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
+            this.m_settings = new ParserSettings
+            {
+                AcceptUnknownMembers = false,
+                AllowUnrecognizedEnums = !this.m_configuration.StrictProcessing,
+                DisallowXsiAttributesOnRoot = this.m_configuration.StrictProcessing,
+                PermissiveParsing = !this.m_configuration.StrictProcessing
+            };
         }
 
         /// <summary>
