@@ -121,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var sourceRelatedPerson = queryResult.Entry.Select(o => o.Resource).OfType<RelatedPerson>().First();
                 Assert.AreEqual(sdbPerson.Key.ToString(), sourceRelatedPerson.Id);
                 Assert.AreEqual("Ontario", sourceRelatedPerson.Address.First().State);
-                Assert.IsTrue(sourceRelatedPerson.Telecom.Count == 1);
+                Assert.AreEqual(1, sourceRelatedPerson.Telecom.Count);
                 Assert.AreEqual("905 617 2020", sourceRelatedPerson.Telecom.First().Value);
                 Assert.AreEqual("25 Tindale Crt", sourceRelatedPerson.Address.First().District);
 

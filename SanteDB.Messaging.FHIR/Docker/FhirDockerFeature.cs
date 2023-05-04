@@ -135,6 +135,7 @@ namespace SanteDB.Messaging.FHIR.Docker
                     {
                         new RestServiceBehaviorConfiguration(typeof(TokenAuthorizationAccessBehavior))
                     },
+                    ServiceType = typeof(FhirServiceBehavior),
                     ConfigurationName = FhirMessageHandler.ConfigurationName,
                     Endpoints = new List<RestEndpointConfiguration>()
                     {
