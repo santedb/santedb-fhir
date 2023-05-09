@@ -193,6 +193,9 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [DisplayName("Strict Processing"), Description("Controls whether the FHIR layer should strictly validate messages")]
         public bool StrictProcessing { get; set; }
 
-
+        [XmlAttribute("persistElementId"), JsonProperty("persistElementId")]
+        [Category("Processing")]
+        [DisplayName("Persist ElementID"), Description("Maps the elementId to the persistence layer ")]
+        public bool PersistElementId { get; set; }
     }
 }

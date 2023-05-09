@@ -26,6 +26,7 @@ using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Extensions;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -36,6 +37,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Security.Services;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
@@ -72,6 +74,17 @@ namespace SanteDB.Messaging.FHIR.Util
 
         // CX Devices
         private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?");
+
+        // Configuration
+        private static readonly FhirServiceConfigurationSection m_configuration;
+
+        /// <summary>
+        /// Static ctor
+        /// </summary>
+        static DataTypeConverter()
+        {
+            m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
+        }
 
         /// <summary>
         /// Convert the audit data to a security audit
@@ -754,7 +767,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR extension");
 
-            var extension = new ActExtension();
+            var extension = new ActExtension()
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? fhirExtension.ElementId : null
+            };
 
             if (fhirExtension == null)
             {
@@ -802,7 +818,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR extension");
 
-            var extension = new EntityExtension();
+            var extension = new EntityExtension()
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? fhirExtension.ElementId : null
+            }; 
 
             if (fhirExtension == null)
             {
@@ -860,7 +879,10 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static PersonLanguageCommunication ToLanguageCommunication(Patient.CommunicationComponent lang)
         {
-            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault());
+            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault())
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? lang.ElementId : null
+            };
         }
 
         /// <summary>
@@ -868,7 +890,10 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static PersonLanguageCommunication ToLanguageCommunication(RelatedPerson.CommunicationComponent lang)
         {
-            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault());
+            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault())
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? lang.ElementId : null
+            };
         }
 
         /// <summary>
@@ -881,7 +906,10 @@ namespace SanteDB.Messaging.FHIR.Util
                 throw new InvalidOperationException("Codeable concept must contain a language code");
             }
 
-            return new PersonLanguageCommunication(lang.Coding.First().Code, preferred);
+            return new PersonLanguageCommunication(lang.Coding.First().Code, preferred)
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? lang.ElementId : null
+            };
         }
 
         /// <summary>
@@ -892,7 +920,8 @@ namespace SanteDB.Messaging.FHIR.Util
             return new Patient.CommunicationComponent
             {
                 Language = new CodeableConcept("urn:ietf:bcp:47", lang.LanguageCode),
-                Preferred = lang.IsPreferred
+                Preferred = lang.IsPreferred,
+                ElementId = m_configuration?.PersistElementId == true ? lang.ExternalKey : null
             };
         }
 
@@ -901,29 +930,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         /// <param name="fhirIdentifier">The FHIR identifier.</param>
         /// <returns>Returns the converted act identifier instance.</returns>
-        public static ActIdentifier ToActIdentifier(Identifier fhirIdentifier)
-        {
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR identifier");
-
-            if (fhirIdentifier == null)
-            {
-                return null;
-            }
-
-            ActIdentifier retVal;
-
-            if (fhirIdentifier.System != null)
-            {
-                retVal = new ActIdentifier(ToIdentityDomain(fhirIdentifier.System), fhirIdentifier.Value);
-            }
-            else
-            {
-                throw new ArgumentException("Identifier must carry a coding system");
-            }
-
-            // TODO: Fill in use
-            return retVal;
-        }
+        public static ActIdentifier ToActIdentifier(Identifier fhirIdentifier) => ToIdentifier<ActIdentifier>(fhirIdentifier);
 
         /// <summary>
         /// Converts a <see cref="FhirUri"/> instance to an <see cref="IdentityDomain"/> instance.
@@ -1214,7 +1221,8 @@ namespace SanteDB.Messaging.FHIR.Util
             var address = new EntityAddress
             {
                 AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key,
-                Component = new List<EntityAddressComponent>()
+                Component = new List<EntityAddressComponent>(),
+                ExternalKey = m_configuration?.PersistElementId == true ? fhirAddress.ElementId : null
             };
 
             if (!string.IsNullOrEmpty(fhirAddress.City))
@@ -1265,6 +1273,10 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             T retVal = new T();
+            if(retVal is IHasExternalKey id)
+            {
+                id.ExternalKey = m_configuration?.PersistElementId == true ? fhirId.ElementId : null;
+            }
 
             if (fhirId.System != null)
             {
@@ -1355,7 +1367,8 @@ namespace SanteDB.Messaging.FHIR.Util
             var name = new EntityName
             {
                 NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key,
-                Component = new List<EntityNameComponent>()
+                Component = new List<EntityNameComponent>(),
+                ExternalKey = m_configuration?.PersistElementId == true ? fhirHumanName.ElementId : null
             };
 
             if (fhirHumanName.Family != null)
@@ -1486,11 +1499,12 @@ namespace SanteDB.Messaging.FHIR.Util
                 Names = patientContact.Name != null ? new List<EntityName>() { ToEntityName(patientContact.Name) } : null,
                 Telecoms = patientContact.Telecom?.Select(ToEntityTelecomAddress).ToList(),
                 Extensions = new List<EntityExtension>(),
-                Relationships = new List<EntityRelationship>()
+                Relationships = new List<EntityRelationship>(),
             })
             {
                 ClassificationKey = RelationshipClassKeys.ContainedObjectLink,
                 RelationshipRoleKey = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault())?.Key,
+                ExternalKey = m_configuration?.PersistElementId == true ? patientContact.ElementId : null
             };
 
             retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());
@@ -1545,7 +1559,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     Value = fhirTelecom.Value,
                     AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
-                    TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key
+                    TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key,
+                    ExternalKey = m_configuration?.PersistElementId == true ? fhirTelecom.ElementId : null
                 };
             }
             return null;
@@ -1569,7 +1584,8 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = new Address()
             {
                 Use = DataTypeConverter.ToFhirEnumeration<Address.AddressUse>(address.AddressUseKey, "http://hl7.org/fhir/address-use"),
-                Line = new List<String>()
+                Line = new List<String>(),
+                ElementId = address.ExternalKey
             };
 
             // Process components
@@ -1686,7 +1702,8 @@ namespace SanteDB.Messaging.FHIR.Util
             // Return value
             var retVal = new HumanName
             {
-                Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.NameUseKey, "http://hl7.org/fhir/name-use")
+                Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.NameUseKey, "http://hl7.org/fhir/name-use"),
+                ElementId = m_configuration?.PersistElementId == true ? entityName.ExternalKey : null
             };
 
             // Process components
@@ -1759,7 +1776,8 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 System = authority?.Url ?? $"urn:oid:{authority?.Oid}",
                 Type = ToFhirCodeableConcept(identifier.IdentifierTypeKey),
-                Value = identifier.Value
+                Value = identifier.Value,
+                ElementId = m_configuration?.PersistElementId == true ? identifier.ExternalKey : null
             };
 
             if (identifier.ExpiryDate.HasValue || identifier.IssueDate.HasValue)
@@ -1787,7 +1805,8 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
                 Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
-                Value = telecomAddress.IETFValue
+                Value = telecomAddress.IETFValue,
+                ElementId = m_configuration?.PersistElementId == true ? telecomAddress.ExternalKey : null
             };
         }
     }
