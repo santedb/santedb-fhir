@@ -25,7 +25,6 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
-using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Exceptions;
@@ -268,7 +267,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             //TODO: Encounter
             if (resource.EventHistory?.Any() == true)
             {
-                foreach(var evt in resource.EventHistory)
+                foreach (var evt in resource.EventHistory)
                 {
                     retVal.Relationships.Add(new ActRelationship()
                     {
@@ -287,7 +286,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (resource.Performer?.Any() == true)
             {
-                foreach(var performer in resource.Performer)
+                foreach (var performer in resource.Performer)
                 {
                     var actor = DataTypeConverter.ResolveEntity<Entity>(performer.Actor, resource);
 

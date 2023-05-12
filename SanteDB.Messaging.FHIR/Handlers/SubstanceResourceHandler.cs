@@ -19,7 +19,6 @@
  * Date: 2023-3-10
  */
 using Hl7.Fhir.Model;
-using SanteDB.Core;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -180,7 +179,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (resource.Instance?.Any() == true)
             {
-                foreach(var instance in resource.Instance)
+                foreach (var instance in resource.Instance)
                 {
                     var mat = new Material();
 

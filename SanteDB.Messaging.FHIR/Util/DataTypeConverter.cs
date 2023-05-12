@@ -26,7 +26,6 @@ using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Extensions;
 using SanteDB.Core.Model;
-using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -446,7 +445,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <param name="conceptKey">The concept key to convert.</param>
         /// <param name="preferredCodeSystem">Any preferred code systems to use to retrieve the representation from.</param>
         /// <returns>A <see cref="Code{T}"/> instance for the concept.</returns>
-        public static Code<T> ToFhirCode<T>(Guid? conceptKey, params string[] preferredCodeSystem) where T: struct
+        public static Code<T> ToFhirCode<T>(Guid? conceptKey, params string[] preferredCodeSystem) where T : struct
         {
             if (null == conceptKey)
             {
@@ -699,7 +698,7 @@ namespace SanteDB.Messaging.FHIR.Util
             // TODO: Configure this namespace / coding scheme
             m_pipService.GetPolicies(resource).Where(o => o.Rule == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding("http://santedb.org/security/policy", o.Policy.Oid)).ToList();
             //retVal.Meta.Security.Add(new Coding("http://santedb.org/security/policy", PermissionPolicyIdentifiers.ReadClinicalData));
-            
+
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
             {
                 DataTypeConverter.AddExtensions(extendableObject, fhirExtendable);
@@ -821,7 +820,7 @@ namespace SanteDB.Messaging.FHIR.Util
             var extension = new EntityExtension()
             {
                 ExternalKey = m_configuration?.PersistElementId == true ? fhirExtension.ElementId : null
-            }; 
+            };
 
             if (fhirExtension == null)
             {
@@ -1273,7 +1272,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             T retVal = new T();
-            if(retVal is IHasExternalKey id)
+            if (retVal is IHasExternalKey id)
             {
                 id.ExternalKey = m_configuration?.PersistElementId == true ? fhirId.ElementId : null;
             }
@@ -1288,7 +1287,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 throw new ArgumentException("Identifier must carry a coding system");
             }
 
-            if(!String.IsNullOrEmpty(fhirId.Value))
+            if (!String.IsNullOrEmpty(fhirId.Value))
             {
                 retVal.Value = fhirId.Value;
             }
@@ -1313,7 +1312,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             }
 
-            switch(fhirId.Use.GetValueOrDefault())
+            switch (fhirId.Use.GetValueOrDefault())
             {
                 case Identifier.IdentifierUse.Secondary:
                     retVal.Reliability = IdentifierReliability.Informative;
@@ -1324,10 +1323,10 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             // Identifier type 
-            if(fhirId.Type != null)
+            if (fhirId.Type != null)
             {
                 var identifierTypeResolution = ToConcept(fhirId.Type);
-                if(identifierTypeResolution == null)
+                if (identifierTypeResolution == null)
                 {
                     throw new KeyNotFoundException($"Cannot find identifier tyoe {fhirId.Type}");
                 }

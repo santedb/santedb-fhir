@@ -19,14 +19,12 @@
  * Date: 2023-3-10
  */
 using SanteDB.Core.Model.Acts;
-using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 
 namespace SanteDB.Messaging.FHIR
 {
@@ -47,7 +45,7 @@ namespace SanteDB.Messaging.FHIR
             }
         }
 
-        public static TAct GetFirstOrDefaultRelatedAct<TAct>(this IDataPersistenceService<ActRelationship> persistenceService, Guid sourceActKey, Guid relationshipTypeKey, Guid? targetTypeConceptKey = null) where TAct: Act
+        public static TAct GetFirstOrDefaultRelatedAct<TAct>(this IDataPersistenceService<ActRelationship> persistenceService, Guid sourceActKey, Guid relationshipTypeKey, Guid? targetTypeConceptKey = null) where TAct : Act
         {
             return QueryRelationships(persistenceService, sourceActKey, relationshipTypeKey, targetTypeConceptKey).FirstOrDefault() as TAct;
         }
@@ -82,7 +80,7 @@ namespace SanteDB.Messaging.FHIR
             }
         }
 
-        public static TAct GetFirstOrDefaultRelatedAct<TAct>(this (IDataPersistenceService<ActRelationship> persistenceService, Act sourceAct) source, Guid relationshipTypeKey, Guid? targetTypeConceptKey = null) where TAct: Act
+        public static TAct GetFirstOrDefaultRelatedAct<TAct>(this (IDataPersistenceService<ActRelationship> persistenceService, Act sourceAct) source, Guid relationshipTypeKey, Guid? targetTypeConceptKey = null) where TAct : Act
         {
             return GetFirstOrDefaultRelatedAct<TAct>(source.persistenceService, source.sourceAct.Key.Value, relationshipTypeKey, targetTypeConceptKey);
         }

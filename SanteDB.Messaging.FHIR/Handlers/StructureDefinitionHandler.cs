@@ -19,7 +19,6 @@
  * Date: 2023-3-10
  */
 using Hl7.Fhir.Model;
-using Hl7.Fhir.Rest;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;

@@ -209,7 +209,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Participations = new List<ActParticipation>()
             };
 
-            
+
 
             if (!Guid.TryParse(resource.Id, out var key))
             {

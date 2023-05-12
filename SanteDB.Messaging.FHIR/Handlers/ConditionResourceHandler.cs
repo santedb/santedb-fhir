@@ -247,7 +247,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.StartTime = DataTypeConverter.ToDateTimeOffset(((Period)resource.Onset).StartElement);
                 retVal.StopTime = DataTypeConverter.ToDateTimeOffset(((Period)resource.Onset).EndElement);
-                
+
             }
 
             // Author
