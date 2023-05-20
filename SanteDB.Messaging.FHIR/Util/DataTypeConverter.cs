@@ -35,6 +35,7 @@ using SanteDB.Core.Model.Security;
 using SanteDB.Core.Security;
 using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
@@ -68,6 +69,17 @@ namespace SanteDB.Messaging.FHIR.Util
 
         // CX Devices
         private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?");
+
+        // Configuration
+        private static readonly FhirServiceConfigurationSection m_configuration;
+
+        /// <summary>
+        /// Static ctor
+        /// </summary>
+        static DataTypeConverter()
+        {
+            m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
+        }
 
         /// <summary>
         /// Convert the audit data to a security audit
@@ -1130,7 +1142,9 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var address = new EntityAddress
             {
-                AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key
+                AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key,
+                ExternalKey = m_configuration?.PersistElementId == true ? fhirAddress.ElementId : null
+
             };
 
             if (!string.IsNullOrEmpty(fhirAddress.City))
@@ -1180,6 +1194,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             var retVal = new EntityIdentifier();
+
 
             if (fhirId.System != null)
             {
@@ -1253,7 +1268,9 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var name = new EntityName
             {
-                NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key
+                NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key,
+                ExternalKey = m_configuration?.PersistElementId == true ? fhirHumanName.ElementId : null
+
             };
 
             if (fhirHumanName.Family != null)
@@ -1379,6 +1396,9 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 ClassificationKey = RelationshipClassKeys.ContainedObjectLink,
                 RelationshipRoleKey = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault())?.Key,
+                ExternalKey = m_configuration?.PersistElementId == true ? patientContact.ElementId : null
+
+
             };
 
             retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());
@@ -1429,7 +1449,9 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     Value = fhirTelecom.Value,
                     AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
-                    TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key
+                    TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key,
+                    ExternalKey = m_configuration?.PersistElementId == true ? fhirTelecom.ElementId : null
+
                 };
             }
             return null;
@@ -1450,7 +1472,9 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = new Address()
             {
                 Use = DataTypeConverter.ToFhirEnumeration<Address.AddressUse>(address.AddressUseKey, "http://hl7.org/fhir/address-use"),
-                Line = new List<String>()
+                Line = new List<String>(),
+                ElementId = address.ExternalKey
+
             };
 
             // Process components
@@ -1505,7 +1529,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     {
                         return new CodeableConcept
                         {
-                            Coding = refTerms.Where(o=>o.RelationshipTypeKey == ConceptRelationshipTypeKeys.SameAs).Select(o => ToCoding(o.LoadProperty(t=>t.ReferenceTerm))).ToList(),
+                            Coding = refTerms.Where(o => o.RelationshipTypeKey == ConceptRelationshipTypeKeys.SameAs).Select(o => ToCoding(o.LoadProperty(t => t.ReferenceTerm))).ToList(),
                             Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
                         };
                     }
@@ -1555,7 +1579,8 @@ namespace SanteDB.Messaging.FHIR.Util
             // Return value
             var retVal = new HumanName
             {
-                Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.NameUseKey, "http://hl7.org/fhir/name-use")
+                Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.NameUseKey, "http://hl7.org/fhir/name-use"),
+                ElementId = entityName.ExternalKey
             };
 
             // Process components
@@ -1610,8 +1635,9 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = new Identifier
             {
                 System = authority?.Url ?? $"urn:oid:{authority?.Oid}",
-                Type = ToFhirCodeableConcept(identifier.LoadProperty<IdentifierType>(nameof(EntityIdentifier.IdentifierType))?.TypeConceptKey),
+                Type = ToFhirCodeableConcept(identifier.LoadProperty(o=>o.IdentifierType)?.TypeConceptKey),
                 Value = identifier.Value
+
             };
 
             if (identifier.ExpiryDate.HasValue || identifier.IssueDate.HasValue)
@@ -1637,7 +1663,8 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
                 Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
-                Value = telecomAddress.Value
+                Value = telecomAddress.Value,
+                ElementId = telecomAddress.ExternalKey
             };
         }
     }

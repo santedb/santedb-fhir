@@ -77,7 +77,10 @@ namespace SanteDB.Messaging.FHIR.Docker
         /// Set ID for authentication
         /// </summary>
         public const string AuthenticationSetting = "AUTH";
-
+        /// <summary>
+        /// Element identifier
+        /// </summary>
+        public const string ConveyElementId = "ELEMENTID";
 
         /// <summary>
         /// Authentication settings
@@ -97,7 +100,7 @@ namespace SanteDB.Messaging.FHIR.Docker
         /// <summary>
         /// Get the settings for this docker feature
         /// </summary>
-        public IEnumerable<string> Settings => new String[] { AuthenticationSetting, ResourceSetting, BaseUriSetting, CorsSetting, ListenUriSetting, AuthenticationSetting };
+        public IEnumerable<string> Settings => new String[] { ConveyElementId, AuthenticationSetting, ResourceSetting, BaseUriSetting, CorsSetting, ListenUriSetting, AuthenticationSetting };
 
         /// <summary>
         /// Create an endpoint config
@@ -271,6 +274,12 @@ namespace SanteDB.Messaging.FHIR.Docker
                     fhirConfiguration.Extensions.Add(res);
                 }
             }
+
+            if (settings.TryGetValue(ConveyElementId, out var conveyRaw) && Boolean.TryParse(conveyRaw, out var conveyBool))
+            {
+                fhirConfiguration.PersistElementId = conveyBool;
+            }
+
             // Custom message list?
             if (settings.TryGetValue(MessageSetting, out string messages))
             {

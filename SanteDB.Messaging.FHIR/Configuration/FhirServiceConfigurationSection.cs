@@ -185,6 +185,14 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [XmlAttribute("defaultContentType"), JsonProperty("defaultContentType")]
         [DisplayName("Default Format"), Description("The default format to use when the client does not specify a perferred format")]
         public FhirResponseFormatConfiguration DefaultResponseFormat { get; set; }
+
+        /// <summary>
+        /// Persist element identifier
+        /// </summary>
+        [XmlAttribute("persistElementId"), JsonProperty("persistElementId")]
+        [Category("Processing")]
+        [DisplayName("Persist ElementID"), Description("Maps the elementId to the persistence layer ")]
+        public bool PersistElementId { get; set; }
     }
 
     /// <summary>
