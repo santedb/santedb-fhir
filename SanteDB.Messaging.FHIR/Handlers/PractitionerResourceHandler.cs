@@ -118,7 +118,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
 
             // Load the koala-fication
-            retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(provider.ProviderSpecialtyKey) } };
+            if (model.ProviderSpecialtyKey.HasValue)
+            {
+                retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(model.ProviderSpecialtyKey) } };
+            }
 
             // Language of communication
             retVal.Communication = model.LoadCollection(o => o.LanguageCommunication)?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();
