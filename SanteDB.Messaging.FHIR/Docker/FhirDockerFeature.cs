@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Docker
         /// <summary>
         /// Get the settings for this docker feature
         /// </summary>
-        public IEnumerable<string> Settings => new String[] { AuthenticationSetting, ResourceSetting, BaseUriSetting, CorsSetting, ListenUriSetting, AuthenticationSetting, StrictProcessingSetting, ConveyElementId };
+        public IEnumerable<string> Settings => new String[] { ConveyElementId, StrictProcessingSetting, AuthenticationSetting, ResourceSetting, BaseUriSetting, CorsSetting, ListenUriSetting, AuthenticationSetting, StrictProcessingSetting, ConveyElementId };
 
         /// <summary>
         /// Create an endpoint config
@@ -294,7 +294,7 @@ namespace SanteDB.Messaging.FHIR.Docker
                 fhirConfiguration.StrictProcessing = strictBool;
             }
 
-            if (settings.TryGetValue(ConveyElementId, out var conveyRaw) && Boolean.TryParse(strictRaw, out var conveyBool))
+            if (settings.TryGetValue(ConveyElementId, out var conveyRaw) && Boolean.TryParse(conveyRaw, out var conveyBool))
             {
                 fhirConfiguration.PersistElementId = conveyBool;
             }
