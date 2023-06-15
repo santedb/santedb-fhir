@@ -56,7 +56,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hl7.Fhir.R4">
-      <Version>3.7.0</Version>
+      <Version>3.8.3</Version>
     </PackageReference>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Runtime.Caching" Version="7.0.0" />

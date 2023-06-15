@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2023, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -16,11 +16,13 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2023-3-10
+ * Date: 2021-10-29
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core.Model;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
+using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
@@ -82,7 +84,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override Practitioner MapToFhir(Provider model)
         {
             // Is there a provider that matches this user?
-            var provider = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.EquivalentEntity && o.ClassificationKey == RelationshipClassKeys.PlayedRoleLink)?.LoadProperty(o => o.TargetEntity) as Provider;
+            var provider = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.AssignedEntity)?.LoadProperty(o => o.TargetEntity) as Provider;
             model = provider ?? model;
 
             var retVal = DataTypeConverter.CreateResource<Practitioner>(model);
@@ -105,9 +107,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Birthdate
             retVal.BirthDateElement = DataTypeConverter.ToFhirDate(provider?.DateOfBirth ?? model.DateOfBirth);
 
-            var photo = (provider?.LoadProperty(o => o.Extensions) ?? model.LoadProperty(o => o.Extensions))?.FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
+            var photo = (provider?.LoadCollection<EntityExtension>(nameof(Entity.Extensions)) ?? model.LoadCollection<EntityExtension>(nameof(Entity.Extensions)))?.FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
             if (photo != null)
-            {
                 retVal.Photo = new List<Attachment>() {
                     new Attachment()
                     {
@@ -115,11 +116,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         Data = photo.ExtensionValueXml
                     }
                 };
-            }
 
             // Load the koala-fication
-
-            retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept((provider ?? model).SpecialtyKey) } };
+            if (model.ProviderSpecialtyKey.HasValue)
+            {
+                retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(model.ProviderSpecialtyKey) } };
+            }
 
             // Language of communication
             retVal.Communication = model.LoadCollection(o => o.LanguageCommunication)?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();
@@ -142,9 +144,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
-                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
+                    if (ii.LoadProperty(o => o.Authority).IsUnique)
                     {
-                        retVal = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                        retVal = this.m_repository.Find(o => o.Identifiers.Where(i => i.AuthorityKey == ii.AuthorityKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (retVal != null)
                     {
@@ -182,7 +184,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (resource.Qualification.Any())
             {
-                retVal.Specialty = DataTypeConverter.ToConcept(resource.Qualification.First().Code);
+                retVal.ProviderSpecialty = DataTypeConverter.ToConcept(resource.Qualification.First().Code);
             }
 
             return retVal;

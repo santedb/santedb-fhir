@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2023, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2023-3-10
+ * Date: 2021-10-29
  */
 using Newtonsoft.Json;
 using SanteDB.Core.Configuration;
@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Xml.Serialization;
 
 namespace SanteDB.Messaging.FHIR.Configuration
@@ -186,16 +187,24 @@ namespace SanteDB.Messaging.FHIR.Configuration
         public FhirResponseFormatConfiguration DefaultResponseFormat { get; set; }
 
         /// <summary>
-        /// Strict processing flag
+        /// Persist element identifier
         /// </summary>
-        [XmlAttribute("strictParsing"), JsonProperty("strictParsing")]
-        [Category("Processing")]
-        [DisplayName("Strict Processing"), Description("Controls whether the FHIR layer should strictly validate messages")]
-        public bool StrictProcessing { get; set; }
-
         [XmlAttribute("persistElementId"), JsonProperty("persistElementId")]
         [Category("Processing")]
         [DisplayName("Persist ElementID"), Description("Maps the elementId to the persistence layer ")]
         public bool PersistElementId { get; set; }
+    }
+
+    /// <summary>
+    /// FHIR Response format configuration
+    /// </summary>
+    [XmlType(nameof(FhirResponseFormatConfiguration), Namespace = "http://santedb.org/configuration")]
+    public enum FhirResponseFormatConfiguration
+    {
+        [XmlEnum("application/fhir+json")]
+        Json,
+
+        [XmlEnum("application/fhir+xml")]
+        Xml
     }
 }
