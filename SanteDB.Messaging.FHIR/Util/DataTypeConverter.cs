@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2022, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2023, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -16,17 +16,17 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2021-10-29
+ * Date: 2023-5-19
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core;
-using SanteDB.Core.Auditing;
 using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Extensions;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -34,6 +34,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Model.Security;
 using SanteDB.Core.Security;
 using SanteDB.Core.Security.Claims;
+using SanteDB.Core.Security.Services;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
@@ -67,6 +68,9 @@ namespace SanteDB.Messaging.FHIR.Util
         // Source device
         private static SecurityDevice m_sourceDevice;
 
+        // Policy information service
+        private static IPolicyInformationService m_pipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
+
         // CX Devices
         private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?");
 
@@ -84,7 +88,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Convert the audit data to a security audit
         /// </summary>
-        public static AuditEvent ToSecurityAudit(AuditData audit)
+        public static AuditEvent ToSecurityAudit(AuditEventData audit)
         {
             var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
@@ -160,7 +164,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             // POU?
-            var pou = audit.AuditableObjects.Find(o => o.ObjectId == SanteDBClaimTypes.PurposeOfUse)?.NameData;
+            var pou = audit.AuditableObjects.FirstOrDefault(o => o.ObjectId == SanteDBClaimTypes.PurposeOfUse)?.NameData;
             if (pou != null && Guid.TryParse(pou, out Guid pouKey))
             {
                 retVal.PurposeOfEvent = new List<CodeableConcept>() { ToFhirCodeableConcept(pouKey) };
@@ -377,11 +381,13 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the t resource.</typeparam>
         /// <param name="targetEntity">The target entity.</param>
         /// <returns>Returns a reference instance.</returns>
-        public static ResourceReference CreateVersionedReference<TResource>(IVersionedEntity targetEntity)
+        public static ResourceReference CreateVersionedReference<TResource>(IVersionedData targetEntity)
             where TResource : DomainResource, new()
         {
             if (targetEntity == null)
+            {
                 throw new ArgumentNullException(nameof(targetEntity));
+            }
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
@@ -390,10 +396,10 @@ namespace SanteDB.Messaging.FHIR.Util
             // Add an identifier to the object
             if (targetEntity is IHasIdentifiers ident)
             {
-                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.Authority.IsUnique);
+                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.IdentityDomain.IsUnique);
                 if (uqIdentifier != null)
                 {
-                    refer.Identifier = new Identifier(uqIdentifier.Authority.Url, uqIdentifier.Value);
+                    refer.Identifier = new Identifier(uqIdentifier.IdentityDomain.Url, uqIdentifier.Value);
                 }
             }
 
@@ -410,7 +416,9 @@ namespace SanteDB.Messaging.FHIR.Util
         public static ResourceReference CreateNonVersionedReference<TResource>(IdentifiedData targetEntity) where TResource : DomainResource, new()
         {
             if (targetEntity == null)
+            {
                 throw new ArgumentNullException(nameof(targetEntity));
+            }
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
 
@@ -419,15 +427,35 @@ namespace SanteDB.Messaging.FHIR.Util
             // Add an identifier to the object
             if (targetEntity is IHasIdentifiers ident)
             {
-                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.Authority.IsUnique);
+                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.IdentityDomain.IsUnique);
                 if (uqIdentifier != null)
                 {
-                    refer.Identifier = new Identifier(uqIdentifier.Authority.Url, uqIdentifier.Value);
+                    refer.Identifier = new Identifier(uqIdentifier.IdentityDomain.Url, uqIdentifier.Value);
                 }
             }
 
             refer.Display = targetEntity.ToDisplay();
             return refer;
+        }
+
+        /// <summary>
+        /// Convert to a fhir code from a codeable concept.
+        /// </summary>
+        /// <typeparam name="T">The code type to convert to.</typeparam>
+        /// <param name="conceptKey">The concept key to convert.</param>
+        /// <param name="preferredCodeSystem">Any preferred code systems to use to retrieve the representation from.</param>
+        /// <returns>A <see cref="Code{T}"/> instance for the concept.</returns>
+        public static Code<T> ToFhirCode<T>(Guid? conceptKey, params string[] preferredCodeSystem) where T : struct
+        {
+            if (null == conceptKey)
+            {
+                return null;
+            }
+
+            return new Code<T>
+            {
+                ObjectValue = ToFhirCodeableConcept(conceptKey, preferredCodeSystem)?.Coding?.FirstOrDefault()?.Code
+            };
         }
 
         /// <summary>
@@ -454,7 +482,9 @@ namespace SanteDB.Messaging.FHIR.Util
         public static ResourceReference CreateInternalReference<TResource>(IdentifiedData targetEntity) where TResource : DomainResource, new()
         {
             if (targetEntity == null)
+            {
                 throw new ArgumentNullException(nameof(targetEntity));
+            }
 
             var fhirType = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TResource).Name);
             var refer = new ResourceReference($"#{targetEntity.Key}");
@@ -629,18 +659,20 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="TResource">The type of the t resource.</typeparam>
         /// <param name="resource">The resource.</param>
         /// <returns>TResource.</returns>
-        public static TResource CreateResource<TResource>(IVersionedEntity resource) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IVersionedData resource) where TResource : Resource, new()
         {
-            var retVal = CreateResource<TResource>((IIdentifiedEntity)resource);
+            var retVal = CreateResource<TResource>((IAnnotatedResource)resource);
             retVal.VersionId = resource.VersionKey.ToString();
             retVal.Meta.VersionId = resource.VersionKey?.ToString();
+
+            // Create all collections 
             return retVal;
         }
 
         /// <summary>
         /// Create non versioned resource
         /// </summary>
-        public static TResource CreateResource<TResource>(IIdentifiedEntity resource) where TResource : Resource, new()
+        public static TResource CreateResource<TResource>(IAnnotatedResource resource) where TResource : Resource, new()
         {
             var retVal = new TResource();
 
@@ -653,6 +685,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 LastUpdated = (resource as IdentifiedData).ModifiedOn.DateTime,
             };
 
+
             if (resource is ITaggable taggable)
             {
                 retVal.Meta.Tag = taggable.Tags.Where(o => !o.TagKey.StartsWith("$fhir")).Select(tag => new Coding("http://santedb.org/fhir/tags", $"{tag.TagKey}:{tag.Value}")).ToList();
@@ -663,11 +696,8 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             // TODO: Configure this namespace / coding scheme
-            if (resource is ISecurable securable)
-            {
-                retVal.Meta.Security = securable?.Policies?.Where(o => o.GrantType == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding("http://santedb.org/security/policy", o.Policy.Oid)).ToList();
-                retVal.Meta.Security.Add(new Coding("http://santedb.org/security/policy", PermissionPolicyIdentifiers.ReadClinicalData));
-            }
+            m_pipService.GetPolicies(resource).Where(o => o.Rule == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding("http://santedb.org/security/policy", o.Policy.Oid)).ToList();
+            //retVal.Meta.Security.Add(new Coding("http://santedb.org/security/policy", PermissionPolicyIdentifiers.ReadClinicalData));
 
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
             {
@@ -689,11 +719,13 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
-                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IIdentifiedEntity, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
+                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IAnnotatedResource, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
             else
+            {
                 return new List<String>();
+            }
         }
 
         /// <summary>
@@ -734,28 +766,43 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR extension");
 
-            var extension = new ActExtension();
+            var extension = new ActExtension()
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? fhirExtension.ElementId : null
+            };
 
             if (fhirExtension == null)
             {
                 throw new ArgumentNullException(nameof(fhirExtension), "Value cannot be null");
+            }
+            else if (fhirExtension.Url == ExtensionTypeKeys.DataQualityExtensionName || fhirExtension.Url == ExtensionTypeKeys.JpegPhotoExtensionName)
+            {
+                return null;
             }
 
             var extensionTypeService = ApplicationServiceContext.Current.GetService<IExtensionTypeRepository>();
 
             extension.ExtensionType = extensionTypeService.Get(new Uri(fhirExtension.Url));
             //extension.ExtensionValue = fhirExtension.Value;
-            if (extension.ExtensionType.ExtensionHandler == typeof(DecimalExtensionHandler))
+            if (extension.LoadProperty(o => o.ExtensionType).ExtensionHandler == typeof(DecimalExtensionHandler))
+            {
                 extension.ExtensionValue = (fhirExtension.Value as FhirDecimal).Value;
+            }
             else if (extension.ExtensionType.ExtensionHandler == typeof(StringExtensionHandler))
+            {
                 extension.ExtensionValue = (fhirExtension.Value as FhirString).Value;
+            }
             else if (extension.ExtensionType.ExtensionHandler == typeof(DateExtensionHandler))
+            {
                 extension.ExtensionValue = (fhirExtension.Value as FhirDateTime).Value;
+            }
             // TODO: Implement binary incoming extensions
             //else if(extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler))
             //    extension.ExtensionValueXml = (fhirExtension.Value as FhirBase64Binary).Value;
             else
-                throw new NotImplementedException($"Extension type is not understood");
+            {
+                throw new NotImplementedException($"Extension type {extension.ExtensionType.ExtensionHandler} is not understood");
+            }
             // Now will
             return extension;
         }
@@ -770,11 +817,18 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR extension");
 
-            var extension = new EntityExtension();
+            var extension = new EntityExtension()
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? fhirExtension.ElementId : null
+            };
 
             if (fhirExtension == null)
             {
                 throw new ArgumentNullException(nameof(fhirExtension), "Value cannot be null");
+            }
+            else if (fhirExtension.Url == ExtensionTypeKeys.DataQualityExtensionName || fhirExtension.Url == ExtensionTypeKeys.JpegPhotoExtensionName)
+            {
+                return null;
             }
 
             // First attempt to parse the extension using a parser
@@ -784,21 +838,33 @@ namespace SanteDB.Messaging.FHIR.Util
 
                 extension.ExtensionType = extensionTypeService.Get(new Uri(fhirExtension.Url));
                 if (extension.ExtensionType == null)
+                {
                     return null;
+                }
 
                 //extension.ExtensionValue = fhirExtension.Value;
                 if (extension.ExtensionType.ExtensionHandler == typeof(DecimalExtensionHandler))
+                {
                     extension.ExtensionValue = (fhirExtension.Value as FhirDecimal).Value;
+                }
                 else if (extension.ExtensionType.ExtensionHandler == typeof(StringExtensionHandler))
+                {
                     extension.ExtensionValue = (fhirExtension.Value as FhirString).Value;
+                }
                 else if (extension.ExtensionType.ExtensionHandler == typeof(DateExtensionHandler))
+                {
                     extension.ExtensionValue = ToDateTimeOffset(fhirExtension.Value as FhirDateTime);
+                }
                 // TODO: Implement binary incoming extensions
                 else if (extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler) ||
                     extension.ExtensionType.ExtensionHandler == typeof(DictionaryExtensionHandler))
+                {
                     extension.ExtensionValueXml = (fhirExtension.Value as Base64Binary).Value;
+                }
                 else
+                {
                     throw new NotImplementedException($"Extension type is not understood");
+                }
 
                 // Now will
                 return extension;
@@ -812,7 +878,10 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static PersonLanguageCommunication ToLanguageCommunication(Patient.CommunicationComponent lang)
         {
-            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault());
+            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault())
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? lang.ElementId : null
+            };
         }
 
         /// <summary>
@@ -820,7 +889,10 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static PersonLanguageCommunication ToLanguageCommunication(RelatedPerson.CommunicationComponent lang)
         {
-            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault());
+            return new PersonLanguageCommunication(lang.Language.GetCoding().Code, lang.Preferred.GetValueOrDefault())
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? lang.ElementId : null
+            };
         }
 
         /// <summary>
@@ -833,7 +905,10 @@ namespace SanteDB.Messaging.FHIR.Util
                 throw new InvalidOperationException("Codeable concept must contain a language code");
             }
 
-            return new PersonLanguageCommunication(lang.Coding.First().Code, preferred);
+            return new PersonLanguageCommunication(lang.Coding.First().Code, preferred)
+            {
+                ExternalKey = m_configuration?.PersistElementId == true ? lang.ElementId : null
+            };
         }
 
         /// <summary>
@@ -844,61 +919,43 @@ namespace SanteDB.Messaging.FHIR.Util
             return new Patient.CommunicationComponent
             {
                 Language = new CodeableConcept("urn:ietf:bcp:47", lang.LanguageCode),
-                Preferred = lang.IsPreferred
+                Preferred = lang.IsPreferred,
+                ElementId = m_configuration?.PersistElementId == true ? lang.ExternalKey : null
             };
         }
 
         /// <summary>
-        /// Converts a <see cref="FhirIdentifier"/> instance to an <see cref="ActIdentifier"/> instance.
+        /// Converts a <see cref="Identifier"/> instance to an <see cref="ActIdentifier"/> instance.
         /// </summary>
         /// <param name="fhirIdentifier">The FHIR identifier.</param>
         /// <returns>Returns the converted act identifier instance.</returns>
-        public static ActIdentifier ToActIdentifier(Identifier fhirIdentifier)
-        {
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR identifier");
-
-            if (fhirIdentifier == null)
-            {
-                return null;
-            }
-
-            ActIdentifier retVal;
-
-            if (fhirIdentifier.System != null)
-            {
-                retVal = new ActIdentifier(ToAssigningAuthority(fhirIdentifier.System), fhirIdentifier.Value);
-            }
-            else
-            {
-                throw new ArgumentException("Identifier must carry a coding system");
-            }
-
-            // TODO: Fill in use
-            return retVal;
-        }
+        public static ActIdentifier ToActIdentifier(Identifier fhirIdentifier) => ToIdentifier<ActIdentifier>(fhirIdentifier);
 
         /// <summary>
-        /// Converts a <see cref="FhirUri"/> instance to an <see cref="AssigningAuthority"/> instance.
+        /// Converts a <see cref="FhirUri"/> instance to an <see cref="IdentityDomain"/> instance.
         /// </summary>
         /// <param name="fhirSystem">The FHIR system.</param>
         /// <returns>Returns the converted instance.</returns>
-        public static AssigningAuthority ToAssigningAuthority(FhirUri fhirSystem)
+        public static IdentityDomain ToAssigningAuthority(FhirUri fhirSystem)
         {
-            return fhirSystem == null ? null : ToAssigningAuthority(fhirSystem.Value);
+            return fhirSystem == null ? null : ToIdentityDomain(fhirSystem.Value);
         }
 
         /// <summary>
         /// Convert to assigning authority
         /// </summary>
-        public static AssigningAuthority ToAssigningAuthority(String fhirSystem)
+        public static IdentityDomain ToIdentityDomain(String fhirSystem)
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping assigning authority");
 
-            var oidRegistrar = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
+            var oidRegistrar = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
             var oid = oidRegistrar.Get(new Uri(fhirSystem));
 
             if (oid == null)
+            {
                 throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.NotFound, $"Could not find identity domain {fhirSystem}");
+            }
+
             return oid;
         }
 
@@ -915,7 +972,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             var cs = referenceTerm.LoadProperty(o => o.CodeSystem);
-            return new Coding(cs?.Url ?? $"urn:oid:{cs?.Oid}", referenceTerm.Mnemonic)
+            return new Coding(cs.Url ?? $"urn:oid:{cs.Oid}", referenceTerm.Mnemonic)
             {
                 Display = referenceTerm.GetDisplayName()
             };
@@ -935,17 +992,30 @@ namespace SanteDB.Messaging.FHIR.Util
             };
 
             if (ext.Value is decimal || eType.ExtensionHandler == typeof(DecimalExtensionHandler))
+            {
                 retVal.Value = new FhirDecimal((decimal)(ext.Value ?? new DecimalExtensionHandler().DeSerialize(ext.Data)));
+            }
             else if (ext.Value is String || eType.ExtensionHandler == typeof(StringExtensionHandler))
+            {
                 retVal.Value = new FhirString((string)(ext.Value ?? new StringExtensionHandler().DeSerialize(ext.Data)));
+            }
             else if (ext.Value is bool || eType.ExtensionHandler == typeof(BooleanExtensionHandler))
+            {
                 retVal.Value = new FhirBoolean((bool)(ext.Value ?? new BooleanExtensionHandler().DeSerialize(ext.Data)));
+            }
             else if (ext.Value is Concept concept)
+            {
                 retVal.Value = ToFhirCodeableConcept(concept.Key);
+            }
             else if (ext.Value is SanteDB.Core.Model.Roles.Patient patient)
+            {
                 retVal.Value = DataTypeConverter.CreateVersionedReference<Patient>(patient);
+            }
             else
+            {
                 retVal.Value = new Base64Binary(ext.Data);
+            }
+
             return retVal;
         }
 
@@ -1008,12 +1078,15 @@ namespace SanteDB.Messaging.FHIR.Util
             // Lookup
             var retVal = conceptService.GetConceptByReferenceTerm(code, system);
             if (retVal == null)
+            {
                 throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not map concept {system}#{code} to a concept");
+            }
+
             return retVal;
         }
 
         /// <summary>
-        /// Converts a <see cref="FhirCode{T}"/> instance to a <see cref="Concept"/> instance.
+        /// Converts a fhir code instance to a <see cref="Concept"/> instance.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="code">The code.</param>
@@ -1042,7 +1115,9 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = ToConcept(new Coding(system, code));
 
             if (retVal == null)
+            {
                 throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not find concept with reference term '{code}' in {system}");
+            }
 
             return retVal;
         }
@@ -1138,13 +1213,15 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var mnemonic = "home";
             if (fhirAddress.Use.HasValue)
+            {
                 mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirAddress.Use);
+            }
 
             var address = new EntityAddress
             {
                 AddressUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/address-use")?.Key,
+                Component = new List<EntityAddressComponent>(),
                 ExternalKey = m_configuration?.PersistElementId == true ? fhirAddress.ElementId : null
-
             };
 
             if (!string.IsNullOrEmpty(fhirAddress.City))
@@ -1181,24 +1258,29 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Convert a FhirIdentifier to an identifier
+        /// Convert a FHIR id
         /// </summary>
-        /// <param name="fhirId">The fhir identifier.</param>
-        /// <returns>Returns an entity identifier instance.</returns>
-        public static EntityIdentifier ToEntityIdentifier(Identifier fhirId)
+        /// <typeparam name="T"></typeparam>
+        /// <param name="fhirId"></param>
+        /// <returns></returns>
+        public static T ToIdentifier<T>(Identifier fhirId) where T : IExternalIdentifier, new()
         {
 
             if (fhirId == null)
             {
-                return null;
+                return default(T);
             }
 
-            var retVal = new EntityIdentifier();
-
+            T retVal = new T();
+            if (retVal is IHasExternalKey id)
+            {
+                id.ExternalKey = m_configuration?.PersistElementId == true ? fhirId.ElementId : null;
+            }
 
             if (fhirId.System != null)
             {
-                retVal.Authority = DataTypeConverter.ToAssigningAuthority(fhirId.System);
+                retVal.IdentityDomain = DataTypeConverter.ToIdentityDomain(fhirId.System);
+                retVal.IdentityDomainKey = retVal.IdentityDomain.Key;
             }
             else
             {
@@ -1230,6 +1312,16 @@ namespace SanteDB.Messaging.FHIR.Util
 
             }
 
+            switch (fhirId.Use.GetValueOrDefault())
+            {
+                case Identifier.IdentifierUse.Secondary:
+                    retVal.Reliability = IdentifierReliability.Informative;
+                    break;
+                case Identifier.IdentifierUse.Official:
+                    retVal.Reliability = IdentifierReliability.Authoritative;
+                    break;
+            }
+
             // Identifier type 
             if (fhirId.Type != null)
             {
@@ -1238,12 +1330,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     throw new KeyNotFoundException($"Cannot find identifier tyoe {fhirId.Type}");
                 }
-                var idTypeRep = ApplicationServiceContext.Current.GetService<IRepositoryService<IdentifierType>>();
-                retVal.IdentifierTypeKey = idTypeRep.Find(o => o.TypeConceptKey == identifierTypeResolution.Key, 0, 1, out _).FirstOrDefault()?.Key;
-                if (retVal.IdentifierTypeKey == null)
-                {
-                    throw new KeyNotFoundException($"Cannot find identifier tyoe {fhirId.Type}");
-                }
+                retVal.IdentifierType = identifierTypeResolution;
+                retVal.IdentifierTypeKey = identifierTypeResolution.Key;
             }
 
             // TODO: Fill in use
@@ -1252,7 +1340,14 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts a <see cref="FhirHumanName" /> instance to an <see cref="EntityName" /> instance.
+        /// Convert a FhirIdentifier to an identifier
+        /// </summary>
+        /// <param name="fhirId">The fhir identifier.</param>
+        /// <returns>Returns an entity identifier instance.</returns>
+        public static EntityIdentifier ToEntityIdentifier(Identifier fhirId) => ToIdentifier<EntityIdentifier>(fhirId);
+
+        /// <summary>
+        /// Converts a <see cref="HumanName" /> instance to an <see cref="EntityName" /> instance.
         /// </summary>
         /// <param name="fhirHumanName">The name of the human.</param>
         /// <returns>Returns an entity name instance.</returns>
@@ -1264,13 +1359,15 @@ namespace SanteDB.Messaging.FHIR.Util
             var mnemonic = "official";
 
             if (fhirHumanName.Use.HasValue)
+            {
                 mnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirHumanName.Use);
+            }
 
             var name = new EntityName
             {
                 NameUseKey = ToConcept(mnemonic, "http://hl7.org/fhir/name-use")?.Key,
+                Component = new List<EntityNameComponent>(),
                 ExternalKey = m_configuration?.PersistElementId == true ? fhirHumanName.ElementId : null
-
             };
 
             if (fhirHumanName.Family != null)
@@ -1288,7 +1385,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Resolve the specified entity
         /// </summary>
-        public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin) where TEntity : Entity, new()
+        public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin) where TEntity : BaseEntityData, ITaggable, IHasIdentifiers, new()
         {
             var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TEntity>>();
 
@@ -1302,17 +1399,13 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 // Already exists in SDB bundle?
                 var identifier = DataTypeConverter.ToEntityIdentifier(resourceRef.Identifier);
-                retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.Authority.Key == identifier.AuthorityKey && i.Value == identifier.Value)).FirstOrDefault();
+                retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.IdentityDomain.Key == identifier.IdentityDomainKey && i.Value == identifier.Value)).FirstOrDefault();
                 if (retVal == null) // Not been processed in bundle
                 {
-                    retVal = repo.Find(o => o.Identifiers.Any(a => a.Authority.Key == identifier.AuthorityKey && a.Value == identifier.Value), 0, 1, out int tr).FirstOrDefault();
-                    if (tr > 1)
+                    retVal = repo.Find(o => o.Identifiers.Any(a => a.IdentityDomain.Key == identifier.IdentityDomainKey && a.Value == identifier.Value)).SingleOrDefault();
+                    if (retVal == null)
                     {
-                        throw new InvalidOperationException($"Reference to {identifier} is ambiguous ({tr} records have this identity)");
-                    }
-                    else if (retVal == null)
-                    {
-                        throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.Authority.Url ?? identifier.Authority.Oid}");
+                        throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.IdentityDomain.Url ?? identifier.IdentityDomain.Oid}");
                     }
                 }
             }
@@ -1358,29 +1451,41 @@ namespace SanteDB.Messaging.FHIR.Util
                         var refRegex = new Regex("^(urn:uuid:.{36}|\\/?(\\w*?)/(.{36}))$");
                         var match = refRegex.Match(resourceRef.Reference);
                         if (!match.Success)
+                        {
                             throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
+                        }
 
                         if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value.Replace("urn:uuid:", string.Empty), out Guid relUuid)) // rel reference
+                        {
                             retVal = repo.Get(relUuid); // Allow any triggers to fire
+                        }
                         // HACK: Need to removed the urn:uuid: at the front of the guid.
                         else if (Guid.TryParse(match.Groups[1].Value.Replace("urn:uuid:", string.Empty), out Guid absRef))
+                        {
                             retVal = repo.Get(absRef);
+                        }
                     }
                 }
             }
             else
+            {
                 throw new ArgumentException("Could not understand resource reference");
+            }
 
             // TODO: Weak references
             if (retVal == null)
+            {
                 throw new FhirException((System.Net.HttpStatusCode)422, IssueType.NotSupported, $"Weak references (to other servers) are not currently supported (ref: {resourceRef.Reference})");
+            }
+
             return retVal;
         }
 
         /// <summary>
-        /// Converts a <see cref="PatientContact"/> instance to an <see cref="EntityRelationship"/> instance.
+        /// Converts a <see cref="Patient.ContactComponent"/> instance to an <see cref="EntityRelationship"/> instance.
         /// </summary>
         /// <param name="patientContact">The patient contact.</param>
+        /// <param name="patient">The SanteDB <see cref="Patient"/> to attach to</param>
         /// <returns>Returns the mapped entity relationship instance..</returns>
         public static EntityRelationship ToEntityRelationship(Patient.ContactComponent patientContact, Patient patient)
         {
@@ -1391,14 +1496,14 @@ namespace SanteDB.Messaging.FHIR.Util
                 CreationTime = DateTimeOffset.Now,
                 // TODO: Gender (after refactor)
                 Names = patientContact.Name != null ? new List<EntityName>() { ToEntityName(patientContact.Name) } : null,
-                Telecoms = patientContact.Telecom?.Select(ToEntityTelecomAddress).ToList()
+                Telecoms = patientContact.Telecom?.Select(ToEntityTelecomAddress).ToList(),
+                Extensions = new List<EntityExtension>(),
+                Relationships = new List<EntityRelationship>(),
             })
             {
                 ClassificationKey = RelationshipClassKeys.ContainedObjectLink,
                 RelationshipRoleKey = DataTypeConverter.ToConcept(patientContact.Relationship.FirstOrDefault())?.Key,
                 ExternalKey = m_configuration?.PersistElementId == true ? patientContact.ElementId : null
-
-
             };
 
             retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());
@@ -1427,7 +1532,7 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts a <see cref="FhirTelecom"/> instance to an <see cref="EntityTelecomAddress"/> instance.
+        /// Converts a <see cref="ContactPoint"/> instance to an <see cref="EntityTelecomAddress"/> instance.
         /// </summary>
         /// <param name="fhirTelecom">The telecom.</param>
         /// <returns>Returns an entity telecom address.</returns>
@@ -1439,11 +1544,15 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 var useMnemonic = "temp";
                 if (fhirTelecom.Use.HasValue)
+                {
                     useMnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.Use);
+                }
 
                 string typeMnemonic = null;
                 if (fhirTelecom.System.HasValue)
+                {
                     typeMnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.System);
+                }
 
                 return new EntityTelecomAddress
                 {
@@ -1451,14 +1560,13 @@ namespace SanteDB.Messaging.FHIR.Util
                     AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
                     TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key,
                     ExternalKey = m_configuration?.PersistElementId == true ? fhirTelecom.ElementId : null
-
                 };
             }
             return null;
         }
 
         /// <summary>
-        /// Converts an <see cref="EntityAddress"/> instance to a <see cref="FhirAddress"/> instance.
+        /// Converts an <see cref="EntityAddress"/> instance to a <see cref="Address"/> instance.
         /// </summary>
         /// <param name="address">The address.</param>
         /// <returns>Returns a FHIR address.</returns>
@@ -1466,7 +1574,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity address");
 
-            if (address == null) return null;
+            if (address == null)
+            {
+                return null;
+            }
 
             // Return value
             var retVal = new Address()
@@ -1474,25 +1585,36 @@ namespace SanteDB.Messaging.FHIR.Util
                 Use = DataTypeConverter.ToFhirEnumeration<Address.AddressUse>(address.AddressUseKey, "http://hl7.org/fhir/address-use"),
                 Line = new List<String>(),
                 ElementId = address.ExternalKey
-
             };
 
             // Process components
             foreach (var com in address.LoadCollection<EntityAddressComponent>(nameof(EntityAddress.Component)))
             {
                 if (com.ComponentTypeKey == AddressComponentKeys.City)
+                {
                     retVal.City = com.Value;
+                }
                 else if (com.ComponentTypeKey == AddressComponentKeys.Country)
+                {
                     retVal.Country = com.Value;
+                }
                 else if (com.ComponentTypeKey == AddressComponentKeys.AddressLine ||
                     com.ComponentTypeKey == AddressComponentKeys.StreetAddressLine)
+                {
                     retVal.LineElement.Add(new FhirString(com.Value));
+                }
                 else if (com.ComponentTypeKey == AddressComponentKeys.State)
+                {
                     retVal.State = com.Value;
+                }
                 else if (com.ComponentTypeKey == AddressComponentKeys.PostalCode)
+                {
                     retVal.PostalCode = com.Value;
+                }
                 else if (com.ComponentTypeKey == AddressComponentKeys.County)
+                {
                     retVal.District = com.Value;
+                }
                 else
                 {
                     retVal.AddExtension(
@@ -1563,7 +1685,7 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Converts an <see cref="EntityName"/> instance to a <see cref="FhirHumanName"/> instance.
+        /// Converts an <see cref="EntityName"/> instance to a <see cref="HumanName"/> instance.
         /// </summary>
         /// <param name="entityName">Name of the entity.</param>
         /// <returns>Returns the mapped FHIR human name.</returns>
@@ -1580,22 +1702,33 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = new HumanName
             {
                 Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.NameUseKey, "http://hl7.org/fhir/name-use"),
-                ElementId = entityName.ExternalKey
+                ElementId = m_configuration?.PersistElementId == true ? entityName.ExternalKey : null
             };
 
             // Process components
             foreach (var com in entityName.LoadCollection<EntityNameComponent>(nameof(EntityName.Component)))
             {
-                if (string.IsNullOrEmpty(com.Value)) continue;
+                if (string.IsNullOrEmpty(com.Value))
+                {
+                    continue;
+                }
 
                 if (com.ComponentTypeKey == NameComponentKeys.Given)
+                {
                     retVal.GivenElement.Add(new FhirString(com.Value));
+                }
                 else if (com.ComponentTypeKey == NameComponentKeys.Family)
+                {
                     retVal.FamilyElement = new FhirString(com.Value);
+                }
                 else if (com.ComponentTypeKey == NameComponentKeys.Prefix)
+                {
                     retVal.PrefixElement.Add(new FhirString(com.Value));
+                }
                 else if (com.ComponentTypeKey == NameComponentKeys.Suffix)
+                {
                     retVal.SuffixElement.Add(new FhirString(com.Value));
+                }
             }
 
             return retVal;
@@ -1608,15 +1741,21 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var coding = DataTypeConverter.ToFhirCodeableConcept(conceptKey, codeSystem);
             if (coding != null)
+            {
                 return Hl7.Fhir.Utility.EnumUtility.ParseLiteral<TEnum>(coding.Coding.First().Code, true);
+            }
             else if (throwIfNotFound)
+            {
                 throw new ConstraintException($"Cannot find FHIR mapping for Concept {conceptKey}");
+            }
             else
+            {
                 return null;
+            }
         }
 
         /// <summary>
-        /// Converts a <see cref="IdentifierBase{TBoundModel}" /> instance to an <see cref="FhirIdentifier" /> instance.
+        /// Converts a <see cref="IdentifierBase{TBoundModel}" /> instance to an <see cref="Identifier" /> instance.
         /// </summary>
         /// <typeparam name="TBoundModel">The type of the bound model.</typeparam>
         /// <param name="identifier">The identifier.</param>
@@ -1630,22 +1769,24 @@ namespace SanteDB.Messaging.FHIR.Util
                 return null;
             }
 
-            var imetaService = ApplicationServiceContext.Current.GetService<IAssigningAuthorityRepositoryService>();
-            var authority = imetaService.Get(identifier.AuthorityKey.Value);
+            var imetaService = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
+            var authority = imetaService.Get(identifier.IdentityDomainKey.Value);
             var retVal = new Identifier
             {
                 System = authority?.Url ?? $"urn:oid:{authority?.Oid}",
-                Type = ToFhirCodeableConcept(identifier.LoadProperty(o=>o.IdentifierType)?.TypeConceptKey),
-                Value = identifier.Value
-
+                Type = ToFhirCodeableConcept(identifier.IdentifierTypeKey),
+                Value = identifier.Value,
+                ElementId = m_configuration?.PersistElementId == true ? identifier.ExternalKey : null
             };
 
             if (identifier.ExpiryDate.HasValue || identifier.IssueDate.HasValue)
+            {
                 retVal.Period = new Period()
                 {
                     StartElement = identifier.IssueDate.HasValue ? new FhirDateTime(identifier.IssueDate.Value) : null,
                     EndElement = identifier.ExpiryDate.HasValue ? new FhirDateTime(identifier.ExpiryDate.Value) : null
                 };
+            }
 
             return retVal;
         }
@@ -1663,8 +1804,8 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
                 Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
-                Value = telecomAddress.Value,
-                ElementId = telecomAddress.ExternalKey
+                Value = telecomAddress.IETFValue,
+                ElementId = m_configuration?.PersistElementId == true ? telecomAddress.ExternalKey : null
             };
         }
     }

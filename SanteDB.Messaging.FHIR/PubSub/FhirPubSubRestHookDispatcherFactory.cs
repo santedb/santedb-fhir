@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2023-3-10
+ * Date: 2023-5-19
  */
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
@@ -194,7 +194,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 try
                 {
                     var resource = this.ConvertToResource(data);
-                    this.m_client.Update<Patient>((Patient)resource);
+                    this.m_client.Update(resource);
                 }
                 catch (Exception e)
                 {
