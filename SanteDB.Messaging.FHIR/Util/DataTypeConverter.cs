@@ -19,6 +19,7 @@
  * Date: 2023-5-19
  */
 using Hl7.Fhir.Model;
+using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Configuration;
@@ -26,6 +27,7 @@ using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Extensions;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
@@ -48,6 +50,7 @@ using System.Diagnostics.Tracing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security;
 using System.Security.Authentication;
 using System.Text.RegularExpressions;
@@ -1871,6 +1874,66 @@ namespace SanteDB.Messaging.FHIR.Util
                 Value = telecomAddress.IETFValue,
                 ElementId = m_configuration?.PersistElementId == true ? telecomAddress.ExternalKey : null
             };
+        }
+
+        /// <summary>
+        /// Add provenance information to the target entity
+        /// </summary>
+        public static void AddContextProvenanceData(IdentifiedData targetEntity)
+        {
+            
+            if(!RestOperationContext.Current.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out var provenanceObject) ||
+                !(provenanceObject is Provenance prov))
+            {
+                return;
+            }
+
+            if(prov.Location != null)
+            {
+                var target = DataTypeConverter.ResolveEntity<Place>(prov.Location, null);
+                switch(targetEntity)
+                {
+                    case Entity ent:
+                        ent.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.ServiceDeliveryLocation, target));
+                        break;
+                    case Act act:
+                        act.LoadProperty(o => o.Participations).Add(new ActParticipation(ActParticipationKeys.Location, target));
+                        break;
+                }
+            }
+
+            if(prov.Agent != null)
+            {
+                foreach(var agnt in prov.Agent)
+                {
+                    if(agnt.Who == null)
+                    {
+                        throw new ArgumentNullException($"{nameof(prov.Agent)}.{nameof(agnt.Who)}");
+                    }
+                    var agent = DataTypeConverter.ResolveEntity<Entity>(agnt.Who, null);
+                    if(agent == null)
+                    {
+                        throw new KeyNotFoundException(agnt.Who.Identifier.ToString());
+                    }
+
+                    var role = agnt.Role.Select(o=> DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
+                    if(role == null)
+                    {
+                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.CodeInvalid, $"{agnt.Role.First().Coding.First().Code} is not registered in SanteDB");
+                    }
+
+                    switch (targetEntity)
+                    {
+                        case Entity ent:
+                            ent.LoadProperty(o => o.Relationships).Add(new EntityRelationship(role.Key, agent));
+                            break;
+                        case Act act:
+                            act.LoadProperty(o => o.Participations).Add(new ActParticipation(role.Key, agent));
+                            break;
+                    }
+
+                }
+            }
         }
     }
 }

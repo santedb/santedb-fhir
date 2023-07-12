@@ -57,5 +57,10 @@ namespace SanteDB.Messaging.FHIR
         /// The object is empty and should be processed / updated at a later time
         /// </summary>
         public const string PlaceholderTag = "$fhir.placeholder";
+
+        /// <summary>
+        /// Provenance header name
+        /// </summary>
+        public const string ProvenanceHeaderName = "X-Provenance";
     }
 }
