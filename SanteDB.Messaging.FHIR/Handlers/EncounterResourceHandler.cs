@@ -193,7 +193,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = new PatientEncounter
             {
                 TypeConcept = DataTypeConverter.ToConcept(resource.Class, "http://santedb.org/conceptset/v3-ActEncounterCode"),
-                // TODO: Extensions
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>().ToList(),
                 Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList(),
                 Key = Guid.NewGuid(),

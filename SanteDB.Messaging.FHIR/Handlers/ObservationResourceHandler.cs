@@ -222,6 +222,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>().ToList();
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
+            retVal.Notes = DataTypeConverter.ToNote<ActNote>(resource.Text);
 
             retVal.Key = Guid.TryParse(resource.Id, out var id) ? id : Guid.NewGuid();
 

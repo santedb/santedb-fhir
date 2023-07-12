@@ -71,6 +71,9 @@ namespace SanteDB.Messaging.FHIR.Util
         // Policy information service
         private static IPolicyInformationService m_pipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
 
+        // Security repository
+        private static ISecurityRepositoryService m_secService = ApplicationServiceContext.Current.GetService<ISecurityRepositoryService>();
+
         // CX Devices
         private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?");
 
@@ -375,6 +378,60 @@ namespace SanteDB.Messaging.FHIR.Util
             return retVal;
         }
 
+
+        internal static List<T> ToNote<T>(Narrative text) where T : INote, new()
+        {
+            if (text == null || String.IsNullOrEmpty(text.Div))
+            {
+                return new List<T>();
+            }
+            else if (text.Status == Narrative.NarrativeStatus.Additional) // Additional notes which supplement the resource - these must be processed
+            {
+                // Get the relevant identification
+                var authorEntity = m_secService.GetCdrEntity(AuthenticationContext.Current.Principal);
+                if (authorEntity == null)
+                {
+                    if (m_configuration.StrictProcessing)
+                    {
+                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.NotFound, $"{AuthenticationContext.Current.Principal.Identity.Name} is unknown");
+                    }
+                    else
+                    {
+                        traceSource.TraceWarning("Could not find authorship information for {0} - narrative text cannot be saved", AuthenticationContext.Current.Principal);
+                        return new List<T>();
+                    }
+                }
+                else
+                {
+                    return new List<T>()
+                    {
+                        new T()
+                        {
+                            AuthorKey = authorEntity.Key,
+                            Text = text.Div
+                        }
+                    };
+                }
+            }
+            else if(text.Status == Narrative.NarrativeStatus.Extensions)
+            {
+                if (m_configuration.StrictProcessing)
+                {
+                    throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.NotSupported, $"Cannot understand narrative text with status extensions");
+                }
+                else
+                {
+                    traceSource.TraceWarning("Cannot understand narrative text with status extensions", AuthenticationContext.Current.Principal);
+                    return new List<T>();
+                }
+            }
+            else
+            {
+                traceSource.TraceWarning("Will not store generated narrative text");
+                return new List<T>();
+            }
+        }
+
         /// <summary>
         /// Creates a FHIR reference.
         /// </summary>
@@ -403,7 +460,14 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
 
-            refer.Display = targetEntity.ToString();
+            if (targetEntity is IdentifiedData id)
+            {
+                refer.Display = id.ToDisplay();
+            }
+            else
+            {
+                refer.Display = targetEntity.ToString();
+            }
             return refer;
         }
 

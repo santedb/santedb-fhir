@@ -219,7 +219,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Relationships = new List<ActRelationship>(),
                 Participations = new List<ActParticipation>(),
                 Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList(),
-                MoodConceptKey = MoodConceptKeys.Eventoccurrence
+                MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
             switch (resource.ClinicalStatus.TypeName)
