@@ -165,18 +165,14 @@ namespace SanteDB.Messaging.FHIR.Rest.Behaviors
                         {
                             if (sig.SigFormat == "application/jose" && JsonWebSignature.TryParseDetached(Encoding.UTF8.GetString(sig.Data), out var jsonWebSignature) == JsonWebSignatureParseResult.Success)
                             {
-                                if (String.IsNullOrEmpty(jsonWebSignature.Header.KeyThumbprint))
-                                {
-                                    throw new ArgumentNullException(nameof(jsonWebSignature.Header.KeyThumbprint));
-                                }
-                                else if (Enum.TryParse<SignatureAlgorithm>(jsonWebSignature.Header.KeyThumbprint, true, out var signatureAlgorithm))
+                                if (this.m_dataSigningService.TryGetSignatureSettings(jsonWebSignature.Header, out var settings))
                                 {
                                     using (request.Body)
                                     {
                                         var ms = new MemoryStream();
                                         request.Body.CopyTo(ms);
                                         // Compute a digital signature 
-                                        if (!this.m_dataSigningService.Verify(ms.ToArray(), jsonWebSignature.Signature, this.m_dataSigningService.GetSignatureSettings(jsonWebSignature.Header.KeyThumbprint, signatureAlgorithm)))
+                                        if (!this.m_dataSigningService.Verify(ms.ToArray(), jsonWebSignature.Signature, settings))
                                         {
                                             throw new InvalidOperationException(ErrorMessages.SIGNATURE_VALIDATION_ERROR);
                                         }
