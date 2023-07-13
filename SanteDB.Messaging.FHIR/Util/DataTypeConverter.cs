@@ -1874,7 +1874,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static void AddContextProvenanceData(IdentifiedData targetEntity)
         {
-            Provenance provenanceObject = null;
+            object provenanceObject = null;
             if (RestOperationContext.Current?.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out provenanceObject) != true ||
                 !(provenanceObject is Provenance prov))
             {
