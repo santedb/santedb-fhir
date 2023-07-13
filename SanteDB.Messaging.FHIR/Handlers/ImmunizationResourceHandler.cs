@@ -151,7 +151,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 ActTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedElement).GetValueOrDefault(),
                 DoseQuantity = resource.DoseQuantity?.Value ?? 0,
-                DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, "http://hl7.org/fhir/sid/ucum") : null,
+                DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, string.IsNullOrWhiteSpace(resource.DoseQuantity.System) ? "http://hl7.org/fhir/sid/ucum" : resource.DoseQuantity.System) : null,
                 Extensions = resource.Extension?.Select(DataTypeConverter.ToActExtension).ToList(),
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToActIdentifier).ToList(),
                 Key = Guid.NewGuid(),

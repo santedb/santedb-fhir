@@ -199,7 +199,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         ValueType = "PQ",
                         Value = quantity.Value.Value,
-                        UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, "http://hl7.org/fhir/sid/ucum"),
+                        UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? "http://hl7.org/fhir/sid/ucum" : quantity.System),
                         Relationships = new List<ActRelationship>(),
                         Participations = new List<ActParticipation>()
                     };

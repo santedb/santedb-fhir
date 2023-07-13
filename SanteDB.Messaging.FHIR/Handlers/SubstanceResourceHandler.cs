@@ -198,7 +198,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     if (null != instance.Quantity)
                     {
                         mat.Quantity = instance.Quantity.Value;
-                        mat.QuantityConcept = DataTypeConverter.ToConcept(instance.Quantity.Unit, "http://hl7.org/fhir/sid/ucum");
+                        mat.QuantityConcept = DataTypeConverter.ToConcept(instance.Quantity.Unit, string.IsNullOrWhiteSpace(instance.Quantity.System) ? "http://hl7.org/fhir/sid/ucum" : instance.Quantity.System);
                     }
 
                     if (null != instance.Identifier)

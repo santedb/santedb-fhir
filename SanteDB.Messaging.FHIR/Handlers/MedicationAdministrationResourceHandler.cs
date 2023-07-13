@@ -302,7 +302,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Site = DataTypeConverter.ToConcept(resource.Dosage.Site);
                 retVal.Route = DataTypeConverter.ToConcept(resource.Dosage.Route);
                 retVal.DoseQuantity = resource.Dosage.Dose.Value.GetValueOrDefault();
-                retVal.DoseUnit = DataTypeConverter.ToConcept(resource.Dosage.Dose.Unit, "http://hl7.org/fhir/sid/ucum");
+                retVal.DoseUnit = DataTypeConverter.ToConcept(resource.Dosage.Dose.Unit, string.IsNullOrWhiteSpace(resource.Dosage.Dose.System) ? "http://hl7.org/fhir/sid/ucum" : resource.Dosage.Dose.System);
             }
 
             return retVal;
