@@ -198,7 +198,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Relationships = new List<ActRelationship>(),
                 Participations = new List<ActParticipation>(),
-                Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList()
+                Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList(),
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
             retVal.ReasonConcept = DataTypeConverter.ToConcept(resource.StatusReason.FirstOrDefault());

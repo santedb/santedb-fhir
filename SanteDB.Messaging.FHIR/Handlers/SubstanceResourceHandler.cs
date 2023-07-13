@@ -141,7 +141,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Relationships = new List<EntityRelationship>(),
                 Participations = new List<Core.Model.Acts.ActParticipation>(),
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
-                Names = new List<EntityName>()
+                Names = new List<EntityName>(),
+                Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text)
             };
 
             switch (resource.Status)

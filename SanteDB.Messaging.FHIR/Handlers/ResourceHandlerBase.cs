@@ -179,7 +179,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 // We want to map from TFhirResource to TModel
                 var modelInstance = this.MapToModel(fhirResource);
-
                 if (modelInstance == null)
                 {
                     throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
@@ -187,6 +186,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         param = "Model"
                     }));
                 }
+                DataTypeConverter.AddContextProvenanceData(modelInstance);
 
                 var result = this.Create(modelInstance, mode);
 
@@ -438,6 +438,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     param = "Request"
                 }));
             }
+            DataTypeConverter.AddContextProvenanceData(modelInstance);
 
             // Guid identifier
             var guidId = Guid.Empty;

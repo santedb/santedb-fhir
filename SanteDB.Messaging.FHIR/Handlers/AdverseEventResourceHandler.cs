@@ -185,7 +185,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Identifiers = new List<ActIdentifier>(),
                 Participations = new List<ActParticipation>(),
                 Relationships = new List<ActRelationship>(),
-
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
             if (!Guid.TryParse(resource.Id, out var key))

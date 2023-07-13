@@ -22,6 +22,7 @@ using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
@@ -150,6 +151,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var substanceAdministration = new SubstanceAdministration
             {
                 ActTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedElement).GetValueOrDefault(),
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 DoseQuantity = resource.DoseQuantity?.Value ?? 0,
                 DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, string.IsNullOrWhiteSpace(resource.DoseQuantity.System) ? "http://hl7.org/fhir/sid/ucum" : resource.DoseQuantity.System) : null,
                 Extensions = resource.Extension?.Select(DataTypeConverter.ToActExtension).ToList(),
