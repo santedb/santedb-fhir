@@ -156,8 +156,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Encounter
             var erService = ApplicationServiceContext.Current.GetService<IDataPersistenceService<EntityRelationship>>();
-            var enc = erService.Query(o => o.TargetEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.ObsoleteVersionSequenceId == null, AuthenticationContext.Current.Principal);
-            if (enc != null)
+            var enc = erService.Query(o => o.TargetEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.ObsoleteVersionSequenceId == null, AuthenticationContext.Current.Principal)?.ToArray();
+            if (enc?.Any() == true)
             {
                 retVal.EventHistory = enc.Select(o => DataTypeConverter.CreateNonVersionedReference<Encounter>(o.TargetEntityKey)).ToList();
                 // TODO: Encounter
@@ -199,6 +199,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Relationships = new List<ActRelationship>(),
                 Participations = new List<ActParticipation>(),
                 Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList(),
+                MoodConceptKey = MoodConceptKeys.Eventoccurrence,
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
@@ -283,6 +284,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.StartTime = DataTypeConverter.ToDateTimeOffset(effectiveperiod.Start);
                 retVal.StopTime = DataTypeConverter.ToDateTimeOffset(effectiveperiod.End);
+            }
+            else if (resource.Effective is FhirDateTime effectivetime)
+            {
+                retVal.ActTime = DataTypeConverter.ToDateTimeOffset(effectivetime);
             }
 
             if (resource.Performer?.Any() == true)

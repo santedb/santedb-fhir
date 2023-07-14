@@ -46,12 +46,23 @@ namespace SanteDB.Messaging.FHIR.Handlers
     {
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ObservationResourceHandler));
 
+        readonly List<Guid> m_AllergyTypes;
+
         /// <summary>
         /// Create new resource handler
         /// </summary>
-        public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo, ILocalizationService localizationService) : base(repo, localizationService)
+        public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo, ILocalizationService localizationService, IConceptRepositoryService conceptRepo) : base(repo, localizationService)
         {
+            m_AllergyTypes = conceptRepo.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
         }
+
+        /// <inheritdoc />
+        public override bool CanMapObject(object instance) => instance is Observation ||
+            (
+                instance is Core.Model.Acts.Observation obs && 
+                null != obs.TypeConceptKey && 
+                (!m_AllergyTypes.Contains(obs.TypeConceptKey.Value) || obs.TypeConceptKey == ObservationTypeKeys.Condition)
+            );
 
 
         /// <summary>
@@ -223,6 +234,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>().ToList();
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
             retVal.Notes = DataTypeConverter.ToNote<ActNote>(resource.Text);
+
+            retVal.MoodConceptKey = MoodConceptKeys.Eventoccurrence;
 
             retVal.Key = Guid.TryParse(resource.Id, out var id) ? id : Guid.NewGuid();
 
