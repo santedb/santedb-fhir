@@ -72,7 +72,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.DoseQuantity = new Quantity()
             {
-                Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code,
+                Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code,
                 Value = model.DoseQuantity
             };
             retVal.RecordedElement = new FhirDateTime(model.ActTime.Value); // TODO: This is probably not the best place to put this?
@@ -153,7 +153,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 ActTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedElement).GetValueOrDefault(),
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 DoseQuantity = resource.DoseQuantity?.Value ?? 0,
-                DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, string.IsNullOrWhiteSpace(resource.DoseQuantity.System) ? "http://hl7.org/fhir/sid/ucum" : resource.DoseQuantity.System) : null,
+                DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, string.IsNullOrWhiteSpace(resource.DoseQuantity.System) ? FhirConstants.DefaultQuantityUnitSystem : resource.DoseQuantity.System) : null,
                 Extensions = resource.Extension?.Select(DataTypeConverter.ToActExtension).ToList(),
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToActIdentifier).ToList(),
                 Key = Guid.NewGuid(),
