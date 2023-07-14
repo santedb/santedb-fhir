@@ -28,6 +28,7 @@ namespace SanteDB.Messaging.FHIR
     public static class FhirConstants
     {
 
+        
         /// <summary>
         /// URI of the SanteDB FHIR profile
         /// </summary>
@@ -62,5 +63,10 @@ namespace SanteDB.Messaging.FHIR
         /// Provenance header name
         /// </summary>
         public const string ProvenanceHeaderName = "X-Provenance";
+
+        /// <summary>
+        /// Default quantity concept system
+        /// </summary>
+        public const string DefaultQuantityUnitSystem = "http://unitsofmeasure.org";
     }
 }

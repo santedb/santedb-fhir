@@ -560,7 +560,7 @@ namespace SanteDB.Messaging.FHIR.Util
             return new Quantity()
             {
                 Value = quantity,
-                Unit = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code
+                Unit = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code
             };
         }
 
