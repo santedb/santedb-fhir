@@ -32,6 +32,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
 using NameValueCollection = System.Collections.Specialized.NameValueCollection;
 using Observation = Hl7.Fhir.Model.Observation;
@@ -347,54 +348,73 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return retVal;
         }
 
-        /// <summary>
-        /// Parameters
-        /// </summary>
-        public override Bundle Query(NameValueCollection parameters)
+        ///<inheritdoc />
+        protected override IQueryResultSet<Core.Model.Acts.Observation> QueryInternal(Expression<Func<Core.Model.Acts.Observation, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
-            if (parameters == null)
+            if (fhirParameters["value-concept"] != null)
             {
-                throw new ArgumentNullException(nameof(parameters), ErrorMessages.ARGUMENT_NULL);
+                var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiParameters);
+                return this.QueryInternalEx<CodedObservation>(predicate, fhirParameters, hdsiParameters).AsResultSet<Core.Model.Acts.Observation>();
             }
-
-            var query = QueryRewriter.RewriteFhirQuery(typeof(Observation), typeof(Core.Model.Acts.Observation), parameters, out var hdsiQuery);
-
-            IQueryResultSet hdsiResults = null;
-
-            if (parameters["value-concept"] != null)
+            else if (fhirParameters["value-quantity"] != null)
             {
-                var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiQuery);
-                hdsiResults = this.QueryEx(predicate);
-            }
-            else if (parameters["value-quantity"] != null)
-            {
-                var predicate = QueryExpressionParser.BuildLinqExpression<QuantityObservation>(hdsiQuery);
-                hdsiResults = this.QueryEx(predicate);
+                var predicate = QueryExpressionParser.BuildLinqExpression<QuantityObservation>(hdsiParameters);
+                return this.QueryInternalEx<QuantityObservation>(predicate, fhirParameters, hdsiParameters).AsResultSet<Core.Model.Acts.Observation>();
             }
             else
             {
-                var predicate = QueryExpressionParser.BuildLinqExpression<Core.Model.Acts.Observation>(hdsiQuery);
-                hdsiResults = this.Query(predicate);
+                return base.QueryInternal(query, fhirParameters, hdsiParameters);
             }
-
-            // TODO: Sorting
-            var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<SanteDB.Core.Model.Acts.Observation>();
-
-            // Return FHIR query result
-            var retVal = new FhirQueryResult("Observation")
-            {
-                Results = results.Select(this.MapToFhir).Select(o => new Bundle.EntryComponent()
-                {
-                    Resource = o,
-                    Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match },
-                }).ToList(),
-                Query = query,
-                TotalResults = totalResults
-            };
-
-            base.ProcessIncludes(results, parameters, retVal);
-            return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
         }
+
+        /// <summary>
+        /// Parameters
+        /// </summary>
+        //public override Bundle Query(NameValueCollection parameters)
+        //{
+        //    if (parameters == null)
+        //    {
+        //        throw new ArgumentNullException(nameof(parameters), ErrorMessages.ARGUMENT_NULL);
+        //    }
+
+        //    var query = QueryRewriter.RewriteFhirQuery(typeof(Observation), typeof(Core.Model.Acts.Observation), parameters, out var hdsiQuery);
+
+        //    IQueryResultSet hdsiResults = null;
+
+        //    if (parameters["value-concept"] != null)
+        //    {
+        //        var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiQuery);
+        //        hdsiResults = this.QueryEx(predicate);
+        //    }
+        //    else if (parameters["value-quantity"] != null)
+        //    {
+        //        var predicate = QueryExpressionParser.BuildLinqExpression<QuantityObservation>(hdsiQuery);
+        //        hdsiResults = this.QueryEx(predicate);
+        //    }
+        //    else
+        //    {
+        //        var predicate = QueryExpressionParser.BuildLinqExpression<Core.Model.Acts.Observation>(hdsiQuery);
+        //        hdsiResults = this.Query(predicate);
+        //    }
+
+        //    // TODO: Sorting
+        //    var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<SanteDB.Core.Model.Acts.Observation>();
+
+        //    // Return FHIR query result
+        //    var retVal = new FhirQueryResult("Observation")
+        //    {
+        //        Results = results.Select(this.MapToFhir).Select(o => new Bundle.EntryComponent()
+        //        {
+        //            Resource = o,
+        //            Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match },
+        //        }).ToList(),
+        //        Query = query,
+        //        TotalResults = totalResults
+        //    };
+
+        //    base.ProcessIncludes(results, parameters, retVal);
+        //    return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
+        //}
 
         /// <summary>
         /// Get included resources

@@ -30,6 +30,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
@@ -295,12 +296,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query filter
         /// </summary>
-        protected override IQueryResultSet<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query)
+        protected override IQueryResultSet<CodedObservation> QueryInternal(Expression<Func<CodedObservation, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             var anyRef = this.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]);
             query = Expression.Lambda<Func<CodedObservation, bool>>(Expression.AndAlso(query.Body, anyRef), query.Parameters);
 
-            return base.Query(query);
+            return base.QueryInternal(query, fhirParameters, hdsiParameters);
         }
     }
 }

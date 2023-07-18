@@ -31,6 +31,7 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
@@ -314,12 +315,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return retVal;
         }
 
-        /// <summary>
-        /// Query for substance administrations that aren't immunizations
-        /// </summary>
-        /// <param name="query">The query which should be executed</param>
-        /// <returns>Returns the list of models which match the given parameters.</returns>
-		protected override IQueryResultSet<SubstanceAdministration> Query(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query)
+        /// <inheritdoc />
+		protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             var drugTherapy = Guid.Parse("7D84A057-1FCC-4054-A51F-B77D230FC6D1");
 

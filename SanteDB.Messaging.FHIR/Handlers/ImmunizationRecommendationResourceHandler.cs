@@ -29,6 +29,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
@@ -122,18 +123,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <inheritdoc/>
-        protected override IQueryResultSet<SubstanceAdministration> Query(Expression<Func<SubstanceAdministration, bool>> query)
-        {
-            // TODO: Hook this up to the forecaster
-            var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.NotEqual, System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(BaseEntityData.ObsoletionTime))), System.Linq.Expressions.Expression.Constant(null));
-            query = System.Linq.Expressions.Expression.Lambda<Func<SubstanceAdministration, bool>>(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query), query.Parameters);
-            //return this.repository.Find<SubstanceAdministration>(query, offset, count, out totalResults);
-            // TODO: Call care planner or call the stored cp
-            return null;
-        }
+        //protected override IQueryResultSet<SubstanceAdministration> QueryInternal(Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+        //{
+        //    // TODO: Hook this up to the forecaster
+        //   // var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(ExpressionType.NotEqual, System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(BaseEntityData.ObsoletionTime))), System.Linq.Expressions.Expression.Constant(null));
+        //    //query = System.Linq.Expressions.Expression.Lambda<Func<SubstanceAdministration, bool>>(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query), query.Parameters);
+        //    //return this.repository.Find<SubstanceAdministration>(query, offset, count, out totalResults);
+        //    // TODO: Call care planner or call the stored cp
+        //    return base.QueryInternal(;
+        //}
 
         /// <inheritdoc/>
-
         protected override SubstanceAdministration Read(Guid id, Guid versionId)
         {
             throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
@@ -163,6 +163,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         /// <inheritdoc/>
         protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        {
+            throw new NotImplementedException(ErrorMessages.NOT_SUPPORTED_IMPLEMENTATION);
+        }
+
+        protected override IQueryResultSet<SubstanceAdministration> QueryInternal(Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             throw new NotImplementedException(ErrorMessages.NOT_SUPPORTED_IMPLEMENTATION);
         }
