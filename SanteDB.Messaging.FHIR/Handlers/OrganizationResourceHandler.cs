@@ -138,6 +138,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Organization
             retVal.TypeConcept = resource.Type.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
             retVal.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
+            retVal.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
 
             // TODO: Extensions
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();

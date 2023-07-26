@@ -28,6 +28,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
@@ -185,7 +186,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Identifiers = new List<ActIdentifier>(),
                 Participations = new List<ActParticipation>(),
                 Relationships = new List<ActRelationship>(),
-
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
             if (!Guid.TryParse(resource.Id, out var key))
@@ -304,14 +305,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query for specified adverse event
         /// </summary>
-        protected override IQueryResultSet<Act> Query(Expression<Func<Act, bool>> query)
+        protected override IQueryResultSet<Act> QueryInternal(Expression<Func<Act, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             var typeReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(Act).GetProperty(nameof(Act.ClassConceptKey))), typeof(Guid)), Expression.Constant(ActClassKeys.Condition));
 
             var anyRef = this.CreateConceptSetFilter(ConceptSetKeys.AdverseEventActs, query.Parameters[0]);
             query = Expression.Lambda<Func<Act, bool>>(Expression.AndAlso(Expression.AndAlso(query.Body, anyRef), typeReference), query.Parameters);
 
-            return base.Query(query);
+            return base.QueryInternal(query, fhirParameters, hdsiParameters);
         }
 
     }

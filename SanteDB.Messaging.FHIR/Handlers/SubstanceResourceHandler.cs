@@ -141,7 +141,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Relationships = new List<EntityRelationship>(),
                 Participations = new List<Core.Model.Acts.ActParticipation>(),
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToEntityIdentifier).ToList(),
-                Names = new List<EntityName>()
+                Names = new List<EntityName>(),
+                Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text)
             };
 
             switch (resource.Status)
@@ -198,7 +199,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     if (null != instance.Quantity)
                     {
                         mat.Quantity = instance.Quantity.Value;
-                        mat.QuantityConcept = DataTypeConverter.ToConcept(instance.Quantity.Unit, "http://hl7.org/fhir/sid/ucum");
+                        mat.QuantityConcept = DataTypeConverter.ToConcept(instance.Quantity.Unit, string.IsNullOrWhiteSpace(instance.Quantity.System) ? "http://hl7.org/fhir/sid/ucum" : instance.Quantity.System);
                     }
 
                     if (null != instance.Identifier)

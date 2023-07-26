@@ -396,7 +396,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
             patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
             patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).ToList();
-
+            patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
             patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
             // TODO: fix
             // HACK: the date of birth precision CK only allows "Y", "M", or "D" for the precision value

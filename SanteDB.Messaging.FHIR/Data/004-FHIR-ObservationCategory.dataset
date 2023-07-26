@@ -1,0 +1,291 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<dataset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="FHIR-ObservationCategory" xmlns="http://santedb.org/data">
+  <update insertIfNotExists="true">
+    <CodeSystem xmlns="http://santedb.org/model">
+      <id>E442C2BC-E52F-4C91-9E04-87906FC060AB</id>
+      <name>Observation Category Codes</name>
+      <authority>ObservationCategoryCodes</authority>
+      <oid>2.16.840.1.113883.4.642.4.1125</oid>
+      <url>http://terminology.hl7.org/CodeSystem/observation-category</url>
+    </CodeSystem>
+  </update>
+  <update insertIfNotExists="true">
+    <ConceptSet xmlns="http://santedb.org/model">
+      <id>90F2BC81-0F0F-4384-8EC3-992C55AE7656</id>
+      <name>Observation Category Codes</name>
+      <mnemonic>ObservationCategoryCodes</mnemonic>
+      <oid>2.16.840.1.113883.4.642.3.403</oid>
+      <url>http://hl7.org/fhir/ValueSet/observation-category</url>
+    </ConceptSet>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>1858E5B7-A346-4BB3-A2E0-D11BD2ED4394</id>
+      <mnemonic>social-history</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Social History</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>525880B1-567F-4E12-AB9D-89E305149314</id>
+      <mnemonic>vital-signs</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Vital Signs</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>B436ABB8-E80C-49D1-AFE7-9EE52E0C7A75</id>
+      <mnemonic>imaging</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Imaging</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>734BEA12-7DC6-466B-9AE7-4239453E9057</id>
+      <mnemonic>laboratory</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Laboratory</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>AF480A43-7833-435A-AF53-E5297CB6C790</id>
+      <mnemonic>procedure</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Procedure</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>43B90FF5-FA78-433F-8FF6-452B21C9F938</id>
+      <mnemonic>survey</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Survey</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>7C47A5D8-5F59-49F6-932B-D327986C01A1</id>
+      <mnemonic>exam</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Exam</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>CA60D843-0723-41E8-A4C6-09F96B0F7CA8</id>
+      <mnemonic>therapy</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Therapy</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>3864D002-6E24-49B5-B694-CD9607F7BD5E</id>
+      <mnemonic>activity</mnemonic>
+      <codeSystem>E442C2BC-E52F-4C91-9E04-87906FC060AB</codeSystem>
+      <name>
+        <language>en</language>
+        <value>Activity</value>
+        <phoeneticAlgorithm xsi:nil="true" />
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>A746B5C1-1267-4CFF-922B-CBF010A68E73</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-SocialHistory</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>1858E5B7-A346-4BB3-A2E0-D11BD2ED4394</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Social History</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>573AECF4-FE8A-4F78-B892-E9E02314AB58</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-VitalSigns</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>525880B1-567F-4E12-AB9D-89E305149314</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Vital Signs</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>84CB6342-F481-4B1D-8DAD-9E8676E762D1</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-Imaging</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>B436ABB8-E80C-49D1-AFE7-9EE52E0C7A75</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Imaging</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>9455478F-A7DE-43AF-9889-0C7E0C549C40</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-Laboratory</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>734BEA12-7DC6-466B-9AE7-4239453E9057</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Laboratory</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>DBD0A442-7DE0-4476-99CB-4B1289C802C3</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-Procedure</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>AF480A43-7833-435A-AF53-E5297CB6C790</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Procedure</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>7F6B2532-0ACC-484A-819D-3088C6061CB6</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-Survey</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>43B90FF5-FA78-433F-8FF6-452B21C9F938</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Survey</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>86127EAA-E50D-438C-9056-4ADAF66DB2F1</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-Exam</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>7C47A5D8-5F59-49F6-932B-D327986C01A1</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Exam</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>0DEA695D-A5FB-4B8F-A893-EE5B3BF316FD</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-Therapy</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>CA60D843-0723-41E8-A4C6-09F96B0F7CA8</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Therapy</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+  <update insertIfNotExists="true">
+    <Concept xmlns="http://santedb.org/model">
+      <id>405417B6-C647-42E6-B509-A292B189F4EE</id>
+      <isReadOnly>false</isReadOnly>
+      <mnemonic>ObservationCategory-Activity</mnemonic>
+      <statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+      <conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+      <referenceTerm>
+        <term>3864D002-6E24-49B5-B694-CD9607F7BD5E</term>
+        <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+      </referenceTerm>
+      <name>
+        <language>en</language>
+        <value>Activity</value>
+      </name>
+      <conceptSet>90F2BC81-0F0F-4384-8EC3-992C55AE7656</conceptSet>
+    </Concept>
+  </update>
+</dataset>

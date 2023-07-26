@@ -3,7 +3,7 @@
   <update skipIfError="false" insertIfNotExists="true">
     <CodeSystem xmlns="http://santedb.org/model">
       <id>24798fa7-6c1a-4018-836c-5b68764e20b1</id>
-      <name>AdverseEventSeverity</name>
+      <name>Adverse Event Severity</name>
       <oid>urn:oid:2.16.840.1.113883.4.642.4.1256</oid>
       <authority>AdverseEventSeverity</authority>
       <url>http://terminology.hl7.org/CodeSystem/adverse-event-severity</url>

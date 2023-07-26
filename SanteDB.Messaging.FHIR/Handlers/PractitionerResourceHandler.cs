@@ -163,6 +163,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Organization
             retVal.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
+            retVal.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
+
             // TODO: Extensions
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             retVal.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();

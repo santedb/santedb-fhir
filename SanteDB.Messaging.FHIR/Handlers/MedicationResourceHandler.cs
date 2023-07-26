@@ -20,6 +20,7 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
@@ -151,6 +152,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             manufacturedMaterial.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             manufacturedMaterial.TypeConcept = DataTypeConverter.ToConcept(resource.Code?.Coding?.FirstOrDefault(), "http://snomed.info/sct");
+            manufacturedMaterial.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
 
             switch (resource.Status)
             {

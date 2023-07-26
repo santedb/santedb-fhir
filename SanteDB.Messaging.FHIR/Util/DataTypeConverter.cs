@@ -74,6 +74,9 @@ namespace SanteDB.Messaging.FHIR.Util
         // Policy information service
         private static IPolicyInformationService m_pipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
 
+        // Security repository
+        private static ISecurityRepositoryService m_secService = ApplicationServiceContext.Current.GetService<ISecurityRepositoryService>();
+
         // CX Devices
         private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?");
 
@@ -378,6 +381,53 @@ namespace SanteDB.Messaging.FHIR.Util
             return retVal;
         }
 
+
+        internal static List<T> ToNote<T>(Hl7.Fhir.Model.Narrative text) where T : INote, new()
+        {
+            if (text == null || String.IsNullOrEmpty(text.Div))
+            {
+                return new List<T>();
+            }
+
+            switch (text.Status)
+            {
+                case Hl7.Fhir.Model.Narrative.NarrativeStatus.Additional:
+                    // Get the relevant identification
+                    var authorEntity = m_secService.GetCdrEntity(AuthenticationContext.Current.Principal);
+                    if (authorEntity == null)
+                    {
+                        if (m_configuration.StrictProcessing)
+                        {
+                            throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.NotFound, $"{AuthenticationContext.Current.Principal.Identity.Name} is unknown");
+                        }
+                        else
+                        {
+                            traceSource.TraceWarning("Could not find authorship information for {0} - narrative text cannot be saved", AuthenticationContext.Current.Principal);
+                            return new List<T>();
+                        }
+                    }
+                    return new List<T>() {  new T()
+                        {
+                            AuthorKey = authorEntity.Key,
+                            Text = text.Div
+                        }
+                    };
+                case Hl7.Fhir.Model.Narrative.NarrativeStatus.Extensions:
+                    if (m_configuration.StrictProcessing)
+                    {
+                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.NotSupported, $"Cannot understand narrative text with status extensions");
+                    }
+                    else
+                    {
+                        traceSource.TraceWarning("Cannot understand narrative text with status extensions", AuthenticationContext.Current.Principal);
+                        return new List<T>();
+                    }
+                default:
+                    traceSource.TraceWarning("Will not store generated narrative text");
+                    return new List<T>();
+            }
+        }
+
         /// <summary>
         /// Creates a FHIR reference.
         /// </summary>
@@ -406,7 +456,14 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
 
-            refer.Display = targetEntity.ToString();
+            if (targetEntity is IdentifiedData id)
+            {
+                refer.Display = id.ToDisplay();
+            }
+            else
+            {
+                refer.Display = targetEntity.ToString();
+            }
             return refer;
         }
 
@@ -503,7 +560,7 @@ namespace SanteDB.Messaging.FHIR.Util
             return new Quantity()
             {
                 Value = quantity,
-                Unit = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code
+                Unit = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code
             };
         }
 
@@ -1817,17 +1874,17 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static void AddContextProvenanceData(IdentifiedData targetEntity)
         {
-            
-            if(RestOperationContext.Current?.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out var provenanceObject) != true ||
+            object provenanceObject = null;
+            if (RestOperationContext.Current?.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out provenanceObject) != true ||
                 !(provenanceObject is Provenance prov))
             {
                 return;
             }
 
-            if(prov.Location != null)
+            if (prov.Location != null)
             {
                 var target = DataTypeConverter.ResolveEntity<Place>(prov.Location, null);
-                switch(targetEntity)
+                switch (targetEntity)
                 {
                     case Entity ent:
                         ent.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.ServiceDeliveryLocation, target));
@@ -1838,22 +1895,22 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
 
-            if(prov.Agent != null)
+            if (prov.Agent != null)
             {
-                foreach(var agnt in prov.Agent)
+                foreach (var agnt in prov.Agent)
                 {
-                    if(agnt.Who == null)
+                    if (agnt.Who == null)
                     {
                         throw new ArgumentNullException($"{nameof(prov.Agent)}.{nameof(agnt.Who)}");
                     }
                     var agent = DataTypeConverter.ResolveEntity<Entity>(agnt.Who, null);
-                    if(agent == null)
+                    if (agent == null)
                     {
                         throw new KeyNotFoundException(agnt.Who.Identifier.ToString());
                     }
 
-                    var role = agnt.Role.Select(o=> DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
-                    if(role == null)
+                    var role = agnt.Role.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
+                    if (role == null)
                     {
                         throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.CodeInvalid, $"{agnt.Role.First().Coding.First().Code} is not registered in SanteDB");
                     }

@@ -30,6 +30,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
@@ -196,7 +197,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Relationships = new List<ActRelationship>(),
                 Participations = new List<ActParticipation>(),
-
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
+                MoodConceptKey = MoodConceptKeys.Eventoccurrence,
             };
 
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
@@ -219,20 +221,54 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.StatusConceptKey = StatusKeys.Nullified;
             }
 
+            // Time
+            if (resource.Onset is Period onset)
+            {
+                retVal.StartTime = DataTypeConverter.ToDateTimeOffset(onset.StartElement);
+                retVal.StopTime = DataTypeConverter.ToDateTimeOffset(onset.EndElement);
+
+            }
+            else if (resource.Onset is FhirDateTime onsetdate)
+            {
+                retVal.StartTime = DataTypeConverter.ToDateTimeOffset(onsetdate).GetValueOrDefault();
+
+                if (resource.Abatement is FhirDateTime abatementdate)
+                {
+                    
+                    retVal.StopTime = DataTypeConverter.ToDateTimeOffset(abatementdate).GetValueOrDefault();
+                }
+                else
+                {
+                    //TODO: Should we set act time here?
+                }
+            }
+            //TODO: Map Age and calculate from the birthdate of the patient.
+
+            if (resource.RecordedDateElement != null)
+            {
+                retVal.CreationTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedDateElement).GetValueOrDefault();
+            }
+
             // Code
             retVal.Value = DataTypeConverter.ToConcept(resource.Code);
 
             // Severity
             if (resource.Severity != null)
             {
-                var severityTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Severity.Coding.FirstOrDefault(), "http://hl7.org/fhir/ValueSet/condition-severity"), TypeConceptKey = ObservationTypeKeys.Severity };
+                var severityTarget = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.Severity.Coding.FirstOrDefault(), "http://hl7.org/fhir/ValueSet/condition-severity"), TypeConceptKey = ObservationTypeKeys.Severity, MoodConceptKey = MoodConceptKeys.Eventoccurrence, StartTime = retVal.StartTime, StopTime = retVal.StopTime, CreationTime = retVal.CreationTime };
                 retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, severityTarget));
             }
+
+            //if (resource.VerificationStatus != null)
+            //{
+            //    var verificationTarget = new CodedObservation { Value = DataTypeConverter.ToConcept(resource.VerificationStatus.Coding.First(), "http://hl7.org/fhir/ValueSet/condition-ver-status"), TypeConceptKey = ObservationTypeKeys.VerificationStatus, MoodConceptKey = MoodConceptKeys.Eventoccurrence };
+            //    retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, verificationTarget));
+            //}
 
             // Site
             if (resource.BodySite.Any())
             {
-                var bodySite = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.BodySite.First()) };
+                var bodySite = new CodedObservation() { Value = DataTypeConverter.ToConcept(resource.BodySite.First()), TypeConceptKey = ObservationTypeKeys.FindingSite, MoodConceptKey = MoodConceptKeys.Eventoccurrence, StartTime = retVal.StartTime, StopTime = retVal.StopTime, CreationTime = retVal.CreationTime };
                 retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, bodySite));
             }
 
@@ -242,13 +278,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
             }
 
-            // Time
-            if (resource.Onset != null && resource.Onset.GetType() == typeof(Period))
-            {
-                retVal.StartTime = DataTypeConverter.ToDateTimeOffset(((Period)resource.Onset).StartElement);
-                retVal.StopTime = DataTypeConverter.ToDateTimeOffset(((Period)resource.Onset).EndElement);
-
-            }
+            
 
             // Author
             if (resource.Asserter != null)
@@ -256,10 +286,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Authororiginator, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
             }
 
-            if (resource.RecordedDateElement != null)
-            {
-                retVal.CreationTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedDateElement).GetValueOrDefault();
-            }
+            
 
             retVal.Value = DataTypeConverter.ToConcept(resource.Code);
 
@@ -269,12 +296,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query filter
         /// </summary>
-        protected override IQueryResultSet<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query)
+        protected override IQueryResultSet<CodedObservation> QueryInternal(Expression<Func<CodedObservation, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             var anyRef = this.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]);
             query = Expression.Lambda<Func<CodedObservation, bool>>(Expression.AndAlso(query.Body, anyRef), query.Parameters);
 
-            return base.Query(query);
+            return base.QueryInternal(query, fhirParameters, hdsiParameters);
         }
     }
 }
