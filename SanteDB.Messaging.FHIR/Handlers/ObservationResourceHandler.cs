@@ -210,8 +210,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         ValueType = "ST",
                         Value = fhirString.Value,
-                        Participations = new List<ActParticipation>(),
-                        Relationships = new List<ActRelationship>()
+                        Participations = new List<ActParticipation>()
                     };
                     break;
 

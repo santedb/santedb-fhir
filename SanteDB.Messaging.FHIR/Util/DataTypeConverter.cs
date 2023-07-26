@@ -862,7 +862,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 else if (extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler) ||
                     extension.ExtensionType.ExtensionHandler == typeof(DictionaryExtensionHandler))
                 {
-                    extension.ExtensionValueXml = (fhirExtension.Value as Base64Binary).Value;
+                    extension.ExtensionValueData = (fhirExtension.Value as Base64Binary).Value;
                 }
                 else
                 {
@@ -1818,7 +1818,7 @@ namespace SanteDB.Messaging.FHIR.Util
         public static void AddContextProvenanceData(IdentifiedData targetEntity)
         {
             
-            if(!RestOperationContext.Current.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out var provenanceObject) ||
+            if(RestOperationContext.Current?.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out var provenanceObject) != true ||
                 !(provenanceObject is Provenance prov))
             {
                 return;

@@ -316,7 +316,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     new Attachment
                     {
                         ContentType = "image/jpg",
-                        Data = photo.ExtensionValueXml
+                        Data = photo.ExtensionValueData
                     }
                 };
             }
