@@ -84,7 +84,7 @@
   </type>
 
   <type resource="Observation">
-    <map fhir="category" model="typeConcept" type="concept"/>
+    <map fhir="category" model="relationship[HasComponent].source.typeConcept" type="concept"/>
     <map fhir="code" model="typeConcept" type="concept"/>
     <map fhir="value-concept" model="value" type="concept"/>
     <map fhir="value-quantity" model="value"/>

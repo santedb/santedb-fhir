@@ -48,20 +48,30 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ObservationResourceHandler));
 
         readonly List<Guid> m_AllergyTypes;
+        readonly List<Guid> m_ListTypes;
+
+        readonly IRepositoryService<Act> m_ActRepository;
+        readonly IRepositoryService<ActRelationship> m_ActRelationshipRepository;
+
+        const string UUID_PREFIX = "urn:uuid:";
 
         /// <summary>
         /// Create new resource handler
         /// </summary>
-        public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repo, ILocalizationService localizationService, IConceptRepositoryService conceptRepo) : base(repo, localizationService)
+        public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repository, ILocalizationService localizationService, IConceptRepositoryService conceptRepository, IRepositoryService<Act> actRepository, IRepositoryService<ActRelationship> actRelationshipRepository)
+            : base(repository, localizationService)
         {
-            m_AllergyTypes = conceptRepo.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
+            m_AllergyTypes = conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
+            m_ListTypes = conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "ObservationCategoryCodes")).Select(o => o.Key.Value).ToList();
+            m_ActRepository = actRepository;
+            m_ActRelationshipRepository = actRelationshipRepository;
         }
 
         /// <inheritdoc />
         public override bool CanMapObject(object instance) => instance is Observation ||
             (
-                instance is Core.Model.Acts.Observation obs && 
-                null != obs.TypeConceptKey && 
+                instance is Core.Model.Acts.Observation obs &&
+                null != obs.TypeConceptKey &&
                 (!m_AllergyTypes.Contains(obs.TypeConceptKey.Value) || obs.TypeConceptKey == ObservationTypeKeys.Condition)
             );
 
@@ -158,6 +168,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Issued = model.CreationTime;
 
+            var categoryrelationships = m_ActRelationshipRepository.Find(o => o.TargetActKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.SourceEntity.ClassConceptKey == ActClassKeys.List).ToList();
+            categoryrelationships.ForEach(r => r.LoadProperty(selector => selector.SourceEntity));
+
+            retVal.Category = categoryrelationships
+                    ?.Select(ar => ar.SourceEntity.TypeConceptKey)
+                    ?.Select(t => DataTypeConverter.ToFhirCodeableConcept(t, FhirConstants.DefaultObservationCategorySystem))?.ToList();
+
             // Value
             switch (model.ValueType)
             {
@@ -211,7 +228,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         ValueType = "PQ",
                         Value = quantity.Value.Value,
-                        UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? "http://unitsofmeasure.org" : quantity.System),
+                        UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? FhirConstants.DefaultQuantityUnitSystem : quantity.System),
                         Relationships = new List<ActRelationship>(),
                         Participations = new List<ActParticipation>()
                     };
@@ -222,8 +239,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         ValueType = "ST",
                         Value = fhirString.Value,
-                        Participations = new List<ActParticipation>(),
-                        Relationships = new List<ActRelationship>()
+                        Participations = new List<ActParticipation>()
                     };
                     break;
 
@@ -303,11 +319,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Participations = new List<ActParticipation>();
             if (resource.Subject != null)
             {
+
+
                 // if the subject is a UUID then add the record target key
                 // otherwise attempt to resolve the reference
-                retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ?
-                    new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) :
-                    new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
+                var subject = resource.Subject.Reference.StartsWith(UUID_PREFIX) ?
+                    new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(UUID_PREFIX.Length))) :
+                    new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource));
+
+                retVal.Participations.Add(subject);
                 //else 
                 //{
                 //    this.m_tracer.TraceError("Only UUID references are supported");
@@ -316,15 +336,71 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 //        param = "UUID"
                 //    }));
                 //}
+
+                var patientkey = subject.PlayerEntityKey.Value;
+
+                if (resource.Category?.Count > 0)
+                {
+                    var patientlists = m_ActRepository.Find(act => act.ClassConceptKey == ActClassKeys.List
+                            && act.Participations.Any(p => p.ParticipationRoleKey == ActParticipationKeys.RecordTarget && p.PlayerEntityKey == patientkey));
+
+                    foreach (var category in resource.Category)
+                    {
+                        if (null == category)
+                            continue;
+
+                        var listtypeconcept = DataTypeConverter.ToConcept(category);
+
+                        if (null == listtypeconcept) //List type is unknown.
+                        {
+                            throw new KeyNotFoundException(m_localizationService.GetString("error.messaging.fhir.observationResource.categoryNotFound", new
+                            {
+                                code = category.GetCoding()?.Code,
+                                system = category.GetCoding()?.System
+                            }));
+                        }
+
+                        var categorylist = patientlists.Where(l => l.TypeConceptKey == listtypeconcept.Key).FirstOrDefault();
+
+                        if (null == categorylist)
+                        {
+                            categorylist = new Act
+                            {
+                                ClassConceptKey = ActClassKeys.List,
+                                TypeConceptKey = listtypeconcept.Key,
+                                MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                                CreationTime = DateTimeOffset.Now,
+                                ActTime = DateTimeOffset.Now
+                            };
+
+                            categorylist.Participations = new List<ActParticipation>()
+                            {
+                                new ActParticipation { ParticipationRoleKey = ActParticipationKeys.RecordTarget, PlayerEntityKey = patientkey }
+                            };
+
+                            categorylist = m_ActRepository.Insert(categorylist);
+                        }
+
+                        //categorylist.Relationships.Add(new ActRelationship
+                        //{
+                        //    TargetAct = retVal,
+                        //    RelationshipTypeKey = ActRelationshipTypeKeys.HasComponent
+                        //});
+
+                        retVal.Relationships.Add(new ActRelationship { SourceEntity = categorylist, TargetAct = retVal, RelationshipTypeKey = ActRelationshipTypeKeys.HasComponent });
+                    }
+                }
             }
+
+
 
             //performer
             if (resource.Performer.Any())
             {
                 foreach (var res in resource.Performer)
                 {
-                    retVal.Participations.Add(res.Reference.StartsWith("urn:uuid:") ?
-                        new ActParticipation(ActParticipationKeys.Performer, Guid.Parse(res.Reference.Substring(9))) :
+                    retVal.Participations.Add(res.Reference.StartsWith(UUID_PREFIX) ?
+                        new ActParticipation(ActParticipationKeys.Performer, Guid.Parse(res.Reference.Substring(UUID_PREFIX.Length))) :
                         new ActParticipation(ActParticipationKeys.Performer, DataTypeConverter.ResolveEntity<Provider>(res, resource)));
 
                     //if (res.Reference.StartsWith("urn:uuid:"))

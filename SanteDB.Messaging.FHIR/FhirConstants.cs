@@ -68,5 +68,10 @@ namespace SanteDB.Messaging.FHIR
         /// Default quantity concept system
         /// </summary>
         public const string DefaultQuantityUnitSystem = "http://unitsofmeasure.org";
+
+        /// <summary>
+        /// Default category concepts
+        /// </summary>
+        public const string DefaultObservationCategorySystem = "http://terminology.hl7.org/CodeSystem/observation-category";
     }
 }

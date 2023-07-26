@@ -213,6 +213,9 @@
     <None Update="Data\004-FHIR-NameUseCodes.dataset">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Data\004-FHIR-ObservationCategory.dataset">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Data\004-FHIR-RoleCode.dataset">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

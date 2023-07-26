@@ -180,11 +180,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Site = DataTypeConverter.ToFhirCodeableConcept(model.SiteKey),
                 Route = DataTypeConverter.ToFhirCodeableConcept(model.RouteKey),
-                Dose = new Quantity
-                {
-                    Value = model.DoseQuantity,
-                    Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, "http://hl7.org/fhir/sid/ucum").GetCoding()?.Code
-                }
+                Dose = DataTypeConverter.ToQuantity(model.DoseQuantity, model.DoseUnitKey)
             };
 
             return retVal;
