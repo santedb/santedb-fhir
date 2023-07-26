@@ -4,7 +4,7 @@
     <CodeSystem xmlns="http://santedb.org/model">
       <id>8ab0391d-e939-45fa-9cc6-b7f58c95b631</id>
       <name>Service type</name>
-      <oid>urn:oid:2.16.840.1.113883.4.642.4.1145</oid>
+      <oid>2.16.840.1.113883.4.642.4.1145</oid>
       <authority>FHR_ServiceType</authority>
       <url>http://terminology.hl7.org/CodeSystem/service-type</url>
       <version>4.0.1</version>
