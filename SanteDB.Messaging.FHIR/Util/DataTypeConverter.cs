@@ -920,7 +920,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 else if (extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler) ||
                     extension.ExtensionType.ExtensionHandler == typeof(DictionaryExtensionHandler))
                 {
-                    extension.ExtensionValueXml = (fhirExtension.Value as Base64Binary).Value;
+                    extension.ExtensionValueData = (fhirExtension.Value as Base64Binary).Value;
                 }
                 else
                 {

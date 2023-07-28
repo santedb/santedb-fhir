@@ -4,7 +4,7 @@
     <CodeSystem xmlns="http://santedb.org/model">
       <id>9fef68aa-5304-475c-9eb0-4e213b8ad6ad</id>
       <name>Discharge disposition</name>
-      <oid>urn:oid:2.16.840.1.113883.4.642.1.1093</oid>
+      <oid>2.16.840.1.113883.4.642.1.1093</oid>
       <authority>DischargeDisposition</authority>
       <url>http://terminology.hl7.org/CodeSystem/discharge-disposition</url>
       <version>0.1.0</version>
