@@ -245,6 +245,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Query for substance administrations.
         /// </summary>
         /// <param name="query">The query to be executed</param>
+        /// <param name="fhirParameters">The fhir parameters provided in the query.</param>
+        /// <param name="hdsiParameters">The translated hdsi parameters that can be executed by the query.</param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
         protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {

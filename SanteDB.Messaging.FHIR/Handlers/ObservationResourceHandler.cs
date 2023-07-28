@@ -445,55 +445,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <summary>
-        /// Parameters
-        /// </summary>
-        //public override Bundle Query(NameValueCollection parameters)
-        //{
-        //    if (parameters == null)
-        //    {
-        //        throw new ArgumentNullException(nameof(parameters), ErrorMessages.ARGUMENT_NULL);
-        //    }
-
-        //    var query = QueryRewriter.RewriteFhirQuery(typeof(Observation), typeof(Core.Model.Acts.Observation), parameters, out var hdsiQuery);
-
-        //    IQueryResultSet hdsiResults = null;
-
-        //    if (parameters["value-concept"] != null)
-        //    {
-        //        var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiQuery);
-        //        hdsiResults = this.QueryEx(predicate);
-        //    }
-        //    else if (parameters["value-quantity"] != null)
-        //    {
-        //        var predicate = QueryExpressionParser.BuildLinqExpression<QuantityObservation>(hdsiQuery);
-        //        hdsiResults = this.QueryEx(predicate);
-        //    }
-        //    else
-        //    {
-        //        var predicate = QueryExpressionParser.BuildLinqExpression<Core.Model.Acts.Observation>(hdsiQuery);
-        //        hdsiResults = this.Query(predicate);
-        //    }
-
-        //    // TODO: Sorting
-        //    var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<SanteDB.Core.Model.Acts.Observation>();
-
-        //    // Return FHIR query result
-        //    var retVal = new FhirQueryResult("Observation")
-        //    {
-        //        Results = results.Select(this.MapToFhir).Select(o => new Bundle.EntryComponent()
-        //        {
-        //            Resource = o,
-        //            Search = new Bundle.SearchComponent() { Mode = Bundle.SearchEntryMode.Match },
-        //        }).ToList(),
-        //        Query = query,
-        //        TotalResults = totalResults
-        //    };
-
-        //    base.ProcessIncludes(results, parameters, retVal);
-        //    return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.SearchType, this.ResourceType, MessageUtil.CreateBundle(retVal, Bundle.BundleType.Searchset)) as Bundle;
-        //}
-
-        /// <summary>
         /// Get included resources
         /// </summary>
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Acts.Observation resource, IEnumerable<IncludeInstruction> includePaths)

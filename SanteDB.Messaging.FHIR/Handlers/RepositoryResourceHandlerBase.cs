@@ -44,7 +44,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         where TFhirResource : Resource, new()
         where TModel : IdentifiedData, new()
     {
-        // Repository service model
+        /// <summary>
+        /// Repository resource model.
+        /// </summary>
         protected IRepositoryService<TModel> m_repository;
 
         private IRepositoryService<Core.Model.Collection.Bundle> m_bundleRepository;

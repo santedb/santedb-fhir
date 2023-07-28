@@ -122,7 +122,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-        /// <inheritdoc/>
         //protected override IQueryResultSet<SubstanceAdministration> QueryInternal(Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         //{
         //    // TODO: Hook this up to the forecaster
@@ -167,6 +166,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             throw new NotImplementedException(ErrorMessages.NOT_SUPPORTED_IMPLEMENTATION);
         }
 
+        /// <inheritdoc/>
         protected override IQueryResultSet<SubstanceAdministration> QueryInternal(Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             throw new NotImplementedException(ErrorMessages.NOT_SUPPORTED_IMPLEMENTATION);

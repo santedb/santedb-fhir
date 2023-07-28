@@ -44,6 +44,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
         }
 
+        /// <inheritdoc />
         protected override IEnumerable<Resource> GetIncludes(Material resource, IEnumerable<IncludeInstruction> includePaths)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));
@@ -65,6 +66,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             { Code = o });
         }
 
+        /// <inheritdoc />
         protected override IEnumerable<Resource> GetReverseIncludes(Material resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException(this.m_localizationService.GetString("error.type.NotImplementedException.userMessage"));

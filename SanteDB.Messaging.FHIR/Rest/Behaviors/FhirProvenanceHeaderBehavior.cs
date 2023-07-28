@@ -38,8 +38,6 @@ namespace SanteDB.Messaging.FHIR.Rest.Behaviors
         private readonly FhirProvenanceHeaderConfiguration m_settings;
         private readonly ISecurityRepositoryService m_securityRespository;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(FhirProvenanceHeaderBehavior));
-        private readonly IDeviceIdentityProviderService m_deviceIdentityProvider;
-        private readonly IIdentityProviderService m_userIdentityProvider;
         private readonly IDataSigningService m_dataSigningService;
 
         /// <summary>

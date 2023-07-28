@@ -871,6 +871,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Converts an <see cref="Extension"/> instance to an <see cref="ActExtension"/> instance.
         /// </summary>
         /// <param name="fhirExtension">The FHIR extension.</param>
+        /// <param name="context">The context object which the extension is attached to.</param>
         /// <returns>Returns the converted act extension instance.</returns>
         /// <exception cref="System.ArgumentNullException">fhirExtension - Value cannot be null</exception>
         public static EntityExtension ToEntityExtension(Extension fhirExtension, IdentifiedData context)

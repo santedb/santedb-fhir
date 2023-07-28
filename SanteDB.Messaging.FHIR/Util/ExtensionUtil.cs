@@ -253,6 +253,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Execute the BeforeSendResponse function allowing the behavior pipeline to inspect the message
         /// </summary>
         /// <param name="interaction">The interaction being called</param>
+        /// <param name="resourceType">The resource type in the FHIR version.</param>
         /// <param name="resource">The resource being actioned</param>
         /// <returns>The updated resource</returns>
         /// <exception cref="SanteDB.Core.Exceptions.DetectedIssueException">If there is a detected/validation issue</exception>
@@ -270,6 +271,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// Execute the AfterReceive function allowing the behavior pipeline to inspect the message
         /// </summary>
         /// <param name="interaction">The interaction being called</param>
+        /// <param name="resourceType">The type of resource that is passed to <paramref name="resource"/>.</param>
         /// <param name="resource">The resource being actioned</param>
         /// <returns>The updated resource</returns>
         /// <exception cref="SanteDB.Core.Exceptions.DetectedIssueException">If there is a detected/validation issue</exception>

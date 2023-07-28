@@ -331,8 +331,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Create channel
         /// </summary>
+        /// <param name="name">The pub-sub channel definition name.</param>
         /// <param name="fhirChannel"></param>
-        /// <returns></returns>
+        /// <param name="mode">Pass <see cref="TransactionMode.Commit"/> to register the channel. Other values will validate the parameters only.</param>
+        /// <returns>The channel definition that is created. If <paramref name="mode"/> is not <see cref="TransactionMode.Commit"/>, this value will be <c>null</c>.</returns>
         private PubSubChannelDefinition CreateChannel(String name, Subscription.ChannelComponent fhirChannel, TransactionMode mode)
         {
             var settings = fhirChannel.Header.Select(o => o.Split(':')).ToDictionary(o => o[0], o => o[1]);

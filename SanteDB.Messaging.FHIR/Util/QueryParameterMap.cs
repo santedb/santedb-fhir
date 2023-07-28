@@ -27,6 +27,7 @@ using System.Xml.Serialization;
 namespace SanteDB.Messaging.FHIR.Util
 {
 
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
     /// <summary>
     /// Identifies the type of rewrite
     /// </summary>
@@ -52,6 +53,7 @@ namespace SanteDB.Messaging.FHIR.Util
         [XmlEnum("indicator")]
         Indicator,
     }
+#pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
 
     /// <summary>
     /// Represents a query parameter map

@@ -133,11 +133,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return relative;
         }
 
-        /// <summary>
-        /// Query for substance administrations that aren't immunizations
-        /// </summary>
-        /// <param name="query">The query.</param>
-        /// <returns>Returns the list of models which match the given parameters.</returns>
+        /// <inheritdoc />
         protected override IQueryResultSet<EntityRelationship> QueryInternal(System.Linq.Expressions.Expression<Func<EntityRelationship, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             System.Linq.Expressions.Expression typeReference = null;
