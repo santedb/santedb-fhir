@@ -44,10 +44,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class MedicationAdministrationResourceHandler : RepositoryResourceHandlerBase<MedicationAdministration, SubstanceAdministration>
     {
-        private readonly Guid[] IZ_TYPES =
-        {
-            Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47"), Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178"), Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5")
-        };
+        //private static readonly Guid INITIAL_IMMUNIZATION = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
+        //private static readonly Guid IMMUNIZATION = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
+        //private static readonly Guid BOOSTER_IMMUNIZATION = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
+
+        private static readonly Guid DRUG_THERAPY = Guid.Parse("7D84A057-1FCC-4054-A51F-B77D230FC6D1");
+
+        //private readonly Guid[] IZ_TYPES =
+        //{
+        //    INITIAL_IMMUNIZATION, IMMUNIZATION, BOOSTER_IMMUNIZATION
+        //};
 
         /// <summary>
         /// Create a new resource handler
@@ -61,7 +67,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public override bool CanMapObject(object instance)
         {
-            return instance is Immunization || instance is SubstanceAdministration sbadm && !this.IZ_TYPES.Contains(sbadm.TypeConceptKey.GetValueOrDefault());
+            return instance is Immunization || instance is SubstanceAdministration sbadm && sbadm.TypeConceptKey == DRUG_THERAPY;
         }
 
         /// <summary>
@@ -228,7 +234,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             }
 
-            retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Category);
+            retVal.TypeConceptKey = DRUG_THERAPY;
+
+            //if (null != resource.Category)
+            //{
+            //    retVal.TypeConcept = DataTypeConverter.ToConcept(resource.Category);
+            //}
 
             if (resource.Medication is ResourceReference medicationreference)
             {
@@ -312,17 +323,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <inheritdoc />
-		protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
-        {
-            var drugTherapy = Guid.Parse("7D84A057-1FCC-4054-A51F-B77D230FC6D1");
+		//protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+  //      {
+  //          var drugTherapy = Guid.Parse("7D84A057-1FCC-4054-A51F-B77D230FC6D1");
 
-            var obsoletionReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.StatusConceptKey))), typeof(Guid)), Expression.Constant(StatusKeys.Completed));
-            var typeReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), Expression.Constant(drugTherapy));
+  //          var obsoletionReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.StatusConceptKey))), typeof(Guid)), Expression.Constant(StatusKeys.Completed));
+  //          var typeReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), Expression.Constant(drugTherapy));
 
-            query = Expression.Lambda<Func<SubstanceAdministration, bool>>(Expression.AndAlso(Expression.AndAlso(obsoletionReference, query.Body), typeReference), query.Parameters);
+  //          query = Expression.Lambda<Func<SubstanceAdministration, bool>>(Expression.AndAlso(Expression.AndAlso(obsoletionReference, query.Body), typeReference), query.Parameters);
 
-            return this.m_repository.Find(query);
-        }
+  //          return this.m_repository.Find(query);
+  //      }
 
 
     }

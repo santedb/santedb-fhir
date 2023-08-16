@@ -139,7 +139,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Severity
-            if (severity != null)
+            if (severity?.Any() == true)
             {
                 retVal.Severity = DataTypeConverter.ToFhirCodeableConcept((severity as CodedObservation).ValueKey);
             }
@@ -156,7 +156,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (recordTarget != null)
             {
-                this.m_traceSource.TraceInfo("RCT: {0}", recordTarget.PlayerEntityKey);
+                //this.m_traceSource.TraceInfo("RCT: {0}", recordTarget.PlayerEntityKey);
                 retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>("PlayerEntity"));
             }
 
@@ -199,6 +199,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Participations = new List<ActParticipation>(),
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                TypeConceptKey = ObservationTypeKeys.Condition
             };
 
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
@@ -286,9 +287,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Authororiginator, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
             }
 
-            
-
-            retVal.Value = DataTypeConverter.ToConcept(resource.Code);
 
             return retVal;
         }

@@ -239,12 +239,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         ValueType = "ST",
                         Value = fhirString.Value,
-                        Participations = new List<ActParticipation>()
+                        Participations = new List<ActParticipation>(),
+                        Relationships = new List<ActRelationship>()
                     };
                     break;
 
                 default:
-                    retVal = new Core.Model.Acts.Observation();
+                    retVal = new Core.Model.Acts.Observation()
+                    {
+                        Participations = new List<ActParticipation>(),
+                        Relationships = new List<ActRelationship>()
+                    };
                     break;
             }
 

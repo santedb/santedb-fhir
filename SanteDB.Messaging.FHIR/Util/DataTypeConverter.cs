@@ -1615,13 +1615,44 @@ namespace SanteDB.Messaging.FHIR.Util
                     typeMnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.System);
                 }
 
-                return new EntityTelecomAddress
+                
+
+                var address = new EntityTelecomAddress
                 {
-                    Value = fhirTelecom.Value,
                     AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
                     TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key,
                     ExternalKey = m_configuration?.PersistElementId == true ? fhirTelecom.ElementId : null
                 };
+
+                if (typeMnemonic == "other")
+                {
+                    address.IETFValue = fhirTelecom.Value;
+                }
+                else
+                {
+                    var val = fhirTelecom.Value;
+
+                    if (val.StartsWith("mailto:", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        val = val.Substring("mailto:".Length);
+                    }
+                    else if (val.StartsWith("tel:", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        val = val.Substring("tel:".Length);
+                    }
+                    else if (val.StartsWith("sms:", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        val = val.Substring("sms:".Length);
+                    }
+                    else if (val.StartsWith("fax:", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        val = val.Substring("fax:".Length);
+                    }
+
+                    address.Value = val;
+                }
+
+                return address;
             }
             return null;
         }
@@ -1704,230 +1735,230 @@ namespace SanteDB.Messaging.FHIR.Util
 
                 var codeSystemService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
+                
+
                 // No preferred CS then all
-                if (!preferredCodeSystem.Any())
+                if (preferredCodeSystem.Any())
                 {
-                    var refTerms = codeSystemService.FindReferenceTermsByConcept(conceptKey.Value, String.Empty);
-                    if (refTerms.Any())
+                    var csrefterms = preferredCodeSystem.Select(o => codeSystemService.GetConceptReferenceTerm(conceptKey.Value, o)).OfType<ReferenceTerm>().ToArray();
+                    if (csrefterms.Any())
                     {
                         return new CodeableConcept
                         {
-                            Coding = refTerms.Where(o => o.RelationshipTypeKey == ConceptRelationshipTypeKeys.SameAs).Select(o => ToCoding(o.LoadProperty(t => t.ReferenceTerm))).ToList(),
+                            Coding = csrefterms.Select(o => ToCoding(o)).ToList(),
                             Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
                         };
                     }
                     else
                     {
-                        var concept = codeSystemService.Get(conceptKey.Value);
-                        return new CodeableConcept("http://santedb.org/concept", concept.Mnemonic)
-                        {
-                            Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
-                        };
+                        //TODO: Trace this
                     }
+                }
+
+                var refTerms = codeSystemService.FindReferenceTermsByConcept(conceptKey.Value, String.Empty);
+                if (refTerms.Any())
+                {
+                    return new CodeableConcept
+                    {
+                        Coding = refTerms.Where(o => o.RelationshipTypeKey == ConceptRelationshipTypeKeys.SameAs).Select(o => ToCoding(o.LoadProperty(t => t.ReferenceTerm))).ToList(),
+                        Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                    };
                 }
                 else
                 {
-                    var refTerms = preferredCodeSystem.Select(o => codeSystemService.GetConceptReferenceTerm(conceptKey.Value, o)).OfType<ReferenceTerm>().ToArray();
-                    if (refTerms.Any())
+                    var concept = codeSystemService.Get(conceptKey.Value);
+                    return new CodeableConcept("http://santedb.org/concept", concept.Mnemonic)
                     {
-                        return new CodeableConcept
-                        {
-                            Coding = refTerms.Select(o => ToCoding(o)).ToList(),
-                            Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
-                        };
-                    }
-                    else
-                    {
-                        return null;
-                    }
+                        Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                    };
                 }
+            }
+        }
+    
 
+    /// <summary>
+    /// Converts an <see cref="EntityName"/> instance to a <see cref="HumanName"/> instance.
+    /// </summary>
+    /// <param name="entityName">Name of the entity.</param>
+    /// <returns>Returns the mapped FHIR human name.</returns>
+    public static HumanName ToFhirHumanName(EntityName entityName)
+    {
+        traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity name");
+
+        if (entityName == null)
+        {
+            return null;
+        }
+
+        // Return value
+        var retVal = new HumanName
+        {
+            Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.NameUseKey, "http://hl7.org/fhir/name-use"),
+            ElementId = m_configuration?.PersistElementId == true ? entityName.ExternalKey : null
+        };
+
+        // Process components
+        foreach (var com in entityName.LoadCollection<EntityNameComponent>(nameof(EntityName.Component)))
+        {
+            if (string.IsNullOrEmpty(com.Value))
+            {
+                continue;
+            }
+
+            if (com.ComponentTypeKey == NameComponentKeys.Given)
+            {
+                retVal.GivenElement.Add(new FhirString(com.Value));
+            }
+            else if (com.ComponentTypeKey == NameComponentKeys.Family)
+            {
+                retVal.FamilyElement = new FhirString(com.Value);
+            }
+            else if (com.ComponentTypeKey == NameComponentKeys.Prefix)
+            {
+                retVal.PrefixElement.Add(new FhirString(com.Value));
+            }
+            else if (com.ComponentTypeKey == NameComponentKeys.Suffix)
+            {
+                retVal.SuffixElement.Add(new FhirString(com.Value));
             }
         }
 
-        /// <summary>
-        /// Converts an <see cref="EntityName"/> instance to a <see cref="HumanName"/> instance.
-        /// </summary>
-        /// <param name="entityName">Name of the entity.</param>
-        /// <returns>Returns the mapped FHIR human name.</returns>
-        public static HumanName ToFhirHumanName(EntityName entityName)
+        return retVal;
+    }
+
+    /// <summary>
+    /// To FHIR enumeration
+    /// </summary>
+    public static TEnum? ToFhirEnumeration<TEnum>(Guid? conceptKey, string codeSystem, bool throwIfNotFound = false) where TEnum : struct
+    {
+        var coding = DataTypeConverter.ToFhirCodeableConcept(conceptKey, codeSystem);
+        if (coding != null)
         {
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity name");
+            return Hl7.Fhir.Utility.EnumUtility.ParseLiteral<TEnum>(coding.Coding.First().Code, true);
+        }
+        else if (throwIfNotFound)
+        {
+            throw new ConstraintException($"Cannot find FHIR mapping for Concept {conceptKey}");
+        }
+        else
+        {
+            return null;
+        }
+    }
 
-            if (entityName == null)
-            {
-                return null;
-            }
+    /// <summary>
+    /// Converts a <see cref="IdentifierBase{TBoundModel}" /> instance to an <see cref="Identifier" /> instance.
+    /// </summary>
+    /// <typeparam name="TBoundModel">The type of the bound model.</typeparam>
+    /// <param name="identifier">The identifier.</param>
+    /// <returns>Returns the mapped FHIR identifier.</returns>
+    public static Identifier ToFhirIdentifier<TBoundModel>(IdentifierBase<TBoundModel> identifier) where TBoundModel : VersionedEntityData<TBoundModel>, new()
+    {
+        traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity identifier");
 
-            // Return value
-            var retVal = new HumanName
-            {
-                Use = DataTypeConverter.ToFhirEnumeration<HumanName.NameUse>(entityName.NameUseKey, "http://hl7.org/fhir/name-use"),
-                ElementId = m_configuration?.PersistElementId == true ? entityName.ExternalKey : null
-            };
-
-            // Process components
-            foreach (var com in entityName.LoadCollection<EntityNameComponent>(nameof(EntityName.Component)))
-            {
-                if (string.IsNullOrEmpty(com.Value))
-                {
-                    continue;
-                }
-
-                if (com.ComponentTypeKey == NameComponentKeys.Given)
-                {
-                    retVal.GivenElement.Add(new FhirString(com.Value));
-                }
-                else if (com.ComponentTypeKey == NameComponentKeys.Family)
-                {
-                    retVal.FamilyElement = new FhirString(com.Value);
-                }
-                else if (com.ComponentTypeKey == NameComponentKeys.Prefix)
-                {
-                    retVal.PrefixElement.Add(new FhirString(com.Value));
-                }
-                else if (com.ComponentTypeKey == NameComponentKeys.Suffix)
-                {
-                    retVal.SuffixElement.Add(new FhirString(com.Value));
-                }
-            }
-
-            return retVal;
+        if (identifier == null)
+        {
+            return null;
         }
 
-        /// <summary>
-        /// To FHIR enumeration
-        /// </summary>
-        public static TEnum? ToFhirEnumeration<TEnum>(Guid? conceptKey, string codeSystem, bool throwIfNotFound = false) where TEnum : struct
+        var imetaService = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
+        var authority = imetaService.Get(identifier.IdentityDomainKey.Value);
+        var retVal = new Identifier
         {
-            var coding = DataTypeConverter.ToFhirCodeableConcept(conceptKey, codeSystem);
-            if (coding != null)
-            {
-                return Hl7.Fhir.Utility.EnumUtility.ParseLiteral<TEnum>(coding.Coding.First().Code, true);
-            }
-            else if (throwIfNotFound)
-            {
-                throw new ConstraintException($"Cannot find FHIR mapping for Concept {conceptKey}");
-            }
-            else
-            {
-                return null;
-            }
-        }
+            System = authority?.Url ?? $"urn:oid:{authority?.Oid}",
+            Type = ToFhirCodeableConcept(identifier.IdentifierTypeKey),
+            Value = identifier.Value,
+            ElementId = m_configuration?.PersistElementId == true ? identifier.ExternalKey : null
+        };
 
-        /// <summary>
-        /// Converts a <see cref="IdentifierBase{TBoundModel}" /> instance to an <see cref="Identifier" /> instance.
-        /// </summary>
-        /// <typeparam name="TBoundModel">The type of the bound model.</typeparam>
-        /// <param name="identifier">The identifier.</param>
-        /// <returns>Returns the mapped FHIR identifier.</returns>
-        public static Identifier ToFhirIdentifier<TBoundModel>(IdentifierBase<TBoundModel> identifier) where TBoundModel : VersionedEntityData<TBoundModel>, new()
+        if (identifier.ExpiryDate.HasValue || identifier.IssueDate.HasValue)
         {
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity identifier");
-
-            if (identifier == null)
+            retVal.Period = new Period()
             {
-                return null;
-            }
-
-            var imetaService = ApplicationServiceContext.Current.GetService<IIdentityDomainRepositoryService>();
-            var authority = imetaService.Get(identifier.IdentityDomainKey.Value);
-            var retVal = new Identifier
-            {
-                System = authority?.Url ?? $"urn:oid:{authority?.Oid}",
-                Type = ToFhirCodeableConcept(identifier.IdentifierTypeKey),
-                Value = identifier.Value,
-                ElementId = m_configuration?.PersistElementId == true ? identifier.ExternalKey : null
-            };
-
-            if (identifier.ExpiryDate.HasValue || identifier.IssueDate.HasValue)
-            {
-                retVal.Period = new Period()
-                {
-                    StartElement = identifier.IssueDate.HasValue ? new FhirDateTime(identifier.IssueDate.Value) : null,
-                    EndElement = identifier.ExpiryDate.HasValue ? new FhirDateTime(identifier.ExpiryDate.Value) : null
-                };
-            }
-
-            return retVal;
-        }
-
-        /// <summary>
-        /// Converts an <see cref="EntityTelecomAddress"/> instance to <see cref="ContactPoint"/> instance.
-        /// </summary>
-        /// <param name="telecomAddress">The telecom address.</param>
-        /// <returns>Returns the mapped FHIR telecom.</returns>
-        public static ContactPoint ToFhirTelecom(EntityTelecomAddress telecomAddress)
-        {
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity telecom address");
-
-            return new ContactPoint
-            {
-                System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
-                Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
-                Value = telecomAddress.IETFValue,
-                ElementId = m_configuration?.PersistElementId == true ? telecomAddress.ExternalKey : null
+                StartElement = identifier.IssueDate.HasValue ? new FhirDateTime(identifier.IssueDate.Value) : null,
+                EndElement = identifier.ExpiryDate.HasValue ? new FhirDateTime(identifier.ExpiryDate.Value) : null
             };
         }
 
-        /// <summary>
-        /// Add provenance information to the target entity
-        /// </summary>
-        public static void AddContextProvenanceData(IdentifiedData targetEntity)
-        {
-            object provenanceObject = null;
-            if (RestOperationContext.Current?.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out provenanceObject) != true ||
-                !(provenanceObject is Provenance prov))
-            {
-                return;
-            }
+        return retVal;
+    }
 
-            if (prov.Location != null)
+    /// <summary>
+    /// Converts an <see cref="EntityTelecomAddress"/> instance to <see cref="ContactPoint"/> instance.
+    /// </summary>
+    /// <param name="telecomAddress">The telecom address.</param>
+    /// <returns>Returns the mapped FHIR telecom.</returns>
+    public static ContactPoint ToFhirTelecom(EntityTelecomAddress telecomAddress)
+    {
+        traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity telecom address");
+
+        return new ContactPoint
+        {
+            System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
+            Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
+            Value = telecomAddress.IETFValue,
+            ElementId = m_configuration?.PersistElementId == true ? telecomAddress.ExternalKey : null
+        };
+    }
+
+    /// <summary>
+    /// Add provenance information to the target entity
+    /// </summary>
+    public static void AddContextProvenanceData(IdentifiedData targetEntity)
+    {
+        object provenanceObject = null;
+        if (RestOperationContext.Current?.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out provenanceObject) != true ||
+            !(provenanceObject is Provenance prov))
+        {
+            return;
+        }
+
+        if (prov.Location != null)
+        {
+            var target = DataTypeConverter.ResolveEntity<Place>(prov.Location, null);
+            switch (targetEntity)
             {
-                var target = DataTypeConverter.ResolveEntity<Place>(prov.Location, null);
+                case Entity ent:
+                    ent.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.ServiceDeliveryLocation, target));
+                    break;
+                case Act act:
+                    act.LoadProperty(o => o.Participations).Add(new ActParticipation(ActParticipationKeys.Location, target));
+                    break;
+            }
+        }
+
+        if (prov.Agent != null)
+        {
+            foreach (var agnt in prov.Agent)
+            {
+                if (agnt.Who == null)
+                {
+                    throw new ArgumentNullException($"{nameof(prov.Agent)}.{nameof(agnt.Who)}");
+                }
+                var agent = DataTypeConverter.ResolveEntity<Entity>(agnt.Who, null);
+                if (agent == null)
+                {
+                    throw new KeyNotFoundException(agnt.Who.Identifier.ToString());
+                }
+
+                var role = agnt.Role.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
+                if (role == null)
+                {
+                    throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.CodeInvalid, $"{agnt.Role.First().Coding.First().Code} is not registered in SanteDB");
+                }
+
                 switch (targetEntity)
                 {
                     case Entity ent:
-                        ent.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.ServiceDeliveryLocation, target));
+                        ent.LoadProperty(o => o.Relationships).Add(new EntityRelationship(role.Key, agent));
                         break;
                     case Act act:
-                        act.LoadProperty(o => o.Participations).Add(new ActParticipation(ActParticipationKeys.Location, target));
+                        act.LoadProperty(o => o.Participations).Add(new ActParticipation(role.Key, agent));
                         break;
                 }
-            }
 
-            if (prov.Agent != null)
-            {
-                foreach (var agnt in prov.Agent)
-                {
-                    if (agnt.Who == null)
-                    {
-                        throw new ArgumentNullException($"{nameof(prov.Agent)}.{nameof(agnt.Who)}");
-                    }
-                    var agent = DataTypeConverter.ResolveEntity<Entity>(agnt.Who, null);
-                    if (agent == null)
-                    {
-                        throw new KeyNotFoundException(agnt.Who.Identifier.ToString());
-                    }
-
-                    var role = agnt.Role.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
-                    if (role == null)
-                    {
-                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, IssueType.CodeInvalid, $"{agnt.Role.First().Coding.First().Code} is not registered in SanteDB");
-                    }
-
-                    switch (targetEntity)
-                    {
-                        case Entity ent:
-                            ent.LoadProperty(o => o.Relationships).Add(new EntityRelationship(role.Key, agent));
-                            break;
-                        case Act act:
-                            act.LoadProperty(o => o.Participations).Add(new ActParticipation(role.Key, agent));
-                            break;
-                    }
-
-                }
             }
         }
     }
+}
 }
