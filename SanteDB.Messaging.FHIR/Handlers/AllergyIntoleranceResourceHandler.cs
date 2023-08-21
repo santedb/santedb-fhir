@@ -30,6 +30,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
@@ -219,7 +220,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Relationships = new List<ActRelationship>(),
                 Participations = new List<ActParticipation>(),
                 Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList(),
-                MoodConceptKey = MoodConceptKeys.Eventoccurrence
+                MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
             switch (resource.ClinicalStatus.TypeName)
@@ -376,12 +378,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query which filters only allergies and intolerances
         /// </summary>
-        protected override IQueryResultSet<CodedObservation> Query(Expression<Func<CodedObservation, bool>> query)
+        protected override IQueryResultSet<CodedObservation> QueryInternal(Expression<Func<CodedObservation, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.AllergyIntoleranceTypes, query.Parameters[0]);
             query = System.Linq.Expressions.Expression.Lambda<Func<CodedObservation, bool>>(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), query.Parameters);
-            return base.Query(query);
+            return base.QueryInternal(query, fhirParameters, hdsiParameters);
         }
+
 
         /// <summary>
         /// Get interactions

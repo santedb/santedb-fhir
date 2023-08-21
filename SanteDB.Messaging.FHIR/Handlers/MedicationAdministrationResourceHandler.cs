@@ -31,6 +31,7 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using static Hl7.Fhir.Model.CapabilityStatement;
@@ -156,8 +157,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Encounter
             var erService = ApplicationServiceContext.Current.GetService<IDataPersistenceService<EntityRelationship>>();
-            var enc = erService.Query(o => o.TargetEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.ObsoleteVersionSequenceId == null, AuthenticationContext.Current.Principal);
-            if (enc != null)
+            var enc = erService.Query(o => o.TargetEntityKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.ObsoleteVersionSequenceId == null, AuthenticationContext.Current.Principal)?.ToArray();
+            if (enc?.Any() == true)
             {
                 retVal.EventHistory = enc.Select(o => DataTypeConverter.CreateNonVersionedReference<Encounter>(o.TargetEntityKey)).ToList();
                 // TODO: Encounter
@@ -179,11 +180,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Site = DataTypeConverter.ToFhirCodeableConcept(model.SiteKey),
                 Route = DataTypeConverter.ToFhirCodeableConcept(model.RouteKey),
-                Dose = new Quantity
-                {
-                    Value = model.DoseQuantity,
-                    Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, "http://hl7.org/fhir/sid/ucum").GetCoding()?.Code
-                }
+                Dose = DataTypeConverter.ToQuantity(model.DoseQuantity, model.DoseUnitKey)
             };
 
             return retVal;
@@ -198,7 +195,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Relationships = new List<ActRelationship>(),
                 Participations = new List<ActParticipation>(),
-                Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList()
+                Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList(),
+                MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
             retVal.ReasonConcept = DataTypeConverter.ToConcept(resource.StatusReason.FirstOrDefault());
@@ -283,6 +282,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.StartTime = DataTypeConverter.ToDateTimeOffset(effectiveperiod.Start);
                 retVal.StopTime = DataTypeConverter.ToDateTimeOffset(effectiveperiod.End);
             }
+            else if (resource.Effective is FhirDateTime effectivetime)
+            {
+                retVal.ActTime = DataTypeConverter.ToDateTimeOffset(effectivetime);
+            }
 
             if (resource.Performer?.Any() == true)
             {
@@ -302,18 +305,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Site = DataTypeConverter.ToConcept(resource.Dosage.Site);
                 retVal.Route = DataTypeConverter.ToConcept(resource.Dosage.Route);
                 retVal.DoseQuantity = resource.Dosage.Dose.Value.GetValueOrDefault();
-                retVal.DoseUnit = DataTypeConverter.ToConcept(resource.Dosage.Dose.Unit, "http://hl7.org/fhir/sid/ucum");
+                retVal.DoseUnit = DataTypeConverter.ToConcept(resource.Dosage.Dose.Unit, string.IsNullOrWhiteSpace(resource.Dosage.Dose.System) ? "http://hl7.org/fhir/sid/ucum" : resource.Dosage.Dose.System);
             }
 
             return retVal;
         }
 
-        /// <summary>
-        /// Query for substance administrations that aren't immunizations
-        /// </summary>
-        /// <param name="query">The query which should be executed</param>
-        /// <returns>Returns the list of models which match the given parameters.</returns>
-		protected override IQueryResultSet<SubstanceAdministration> Query(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query)
+        /// <inheritdoc />
+		protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             var drugTherapy = Guid.Parse("7D84A057-1FCC-4054-A51F-B77D230FC6D1");
 

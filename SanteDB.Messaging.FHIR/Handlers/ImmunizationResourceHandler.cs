@@ -22,12 +22,14 @@ using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
@@ -71,7 +73,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.DoseQuantity = new Quantity()
             {
-                Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, "http://hl7.org/fhir/sid/ucum")?.GetCoding().Code,
+                Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code,
                 Value = model.DoseQuantity
             };
             retVal.RecordedElement = new FhirDateTime(model.ActTime.Value); // TODO: This is probably not the best place to put this?
@@ -150,8 +152,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var substanceAdministration = new SubstanceAdministration
             {
                 ActTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedElement).GetValueOrDefault(),
+                Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 DoseQuantity = resource.DoseQuantity?.Value ?? 0,
-                DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, "http://hl7.org/fhir/sid/ucum") : null,
+                DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, string.IsNullOrWhiteSpace(resource.DoseQuantity.System) ? FhirConstants.DefaultQuantityUnitSystem : resource.DoseQuantity.System) : null,
                 Extensions = resource.Extension?.Select(DataTypeConverter.ToActExtension).ToList(),
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToActIdentifier).ToList(),
                 Key = Guid.NewGuid(),
@@ -242,8 +245,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Query for substance administrations.
         /// </summary>
         /// <param name="query">The query to be executed</param>
+        /// <param name="fhirParameters">The fhir parameters provided in the query.</param>
+        /// <param name="hdsiParameters">The translated hdsi parameters that can be executed by the query.</param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected override IQueryResultSet<SubstanceAdministration> Query(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query)
+        protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(StatusKeys.Completed));
             var typeReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Or,

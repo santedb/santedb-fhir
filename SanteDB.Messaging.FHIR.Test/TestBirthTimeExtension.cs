@@ -75,7 +75,9 @@ namespace SanteDB.Messaging.FHIR.Test
             var birthDate = extension.Value as FhirDateTime;
 
             Assert.IsNotNull(birthDate);
+#pragma warning disable CS0618 // Type or member is obsolete
             Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23), birthDate);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             var parsedBirthTime = m_extension.Parse(extension, person);
 
@@ -107,7 +109,9 @@ namespace SanteDB.Messaging.FHIR.Test
             var birthDate = extension.Value as FhirDateTime;
 
             Assert.IsNotNull(birthDate);
+#pragma warning disable CS0618 // Type or member is obsolete
             Assert.AreEqual(new FhirDateTime(1980, 4, 6, 2, 3, 23), birthDate);
+#pragma warning restore CS0618 // Type or member is obsolete
 
             var parsedBirthTime = m_extension.Parse(extension, new Place());
 

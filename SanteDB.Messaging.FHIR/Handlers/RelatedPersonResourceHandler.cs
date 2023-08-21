@@ -28,6 +28,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -132,12 +133,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return relative;
         }
 
-        /// <summary>
-        /// Query for substance administrations that aren't immunizations
-        /// </summary>
-        /// <param name="query">The query.</param>
-        /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected override IQueryResultSet<EntityRelationship> Query(System.Linq.Expressions.Expression<Func<EntityRelationship, bool>> query)
+        /// <inheritdoc />
+        protected override IQueryResultSet<EntityRelationship> QueryInternal(System.Linq.Expressions.Expression<Func<EntityRelationship, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
             System.Linq.Expressions.Expression typeReference = null;
             System.Linq.Expressions.Expression typeProperty = System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(EntityRelationship).GetProperty(nameof(EntityRelationship.RelationshipTypeKey)));

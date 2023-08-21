@@ -10,11 +10,19 @@
   "code": {
     "coding": [
       {
-        "system": "http://santedb.org/conceptset/v3-ActClassClinicalDocument",
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActClass",
         "code": "DOCCLIN"
       }
     ],
     "text": "Clinical Document"
+  },
+  "category": {
+    "coding": [
+      {
+        "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+        "code":  "laboratory"
+      }
+    ]
   },
   "effectiveDateTime": "2021-11-29T08:06:32-05:00",
   "issued": "2021-08-01T08:06:32+01:00",

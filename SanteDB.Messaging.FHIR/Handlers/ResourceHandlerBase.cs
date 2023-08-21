@@ -33,6 +33,7 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -179,7 +180,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 // We want to map from TFhirResource to TModel
                 var modelInstance = this.MapToModel(fhirResource);
-
                 if (modelInstance == null)
                 {
                     throw new ArgumentException(this.m_localizationService.GetString("error.type.InvalidDataException.userMessage", new
@@ -187,6 +187,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         param = "Model"
                     }));
                 }
+                DataTypeConverter.AddContextProvenanceData(modelInstance);
 
                 var result = this.Create(modelInstance, mode);
 
@@ -281,7 +282,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (parameters == null)
             {
                 this.m_traceSource.TraceError($"Argument {nameof(parameters)} null or empty");
-                throw new ArgumentNullException(ErrorMessages.ARGUMENT_NULL);
+                throw new ArgumentNullException(nameof(parameters), ErrorMessages.ARGUMENT_NULL);
             }
 
             FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(TFhirResource), typeof(TModel), parameters, out var hdsiQuery);
@@ -289,7 +290,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Do the query
             var predicate = QueryExpressionParser.BuildLinqExpression<TModel>(hdsiQuery, null, false, false);
 
-            var hdsiResults = this.Query(predicate);
+            var hdsiResults = this.QueryInternal(predicate, hdsiQuery, hdsiQuery);
             var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<TModel>();
 
             var auth = AuthenticationContext.Current;
@@ -438,6 +439,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     param = "Request"
                 }));
             }
+            DataTypeConverter.AddContextProvenanceData(modelInstance);
 
             // Guid identifier
             var guidId = Guid.Empty;
@@ -513,8 +515,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// Execute the specified query
         /// </summary>
         /// <param name="query">The query filter</param>
+        /// <param name="fhirParameters"></param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected abstract IQueryResultSet<TModel> Query(Expression<Func<TModel, bool>> query);
+        /// <param name="hdsiParameters"></param>
+        protected abstract IQueryResultSet<TModel> QueryInternal(Expression<Func<TModel, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters);
 
         /// <summary>
         /// Read the specified FHIR object.

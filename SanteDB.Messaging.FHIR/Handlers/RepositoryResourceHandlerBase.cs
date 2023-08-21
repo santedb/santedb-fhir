@@ -30,6 +30,7 @@ using SanteDB.Core.Services;
 using SanteDB.Rest.Common.Attributes;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -43,7 +44,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         where TFhirResource : Resource, new()
         where TModel : IdentifiedData, new()
     {
-        // Repository service model
+        /// <summary>
+        /// Repository resource model.
+        /// </summary>
         protected IRepositoryService<TModel> m_repository;
 
         private IRepositoryService<Core.Model.Collection.Bundle> m_bundleRepository;
@@ -108,21 +111,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return this.m_repository.Delete(modelId);
         }
 
-        /// <summary>
-        /// Query for patients.
-        /// </summary>
-        /// <param name="query">The query.</param>
-        /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected override IQueryResultSet<TModel> Query(Expression<Func<TModel, bool>> query)
+        /// <inheritdoc />
+        protected override IQueryResultSet<TModel> QueryInternal(Expression<Func<TModel, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
-            return this.QueryEx<TModel>(query);
+            return m_repository.Find(query);
         }
 
+
         /// <summary>
-        /// A query function which allows for changing of the return  type
+        /// Execute the specified query using a different type from <typeparamref name="TModel"/> which can be used to override the query type for special scenarios.
         /// </summary>
-        protected virtual IQueryResultSet<TReturn> QueryEx<TReturn>(Expression<Func<TReturn, bool>> query)
-            where TReturn : IdentifiedData
+        /// <param name="query">The query filter.</param>
+        /// <param name="fhirParameters">The fhir resource parameters as provided in the query request.</param>
+        /// <param name="hdsiParameters">The HDSI parameters as parsed using <typeparamref name="TModel"/>. If you need HDSI parameters for <typeparamref name="TData"/>, call <c>QueryRewriter.RewriteFhirQuery(typeof(TFhirResource), typeof(TModel), fhirParameters, out hdsiParameters) in your own implementation before calling this method.</c></param>
+        protected virtual IQueryResultSet<TData> QueryInternalEx<TData>(Expression<Func<TData, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+            where TData : IdentifiedData, TModel
         {
             // Obsoletion State is not used anymore
             //if (typeof(IHasState).IsAssignableFrom(typeof(TReturn)))
@@ -131,7 +134,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             //    query = System.Linq.Expressions.Expression.Lambda<Func<TReturn, bool>>(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), query.Parameters);
             //}
 
-            var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TReturn>>();
+            var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TData>>();
             return repo.Find(query);
         }
 

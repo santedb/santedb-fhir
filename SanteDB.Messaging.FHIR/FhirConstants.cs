@@ -28,6 +28,7 @@ namespace SanteDB.Messaging.FHIR
     public static class FhirConstants
     {
 
+        
         /// <summary>
         /// URI of the SanteDB FHIR profile
         /// </summary>
@@ -57,5 +58,20 @@ namespace SanteDB.Messaging.FHIR
         /// The object is empty and should be processed / updated at a later time
         /// </summary>
         public const string PlaceholderTag = "$fhir.placeholder";
+
+        /// <summary>
+        /// Provenance header name
+        /// </summary>
+        public const string ProvenanceHeaderName = "X-Provenance";
+
+        /// <summary>
+        /// Default quantity concept system
+        /// </summary>
+        public const string DefaultQuantityUnitSystem = "http://unitsofmeasure.org";
+
+        /// <summary>
+        /// Default category concepts
+        /// </summary>
+        public const string DefaultObservationCategorySystem = "http://terminology.hl7.org/CodeSystem/observation-category";
     }
 }
