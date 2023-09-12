@@ -19,6 +19,7 @@
  * Date: 2023-5-19
  */
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Query;
@@ -359,7 +360,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
 
                 // Valuse
-                foreach (var v in fhirQuery.GetValues(kv))
+                foreach (var v in fhirQuery.GetValues(kv).SelectMany(v => v.Split(','))) 
                 {
                     if (String.IsNullOrEmpty(v))
                     {
@@ -470,7 +471,16 @@ namespace SanteDB.Messaging.FHIR.Util
                                     {
                                         throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotFound, $"No authority for {data} found");
                                     }
-                                    hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
+
+                                    // Has an identifier
+                                    if (!String.IsNullOrEmpty(segs[1]))
+                                    {
+                                        hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
+                                    }
+                                    else
+                                    {
+                                        hdsiQuery.Add(String.Format("{0}.domain", parmMap.ModelQuery), aa.Key.ToString());
+                                    }
                                 }
                                 else
                                 {
