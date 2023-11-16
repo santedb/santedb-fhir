@@ -48,8 +48,12 @@ namespace SanteDB.Messaging.FHIR.Util
         Tag,
         [XmlEnum("string")]
         String,
-        [XmlEnum("int")]
+        [XmlEnum("number")]
         Int,
+        [XmlEnum("date")]
+        Date,
+        [XmlEnum("quantity")]
+        Quantity,
         [XmlEnum("indicator")]
         Indicator,
     }
