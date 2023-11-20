@@ -714,22 +714,6 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
-        /// Creates the resource.
-        /// </summary>
-        /// <typeparam name="TResource">The type of the t resource.</typeparam>
-        /// <param name="resource">The resource.</param>
-        /// <returns>TResource.</returns>
-        public static TResource CreateResource<TResource>(IVersionedData resource) where TResource : Resource, new()
-        {
-            var retVal = CreateResource<TResource>((IAnnotatedResource)resource);
-            retVal.VersionId = resource.VersionKey.ToString();
-            retVal.Meta.VersionId = resource.VersionKey?.ToString();
-
-            // Create all collections 
-            return retVal;
-        }
-
-        /// <summary>
         /// Create non versioned resource
         /// </summary>
         public static TResource CreateResource<TResource>(IAnnotatedResource resource) where TResource : Resource, new()
@@ -762,6 +746,13 @@ namespace SanteDB.Messaging.FHIR.Util
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
             {
                 DataTypeConverter.AddExtensions(extendableObject, fhirExtendable);
+            }
+
+
+            if (resource is IVersionedData vd)
+            {
+                retVal.VersionId = vd.VersionKey.ToString();
+                retVal.Meta.VersionId = vd.VersionKey?.ToString();
             }
 
             return retVal;
