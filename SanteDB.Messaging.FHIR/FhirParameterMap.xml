@@ -27,106 +27,106 @@
   </type>
   <type resource="ImmunizationRecommendation">
     <map fhir="vaccine-type" model="participation[Product].player.typeConcept" type="concept"/>
-    <map fhir="dose-number" model="doseSequence"/>
-    <map fhir="date" model="creationTime"/>
+    <map fhir="dose-number" model="doseSequence" type="number"/>
+    <map fhir="date" model="creationTime" type="date"/>
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="patient.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" />
-    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth"/>
+    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
+    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="date"/>
   </type>
   
   <type resource="Immunization">
     <map fhir="vaccine-code" model="participation[Consumable].player@ManufacturedMaterial.typeConcept" type="concept"/>
-    <map fhir="dose-sequence" model="doseSequence"/>
-    <map fhir="date" model="actTime"/>
+    <map fhir="dose-sequence" model="doseSequence" type="number"/>
+    <map fhir="date" model="actTime" type="date"/>
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="patient.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="patient.name" model="participation[RecordTarget].player@Patient.name.component.value" />
-    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Patient.dateOfBirth"/>
+    <map fhir="patient.name" model="participation[RecordTarget].player@Patient.name.component.value" type="string"/>
+    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Patient.dateOfBirth" type="date"/>
     <map fhir="patient.location.identifier" model="participation[RecordTarget].player@Patient.relationship[IncidentalServiceDeliveryLocation|DedicatedServiceDeliveryLocation|ServiceDeliveryLocation].target@Place.identifier" type="identifier"/>
-    <map fhir="in-catchment" model="tag[catchmentIndicator].value"/>
-    <map fhir="is-outreach" model="relationship[HasComponent].source.tag[outreach].value"/>
-    <map fhir="is-backEntry" model="tag[backEntry].value"/>
+    <map fhir="in-catchment" model="tag[catchmentIndicator].value" type="indicator"/>
+    <map fhir="is-outreach" model="relationship[HasComponent].source.tag[outreach].value" type="indicator"/>
+    <map fhir="is-backEntry" model="tag[backEntry].value" type="indicator"/>
     <map fhir="location" model="participation[Location].player" type="reference"/>
-    <map fhir="location.name" model="participation[Location].player@Place.name.component.value"/>
+    <map fhir="location.name" model="participation[Location].player@Place.name.component.value" type="string"/>
     <map fhir="location.identifier" model="participation[Location].player@Place.identifier" type="identifier"/>
   </type>
 
   <type resource="Patient">
     <map fhir="active" model="statusConcept.mnemonic=ACTIVE" type="indicator" />
-    <map fhir="telecom" model="telecom.value" />
-    <map fhir="name" model="name.component.value"/>
-    <map fhir="family" model="name.component[Family].value"/>
-    <map fhir="given" model="name.component[Given].value"/>
-    <map fhir="address" model="address.component.value"/>
-    <map fhir="address-city" model="address.component[City].value"/>
-    <map fhir="address-state" model="address.component[State].value"/>
-    <map fhir="address-country" model="address.component[Country].value"/>
-    <map fhir="address-postalcode" model="address.component[PostalCode].value"/>
-    <map fhir="state" model="address.component[State].value"/>
+    <map fhir="telecom" model="telecom.value" type="string"/>
+    <map fhir="name" model="name.component.value" type="string"/>
+    <map fhir="family" model="name.component[Family].value" type="string"/>
+    <map fhir="given" model="name.component[Given].value" type="string"/>
+    <map fhir="address" model="address.component.value" type="string"/>
+    <map fhir="address-city" model="address.component[City].value" type="string"/>
+    <map fhir="address-state" model="address.component[State].value" type="string"/>
+    <map fhir="address-country" model="address.component[Country].value" type="string"/>
+    <map fhir="address-postalcode" model="address.component[PostalCode].value" type="string"/>
+    <map fhir="state" model="address.component[State].value" type="string"/>
     <map fhir="multipleBirth" model="multipleBirthOrder=!null" type="indicator"/>
-    <map fhir="birthdate" model="dateOfBirth"/>
-    <map fhir="death-date" model="deceasedDate"/>
+    <map fhir="birthdate" model="dateOfBirth" type="string"/>
+    <map fhir="death-date" model="deceasedDate" type="date"/>
     <map fhir="deceased" model="deceasedDate=!null" type="indicator"/>
     <map fhir="gender" model="genderConcept" type="concept"/>
-    <map fhir="language" model="language.languageCode"/>
+    <map fhir="language" model="language.languageCode" type="string"/>
     <map fhir="link" model="relationship.target@Patient" type="reference"/>
-    <map fhir="phonetic" model="name.component.value" function=":(soundslike|$1)" />
+    <map fhir="phonetic" model="name.component.value" function=":(soundslike|$1)" type="string"/>
     <map fhir="identifier" model="identifier" type="identifier"/>
     <map fhir="general-practitioner" model="relationship[HealthcareProvider].target" type="reference"/>
-    <map fhir="general-practitioner.name" model="relationship[HealthcareProvider].target.name.component.value"/>
-    <map fhir="general-practitioner.address" model="relationship[HealthcareProvider].target.address.component.value"/>
-    <map fhir="organization" model="relationship[Scoper].target" type="reference"/>
-    <map fhir="organization.name" model="relationship[scoper].target.name.component.value"/>
-    <map fhir="organization.address" model="relationship[scoper].target.address.component.value"/>
-    <map fhir="registration-time" model="creationTime"/>
-    <map fhir="date" model="creationTime" />
+    <map fhir="general-practitioner.name" model="relationship[HealthcareProvider].target.name.component.value" type="string"/>
+    <map fhir="general-practitioner.address" model="relationship[HealthcareProvider].target.address.component.value" type="string"/>
+    <map fhir="organization" model="relationship[Scoper].target" type="reference" />
+    <map fhir="organization.name" model="relationship[scoper].target.name.component.value" type="string"/>
+    <map fhir="organization.address" model="relationship[scoper].target.address.component.value" type="string"/>
+    <map fhir="registration-time" model="creationTime" type="date"/>
+    <map fhir="date" model="creationTime" type="date"/>
   </type>
 
   <type resource="Observation">
     <map fhir="category" model="relationship[HasComponent].source.typeConcept" type="concept"/>
     <map fhir="code" model="typeConcept" type="concept"/>
     <map fhir="value-concept" model="value" type="concept"/>
-    <map fhir="value-quantity" model="value"/>
-    <map fhir="issued" model="creationTime"/>
-    <map fhir="date" model="actTime"/>
-    <map fhir="data-absent-reason" model="reasonConcept"/>
+    <map fhir="value-quantity" model="value" type="quantity"/>
+    <map fhir="issued" model="creationTime" type="date"/>
+    <map fhir="date" model="actTime" type="date"/>
+    <map fhir="data-absent-reason" model="reasonConcept" type="concept"/>
     <map fhir="encounter" model="relationship[HasComponent].source" type="reference"/>
     <map fhir="identifier" model="identifier" type="identifier"/>
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="patient.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" />
-    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth"/>
+    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
+    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="date"/>
     <map fhir="performer" model="participation[Authorororiginator].player" type="reference"/>
     <map fhir="status" model="statusConcept" type="concept"/>
     <map fhir="interpretation" model="interpretationConcept" type="concept"/>
     <map fhir="location" model="participation[Location].player" type="reference"/>
     <map fhir="location.identifier" model="participation[Location].player.identifier" type="identifier"/>
-    <map fhir="location.name" model="participation[Location].player.name.component.value" />
+    <map fhir="location.name" model="participation[Location].player.name.component.value" type="string"/>
   </type>
 
   <type resource="AdverseEvent">
-    <map fhir="date" model="relationship[HasSubject].target.actTime"/>
+    <map fhir="date" model="relationship[HasSubject].target.actTime" type="date"/>
     <map fhir="location" model="participation[Location].player" type="reference"/>
     <map fhir="location.identifier" model="participation[Location].player.identifier" type="identifier"/>
-    <map fhir="location.name" model="participation[Location].player.name.component.value" />
+    <map fhir="location.name" model="participation[Location].player.name.component.value" type="string"/>
     <map fhir="reaction" model="relationship[HasSubject].target.relationship[HasManifestation].target.value" type="concept"/>
     <map fhir="recorder" model="participation[Authorororiginator].player" type="reference"/>
     <map fhir="recorder.identifier" model="participation[Authorororiginator].player.identifier" type="identifier"/>
-    <map fhir="recorder.name" model="participation[Authorororiginator].player.name.component.value" />
+    <map fhir="recorder.name" model="participation[Authorororiginator].player.name.component.value" type="string"/>
     <map fhir="recorder" model="participation[Authorororiginator].player" type="reference"/>
     <map fhir="seriousness" model="relationship[HasSubject].target.relationship[HasComponent].target[ObservationType-Severity].value" type="concept"/>
     <map fhir="subject" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="subject.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="subject.address" model="participation[RecordTarget].player.address.component.value" />
-    <map fhir="subject.name" model="participation[RecordTarget].player.name.component.value" />
-    <map fhir="subject.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" />
+    <map fhir="subject.address" model="participation[RecordTarget].player.address.component.value" type="string"/>
+    <map fhir="subject.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
+    <map fhir="subject.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="date"/>
     <map fhir="subject.identifier" model="participation[RecordTarget].player.identifier" type="identifier"/>
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="patient.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="patient.address" model="participation[RecordTarget].player.address.component.value" />
-    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" />
-    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" />
+    <map fhir="patient.address" model="participation[RecordTarget].player.address.component.value" type="string"/>
+    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
+    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="date"/>
     <map fhir="patient.identifier" model="participation[RecordTarget].player.identifier" type="identifier"/>
     <map fhir="type" model="typeConcept" type="concept" />
     <amp fhir="substance" model="relationship[RefersTo].target.participation[Product|Consumable].player" type="reference"/>
@@ -136,78 +136,78 @@
   <type resource="AllergyIntolerance">
     <map fhir="asserter" model="participation[Authorororiginator].player" type="reference"/>
     <map fhir="asserter.identifier" model="participation[Authorororiginator].player.identifier" type="identifier"/>
-    <map fhir="asserter.name" model="participation[Authorororiginator].player.name.component.value"/>
+    <map fhir="asserter.name" model="participation[Authorororiginator].player.name.component.value" type="string"/>
     <map fhir="category" model="typeConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/allergy-intolerance-category"/>
     <map fhir="clinical-status" model="statusConcept" type="concept"/>
     <map fhir="code" model="value" type="concept"/>
     <map fhir="criticality" model="relationship[HasComponent].target[ObservationType-Severity].value" type="concept" defaultCodeSystem="http://hl7.org/fhir/allergy-intolerance-criticality"/>
     <map fhir="type" model="typeConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/allergy-intolerance-type"/>
-    <map fhir="date" model="actTime"/>
+    <map fhir="date" model="actTime" type="date"/>
     <map fhir="identifier" model="identifier" type="identifier"/>
     <map fhir="manifestation" model="relationship[HasManifestation].target.value" type="concept"/>
-    <map fhir="onset-date" model="startTime"/>
+    <map fhir="onset-date" model="startTime" type="date"/>
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="patient.identifier" model="participation[RecordTarget].player.identifier" type="identifier"/>
-    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" />
+    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
     <map fhir="patient.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth"/>
+    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="date"/>
     <map fhir="recorder" model="participation[Authorororiginator].player" type="reference"/>
     <map fhir="recorder.identifier" model="participation[Authorororiginator].player.identifier" type="identifier"/>
-    <map fhir="recorder.name" model="participation[Authorororiginator].player.name.component.value"/>
+    <map fhir="recorder.name" model="participation[Authorororiginator].player.name.component.value" type="string"/>
 
   </type>
 
   <type resource="Condition">
-    <map fhir="asserted-date" model="creationTime"/>
+    <map fhir="asserted-date" model="creationTime" type="date"/>
     <map fhir="asserter" model="participation[Authorororiginator].player" type="reference"/>
     <map fhir="asserter.identifier" model="participation[Authorororiginator].player.identifier" type="identifier"/>
-    <map fhir="asserter.name" model="participation[Authorororiginator].player.name.component.value"/>
+    <map fhir="asserter.name" model="participation[Authorororiginator].player.name.component.value" type="string"/>
     <map fhir="clinical-status" model="statusConcept" type="concept"/>
     <map fhir="code" model="value" type="concept"/>
     <map fhir="encounter" model="relationship[HasComponent].source" type="reference"/>
     <map fhir="identifier" model="identifier" type="identifier"/>
-    <map fhir="onset-date" model="startTime"/>
+    <map fhir="onset-date" model="startTime" type="date" />
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="patient.identifier" model="participation[RecordTarget].player.identifier" type="identifier"/>
-    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" />
+    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
     <map fhir="patient.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth"/>
-    <map fhir="severity" model="relationship[HasComponent].target[ObservationType-Severity].value"/>
+    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="string"/>
+    <map fhir="severity" model="relationship[HasComponent].target[ObservationType-Severity].value" type="string"/>
   </type>
 
   <type resource="MedicationAdministration">
     <map fhir="code" model="participation[Product].player.typeConcept" type="concept"/>
-    <map fhir="effective-time" model="actTime"/>
-    <map fhir="date" model="actTime"/>
+    <map fhir="effective-time" model="actTime" type="date"/>
+    <map fhir="date" model="actTime" type="date"/>
     <map fhir="identifier" model="identifier" type="token"/>
     <map fhir="medication" model="participation[Product|Consumable].player" type="reference"/>
-    <map fhir="not-given" model="isNegated"/>
+    <map fhir="not-given" model="isNegated" type="indicator"/>
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="patient.identifier" model="participation[RecordTarget].player.identifier" type="identifier"/>
-    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" />
+    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
     <map fhir="patient.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth"/>
+    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="date"/>
     <map fhir="location" model="participation[Location].player" type="reference"/>
     <map fhir="location.identifier" model="participation[Location].player.identifier" type="identifier"/>
-    <map fhir="location.name" model="participation[Location].player.name.component.value" />
+    <map fhir="location.name" model="participation[Location].player.name.component.value" type="string"/>
     <map fhir="performer" model="participation[Authorororiginator|Performer].player" type="reference"/>
     <map fhir="reason-given" model="reasonConcept" type="concept"/>
     <map fhir="reason-not-given" model="reasonConcept" type="concept"/>
-    <map fhir="status" model="statusConcept.referenceTerm.value"/>
+    <map fhir="status" model="statusConcept.referenceTerm.value" type="string"/>
     
   </type>
 
   <type resource="Encounter">
-    <map fhir="date" model="actTime"/>
+    <map fhir="date" model="actTime" type="date"/>
     <map fhir="identifier" model="identifier" type="token"/>
     <map fhir="patient" model="participation[RecordTarget].player" type="reference"/>
     <map fhir="patient.identifier" model="participation[RecordTarget].player.identifier" type="identifier"/>
-    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" />
+    <map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
     <map fhir="patient.gender" model="participation[RecordTarget].player@Patient.genderConcept" type="concept"/>
-    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth"/>
+    <map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="date"/>
     <map fhir="location" model="participation[Location].player" type="reference"/>
     <map fhir="location.identifier" model="participation[Location].player.identifier" type="identifier"/>
-    <map fhir="location.name" model="participation[Location].player.name.component.value" />
+    <map fhir="location.name" model="participation[Location].player.name.component.value" type="string"/>
     <map fhir="participant" model="participation[Authorororiginator|Performer].player" type="reference"/>
     <map fhir="reason" model="reasonConcept" type="concept"/>
     <map fhir="status" model="statusConcept" type="concept"/>
@@ -215,12 +215,12 @@
 
 
   <type resource="Location">
-    <map fhir="address" model="address.component.value"/>
-    <map fhir="address-city" model="address.component[City].value"/>
-    <map fhir="address-country" model="address.component[Country].value"/>
-    <map fhir="address-state" model="address.component[State].value"/>
+    <map fhir="address" model="address.component.value" type="string"/>
+    <map fhir="address-city" model="address.component[City].value" type="string"/>
+    <map fhir="address-country" model="address.component[Country].value" type="string"/>
+    <map fhir="address-state" model="address.component[State].value" type="string"/>
     <map fhir="identifier" model="identifier" type="identifier"/>
-    <map fhir="name" model="name.component.value"/>
+    <map fhir="name" model="name.component.value" type="string"/>
     <map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/location-status"/>
     <map fhir="type" model="typeConcept" type="concept"/>
   </type>
@@ -229,28 +229,28 @@
     <map fhir="code" model="typeConcept" type="concept"/>
     <map fhir="form" model="formConcept" type="concept"/>
     <map fhir="manufacturer" model="relationship[WarrantedProduct].source" type="reference"/>
-    <map fhir="manufacturer.name" model="relationship[WarrantedProduct].source.name.component.value"/>
-    <map fhir="lotNumber" model="lotNumber"/>
-    <map fhir="expirationDate" model="expireDate"/>
+    <map fhir="manufacturer.name" model="relationship[WarrantedProduct].source.name.component.value" type="string"/>
+    <map fhir="lotNumber" model="lotNumber" type="string"/>
+    <map fhir="expirationDate" model="expireDate" type="date"/>
     <map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/medication-status"/>
   </type>
 
   <type resource="Substance">
     <map fhir="code" model="typeConcept" type="concept"/>
-    <map fhir="expiry" model="expireDate"/>
+    <map fhir="expiry" model="expireDate" type="date"/>
     <map fhir="identifier" model="identifier" type="identifier"/>
     <map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/substance-status"/>
   </type>
 
   <type resource="RelatedPerson">
-    <map fhir="name" model="target@Person.name.component.value"/>
-    <map fhir="family" model="target@Person.name.component[Family].value"/>
-    <map fhir="given" model="target@Person.name.component[Given].value"/>
-    <map fhir="address" model="target@Person.address.component.value"/>
-    <map fhir="state" model="target@Person.address.component[State].value"/>
-    <map fhir="birthdate" model="target@Person.dateOfBirth"/>
+    <map fhir="name" model="target@Person.name.component.value" type="string"/>
+    <map fhir="family" model="target@Person.name.component[Family].value" type="string"/>
+    <map fhir="given" model="target@Person.name.component[Given].value" type="string"/>
+    <map fhir="address" model="target@Person.address.component.value" type="string"/>
+    <map fhir="state" model="target@Person.address.component[State].value" type="string"/>
+    <map fhir="birthdate" model="target@Person.dateOfBirth" type="date"/>
     <map fhir="gender" model="target@Person.genderConcept" type="concept"/>
     <map fhir="identifier" model="target@Person.identifier" type="identifier"/>
-    <map fhir="date" model="creationTime" />
+    <map fhir="date" model="creationTime" type="date"/>
   </type>
 </QueryParameterMap>

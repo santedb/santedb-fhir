@@ -19,8 +19,10 @@
  * Date: 2023-5-19
  */
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Serialization;
 using SanteDB.Core.Services;
@@ -359,7 +361,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
 
                 // Valuse
-                foreach (var v in fhirQuery.GetValues(kv))
+                foreach (var v in fhirQuery.GetValues(kv).SelectMany(v => v.Split(',')))
                 {
                     if (String.IsNullOrEmpty(v))
                     {
@@ -370,40 +372,48 @@ namespace SanteDB.Messaging.FHIR.Util
                     bool chop = false;
                     string opValue = String.Empty;
                     string filterValue = v;
-                    if (v.Length > 2)
+                    switch (parmMap.FhirType)
                     {
-                        switch (v.Substring(0, 2))
-                        {
-                            case "ap":
-                                chop = true;
-                                opValue = "~";
-                                break;
-                            case "gt":
-                                chop = true;
-                                opValue = ">";
-                                break;
-                            case "ge":
-                                chop = true;
-                                opValue = ">=";
-                                break;
-                            case "lt":
-                                chop = true;
-                                opValue = "<";
-                                break;
-                            case "le":
-                                chop = true;
-                                opValue = "<=";
-                                break;
-                            case "ne":
-                                chop = true;
-                                opValue = "!";
-                                break;
-                            case "eq":
-                                chop = true;
-                                break;
-                            default:
-                                break;
-                        }
+                        case QueryParameterRewriteType.Int:
+                        case QueryParameterRewriteType.Quantity:
+                        case QueryParameterRewriteType.Date:
+                            if (v.Length > 2)
+                            {
+                                switch (v.Substring(0, 2))
+                                {
+                                    case "ap":
+                                        chop = true;
+                                        opValue = "~";
+                                        break;
+                                    case "gt":
+                                        chop = true;
+                                        opValue = ">";
+                                        break;
+                                    case "ge":
+                                        chop = true;
+                                        opValue = ">=";
+                                        break;
+                                    case "lt":
+                                        chop = true;
+                                        opValue = "<";
+                                        break;
+                                    case "le":
+                                        chop = true;
+                                        opValue = "<=";
+                                        break;
+                                    case "ne":
+                                        chop = true;
+                                        opValue = "!";
+                                        break;
+                                    case "eq":
+                                        chop = true;
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                            break;
+
                     }
 
                     if (parmComponents.Length > 1)
@@ -470,7 +480,16 @@ namespace SanteDB.Messaging.FHIR.Util
                                     {
                                         throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotFound, $"No authority for {data} found");
                                     }
-                                    hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
+
+                                    // Has an identifier
+                                    if (!String.IsNullOrEmpty(segs[1]))
+                                    {
+                                        hdsiQuery.Add(String.Format("{0}[{1}].value", parmMap.ModelQuery, aa.DomainName), segs[1]);
+                                    }
+                                    else
+                                    {
+                                        hdsiQuery.Add(String.Format("{0}.domain", parmMap.ModelQuery), aa.Key.ToString());
+                                    }
                                 }
                                 else
                                 {
@@ -481,6 +500,41 @@ namespace SanteDB.Messaging.FHIR.Util
                             {
                                 hdsiQuery.Add(parmMap.ModelQuery + ".value", itm);
                             }
+                        }
+                        break;
+                    case QueryParameterRewriteType.Quantity:
+                        foreach (var itm in value)
+                        {
+                            var queryPath = parmMap.ModelQuery;
+                            if (queryPath.Equals("value"))
+                            {
+                                queryPath = String.Empty;
+                            }
+                            else
+                            {
+                                queryPath += ".";
+                            }
+
+                            if (itm.Contains("|"))
+                            {
+                                var segs = itm.Split('|');
+                                // Might be a URL
+                                if (segs.Length == 3)
+                                {
+                                    var uom = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>().GetConceptByReferenceTerm(segs[2], segs[1]);
+                                    if (uom == null)
+                                    {
+                                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotFound, $"No concept for {itm} found");
+                                    }
+
+                                    hdsiQuery.Add(String.Format("{0}unitOfMeasure", queryPath), uom.Key.ToString());
+                                }
+                                else
+                                {
+                                    throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.INVALID_FORMAT, itm, "val|system|code"));
+                                }
+                            }
+                            hdsiQuery.Add(queryPath + "value", itm);
                         }
                         break;
                     case QueryParameterRewriteType.Indicator:
