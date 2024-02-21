@@ -161,7 +161,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Telecom = model.GetTelecoms().Select(DataTypeConverter.ToFhirTelecom).ToList();
             retVal.Communication = model.GetPersonLanguages().Select(DataTypeConverter.ToFhirCommunicationComponent).ToList();
 
-            foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
+            foreach (var rel in model.GetRelationships())
             {
                 if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
                 {
