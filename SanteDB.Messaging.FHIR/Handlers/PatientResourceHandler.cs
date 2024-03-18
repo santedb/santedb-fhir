@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2023, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2024, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2023-5-19
+ * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core;
@@ -161,7 +161,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Telecom = model.GetTelecoms().Select(DataTypeConverter.ToFhirTelecom).ToList();
             retVal.Communication = model.GetPersonLanguages().Select(DataTypeConverter.ToFhirCommunicationComponent).ToList();
 
-            foreach (var rel in model.GetRelationships().Where(o => !o.InversionIndicator))
+            foreach (var rel in model.GetRelationships())
             {
                 if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
                 {
