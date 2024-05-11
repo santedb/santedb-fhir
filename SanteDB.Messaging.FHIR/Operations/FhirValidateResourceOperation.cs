@@ -19,7 +19,10 @@
  * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core;
+using SanteDB.Core.Data.Quality;
 using SanteDB.Core.Exceptions;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
@@ -86,7 +89,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             }
             else
             {
-                var hdlr = FhirResourceHandlerUtil.GetResourceHandler(rt);
+                var hdlr = FhirResourceHandlerUtil.GetMapperForInstance(rt);
                 if (hdlr == null)
                 {
                     retVal.Issue.Add(new OperationOutcome.IssueComponent()
@@ -108,11 +111,20 @@ namespace SanteDB.Messaging.FHIR.Operations
                     try
                     {
 
-                        // Instruct the handler to perform an update with 
-                        hdlr.Update(resource.Resource.Id, resource.Resource, Core.Services.TransactionMode.Rollback);
+                        // Instruct the handler to map to RIM and then to call BRE validation
+                        var rimModel = hdlr.MapToModel(resource.Resource);
+                        retVal.Issue.AddRange(ApplicationServiceContext.Current.GetBusinessRuleService(rimModel.GetType())?.Validate(hdlr)?.Select(o => new OperationOutcome.IssueComponent()
+                        {
+                            Diagnostics = o.Text,
+                            Severity = o.Priority == Core.BusinessRules.DetectedIssuePriorityType.Error ? OperationOutcome.IssueSeverity.Error : o.Priority == Core.BusinessRules.DetectedIssuePriorityType.Warning ? OperationOutcome.IssueSeverity.Warning : OperationOutcome.IssueSeverity.Information,
+                            Code = OperationOutcome.IssueType.BusinessRule
+                        }) ?? new OperationOutcome.IssueComponent[0]);
+
+                        //hdlr.Update(resource.Resource.Id, resource.Resource, Core.Services.TransactionMode.Rollback);
+
                         retVal.Issue.Add(new OperationOutcome.IssueComponent()
                         {
-                            Diagnostics = "Resource Valid",
+                            Diagnostics = "Validation Completed Successfully",
                             Severity = OperationOutcome.IssueSeverity.Information,
                             Code = OperationOutcome.IssueType.Unknown
                         });
