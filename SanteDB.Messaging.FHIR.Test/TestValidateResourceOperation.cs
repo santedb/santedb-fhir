@@ -82,7 +82,8 @@ namespace SanteDB.Messaging.FHIR.Test
         {
             var patient = new Patient
             {
-                Id = Guid.NewGuid().ToString()
+                Id = Guid.NewGuid().ToString(),
+                BirthDate = "2024-01-03"
             };
 
             Resource actual;
@@ -112,7 +113,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var actualOperationOutcome = (OperationOutcome)actual;
 
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Severity == OperationOutcome.IssueSeverity.Error));
-            Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Code == OperationOutcome.IssueType.NoStore));
+            Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Code == OperationOutcome.IssueType.BusinessRule));
             Assert.IsTrue(actualOperationOutcome.Issue.Any(c => c.Diagnostics == "No Gender"));
         }
     }

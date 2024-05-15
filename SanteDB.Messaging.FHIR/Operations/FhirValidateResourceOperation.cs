@@ -29,6 +29,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 
 namespace SanteDB.Messaging.FHIR.Operations
 {
@@ -80,24 +81,14 @@ namespace SanteDB.Messaging.FHIR.Operations
             // Get the profile handler for the specified profile, if no profile then just perform a profile mode
             if (!resource.Resource.TryDeriveResourceType(out ResourceType rt))
             {
-                retVal.Issue.Add(new OperationOutcome.IssueComponent()
-                {
-                    Code = OperationOutcome.IssueType.NotSupported,
-                    Severity = OperationOutcome.IssueSeverity.Fatal,
-                    Diagnostics = $"Resource {resource.Resource.TypeName} not supported"
-                });
+               throw new NotSupportedException($"Resource {resource.Resource.TypeName} not suppored");
             }
             else
             {
-                var hdlr = FhirResourceHandlerUtil.GetMapperForInstance(rt);
+                var hdlr = FhirResourceHandlerUtil.GetMappersFor(rt).FirstOrDefault();
                 if (hdlr == null)
                 {
-                    retVal.Issue.Add(new OperationOutcome.IssueComponent()
-                    {
-                        Code = OperationOutcome.IssueType.NotSupported,
-                        Severity = OperationOutcome.IssueSeverity.Fatal,
-                        Diagnostics = $"Resource {resource.Resource.TypeName} not supported"
-                    });
+                    throw new NotSupportedException($"Resource {resource.Resource.TypeName} not suppored");
                 }
                 else
                 {
@@ -113,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 
                         // Instruct the handler to map to RIM and then to call BRE validation
                         var rimModel = hdlr.MapToModel(resource.Resource);
-                        retVal.Issue.AddRange(ApplicationServiceContext.Current.GetBusinessRuleService(rimModel.GetType())?.Validate(hdlr)?.Select(o => new OperationOutcome.IssueComponent()
+                        retVal.Issue.AddRange(ApplicationServiceContext.Current.GetBusinessRuleService(rimModel.GetType())?.Validate(rimModel)?.Select(o => new OperationOutcome.IssueComponent()
                         {
                             Diagnostics = o.Text,
                             Severity = o.Priority == Core.BusinessRules.DetectedIssuePriorityType.Error ? OperationOutcome.IssueSeverity.Error : o.Priority == Core.BusinessRules.DetectedIssuePriorityType.Warning ? OperationOutcome.IssueSeverity.Warning : OperationOutcome.IssueSeverity.Information,
