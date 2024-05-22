@@ -1040,7 +1040,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var retVal = new Extension()
             {
-                Url = eType.Name
+                Url = eType.Uri
             };
 
             if (ext.Value is decimal || eType.ExtensionHandler == typeof(DecimalExtensionHandler))
