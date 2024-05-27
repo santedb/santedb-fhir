@@ -50,6 +50,7 @@ using System.Diagnostics.Tracing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Security;
 using System.Security.Authentication;
 using System.Text.RegularExpressions;
@@ -1039,7 +1040,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             var retVal = new Extension()
             {
-                Url = eType.Name
+                Url = eType.Uri
             };
 
             if (ext.Value is decimal || eType.ExtensionHandler == typeof(DecimalExtensionHandler))
@@ -1305,6 +1306,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 address.Component.Add(new EntityAddressComponent(AddressComponentKeys.County, fhirAddress.District));
             }
 
+            // HACK: Apply extension to address
+            fhirAddress.Extension.ForEach(p => p.TryApplyExtension(address));
             return address;
         }
 
@@ -1314,7 +1317,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <typeparam name="T"></typeparam>
         /// <param name="fhirId"></param>
         /// <returns></returns>
-        public static T ToIdentifier<T>(Identifier fhirId) where T : IExternalIdentifier, new()
+        public static T ToIdentifier<T>(Identifier fhirId) where T : IdentifiedData, IExternalIdentifier, new()
         {
 
             if (fhirId == null)
@@ -1385,6 +1388,9 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal.IdentifierTypeKey = identifierTypeResolution.Key;
             }
 
+            // HACK: Apply extension to address
+            fhirId.Extension.ForEach(p => p.TryApplyExtension(retVal));
+
             // TODO: Fill in use
             return retVal;
 
@@ -1430,6 +1436,7 @@ namespace SanteDB.Messaging.FHIR.Util
             name.Component.AddRange(fhirHumanName.Prefix.Select(p => new EntityNameComponent(NameComponentKeys.Prefix, p)));
             name.Component.AddRange(fhirHumanName.Suffix.Select(s => new EntityNameComponent(NameComponentKeys.Suffix, s)));
 
+            fhirHumanName.Extension.ForEach(e => e.TryApplyExtension(name));
             return name;
         }
 
@@ -1605,13 +1612,16 @@ namespace SanteDB.Messaging.FHIR.Util
                     typeMnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.System);
                 }
 
-                return new EntityTelecomAddress
+                var retVal = new EntityTelecomAddress
                 {
                     Value = fhirTelecom.Value,
                     AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
                     TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key,
                     ExternalKey = m_configuration?.PersistElementId == true ? fhirTelecom.ElementId : null
                 };
+
+                fhirTelecom.Extension.ForEach(p => p.TryApplyExtension(retVal));
+                return retVal;
             }
             return null;
         }
@@ -1675,6 +1685,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
 
+            retVal.Extension.AddRange(address.CreateExtensions(ResourceType.Basic, out _));
             return retVal;
         }
 
@@ -1782,6 +1793,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
 
+            retVal.Extension.AddRange(entityName.CreateExtensions(ResourceType.Basic, out _));
+
             return retVal;
         }
 
@@ -1856,7 +1869,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
                 Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
                 Value = telecomAddress.IETFValue,
-                ElementId = m_configuration?.PersistElementId == true ? telecomAddress.ExternalKey : null
+                ElementId = m_configuration?.PersistElementId == true ? telecomAddress.ExternalKey : null,
+                Extension = new List<Extension>(telecomAddress.CreateExtensions(ResourceType.Basic, out _))
             };
         }
 

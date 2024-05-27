@@ -27,6 +27,7 @@
     <add type="SanteDB.Core.Configuration.AuditAccountabilityConfigurationSection, SanteDB.Core.Api" />
     <add type="SanteDB.Persistence.Data.Configuration.AdoPersistenceConfigurationSection, SanteDB.Persistence.Data" />
     <add type="SanteDB.OrmLite.Configuration.OrmConfigurationSection, SanteDB.OrmLite" />
+    <add type="SanteDB.Core.Data.Quality.Configuration.DataQualityConfigurationSection, SanteDB.Core.Api" />
     <add type="SanteDB.Core.Configuration.Data.DataConfigurationSection, SanteDB.Core.Api" />
   </sections>
   <section xsi:type="DiagnosticsConfigurationSection">
@@ -105,12 +106,39 @@
 
     <validation unique="off" scope="off" format="off" checkDigit="off" authority="off"/>
   </section>
+  <section xsi:type="DataQualityConfigurationSection">
+    <ruleSet enabled="true" id="default" name="My Data Quality Configuration">
+      <resources>
+        <add resource="Patient">
+          <assert id="dob.required" name="Date of Birth Required" priority="Warning" evaluation="all">
+            <expression>dateOfBirth=null</expression>
+          </assert>
+          <assert id="dob.future" name="Date of Birth in Future" priority="Warning" evaluation="all">
+            <expression>dateOfBirth=&gt;$today</expression>
+          </assert>
+          <assert id="address.required" name="Address Required" priority="Warning" evaluation="all">
+            <expression>address.component.value=null</expression>
+          </assert>
+          <assert id="name.required" name="Name Required" priority="Warning" evaluation="all">
+            <expression>name.component.value=null</expression>
+          </assert>
+          <assert id="identifier.national" name="Identifier Required" priority="Warning" evaluation="any">
+            <expression>identifier.value=null</expression>
+          </assert>
+          <assert id="gender.required" name="Gender Required" priority="Error" evaluation="all">
+            <expression>genderConcept=null</expression>
+          </assert>
+        </add>
+      </resources>
+    </ruleSet>
+  </section>
   <section xsi:type="ApplicationServiceContextConfigurationSection" allowUnsignedAssemblies="true" threadPoolSize="4">
     <serviceProviders>
       <add type="SanteDB.Caching.Memory.MemoryCacheService, SanteDB.Caching.Memory" />
       <add type="SanteDB.Caching.Memory.MemoryQueryPersistenceService, SanteDB.Caching.Memory" />
       <add type="SanteDB.Caching.Memory.MemoryAdhocCacheService, SanteDB.Caching.Memory" />
       <add type="SanteDB.Core.Services.Impl.Repository.LocalRepositoryFactory,SanteDB.Core.Api" />
+      <add type="SanteDB.Core.Data.Quality.DataQualityService, SanteDB.Core.Api" />
 
       <add type="SanteDB.Persistence.Data.Services.AdoApplicationIdentityProvider, SanteDB.Persistence.Data" />
       <add type="SanteDB.Persistence.Data.Services.AdoDeviceIdentityProvider, SanteDB.Persistence.Data" />
