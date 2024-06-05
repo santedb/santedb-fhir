@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2023, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2024, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -16,7 +16,7 @@
  * the License.
  * 
  * User: fyfej
- * Date: 2023-5-19
+ * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core;
@@ -234,7 +234,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 if (resource.Abatement is FhirDateTime abatementdate)
                 {
-                    
+
                     retVal.StopTime = DataTypeConverter.ToDateTimeOffset(abatementdate).GetValueOrDefault();
                 }
                 else
@@ -278,7 +278,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Participations.Add(resource.Subject.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.RecordTarget, Guid.Parse(resource.Subject.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.RecordTarget, DataTypeConverter.ResolveEntity<Core.Model.Roles.Patient>(resource.Subject, resource)));
             }
 
-            
+
 
             // Author
             if (resource.Asserter != null)
@@ -286,7 +286,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Participations.Add(resource.Asserter.Reference.StartsWith("urn:uuid:") ? new ActParticipation(ActParticipationKeys.Authororiginator, Guid.Parse(resource.Asserter.Reference.Substring(9))) : new ActParticipation(ActParticipationKeys.Authororiginator, DataTypeConverter.ResolveEntity<Core.Model.Roles.Provider>(resource.Asserter, resource))); ;
             }
 
-            
+
 
             retVal.Value = DataTypeConverter.ToConcept(resource.Code);
 
