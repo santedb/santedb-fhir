@@ -188,6 +188,7 @@ namespace SanteDB.Messaging.FHIR.Test
                         Family = "Patient"
                     }
                 },
+                Gender = AdministrativeGender.Male,
                 Active = true,
                 Address = new List<Address>
                 {
