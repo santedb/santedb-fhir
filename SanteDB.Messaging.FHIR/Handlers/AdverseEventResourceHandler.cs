@@ -89,14 +89,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Category = new List<CodeableConcept>
                 {DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey)};
 
-            var recordTarget = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
+            var modelparticipations = model.LoadCollection(m => m.Participations);
+            var modelrelationships = model.LoadCollection(m => m.Relationships);
+
+            var recordTarget = modelparticipations?.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
             if (recordTarget != null)
             {
-                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>("PlayerEntity"));
+                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>(nameof(recordTarget.PlayerEntity)));
             }
 
             // Main topic of the concern
-            var subject = model.LoadCollection<ActRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasSubject)?.LoadProperty<Act>("TargetAct");
+            var subject = modelrelationships?.FirstOrDefault(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasSubject)?.LoadProperty<Act>(nameof(ActRelationship.TargetAct));
             if (subject == null)
             {
                 throw new InvalidOperationException(this.m_localizationService.GetString("error.messaging.fhir.adverseEvent.act"));
@@ -104,28 +107,42 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.DateElement = new FhirDateTime(subject.ActTime.GetValueOrDefault());
 
+            var subjectrelationships = subject.LoadCollection(s => s.Relationships);
+
             // Reactions = HasManifestation
-            var reactions = subject.LoadCollection<ActRelationship>("Relationships").Where(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasManifestation).FirstOrDefault();
+            var reactions = subjectrelationships?.Where(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasManifestation)?.FirstOrDefault();
             if (reactions != null)
             {
-                retVal.Event = DataTypeConverter.ToFhirCodeableConcept(reactions.LoadProperty<CodedObservation>("TargetAct").ValueKey);
+                retVal.Event = DataTypeConverter.ToFhirCodeableConcept(reactions.LoadProperty<CodedObservation>(nameof(ActRelationship.TargetAct)).ValueKey);
             }
 
-            var location = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Location);
+            var location = modelparticipations?.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Location);
             if (location != null)
             {
-                retVal.Location = DataTypeConverter.CreateVersionedReference<Location>(location.LoadProperty<Entity>("PlayerEntity"));
+                retVal.Location = DataTypeConverter.CreateVersionedReference<Location>(location.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)));
             }
 
             // Severity
-            var severity = subject.LoadCollection<ActRelationship>("Relationships").First(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.LoadProperty<Act>("TargetAct").TypeConceptKey == ObservationTypeKeys.Severity);
+
+            
+
+            var severity = subjectrelationships?.Where(r => r.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent)
+                ?.Select(r => (relationship: r, targetAct: r.LoadProperty<CodedObservation>(nameof(ActRelationship.TargetAct))))
+                ?.Where(t => t.targetAct.TypeConceptKey == ObservationTypeKeys.Severity)
+                ?.FirstOrDefault().targetAct;
+
             if (severity != null)
             {
-                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept(severity.LoadProperty<CodedObservation>("TargetAct").ValueKey, "http://terminology.hl7.org/CodeSystem/adverse-event-severity");
+                retVal.Severity = DataTypeConverter.ToFhirCodeableConcept(severity.ValueKey, "http://terminology.hl7.org/CodeSystem/adverse-event-severity");
             }
 
             // Did the patient die?
-            var causeOfDeath = model.LoadCollection<ActRelationship>("Relationships").FirstOrDefault(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.IsCauseOf && o.LoadProperty<Act>("TargetAct").TypeConceptKey == ObservationTypeKeys.ClinicalState && (o.TargetAct as CodedObservation)?.ValueKey == Guid.Parse("6df3720b-857f-4ba2-826f-b7f1d3c3adbb"));
+
+            var causeOfDeath = modelrelationships?.Where(r => r.RelationshipTypeKey == ActRelationshipTypeKeys.IsCauseOf)
+                ?.Select(s => (relationship: s, targetAct: s.LoadProperty<CodedObservation>(nameof(ActRelationship.TargetAct))))
+                ?.Where(t => t.targetAct?.TypeConceptKey == ObservationTypeKeys.ClinicalState && t.targetAct?.ValueKey == DischargeDispositionKeys.Died)
+                ?.FirstOrDefault().relationship;
+
             if (causeOfDeath != null)
             {
                 retVal.Outcome = new CodeableConcept("http://hl7.org/fhir/adverse-event-outcome", "fatal");
@@ -139,17 +156,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Outcome = new CodeableConcept("http://hl7.org/fhir/adverse-event-outcome", "resolved");
             }
 
-            var author = model.LoadCollection<ActParticipation>("Participations").FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Authororiginator);
+            var author = modelparticipations?.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Authororiginator);
             if (author != null)
             {
-                retVal.Recorder = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.LoadProperty<Entity>("PlayerEntity"));
+                retVal.Recorder = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.LoadProperty(a => a.PlayerEntity));
             }
 
             // Suspect entities
-            var refersTo = model.LoadCollection<ActRelationship>("Relationships").Where(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.RefersTo).ToArray();
-            if (refersTo.Any())
+            var refersTo = modelrelationships?.Where(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.RefersTo);
+            if (refersTo?.Any() == true)
             {
-                retVal.SuspectEntity = refersTo.Select(o => o.LoadProperty<Act>("TargetAct")).OfType<SubstanceAdministration>().Select(o =>
+                retVal.SuspectEntity = refersTo.Select(o => o.LoadProperty<SubstanceAdministration>(nameof(ActRelationship.TargetAct))).Select(o =>
                 {
                     var consumable = o.LoadCollection<ActParticipation>("Participations").FirstOrDefault(x => x.ParticipationRoleKey == ActParticipationKeys.Consumable)?.LoadProperty<ManufacturedMaterial>("PlayerEntity");
                     if (consumable == null)
