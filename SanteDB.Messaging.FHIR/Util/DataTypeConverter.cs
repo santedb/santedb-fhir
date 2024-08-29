@@ -1862,6 +1862,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns the mapped FHIR telecom.</returns>
         public static ContactPoint ToFhirTelecom(EntityTelecomAddress telecomAddress)
         {
+            if (null == telecomAddress)
+                return null;
+
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity telecom address");
 
             return new ContactPoint
