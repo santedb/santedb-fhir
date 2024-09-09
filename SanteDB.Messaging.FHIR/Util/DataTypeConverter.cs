@@ -505,7 +505,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <param name="conceptKey">The concept key to convert.</param>
         /// <param name="preferredCodeSystem">Any preferred code systems to use to retrieve the representation from.</param>
         /// <returns>A <see cref="Code{T}"/> instance for the concept.</returns>
-        public static Code<T> ToFhirCode<T>(Guid? conceptKey, params string[] preferredCodeSystem) where T : struct
+        public static Code<T> ToFhirCode<T>(Guid? conceptKey, params string[] preferredCodeSystem) where T : struct, Enum
         {
             if (null == conceptKey)
             {
