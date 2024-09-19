@@ -15,8 +15,6 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: fyfej
- * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
@@ -67,7 +65,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (fhirExtension.Value is FhirDateTime dateTime && modelObject is Person person)
             {
-                person.DateOfBirth = DataTypeConverter.ToDateTimeOffset(dateTime.Value, out var datePrecision)?.Date;
+                person.DateOfBirth = DataTypeConverter.ToDateTimeOffset(dateTime.Value, out var datePrecision)?.DateTime;
                 person.DateOfBirthPrecision = datePrecision;
                 return true;
             }

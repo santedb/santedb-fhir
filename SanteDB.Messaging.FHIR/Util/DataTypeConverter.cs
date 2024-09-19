@@ -15,8 +15,6 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: fyfej
- * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
@@ -505,7 +503,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <param name="conceptKey">The concept key to convert.</param>
         /// <param name="preferredCodeSystem">Any preferred code systems to use to retrieve the representation from.</param>
         /// <returns>A <see cref="Code{T}"/> instance for the concept.</returns>
-        public static Code<T> ToFhirCode<T>(Guid? conceptKey, params string[] preferredCodeSystem) where T : struct
+        public static Code<T> ToFhirCode<T>(Guid? conceptKey, params string[] preferredCodeSystem) where T : struct, Enum
         {
             if (null == conceptKey)
             {
@@ -1862,6 +1860,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns the mapped FHIR telecom.</returns>
         public static ContactPoint ToFhirTelecom(EntityTelecomAddress telecomAddress)
         {
+            if (null == telecomAddress)
+                return null;
+
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity telecom address");
 
             return new ContactPoint

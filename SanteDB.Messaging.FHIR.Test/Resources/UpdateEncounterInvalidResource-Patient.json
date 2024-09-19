@@ -1,5 +1,6 @@
 ﻿{
   "resourceType": "Patient",
+  "gender": "male",
   "name": [
     {
       "family": "Webber",

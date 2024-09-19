@@ -15,12 +15,12 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: fyfej
- * Date: 2023-6-21
  */
+using DynamicExpresso;
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -32,7 +32,6 @@ using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 using DatePrecision = SanteDB.Core.Model.DataTypes.DatePrecision;
 
-#pragma warning disable CS0618
 
 namespace SanteDB.Messaging.FHIR.Handlers
 {
@@ -42,19 +41,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
     public class PatientResourceHandler : RepositoryResourceHandlerBase<Patient, Core.Model.Roles.Patient>
     {
         // ER repository
-        private IRepositoryService<EntityRelationship> m_erRepository;
-        private readonly IAdhocCacheService m_adhocCacheService;
-        private readonly IRepositoryService<Concept> m_conceptRepository;
+        private readonly IRepositoryService<EntityRelationship> m_EntityRelationshipRepository;
+        private readonly IAdhocCacheService m_AdhocCacheService;
+        private readonly IRepositoryService<Concept> m_ConceptRepository;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(PatientResourceHandler));
 
         /// <summary>
         /// Resource handler subscription
         /// </summary>
-        public PatientResourceHandler(IRepositoryService<Core.Model.Roles.Patient> repo, IRepositoryService<EntityRelationship> erRepository, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService, IAdhocCacheService adhocCacheService = null) : base(repo, localizationService)
+        public PatientResourceHandler(IRepositoryService<Core.Model.Roles.Patient> repo, IRepositoryService<EntityRelationship> entityRelationshipRepository, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService, IAdhocCacheService adhocCacheService = null) : base(repo, localizationService)
         {
-            this.m_erRepository = erRepository;
-            this.m_adhocCacheService = adhocCacheService;
-            this.m_conceptRepository = conceptRepository;
+            this.m_EntityRelationshipRepository = entityRelationshipRepository;
+            this.m_AdhocCacheService = adhocCacheService;
+            this.m_ConceptRepository = conceptRepository;
         }
 
         /// <summary>
@@ -62,11 +61,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         private Guid[] GetRelatedPersonConceptUuids()
         {
-            var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.relatedPersonsUuids");
+            var retVal = this.m_AdhocCacheService?.Get<Guid[]>("fhir.patient.relatedPersonsUuids");
             if (retVal == null)
             {
-                retVal = this.m_conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(o => o.Key.Value).ToArray();
-                this.m_adhocCacheService?.Add("fhir.patient.relatedPersonsUuids", retVal);
+                retVal = this.m_ConceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(o => o.Key.Value).ToArray();
+                this.m_AdhocCacheService?.Add("fhir.patient.relatedPersonsUuids", retVal);
             }
             return retVal;
         }
@@ -76,11 +75,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         private Guid[] GetFamilyMemberUuids()
         {
-            var retVal = this.m_adhocCacheService?.Get<Guid[]>("fhir.patient.familyMemberUuids");
+            var retVal = this.m_AdhocCacheService?.Get<Guid[]>("fhir.patient.familyMemberUuids");
             if (retVal == null)
             {
-                retVal = this.m_conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember")).Select(o => o.Key.Value).ToArray();
-                this.m_adhocCacheService?.Add("fhir.patient.familyMemberUuids", retVal);
+                retVal = this.m_ConceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "FamilyMember")).Select(o => o.Key.Value).ToArray();
+                this.m_AdhocCacheService?.Add("fhir.patient.familyMemberUuids", retVal);
             }
             return retVal;
 
@@ -100,7 +99,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = DataTypeConverter.CreateResource<Patient>(model);
 
             retVal.Active = StatusKeys.ActiveStates.Contains(model.StatusConceptKey.Value);
-            retVal.Address = model.GetAddresses().Select(DataTypeConverter.ToFhirAddress).ToList();
+
+            _ = model.LoadProperty(p => p.Addresses);
+            retVal.Address = model.Addresses?.Select(DataTypeConverter.ToFhirAddress)?.ToList();
+            
 
             if (model.DateOfBirth.HasValue)
             {
@@ -155,13 +157,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.GenderConceptKey, "http://hl7.org/fhir/administrative-gender", true);
             }
 
+            _ = model.LoadProperty(m => m.Names);
+            _ = model.LoadProperty(m => m.Addresses);
+            _ = model.LoadProperty(m => m.LanguageCommunication);
+
             retVal.Identifier = model.Identifiers?.Select(DataTypeConverter.ToFhirIdentifier).ToList();
             retVal.MultipleBirth = model.MultipleBirthOrder == 0 ? (DataType)new FhirBoolean(true) : model.MultipleBirthOrder.HasValue ? new Integer(model.MultipleBirthOrder.Value) : null;
-            retVal.Name = model.GetNames().Select(DataTypeConverter.ToFhirHumanName).ToList();
-            retVal.Telecom = model.GetTelecoms().Select(DataTypeConverter.ToFhirTelecom).ToList();
-            retVal.Communication = model.GetPersonLanguages().Select(DataTypeConverter.ToFhirCommunicationComponent).ToList();
+            retVal.Name = model.Names?.Select(DataTypeConverter.ToFhirHumanName)?.ToList();
+            retVal.Telecom = model.Telecoms?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
+            retVal.Communication = model.LanguageCommunication?.Select(DataTypeConverter.ToFhirCommunicationComponent)?.ToList();
 
-            foreach (var rel in model.GetRelationships())
+
+            _ = model.LoadProperty(m => m.Relationships);
+            foreach (var rel in model.Relationships)
             {
                 if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Contact)
                 {
@@ -169,18 +177,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                     if (relEntity is Core.Model.Entities.Person person)
                     {
+                        _ = person.LoadProperty(p => p.Names);
+                        _ = person.LoadProperty(p => p.Addresses);
+                        _ = person.LoadProperty(p => p.Telecoms);
+
                         var contact = new Patient.ContactComponent()
                         {
                             ElementId = $"{person.Key}",
-                            Address = DataTypeConverter.ToFhirAddress(person.GetAddresses().FirstOrDefault()),
+                            Address = DataTypeConverter.ToFhirAddress(person.Addresses?.FirstOrDefault()),
                             Relationship = new List<CodeableConcept>() {
                                 DataTypeConverter.ToFhirCodeableConcept(rel.RelationshipRoleKey, "http://terminology.hl7.org/CodeSystem/v2-0131"),
                                 DataTypeConverter.ToFhirCodeableConcept(rel.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131")
                             }.OfType<CodeableConcept>().ToList(),
-                            Name = DataTypeConverter.ToFhirHumanName(person.GetNames().FirstOrDefault()),
+                            Name = DataTypeConverter.ToFhirHumanName(person.Names?.FirstOrDefault()),
                             // TODO: Gender
                             Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.GenderConceptKey, "http://hl7.org/fhir/administrative-gender"),
-                            Telecom = person.GetTelecoms().Select(t => DataTypeConverter.ToFhirTelecom(t)).ToList()
+                            Telecom = person.Telecoms?.Select(t => DataTypeConverter.ToFhirTelecom(t))?.ToList(),
                         };
 
                         var scoper = person.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper);
@@ -200,7 +212,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                 DataTypeConverter.ToFhirCodeableConcept(rel.RelationshipRoleKey, "http://terminology.hl7.org/CodeSystem/v2-0131"),
                                 DataTypeConverter.ToFhirCodeableConcept(rel.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131")
                             }.OfType<CodeableConcept>().ToList(),
-                            Organization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(org)
+                            Organization = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(org),
                         };
                         retVal.Contact.Add(contact);
                     }
@@ -215,7 +227,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     partOfBundle?.Entry.Add(new Bundle.EntryComponent
                     {
                         FullUrl = $"{MessageUtil.GetBaseUri()}/Organization/{scoper.Key}",
-                        Resource = FhirResourceHandlerUtil.GetMapperForInstance(scoper).MapToFhir(scoper)
+                        Resource = FhirResourceHandlerUtil.GetMapperForInstance(scoper).MapToFhir(scoper),
                     });
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider)
@@ -228,7 +240,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     partOfBundle?.Entry.Add(new Bundle.EntryComponent
                     {
                         FullUrl = $"{MessageUtil.GetBaseUri()}/Practitioner/{practitioner.Key}",
-                        Resource = FhirResourceHandlerUtil.GetMapperForInstance(practitioner).MapToFhir(practitioner)
+                        Resource = FhirResourceHandlerUtil.GetMapperForInstance(practitioner).MapToFhir(practitioner),
                     });
                 }
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
@@ -252,7 +264,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         partOfBundle.Entry.Add(new Bundle.EntryComponent()
                         {
                             FullUrl = $"{MessageUtil.GetBaseUri()}/RelatedPerson/{rel.Key}",
-                            Resource = relative
+                            Resource = relative,
                         });
                     }
                 }
@@ -274,28 +286,28 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Reverse relationships of family member?
             var uuids = model.Relationships.FilterManagedReferenceLinks().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
             var familyMemberConcepts = this.GetFamilyMemberUuids();
-            var reverseRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
+            var reverseRelationships = this.m_EntityRelationshipRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
 
             foreach (var rrv in reverseRelationships)
             {
                 retVal.Link.Add(new Patient.LinkComponent
                 {
                     Type = Patient.LinkType.Seealso,
-                    Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rrv)
+                    Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rrv),
                 });
 
                 // If this is part of a bundle, include it
                 partOfBundle?.Entry.Add(new Bundle.EntryComponent
                 {
                     FullUrl = $"{MessageUtil.GetBaseUri()}/RelatedPerson/{rrv.Key}",
-                    Resource = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rrv)
+                    Resource = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rrv),
                 });
             }
 
             // Was this record replaced?
             if (!retVal.Active.GetValueOrDefault())
             {
-                var replacedRelationships = this.m_erRepository.Find(o => uuids.Contains(o.TargetEntityKey) && o.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && o.ObsoleteVersionSequenceId == null);
+                var replacedRelationships = this.m_EntityRelationshipRepository.Find(o => uuids.Contains(o.TargetEntityKey) && o.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && o.ObsoleteVersionSequenceId == null);
 
                 foreach (var repl in replacedRelationships)
                 {
@@ -316,7 +328,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     new Attachment
                     {
                         ContentType = "image/jpg",
-                        Data = photo.ExtensionValueData
+                        Data = photo.ExtensionValueData,
                     }
                 };
             }

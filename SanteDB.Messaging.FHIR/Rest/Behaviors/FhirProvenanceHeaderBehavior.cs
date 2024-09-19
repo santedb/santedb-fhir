@@ -15,8 +15,6 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
- * User: fyfej
- * Date: 2023-7-12
  */
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
