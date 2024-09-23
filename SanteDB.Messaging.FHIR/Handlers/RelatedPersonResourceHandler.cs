@@ -322,7 +322,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
                 person.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
                 // Identity
-                person.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).ToList();
+                person.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).OfType<EntityExtension>().ToList();
             }
             else
             {
