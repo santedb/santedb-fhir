@@ -32,6 +32,7 @@ using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Model.Security;
+using SanteDB.Core.Model.Text;
 using SanteDB.Core.Security;
 using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Security.Services;
@@ -52,6 +53,7 @@ using System.Net;
 using System.Security;
 using System.Security.Authentication;
 using System.Text.RegularExpressions;
+using System.Xml;
 using static Hl7.Fhir.Model.OperationOutcome;
 
 namespace SanteDB.Messaging.FHIR.Util
@@ -724,7 +726,7 @@ namespace SanteDB.Messaging.FHIR.Util
             // metadata
             retVal.Meta = new Meta()
             {
-                LastUpdated = (resource as IdentifiedData).ModifiedOn.DateTime,
+                LastUpdated = (resource as IdentifiedData).ModifiedOn.DateTime
             };
 
 
@@ -753,6 +755,29 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal.Meta.VersionId = vd.VersionKey?.ToString();
             }
 
+            if (retVal is DomainResource dr) {
+                if (resource.TryGetTextGenerator(out var textGenerator))
+                {
+                    using (var sw = new StringWriter())
+                    {
+                        using (var xw = XmlWriter.Create(sw, new XmlWriterSettings()
+                        {
+                            OmitXmlDeclaration = true,
+                            ConformanceLevel = ConformanceLevel.Document,
+                            WriteEndDocumentOnClose = true
+                        }))
+                        {
+                            textGenerator.WriteSummary(xw, resource);
+                        }
+                        dr.Text = new Hl7.Fhir.Model.Narrative(sw.ToString());
+
+                    }
+                }
+                else if(resource is IdentifiedData idd)
+                {
+                    dr.Text = new Hl7.Fhir.Model.Narrative(idd.ToDisplay());
+                }
+            }
             return retVal;
         }
 
@@ -763,12 +788,12 @@ namespace SanteDB.Messaging.FHIR.Util
         public static IEnumerable<String> AddExtensions(Core.Model.Interfaces.IExtendable extendable, Hl7.Fhir.Model.IExtendable fhirExtension)
         {
             var resource = fhirExtension as Resource;
-            // TODO: Do we want to expose all internal extensions as external ones? Or do we just want to rely on the IFhirExtensionHandler?
-            fhirExtension.Extension = extendable?.LoadCollection(o => o.Extensions).Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension).ToList();
-
+            
             if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
-                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IAnnotatedResource, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).Union(fhirExtension.Extension).ToList();
+                fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IAnnotatedResource, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).ToList();
+                fhirExtension.Extension.AddRange(extendable.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension));
+
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
             else

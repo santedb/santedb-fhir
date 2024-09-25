@@ -17,12 +17,15 @@
  * 
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core.Extensions;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Person = SanteDB.Core.Model.Entities.Person;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
@@ -52,9 +55,14 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
-            if (modelObject is Person person && person.DateOfBirthPrecision > DatePrecision.Day)
+            if (modelObject is Person person)
             {
-                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirDateTime(person.DateOfBirth));
+                var btExtension = person.LoadProperty(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.BirthTimeExtension);
+                if (btExtension != null)
+                {
+                    person.Extensions.Remove(btExtension);
+                    yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirDateTime((DateTime)btExtension.ExtensionValue));
+                }
             }
         }
 
@@ -65,8 +73,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (fhirExtension.Value is FhirDateTime dateTime && modelObject is Person person)
             {
-                person.DateOfBirth = DataTypeConverter.ToDateTimeOffset(dateTime.Value, out var datePrecision)?.DateTime;
-                person.DateOfBirthPrecision = datePrecision;
+                person.LoadProperty(o => o.Extensions).RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.BirthTimeExtension);
+                person.Extensions.Add(new EntityExtension(ExtensionTypeKeys.BirthTimeExtension, typeof(DateExtensionHandler), dateTime.ToDateTime()));
                 return true;
             }
 

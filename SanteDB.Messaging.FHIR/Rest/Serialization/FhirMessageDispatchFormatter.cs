@@ -189,7 +189,8 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                                 new FhirJsonSerializer(new SerializerSettings
                                 {
                                     Pretty = isOutputPretty
-                                }).Serialize(baseObject, jw);
+                                    
+                                }).Serialize(baseObject, jw, summaryType ?? SummaryType.False);
                             }
 
                             break;

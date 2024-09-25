@@ -160,7 +160,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // point the child organization entity at the target organization entity with a relationship of parent 
                 retVal.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.Parent, reference));
             }
-            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
+            retVal.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>());
             return retVal;
         }
     }

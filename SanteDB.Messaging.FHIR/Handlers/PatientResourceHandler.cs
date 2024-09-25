@@ -271,7 +271,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // MDM links
-            model.Relationships.FilterManagedReferenceLinks().ToList().ForEach(rel =>
+            model.Relationships.FilterManagedReferenceLinks< SanteDB.Core.Model.Roles.Patient>().ToList().ForEach(rel =>
             {
                 if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
                 {
@@ -284,10 +284,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             });
 
             // Reverse relationships of family member?
-            var uuids = model.Relationships.FilterManagedReferenceLinks().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
+            var uuids = model.Relationships.FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
             var familyMemberConcepts = this.GetFamilyMemberUuids();
             var reverseRelationships = this.m_EntityRelationshipRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
-
             foreach (var rrv in reverseRelationships)
             {
                 retVal.Link.Add(new Patient.LinkComponent
@@ -407,9 +406,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
             patient.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
             patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
-            patient.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).OfType<EntityExtension>().ToList();
-            patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
             patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
+            patient.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).OfType<EntityExtension>());
+            patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
             // TODO: fix
             // HACK: the date of birth precision CK only allows "Y", "M", or "D" for the precision value
             patient.DateOfBirthPrecision = dateOfBirthPrecision == DatePrecision.Full ? DatePrecision.Day : dateOfBirthPrecision;
@@ -542,10 +541,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             {
                                 patient.Key = referee.Key;
                             }
-                            else if (referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks().Any()
+                            else if (referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks< SanteDB.Core.Model.Roles.Patient>().Any()
                                 && referee.GetTag("$mdm.type") == "M") // HACK: This is a master and someone is attempting to point another record at it
                             {
-                                var managedLink = referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks().First() as EntityRelationship;
+                                var managedLink = referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().First() as EntityRelationship;
                                 patient.Relationships.Add(new EntityRelationship()
                                 {
                                     RelationshipTypeKey = managedLink.RelationshipTypeKey,
