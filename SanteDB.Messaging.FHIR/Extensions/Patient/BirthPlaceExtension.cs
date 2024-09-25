@@ -49,13 +49,13 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
             EntityClassKeys.Place
         };
 
-        private readonly IDictionary<Func<Address, String>, Func<Address, System.Linq.Expressions.Expression<Func<Place, bool>>>> m_lookupExpressions = new Dictionary<Func<Address, string>, Func<Address, System.Linq.Expressions.Expression<Func<Place, bool>>>>()
+        private readonly IDictionary<Func<Address, bool>, Func<Address, System.Linq.Expressions.Expression<Func<Place, bool>>>> m_lookupExpressions = new Dictionary<Func<Address, bool>, Func<Address, System.Linq.Expressions.Expression<Func<Place, bool>>>>()
         {
-            { (a) => a.Text,  (ad) => o => o.Names.Any(c => c.Component.Any(a => a.Value == ad.Text)) },
-            { (a) => a.City,  (ad) => o => o.ClassConceptKey == EntityClassKeys.CityOrTown && o.Names.Any(c=>c.Component.Any(n=>n.Value == ad.City)) },
-            { (a) => a.District, (ad) => o => o.ClassConceptKey == EntityClassKeys.CountyOrParish && o.Names.Any(c=>c.Component.Any(n=>n.Value == ad.District)) },
-            { (a) => a.State, (ad) => o => o.ClassConceptKey == EntityClassKeys.StateOrProvince && o.Names.Any(c=>c.Component.Any(n=>n.Value == ad.State)) },
-            { (a) => a.Country, (ad) => o => o.ClassConceptKey == EntityClassKeys.Country && o.Names.Any(c=>c.Component.Any(n=>n.Value == ad.Country)) }
+            { (a) => !String.IsNullOrEmpty(a.Text),  (ad) => o => o.Names.Any(c => c.Component.Any(a => a.Value == ad.Text)) },
+            { (a) => !String.IsNullOrEmpty(a.City),  (ad) => o => o.ClassConceptKey == EntityClassKeys.CityOrTown && o.Names.Any(c=>c.Component.Any(n=>n.Value == ad.City)) },
+            { (a) => !String.IsNullOrEmpty(a.District) && !String.IsNullOrEmpty(a.State), (ad) => o => o.ClassConceptKey == EntityClassKeys.CountyOrParish && o.Names.Any(c=>c.Component.Any(n=>n.Value == ad.District)) && o.Relationships.Where(r=>r.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent).Any(r=>r.TargetEntity.Names.Any(pn=>pn.Component.Any(pc=>pc.Value == ad.State)))  },
+            { (a) => !String.IsNullOrEmpty(a.State) && !String.IsNullOrEmpty(a.Country), (ad) => o => o.ClassConceptKey == EntityClassKeys.StateOrProvince && o.Names.Any(c=>c.Component.Any(n=>n.Value == ad.District)) && o.Relationships.Where(r=>r.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent).Any(r=>r.TargetEntity.Names.Any(pn=>pn.Component.Any(pc=>pc.Value == ad.Country)))  },
+            { (a) => !String.IsNullOrEmpty(a.Country) && String.IsNullOrEmpty(a.State) && String.IsNullOrEmpty(a.District) && String.IsNullOrEmpty(a.City), (ad) => o => o.ClassConceptKey == EntityClassKeys.Country && o.Names.Any(c=>c.Component.Any(n=>n.Value == ad.Country)) }
         };
 
         // Place repository
@@ -118,7 +118,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
                 foreach (var itm in this.m_lookupExpressions)
                 {
-                    if (!string.IsNullOrEmpty(itm.Key(address)))
+                    if (itm.Key(address))
                     {
                         places = this.m_placeRepository.Find(itm.Value(address));
 
