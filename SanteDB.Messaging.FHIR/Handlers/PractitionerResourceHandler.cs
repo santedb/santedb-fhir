@@ -168,7 +168,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
             retVal.StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
             retVal.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).ToList();
-            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>().ToList();
+            retVal.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal)).OfType<EntityExtension>());
             retVal.GenderConceptKey = resource.Gender == null ? NullReasonKeys.Unknown : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             retVal.DateOfBirthXml = resource.BirthDate;
             retVal.DateOfBirthPrecision = DatePrecision.Day;

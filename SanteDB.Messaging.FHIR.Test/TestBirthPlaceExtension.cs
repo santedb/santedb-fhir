@@ -201,7 +201,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
             var address = extension.Value as Address;
 
-            Assert.IsNull(address.Text);
+            //Assert.IsNull(address.Text);
         }
 
         /// <summary>

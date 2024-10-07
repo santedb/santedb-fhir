@@ -248,6 +248,7 @@
     <map fhir="birthdate" model="target@Person.dateOfBirth" type="date"/>
     <map fhir="gender" model="target@Person.genderConcept" type="concept"/>
     <map fhir="identifier" model="target@Person.identifier" type="identifier"/>
+    <map fhir="patient" model="source" type="reference"/>
     <map fhir="date" model="creationTime" type="date"/>
   </type>
 </QueryParameterMap>

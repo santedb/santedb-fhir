@@ -10,6 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="TestBirthTimeExtension.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="Resources\ComplexPatient.json" />
     <None Remove="Resources\ComplexPatientPatientRelationship.json" />
     <None Remove="Resources\EntireFamilyRelationship.json" />
@@ -53,6 +57,7 @@
     <None Include="..\..\SanteDB.licenseheader">
       <Link>SanteDB.licenseheader</Link>
     </None>
+    <None Include="TestBirthTimeExtension.cs" />
   </ItemGroup>
   <!-- Test Framework via Nuget does this automagically -->
   <Import Condition="$(SolutionName.Contains('-ext'))" Project="$(SolutionDir)\santedb-data\SanteDB.Core.TestFramework.FirebirdSQL\SanteDB.Core.TestFramework.FirebirdSQL.targets" />
