@@ -708,7 +708,8 @@ namespace SanteDB.Messaging.FHIR.Test
                 //query for patient
                 var patientBundle = patientResourceHandler.Query(new NameValueCollection()
                 {
-                    { "_id", result.Id }
+                    { "id", result.Id },
+                    { "birthdate", "ap2021"}
                 });
 
                 //Ensure persistence of single updated contact and contact details 

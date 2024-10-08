@@ -62,7 +62,7 @@
     <map fhir="address-postalcode" model="address.component[PostalCode].value" type="string"/>
     <map fhir="state" model="address.component[State].value" type="string"/>
     <map fhir="multipleBirth" model="multipleBirthOrder=!null" type="indicator"/>
-    <map fhir="birthdate" model="dateOfBirth" type="string"/>
+    <map fhir="birthdate" model="dateOfBirth" type="date"/>
     <map fhir="death-date" model="deceasedDate" type="date"/>
     <map fhir="deceased" model="deceasedDate=!null" type="indicator"/>
     <map fhir="gender" model="genderConcept" type="concept"/>
