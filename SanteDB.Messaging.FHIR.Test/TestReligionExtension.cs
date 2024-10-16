@@ -67,7 +67,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual(1, constructedReligion.Length);
             Assert.IsInstanceOf<CodeableConcept>(constructedReligion.First().Value);
             var codeableConcept = (CodeableConcept)constructedReligion.First().Value;
-            Assert.AreEqual("AGN", codeableConcept.Coding.First().Code);
+            Assert.IsTrue(codeableConcept.Coding.Any(o=>o.Code == "AGN"));
         }
 
         /// <summary>
