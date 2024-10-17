@@ -139,7 +139,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 var afterRelatedPerson = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.RelatedPerson).Update(sourceRelatedPerson.Id, sourceRelatedPerson, TransactionMode.Commit);
                 Assert.AreEqual(sdbPerson.Key.ToString(), afterRelatedPerson.Id);
                 sdbPerson = this.m_relationshipRepository.Get(Guid.Parse(createdFhirRelatedPerson.Id));
-                Assert.IsTrue(sdbPerson.LoadProperty(o => o.TargetEntity).Names.First().Component.Any(c => c.Value == "SINGH"));
+                Assert.IsTrue(sdbPerson.LoadProperty(o => o.TargetEntity).LoadProperty(o => o.Names).First().LoadProperty(o => o.Component).Any(c => c.Value == "SINGH"));
                 Assert.AreEqual(Address.AddressUse.Old, sourceRelatedPerson.Address.First().Use);
                 Assert.IsFalse(sourceRelatedPerson.Telecom.Any());
                 messageString = TestUtil.MessageToString(afterRelatedPerson);
