@@ -74,7 +74,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Name = model.LoadProperty(o => o.Names).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value;
             retVal.Alias = model.LoadProperty(o => o.Names).Where(o => o.NameUseKey != NameUseKeys.OfficialRecord)?.Select(n => n.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value).ToList();
-
+            retVal.PhysicalType = DataTypeConverter.ToFhirCodeableConcept(model.ClassConceptKey, "http://terminology.hl7.org/CodeSystem/location-physical-type");
             // Convert the determiner code
             if (model.DeterminerConceptKey == DeterminerKeys.Described)
             {
