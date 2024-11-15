@@ -164,7 +164,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Identifier = model.Identifiers?.Select(DataTypeConverter.ToFhirIdentifier).ToList();
             retVal.MultipleBirth = model.MultipleBirthOrder == 0 ? (DataType)new FhirBoolean(true) : model.MultipleBirthOrder.HasValue ? new Integer(model.MultipleBirthOrder.Value) : null;
             retVal.Name = model.Names?.Select(DataTypeConverter.ToFhirHumanName)?.ToList();
-            retVal.Telecom = model.Telecoms?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
+            retVal.Telecom = model.LoadProperty(o => o.Telecoms)?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
             retVal.Communication = model.LanguageCommunication?.Select(DataTypeConverter.ToFhirCommunicationComponent)?.ToList();
 
 
