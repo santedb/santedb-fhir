@@ -80,7 +80,7 @@
   <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>c31564ef-ca8d-4528-85a8-88245fcef344</source>
-      <term>9A68D9C0-61EB-4CAD-AA11-A83773C7DE79</term>
+      <term>991816A4-2010-4415-9FEF-98EE2E47EFB9</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
     </ConceptReferenceTerm>
   </update>
@@ -99,7 +99,7 @@
   <update insertIfNotExists="true">
     <ConceptReferenceTerm xmlns="http://santedb.org/model">
       <source>95e6843a-26ff-4046-b6f4-eb440d4b85f7</source>
-      <term>9A68D9C0-61EB-4CAD-AA11-A83773C7DE79</term>
+      <term>A4336569-4BA6-4C64-8C99-7FC2968D94F6</term>
       <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
     </ConceptReferenceTerm>
   </update>
