@@ -153,7 +153,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 DoseQuantity = resource.DoseQuantity?.Value ?? 0,
                 DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, string.IsNullOrWhiteSpace(resource.DoseQuantity.System) ? FhirConstants.DefaultQuantityUnitSystem : resource.DoseQuantity.System) : null,
-                Extensions = resource.Extension?.Select(DataTypeConverter.ToActExtension).ToList(),
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToActIdentifier).ToList(),
                 Key = Guid.NewGuid(),
                 MoodConceptKey = ActMoodKeys.Eventoccurrence,
@@ -164,6 +163,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Participations = new List<ActParticipation>(),
                 Relationships = new List<ActRelationship>()
             };
+
+            substanceAdministration.Extensions = resource.Extension?.Select(o => DataTypeConverter.ToActExtension(o, substanceAdministration)).ToList();
+
 
             Guid key;
             if (Guid.TryParse(resource.Id, out key))

@@ -192,7 +192,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 TypeConcept = DataTypeConverter.ToConcept(resource.Class, "http://santedb.org/conceptset/v3-ActEncounterCode"),
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
-                Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>().ToList(),
                 Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList(),
                 Key = Guid.NewGuid(),
                 StatusConceptKey = status == Encounter.EncounterStatus.Finished ? StatusKeys.Completed :
@@ -207,7 +206,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Participations = new List<ActParticipation>()
             };
 
-
+            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToActExtension(o, retVal)).OfType<ActExtension>().ToList();
 
             if (!Guid.TryParse(resource.Id, out var key))
             {
