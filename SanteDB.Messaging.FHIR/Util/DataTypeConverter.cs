@@ -52,6 +52,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime;
 using System.Security;
 using System.Security.Authentication;
 using System.Text.RegularExpressions;
@@ -470,6 +471,40 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Creates a FHIR reference from a target object
+        /// </summary>
+        public static ResourceReference CreateRimReference(IdentifiedData targetObject) 
+        {
+
+            if (targetObject == null)
+            {
+                throw new ArgumentNullException(nameof(targetObject));
+            }
+
+            var mapper = FhirResourceHandlerUtil.GetMappersFor(targetObject.GetType()).FirstOrDefault();
+            if(mapper == null)
+            {
+                throw new InvalidOperationException("Configuration for mapper is not available");
+            }
+
+
+            var refer = new ResourceReference($"{mapper.ResourceType}/{targetObject.Key}");
+
+            // Add an identifier to the object
+            if (targetObject is IHasIdentifiers ident)
+            {
+                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.IdentityDomain.IsUnique);
+                if (uqIdentifier != null)
+                {
+                    refer.Identifier = new Identifier(uqIdentifier.IdentityDomain.Url, uqIdentifier.Value);
+                }
+            }
+
+            refer.Display = targetObject.ToDisplay();
+            return refer;
+        }
+
+        /// <summary>
         /// Creates a FHIR reference.
         /// </summary>
         /// <typeparam name="TResource">The type of the resource.</typeparam>
@@ -477,6 +512,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns a reference instance.</returns>
         public static ResourceReference CreateNonVersionedReference<TResource>(IdentifiedData targetEntity) where TResource : DomainResource, new()
         {
+
             if (targetEntity == null)
             {
                 throw new ArgumentNullException(nameof(targetEntity));
@@ -886,15 +922,26 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     extension.ExtensionValueData = fbo.Value;
                 }
-                else if (extension.ExtensionType.ExtensionHandler == typeof(ReferenceExtensionHandler) && fhirExtension.Value is ResourceReference frr)
+                else if (extension.ExtensionType.ExtensionHandler == typeof(ReferenceExtensionHandler))
                 {
-                    if (TryResolveResourceReference(frr, null, out var refr))
+                    switch(fhirExtension.Value)
                     {
-                        extension.ExtensionValue = refr;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException(String.Format(ErrorMessages.REFERENCE_NOT_FOUND, frr));
+                        case ResourceReference frr:
+                            if (TryResolveResourceReference(frr, null, out var refr))
+                            {
+                                extension.ExtensionValue = refr;
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException(String.Format(ErrorMessages.REFERENCE_NOT_FOUND, frr));
+                            }
+                            break;
+                        case CodeableConcept ccc:
+                            var concept = ToConcept(ccc);
+                            extension.ExtensionValue = concept;
+                            break;
+                        default:
+                            throw new NotSupportedException();
                     }
                 }
                 else
@@ -964,14 +1011,26 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     extension.ExtensionValueData = fbo.Value;
                 }
-                else if(extension.ExtensionType.ExtensionHandler == typeof(ReferenceExtensionHandler) && fhirExtension.Value is ResourceReference frr)
+                else if (extension.ExtensionType.ExtensionHandler == typeof(ReferenceExtensionHandler))
                 {
-                    if (TryResolveResourceReference(frr, null, out var refr)) {
-                        extension.ExtensionValue = refr;
-                    }
-                    else
+                    switch (fhirExtension.Value)
                     {
-                        throw new InvalidOperationException(String.Format(ErrorMessages.REFERENCE_NOT_FOUND, frr));
+                        case ResourceReference frr:
+                            if (TryResolveResourceReference(frr, null, out var refr))
+                            {
+                                extension.ExtensionValue = refr;
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException(String.Format(ErrorMessages.REFERENCE_NOT_FOUND, frr));
+                            }
+                            break;
+                        case CodeableConcept ccc:
+                            var concept = ToConcept(ccc);
+                            extension.ExtensionValue = concept;
+                            break;
+                        default:
+                            throw new NotSupportedException();
                     }
                 }
                 else
@@ -1124,9 +1183,9 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 retVal.Value = ToFhirCodeableConcept(concept.Key);
             }
-            else if (ext.Value is SanteDB.Core.Model.Roles.Patient patient)
+            else if (ext.Value is IdentifiedData idd)
             {
-                retVal.Value = DataTypeConverter.CreateVersionedReference<Patient>(patient);
+                retVal.Value = DataTypeConverter.CreateRimReference(idd);
             }
             else
             {
