@@ -82,6 +82,23 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().Where(o => o.ResourceType == resourceType);
         }
 
+
+        /// <summary>
+        /// Get mappers for specified <paramref name="resourceTypeString"/>
+        /// </summary>
+        public static IEnumerable<IFhirResourceMapper> GetMappersFor(String resourceTypeString)
+        {
+            if(Enum.TryParse<ResourceType>(resourceTypeString, out var rt))
+            {
+                return GetMappersFor(rt);
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException(nameof(resourceTypeString));
+            }
+
+        }
+
         /// <summary>
         /// Get the message processor type based on resource name
         /// </summary>

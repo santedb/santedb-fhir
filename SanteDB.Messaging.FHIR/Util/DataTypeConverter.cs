@@ -24,6 +24,7 @@ using SanteDB.Core.Configuration;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Extensions;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Audit;
@@ -42,6 +43,7 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -50,6 +52,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime;
 using System.Security;
 using System.Security.Authentication;
 using System.Text.RegularExpressions;
@@ -468,6 +471,40 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Creates a FHIR reference from a target object
+        /// </summary>
+        public static ResourceReference CreateRimReference(IdentifiedData targetObject) 
+        {
+
+            if (targetObject == null)
+            {
+                throw new ArgumentNullException(nameof(targetObject));
+            }
+
+            var mapper = FhirResourceHandlerUtil.GetMappersFor(targetObject.GetType()).FirstOrDefault();
+            if(mapper == null)
+            {
+                throw new InvalidOperationException("Configuration for mapper is not available");
+            }
+
+
+            var refer = new ResourceReference($"{mapper.ResourceType}/{targetObject.Key}");
+
+            // Add an identifier to the object
+            if (targetObject is IHasIdentifiers ident)
+            {
+                var uqIdentifier = ident.LoadCollection(x => x.Identifiers).FirstOrDefault(i => i.IdentityDomain.IsUnique);
+                if (uqIdentifier != null)
+                {
+                    refer.Identifier = new Identifier(uqIdentifier.IdentityDomain.Url, uqIdentifier.Value);
+                }
+            }
+
+            refer.Display = targetObject.ToDisplay();
+            return refer;
+        }
+
+        /// <summary>
         /// Creates a FHIR reference.
         /// </summary>
         /// <typeparam name="TResource">The type of the resource.</typeparam>
@@ -475,6 +512,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns>Returns a reference instance.</returns>
         public static ResourceReference CreateNonVersionedReference<TResource>(IdentifiedData targetEntity) where TResource : DomainResource, new()
         {
+
             if (targetEntity == null)
             {
                 throw new ArgumentNullException(nameof(targetEntity));
@@ -836,7 +874,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <param name="fhirExtension">The FHIR extension.</param>
         /// <returns>Returns the converted act extension instance.</returns>
         /// <exception cref="System.ArgumentNullException">fhirExtension - Value cannot be null</exception>
-        public static ActExtension ToActExtension(Extension fhirExtension)
+        public static ActExtension ToActExtension(Extension fhirExtension, IdentifiedData context)
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR extension");
 
@@ -854,31 +892,68 @@ namespace SanteDB.Messaging.FHIR.Util
                 return null;
             }
 
-            var extensionTypeService = ApplicationServiceContext.Current.GetService<IExtensionTypeRepository>();
+            // First attempt to parse the extension using a parser
+            if (!fhirExtension.TryApplyExtension(context))
+            {
+                var extensionTypeService = ApplicationServiceContext.Current.GetService<IExtensionTypeRepository>();
 
-            extension.ExtensionType = extensionTypeService.Get(new Uri(fhirExtension.Url));
-            //extension.ExtensionValue = fhirExtension.Value;
-            if (extension.LoadProperty(o => o.ExtensionType).ExtensionHandler == typeof(DecimalExtensionHandler))
-            {
-                extension.ExtensionValue = (fhirExtension.Value as FhirDecimal).Value;
+                extension.ExtensionType = extensionTypeService.Get(new Uri(fhirExtension.Url));
+                if (extension.ExtensionType == null)
+                {
+                    return null;
+                }
+
+                //extension.ExtensionValue = fhirExtension.Value;
+                if (extension.ExtensionType.ExtensionHandler == typeof(DecimalExtensionHandler) && fhirExtension.Value is FhirDecimal fd)
+                {
+                    extension.ExtensionValue = fd.Value;
+                }
+                else if (extension.ExtensionType.ExtensionHandler == typeof(StringExtensionHandler) && fhirExtension.Value is FhirString fs)
+                {
+                    extension.ExtensionValue = fs.Value;
+                }
+                else if (extension.ExtensionType.ExtensionHandler == typeof(DateExtensionHandler) && fhirExtension.Value is FhirDateTime fdto)
+                {
+                    extension.ExtensionValue = ToDateTimeOffset(fdto);
+                }
+                // TODO: Implement binary incoming extensions
+                else if ((extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler) ||
+                    extension.ExtensionType.ExtensionHandler == typeof(DictionaryExtensionHandler)) && fhirExtension.Value is Base64Binary fbo)
+                {
+                    extension.ExtensionValueData = fbo.Value;
+                }
+                else if (extension.ExtensionType.ExtensionHandler == typeof(ReferenceExtensionHandler))
+                {
+                    switch(fhirExtension.Value)
+                    {
+                        case ResourceReference frr:
+                            if (TryResolveResourceReference(frr, null, out var refr))
+                            {
+                                extension.ExtensionValue = refr;
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException(String.Format(ErrorMessages.REFERENCE_NOT_FOUND, frr));
+                            }
+                            break;
+                        case CodeableConcept ccc:
+                            var concept = ToConcept(ccc);
+                            extension.ExtensionValue = concept;
+                            break;
+                        default:
+                            throw new NotSupportedException();
+                    }
+                }
+                else
+                {
+                    throw new NotImplementedException($"Extension type is not understood");
+                }
+
+                // Now will
+                return extension;
             }
-            else if (extension.ExtensionType.ExtensionHandler == typeof(StringExtensionHandler))
-            {
-                extension.ExtensionValue = (fhirExtension.Value as FhirString).Value;
-            }
-            else if (extension.ExtensionType.ExtensionHandler == typeof(DateExtensionHandler))
-            {
-                extension.ExtensionValue = (fhirExtension.Value as FhirDateTime).Value;
-            }
-            // TODO: Implement binary incoming extensions
-            //else if(extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler))
-            //    extension.ExtensionValueXml = (fhirExtension.Value as FhirBase64Binary).Value;
-            else
-            {
-                throw new NotImplementedException($"Extension type {extension.ExtensionType.ExtensionHandler} is not understood");
-            }
-            // Now will
-            return extension;
+
+            return null;
         }
 
         /// <summary>
@@ -918,23 +993,45 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
 
                 //extension.ExtensionValue = fhirExtension.Value;
-                if (extension.ExtensionType.ExtensionHandler == typeof(DecimalExtensionHandler))
+                if (extension.ExtensionType.ExtensionHandler == typeof(DecimalExtensionHandler) && fhirExtension.Value is FhirDecimal fd)
                 {
-                    extension.ExtensionValue = (fhirExtension.Value as FhirDecimal).Value;
+                    extension.ExtensionValue = fd.Value;
                 }
-                else if (extension.ExtensionType.ExtensionHandler == typeof(StringExtensionHandler))
+                else if (extension.ExtensionType.ExtensionHandler == typeof(StringExtensionHandler) && fhirExtension.Value is FhirString fs)
                 {
-                    extension.ExtensionValue = (fhirExtension.Value as FhirString).Value;
+                    extension.ExtensionValue = fs.Value;
                 }
-                else if (extension.ExtensionType.ExtensionHandler == typeof(DateExtensionHandler))
+                else if (extension.ExtensionType.ExtensionHandler == typeof(DateExtensionHandler) && fhirExtension.Value is FhirDateTime fdto)
                 {
-                    extension.ExtensionValue = ToDateTimeOffset(fhirExtension.Value as FhirDateTime);
+                    extension.ExtensionValue = ToDateTimeOffset(fdto);
                 }
                 // TODO: Implement binary incoming extensions
-                else if (extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler) ||
-                    extension.ExtensionType.ExtensionHandler == typeof(DictionaryExtensionHandler))
+                else if ((extension.ExtensionType.ExtensionHandler == typeof(BinaryExtensionHandler) ||
+                    extension.ExtensionType.ExtensionHandler == typeof(DictionaryExtensionHandler)) && fhirExtension.Value is Base64Binary fbo)
                 {
-                    extension.ExtensionValueData = (fhirExtension.Value as Base64Binary).Value;
+                    extension.ExtensionValueData = fbo.Value;
+                }
+                else if (extension.ExtensionType.ExtensionHandler == typeof(ReferenceExtensionHandler))
+                {
+                    switch (fhirExtension.Value)
+                    {
+                        case ResourceReference frr:
+                            if (TryResolveResourceReference(frr, null, out var refr))
+                            {
+                                extension.ExtensionValue = refr;
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException(String.Format(ErrorMessages.REFERENCE_NOT_FOUND, frr));
+                            }
+                            break;
+                        case CodeableConcept ccc:
+                            var concept = ToConcept(ccc);
+                            extension.ExtensionValue = concept;
+                            break;
+                        default:
+                            throw new NotSupportedException();
+                    }
                 }
                 else
                 {
@@ -1078,13 +1175,17 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 retVal.Value = new FhirBoolean((bool)(ext.Value ?? new BooleanExtensionHandler().DeSerialize(ext.Data)));
             }
+            else if(ext.Value is DateTime || ext.Value is DateTimeOffset || eType.ExtensionHandler == typeof(DateExtensionHandler))
+            {
+                retVal.Value = new FhirDateTime((DateTime)(ext.Value ?? new DateExtensionHandler().DeSerialize(ext.Data)));
+            }
             else if (ext.Value is Concept concept)
             {
                 retVal.Value = ToFhirCodeableConcept(concept.Key);
             }
-            else if (ext.Value is SanteDB.Core.Model.Roles.Patient patient)
+            else if (ext.Value is IdentifiedData idd)
             {
-                retVal.Value = DataTypeConverter.CreateVersionedReference<Patient>(patient);
+                retVal.Value = DataTypeConverter.CreateRimReference(idd);
             }
             else
             {
@@ -1464,6 +1565,50 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Try to convert resource reference
+        /// </summary>
+        public static bool TryResolveResourceReference(ResourceReference resourceRef, Resource containedWithin, out IdentifiedData data)
+        {
+            if(String.IsNullOrEmpty(resourceRef.Type) && Uri.TryCreate(resourceRef.Reference, UriKind.RelativeOrAbsolute, out var uri))
+            {
+                if(uri.IsAbsoluteUri)
+                {
+                    throw new InvalidOperationException("Only relative references are supported in SanteDB");
+                }
+                else
+                {
+                    var urlParts = resourceRef.Reference.Split('/');
+                    if (urlParts.Length > 1)
+                    {
+                        resourceRef.Type = urlParts[urlParts.Length - 2];
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException("References must be in form {resource}/UUID or must have a type");
+                    }
+                }
+            }
+            var resourceMapper = FhirResourceHandlerUtil.GetMappersFor(resourceRef.Type).FirstOrDefault();
+            if(resourceMapper == null)
+            {
+                throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.TYPE_NOT_FOUND, resourceRef.Type));
+            }
+
+            var resolveMethod = typeof(DataTypeConverter).GetGenericMethod(nameof(ResolveEntity), new Type[] { resourceMapper.CanonicalType }, new Type[] { typeof(ResourceReference), typeof(Resource) });
+            if(resolveMethod == null)
+            {
+                data = null;
+                return false;
+            }
+            else
+            {
+                data = resolveMethod.Invoke(null, new object[] { resourceRef, containedWithin }) as IdentifiedData;
+                return data != null;
+            }
+        }
+
+
+        /// <summary>
         /// Resolve the specified entity
         /// </summary>
         public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin) where TEntity : BaseEntityData, ITaggable, IHasIdentifiers, new()
@@ -1471,8 +1616,8 @@ namespace SanteDB.Messaging.FHIR.Util
             var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TEntity>>();
 
             // First is there a bundle in the contained within
-            var sdbBundle = containedWithin.Annotations(typeof(Core.Model.Collection.Bundle)).FirstOrDefault() as Core.Model.Collection.Bundle;
-            var fhirBundle = containedWithin.Annotations(typeof(Bundle)).FirstOrDefault() as Bundle;
+            var sdbBundle = containedWithin?.Annotations(typeof(Core.Model.Collection.Bundle)).FirstOrDefault() as Core.Model.Collection.Bundle;
+            var fhirBundle = containedWithin?.Annotations(typeof(Bundle)).FirstOrDefault() as Bundle;
 
             TEntity retVal = null;
 

@@ -245,7 +245,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
-            retVal.Extensions = resource.Extension.Select(DataTypeConverter.ToActExtension).OfType<ActExtension>().ToList();
+            retVal.Extensions = resource.Extension.Select(o=>DataTypeConverter.ToActExtension(o, retVal)).OfType<ActExtension>().ToList();
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
             retVal.Notes = DataTypeConverter.ToNote<ActNote>(resource.Text);
 
