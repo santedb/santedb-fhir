@@ -79,7 +79,7 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// <summary>
         /// Gets the URI where this operation is defined
         /// </summary>
-        public Uri Uri => new Uri("OperationDefinition/match", UriKind.Relative);
+        public Uri Uri => new Uri("http://hl7.org/fhir/OperationDefinition/Patient-match");
 
         /// <summary>
         /// Applies to which resources (all of them)

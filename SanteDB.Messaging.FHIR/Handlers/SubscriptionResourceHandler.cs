@@ -116,7 +116,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var channel = this.CreateChannel($"Channel for {subscription.Id}", subscription.Channel, mode);
             var retVal = this.m_pubSubManager.RegisterSubscription(cdrType.CanonicalType, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete | PubSubEventType.Merge, hdsiQuery.ToHttpString(), channel.Key.Value, supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
 
-            if (subscription.Status == Subscription.SubscriptionStatus.Active)
+            if (subscription.Status == SubscriptionStatusCodes.Active)
             {
                 retVal = this.m_pubSubManager.ActivateSubscription(retVal.Key.Value, true);
             }
@@ -270,7 +270,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Update the channel
             var retVal = this.m_pubSubManager.UpdateSubscription(key.Value, subscription.Id, subscription.Reason, PubSubEventType.Create | PubSubEventType.Update | PubSubEventType.Delete, hdsiQuery.ToHttpString(), supportAddress: subscription.Contact?.FirstOrDefault()?.Value, notAfter: subscription.End);
-            this.m_pubSubManager.ActivateSubscription(key.Value, subscription.Status == Subscription.SubscriptionStatus.Active);
+            this.m_pubSubManager.ActivateSubscription(key.Value, subscription.Status == SubscriptionStatusCodes.Active);
 
             var settings = subscription.Channel.Header.Select(o => o.Split(':')).ToDictionary(o => o[0], o => o[1]);
             settings.Add("Content-Type", subscription.Channel.Payload);
@@ -294,10 +294,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 new ContactPoint(ContactPoint.ContactPointSystem.Other, ContactPoint.ContactPointUse.Temp, model.SupportContact)
             };
 
-            retVal.Status = model.IsActive ? Subscription.SubscriptionStatus.Active : Subscription.SubscriptionStatus.Off;
+            retVal.Status = model.IsActive ? SubscriptionStatusCodes.Active : SubscriptionStatusCodes.Off;
             if (model.NotBefore > DateTime.Now)
             {
-                retVal.Status = Subscription.SubscriptionStatus.Requested;
+                retVal.Status = SubscriptionStatusCodes.Requested;
             }
 
             if (model.NotAfter.HasValue)

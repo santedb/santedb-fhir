@@ -17,6 +17,7 @@
  * 
  */
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using RestSrvr;
 using RestSrvr.Attributes;
 using SanteDB.Core;
@@ -25,6 +26,8 @@ using SanteDB.Core.Exceptions;
 using SanteDB.Core.Interop;
 using SanteDB.Core.Interop.Description;
 using SanteDB.Core.Model.Audit;
+using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.Json.Formatter;
 using SanteDB.Core.Security;
 using SanteDB.Core.Security.Audit;
 using SanteDB.Core.Services;
@@ -34,6 +37,7 @@ using SanteDB.Messaging.FHIR.Util;
 using SanteDB.Rest.Common;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
@@ -617,7 +621,50 @@ namespace SanteDB.Messaging.FHIR.Rest
                     throw new FileNotFoundException(); // endpoint not found!
                 }
 
-                var result = handler.Invoke(null);
+                var parms = new Parameters();
+                foreach(var parm in handler.Parameters)
+                {
+                    var restValue = RestOperationContext.Current.IncomingRequest.QueryString[parm.Key];
+                    if(!String.IsNullOrEmpty(restValue))
+                    {
+                        Base value = null;
+                        switch(parm.Value)
+                        {
+                            case FHIRAllTypes.String:
+                                value = new FhirString(restValue);
+                                break;
+                            case FHIRAllTypes.Date:
+                            case FHIRAllTypes.DateTime:
+                                if(DateTime.TryParse(restValue, out var dt))
+                                {
+                                    value = new FhirDateTime(dt);
+                                }
+                                break;
+                            case FHIRAllTypes.Integer:
+                                if(Int32.TryParse(restValue, out var intVal))
+                                {
+                                    value = new Integer(intVal);
+                                }
+                                break;
+                            case FHIRAllTypes.Decimal:
+                                if(Decimal.TryParse(restValue, out var decVal))
+                                {
+                                    value = new FhirDecimal(decVal);
+                                }
+                                break;
+                            case FHIRAllTypes.Boolean:
+                                if(Boolean.TryParse(restValue, out var boolVal))
+                                {
+                                    value = new FhirBoolean(boolVal);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException("Parameter value is out of range of allowed types");
+                        }
+                        parms.Add(parm.Key, value);
+                    }
+                }
+                var result = handler.Invoke(parms);
                 this.AuditOperationAction(resourceType, operationName, OutcomeIndicator.Success, result);
 
                 return result;
@@ -721,10 +768,12 @@ namespace SanteDB.Messaging.FHIR.Rest
                 {
                     foreach (var op in def.Interaction)
                     {
+                        
                         ServiceOperationDescription operationDescription = null;
                         switch (op.Code.Value)
                         {
                             case CapabilityStatement.TypeRestfulInteraction.Create:
+                                
                                 operationDescription = new ServiceOperationDescription("POST", $"/{def.Type.Value}", acceptProduces, true);
                                 operationDescription.Responses.Add(HttpStatusCode.Created, def.Type.Value.CreateDescription());
                                 operationDescription.Parameters.Add(new OperationParameterDescription("body", def.Type.Value.CreateDescription(), OperationParameterLocation.Body));

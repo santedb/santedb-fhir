@@ -778,7 +778,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             // TODO: Configure this namespace / coding scheme
-            m_pipService.GetPolicies(resource).Where(o => o.Rule == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding("http://santedb.org/security/policy", o.Policy.Oid)).ToList();
+            retVal.Meta.Security = m_pipService.GetPolicies(resource).Where(o => o.Rule == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding(FhirConstants.SecurityPolicySystem, o.Policy.Oid)).ToList();
             //retVal.Meta.Security.Add(new Coding("http://santedb.org/security/policy", PermissionPolicyIdentifiers.ReadClinicalData));
 
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
@@ -1479,12 +1479,12 @@ namespace SanteDB.Messaging.FHIR.Util
 #pragma warning disable CS0618
                 if (fhirId.Period.StartElement != null)
                 {
-                    retVal.IssueDate = fhirId.Period.StartElement.ToDateTimeOffset();
+                    retVal.IssueDate = fhirId.Period.StartElement.ToDateTimeOffset(TimeSpan.Zero).ToLocalTime();
                 }
 
                 if (fhirId.Period.EndElement != null)
                 {
-                    retVal.ExpiryDate = fhirId.Period.EndElement.ToDateTimeOffset();
+                    retVal.ExpiryDate = fhirId.Period.EndElement.ToDateTimeOffset(TimeSpan.Zero).ToLocalTime();
                 }
 #pragma warning restore CS0618
 
@@ -1969,7 +1969,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// To FHIR enumeration
         /// </summary>
-        public static TEnum? ToFhirEnumeration<TEnum>(Guid? conceptKey, string codeSystem, bool throwIfNotFound = false) where TEnum : struct
+        public static TEnum? ToFhirEnumeration<TEnum>(Guid? conceptKey, string codeSystem, bool throwIfNotFound = false) where TEnum : struct, Enum
         {
             var coding = DataTypeConverter.ToFhirCodeableConcept(conceptKey, codeSystem);
             if (coding != null)
@@ -2048,7 +2048,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Add provenance information to the target entity
         /// </summary>
-        public static void AddContextProvenanceData(IdentifiedData targetEntity)
+        public static void AddContextProvenanceData(IIdentifiedResource targetEntity)
         {
             object provenanceObject = null;
             if (RestOperationContext.Current?.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out provenanceObject) != true ||
