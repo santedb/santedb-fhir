@@ -18,6 +18,7 @@
  */
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Interfaces;
 using System;
 
 namespace SanteDB.Messaging.FHIR.Handlers

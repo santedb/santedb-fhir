@@ -71,5 +71,10 @@ namespace SanteDB.Messaging.FHIR
         /// Default category concepts
         /// </summary>
         public const string DefaultObservationCategorySystem = "http://terminology.hl7.org/CodeSystem/observation-category";
+
+        /// <summary>
+        /// Security policy applied
+        /// </summary>
+        public const string SecurityPolicySystem = "http://santedb.org/security/policy";
     }
 }
