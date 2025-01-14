@@ -1,0 +1,117 @@
+﻿<?xml version="1.0"?>
+<dataset xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="HL7 FHIR Location Types" xmlns="http://santedb.org/data">
+  <update skipIfError="false" insertIfNotExists="true">
+    <CodeSystem xmlns="http://santedb.org/model">
+      <id>f3521b6a-d211-11ef-b186-5f9b1fa40664</id>
+      <name>HL7 Location Physical Type</name>
+      <oid>2.16.840.1.113883.4.642.3.328</oid>
+      <authority>LocationType</authority>
+      <url>http://terminology.hl7.org/CodeSystem/location-physical-type</url>
+      <version>4.3.0</version>
+      <description>HL7 FHIR Location Physical Types</description>
+    </CodeSystem>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>182d968a-ea0d-4879-a1b2-7df62d36f861</id>
+      <mnemonic>area</mnemonic>
+      <codeSystem>f3521b6a-d211-11ef-b186-5f9b1fa40664</codeSystem>
+      <name>
+        <id>73731fba-d212-11ef-a830-cbb21ac5f496</id>
+        <language>en</language>
+        <value>Area</value>
+        <source>182d968a-ea0d-4879-a1b2-7df62d36f861</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>97705d4d-68e0-4706-8c40-075c4127d05d</id>
+      <mnemonic>jdn</mnemonic>
+      <codeSystem>f3521b6a-d211-11ef-b186-5f9b1fa40664</codeSystem>
+      <name>
+        <id>8f6337aa-d212-11ef-88ca-2716ed5fa207</id>
+        <language>en</language>
+        <value>Jurisdiction</value>
+        <source>97705d4d-68e0-4706-8c40-075c4127d05d</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>a6fcb12e-7fde-4241-a93e-678df8c73df6</id>
+      <mnemonic>si</mnemonic>
+      <codeSystem>f3521b6a-d211-11ef-b186-5f9b1fa40664</codeSystem>
+      <name>
+        <id>a6305ab2-d212-11ef-b39a-53a284564a4f</id>
+        <language>en</language>
+        <value>Site</value>
+        <source>a6fcb12e-7fde-4241-a93e-678df8c73df6</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>7374453e-d212-11ef-a831-a3dbf5a15aa3</id>
+      <source>79dd4f75-68e8-4722-a7f5-8bc2e08f5cd6</source>
+      <term>182d968a-ea0d-4879-a1b2-7df62d36f861</term>
+      <relationshipType>ae8b4f2f-009f-4e0d-b35e-5a89555c5980</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>737503de-d212-11ef-a832-cbfde1d6500a</id>
+      <source>6eefee7d-dff5-46d3-a6a7-171ef93879c7</source>
+      <term>182d968a-ea0d-4879-a1b2-7df62d36f861</term>
+      <relationshipType>ae8b4f2f-009f-4e0d-b35e-5a89555c5980</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>737567ac-d212-11ef-a833-cfdbcbd5fda2</id>
+      <source>acafe0f2-e209-43bb-8633-3665fd7c90ba</source>
+      <term>182d968a-ea0d-4879-a1b2-7df62d36f861</term>
+      <relationshipType>ae8b4f2f-009f-4e0d-b35e-5a89555c5980</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>8f63fa1e-d212-11ef-88cb-17bdcf654552</id>
+      <source>48b2ffb3-07db-47ba-ad73-fc8fb8502471</source>
+      <term>97705d4d-68e0-4706-8c40-075c4127d05d</term>
+      <relationshipType>ae8b4f2f-009f-4e0d-b35e-5a89555c5980</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>8f646ada-d212-11ef-88cc-27c267804ac4</id>
+      <source>8cf4b0b0-84e5-4122-85fe-6afa8240c218</source>
+      <term>97705d4d-68e0-4706-8c40-075c4127d05d</term>
+      <relationshipType>ae8b4f2f-009f-4e0d-b35e-5a89555c5980</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>8f64cc78-d212-11ef-88cd-d73cd6f6d8bc</id>
+      <source>3f9b5ff2-97a6-40be-8fcb-e71d18c8ee42</source>
+      <term>97705d4d-68e0-4706-8c40-075c4127d05d</term>
+      <relationshipType>ae8b4f2f-009f-4e0d-b35e-5a89555c5980</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>a630eb3a-d212-11ef-b39b-5778988bd03e</id>
+      <source>21ab7873-8ef3-4d78-9c19-4582b3c40631</source>
+      <term>a6fcb12e-7fde-4241-a93e-678df8c73df6</term>
+      <relationshipType>ae8b4f2f-009f-4e0d-b35e-5a89555c5980</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>a6319738-d212-11ef-b39c-afdfdf9fdc88</id>
+      <source>ff34dfa7-c6d3-4f8b-bc9f-14bcdc13ba6c</source>
+      <term>a6fcb12e-7fde-4241-a93e-678df8c73df6</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+</dataset>
