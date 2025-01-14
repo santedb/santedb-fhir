@@ -85,7 +85,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Mode = Location.LocationMode.Instance;
             }
 
-            retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://hl7.org/fhir/ValueSet/v3-ServiceDeliveryLocationRoleType") };
+            retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://terminology.hl7.org/ValueSet/v3-ServiceDeliveryLocationRoleType") };
             retVal.Telecom = model.LoadProperty(o => o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
             retVal.Address = DataTypeConverter.ToFhirAddress(model.LoadProperty(o => o.Addresses).FirstOrDefault());
 
@@ -104,6 +104,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.PartOf = DataTypeConverter.CreateVersionedReference<Location>(parent.LoadProperty(o => o.TargetEntity));
             }
+
+            if(model.GeoTag != null)
+            {
+                retVal.Position = new Location.PositionComponent()
+                {
+                    Latitude = (decimal)model.GeoTag.Lat,
+                    Longitude = (decimal)model.GeoTag.Lng
+                };
+            }
+
+
 
             return retVal;
         }

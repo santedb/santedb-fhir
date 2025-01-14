@@ -18,6 +18,7 @@
  */
 using Hl7.Fhir.Model;
 using RestSrvr;
+using SanteDB.BI.Model;
 using SanteDB.Core;
 using SanteDB.Core.BusinessRules;
 using SanteDB.Core.Configuration;
@@ -1896,7 +1897,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
                 else
                 {
-                    var refTerms = preferredCodeSystem.Select(o => codeSystemService.GetConceptReferenceTerm(conceptKey.Value, o)).OfType<ReferenceTerm>().ToArray();
+                    var refTerms = preferredCodeSystem.Select(o => codeSystemService.GetConceptReferenceTerm(conceptKey.Value, o, false)).OfType<ReferenceTerm>().ToArray();
                     if (refTerms.Any())
                     {
                         return new CodeableConcept
@@ -2103,6 +2104,35 @@ namespace SanteDB.Messaging.FHIR.Util
 
                 }
             }
+        }
+
+        /// <summary>
+        /// To a FHIR measure type
+        /// </summary>
+        internal static CodeableConcept ToFhirMeasureType(BiMeasureComputationColumnReference comp)
+        {
+            string codeValue = String.Empty;
+            switch (comp.GetType().Name)
+            {
+                case nameof(BiMeasureComputationDenominator):
+                    codeValue = "denominator";
+                    break;
+                case nameof(BiMeasureComputationDenominatorExclusion):
+                    codeValue = "denominator-exclusion";
+                    break;
+                case nameof(BiMeasureComputationNumerator):
+                    codeValue = "numerator";
+                    break;
+                case nameof(BiMeasureComputationNumeratorExclusion):
+                    codeValue = "numerator-exclusion";
+                    break;
+                case nameof(BiMeasureComputationScore):
+                    codeValue = "measure-observation";
+                    break;
+                default:
+                    throw new InvalidOperationException();
+            }
+            return new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-population", codeValue);
         }
     }
 }
