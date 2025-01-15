@@ -1,13 +1,14 @@
-﻿using DocumentFormat.OpenXml.Presentation;
-using DocumentFormat.OpenXml.Wordprocessing;
-using Hl7.Fhir.Model;
+﻿using Hl7.Fhir.Model;
 using RestSrvr.Attributes;
+using SanteDB.BI;
 using SanteDB.BI.Model;
 using SanteDB.BI.Services;
 using SanteDB.BI.Util;
 using SanteDB.Core;
 using SanteDB.Core.i18n;
+using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Services;
+using SanteDB.Core.Services.Impl;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
@@ -121,12 +122,17 @@ namespace SanteDB.Messaging.FHIR.Operations
                 throw new ArgumentException($"{SUBJECT_ID_PARM_NAME} must be specified");
             }
             var forSubjectId = str?.Value;
-            var subjRepo = typeof(IRepositoryService<>).MakeGenericType(indicatorDef.Subject.ResourceType);
-            var repo = ApplicationServiceContext.Current.GetService(subjRepo) as IRepositoryService;
-            var subject = repo.Get(Guid.Parse(forSubjectId));
-            if(subject == null)
+
+            // Resolve from FHIR
+            if (!DataTypeConverter.TryResolveResourceReference(new ResourceReference(forSubjectId), null, out var subject))
             {
-                throw new InvalidOperationException(String.Format(ErrorMessages.OBJECT_NOT_FOUND, forSubjectId));
+                var subjRepo = typeof(IRepositoryService<>).MakeGenericType(indicatorDef.Subject.ResourceType);
+                var repo = ApplicationServiceContext.Current.GetService(subjRepo) as IRepositoryService;
+                subject = repo.Get(Guid.Parse(forSubjectId));
+                if (subject == null)
+                {
+                    throw new InvalidOperationException(String.Format(ErrorMessages.OBJECT_NOT_FOUND, forSubjectId));
+                }
             }
 
             // Bundle
@@ -142,8 +148,8 @@ namespace SanteDB.Messaging.FHIR.Operations
                 Group = new List<MeasureReport.GroupComponent>()
             };
 
-
-            foreach (var indicatorResult in providerImplementation.ExecuteIndicator(indicatorDef, period, forSubjectId).GroupBy(o=>o.Measure))
+            
+            foreach (var indicatorResult in providerImplementation.ExecuteIndicator(indicatorDef, period, subject.Key.ToString()).GroupBy(o=>o.Measure))
             {
                 var measureGroup = new MeasureReport.GroupComponent();
 
@@ -158,28 +164,29 @@ namespace SanteDB.Messaging.FHIR.Operations
                         if (currentRecord == null) { continue; }
 
                         // Numerator and denominator
-                        long numeratorValue = (long)currentRecord[measureResult.Measure.Numerator.Name ?? "numerator"],
-                            denominatorValue = (long)currentRecord[measureResult.Measure.Denominator.Name ?? "denominator"];
+                        measureGroup.Population = this.ConvertComputation(currentRecord, measureResult.Measure, out var numeratorValue, out var denominatorValue, out var scoreObtained);
+                        
 
                         measureGroup.ElementId = measureResult.Measure.Id ?? measureResult.Measure.Name;
                         if (measureResult.Measure.Identifier != null)
                         {
                             measureGroup.Code = new CodeableConcept(measureResult.Measure.Identifier.System, measureResult.Measure.Identifier.Value);
                         }
-                        measureGroup.Population = new List<MeasureReport.PopulationComponent>()
+
+                        if (scoreObtained.HasValue)
                         {
-                            new MeasureReport.PopulationComponent()
+                            measureGroup.MeasureScore = new Quantity(scoreObtained.Value, null, null);
+                        }
+                        else { 
+                            if (denominatorValue.HasValue)
                             {
-                                Code = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-population", "numerator"),
-                                Count = (int)numeratorValue
-                            },
-                            new MeasureReport.PopulationComponent()
-                            {
-                                Code = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-population", "denominator"),
-                                Count = (int)denominatorValue
+                                measureGroup.MeasureScore = new Quantity((decimal)((float)numeratorValue / (float)denominatorValue), null, null);
                             }
-                        };
-                        measureGroup.MeasureScore = new Quantity((decimal)((float)numeratorValue / (float)denominatorValue), null);
+                            else
+                            {
+                                measureGroup.MeasureScore = new Quantity((decimal)numeratorValue, null, null);
+                            }
+                        }
                     }
                     else
                     {
@@ -199,39 +206,90 @@ namespace SanteDB.Messaging.FHIR.Operations
                             stratifier.Code.Add(new CodeableConcept(stratifierDefn.Identifier.System, stratifierDefn.Identifier.Value));
                         }
 
-                        long stratumDenominator = 0;
-                        foreach (IDictionary<String, object> result in measureResult.Records)
+                        foreach (IDictionary<String, object> currentRecord in measureResult.Records)
                         {
-                            var stratName = result[result.Keys.Skip(stratumPath.Length).First()];
-                            long numeratorValue = (long)result[measureResult.Measure.Numerator.Name ?? "numerator"],
-                                denominatorValue = (long)result[measureResult.Measure.Denominator.Name ?? "denominator"];
-                            stratumDenominator += numeratorValue;
+                            var stratName = currentRecord[currentRecord.Keys.Skip(stratumPath.Length).First()];
                             var stratum = new MeasureReport.StratifierGroupComponent()
                             {
                                 Value = new CodeableConcept(null, stratName.ToString()),
-                                Population = new List<MeasureReport.StratifierGroupPopulationComponent>()
-                                {
-                                    new MeasureReport.StratifierGroupPopulationComponent()
-                                    {
-                                        Code = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-population", "numerator"),
-                                        Count = (int)numeratorValue
-                                    }
-                                }
                             };
+                            stratum.Population = this.ConvertComputation(currentRecord, measureResult.Measure, out var numeratorValue, out var denominatorValue, out var scoreObtained)
+                                    .Select(o => new MeasureReport.StratifierGroupPopulationComponent() { Code = o.Code, Count = o.Count }).ToList();
+
+                            if (scoreObtained.HasValue)
+                            {
+                                stratum.MeasureScore = new Quantity(scoreObtained.Value, null, null);
+                            }
+                            else
+                            {
+                                if (denominatorValue.HasValue)
+                                {
+                                    stratum.MeasureScore = new Quantity((decimal)((float)numeratorValue / (float)denominatorValue), null, null);
+                                }
+                                else
+                                {
+                                    stratum.MeasureScore = new Quantity((decimal)numeratorValue, null, null);
+                                }
+                            }
 
                             stratifier.Stratum.Add(stratum);
                         }
-                        stratifier.Stratum.ForEach(st => st.Population.Add(new MeasureReport.StratifierGroupPopulationComponent()
-                        {
-                            Code = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-population", "denominator"),
-                            Count = (int)stratumDenominator
-                        }));
+
+                        // TODO: Denominator on the stratum may need to be updated to match the numerator of the overall group 
 
                         measureGroup.Stratifier.Add(stratifier);
                     }
                 }
 
                 retVal.Group.Add(measureGroup);
+
+            }
+
+            return retVal;
+        }
+
+        private List<MeasureReport.PopulationComponent> ConvertComputation(IDictionary<String, object> currentRecord, BiIndicatorMeasureDefinition measure, out long? numeratorValue, out long? denominatorValue, out decimal? scoreObtained)
+        {
+            var retVal = new List<MeasureReport.PopulationComponent>(3);
+            numeratorValue = null;
+            denominatorValue = null;
+            scoreObtained = null;
+            foreach (var calc in measure.Computation)
+            {
+                switch (calc)
+                {
+                    case BiMeasureComputationNumerator cNumerator:
+                        numeratorValue = (long)currentRecord[calc.Name];
+                        break;
+                    case BiMeasureComputationNumeratorExclusion cNumeratorExcl:
+                        numeratorValue -= (long)currentRecord[calc.Name];
+                        break;
+                    case BiMeasureComputationDenominator cDenominator:
+                        denominatorValue = (long)currentRecord[calc.Name];
+                        break;
+                    case BiMeasureComputationDenominatorExclusion cDenominator:
+                        denominatorValue -= (long)currentRecord[calc.Name];
+                        break;
+                    case BiMeasureComputationScore cScore:
+                        var rawValue = currentRecord[calc.Name];
+                        if (rawValue == null)
+                        {
+                            scoreObtained = 0;
+                        }
+                        else if (rawValue is Decimal d || Decimal.TryParse(rawValue.ToString(), out d))
+                        {
+                            scoreObtained = d;
+                        }
+                        continue;
+                    default:
+                        continue;
+                }
+
+                retVal.Add(new MeasureReport.PopulationComponent()
+                {
+                    Code = DataTypeConverter.ToFhirMeasureType(calc),
+                    Count = (int)(long)currentRecord[calc.Name]
+                });
 
             }
 

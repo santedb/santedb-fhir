@@ -16,12 +16,14 @@
  * the License.
  * 
  */
+using DocumentFormat.OpenXml.Office2019.Drawing.Model3D;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.PubSub;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
@@ -134,6 +136,12 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <returns>The converted resource</returns>
             private Resource ConvertToResource<TModel>(TModel data)
             {
+                // First we want to ensure that this is the correct type
+                if((!this.Settings.TryGetValue("notify.local", out var notifyLocalStr) || !Boolean.TryParse(notifyLocalStr, out bool notifiyLocal) || !notifiyLocal) && data is IdentifiedData id)
+                {
+                    data = (TModel)(object)id.ResolveGoldenRecord();
+                }
+
                 var mapper = FhirResourceHandlerUtil.GetMapperForInstance(data);
                 if (mapper == null)
                 {

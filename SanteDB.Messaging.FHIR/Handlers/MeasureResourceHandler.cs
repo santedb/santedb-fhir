@@ -157,7 +157,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     Security = definition.MetaData?.Demands?.Select(o => new Coding(FhirConstants.SecurityPolicySystem, o)).ToList(),
                     LastUpdated = definition.MetaData?.LastModified
                 },
-                Scoring = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-scoring", "proportion")
+                Scoring = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-scoring", definition.Measures.Any(m=>m.Computation.Any(c=>c.GetType() == typeof(BiMeasureComputationScore))) ? "continuous-variable" : "proportion")
             };
 
             if (definition.Identifier != null)
@@ -183,20 +183,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 group.Description = measure.MetaData?.Annotation?.JsonBody;
                 group.Population = new List<Measure.PopulationComponent>();
-                if(measure.Denominator != null)
+                foreach(var comp in measure.Computation)
                 {
                     group.Population.Add(new Measure.PopulationComponent()
                     {
-                        Code = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-population", "denominator"),
-                        Criteria = this.ToExpression(measure.Denominator)
-                    });
-                }
-                if(measure.Numerator != null)
-                {
-                    group.Population.Add(new Measure.PopulationComponent()
-                    {
-                        Code = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-population", "numerator"),
-                        Criteria = this.ToExpression(measure.Numerator)
+                        Code = DataTypeConverter.ToFhirMeasureType(comp),
+                        Criteria = this.ToExpression(comp)
                     });
                 }
 
