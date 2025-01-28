@@ -88,7 +88,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = DataTypeConverter.CreateResource<Medication>(model);
 
             // Code of medication code
-            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://snomed.info/sct");
+            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey);
             retVal.Identifier = model.LoadProperty(o => o.Identifiers).Select(DataTypeConverter.ToFhirIdentifier).ToList();
 
             switch (model.StatusConceptKey.ToString().ToUpper())

@@ -160,6 +160,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.Type = AllergyIntolerance.AllergyIntoleranceType.Intolerance;
                     retVal.Category = new AllergyIntolerance.AllergyIntoleranceCategory?[] { AllergyIntolerance.AllergyIntoleranceCategory.Environment };
                 }
+                else if (model.TypeConceptKey == IntoleranceObservationTypeKeys.UnspecifiedAllergyIntolerance)
+                {
+                    retVal.Type = null;
+                    retVal.Category = null;
+                }
                 else
                 {
                     //TODO: Throw exception here, cannot translate.
@@ -297,6 +302,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal.TypeConceptKey = isintolerance ? IntoleranceObservationTypeKeys.EnvironmentalNonAllergyIntolerance : IntoleranceObservationTypeKeys.EnvironmentalIntolerance;
                     break;
                 default:
+                    retVal.TypeConceptKey = IntoleranceObservationTypeKeys.UnspecifiedAllergyIntolerance;
                     break;
             }
 

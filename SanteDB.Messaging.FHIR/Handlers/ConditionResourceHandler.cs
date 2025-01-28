@@ -137,7 +137,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Severity
-            if (severity != null)
+            if (severity?.Any() == true)
             {
                 retVal.Severity = DataTypeConverter.ToFhirCodeableConcept((severity as CodedObservation).ValueKey);
             }
@@ -197,6 +197,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Participations = new List<ActParticipation>(),
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                TypeConceptKey = ObservationTypeKeys.Condition
             };
 
             retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
