@@ -253,6 +253,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Key = Guid.TryParse(resource.Id, out var id) ? id : Guid.NewGuid();
 
+            if (null == retVal.Relationships)
+            {
+                retVal.Relationships = new List<ActRelationship>();
+            }
+
+            if (null == retVal.Participations)
+            {
+                retVal.Participations = new List<ActParticipation>();
+            }
+
             // Observation
             var status = resource.Status;
 
