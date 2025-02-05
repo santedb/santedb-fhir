@@ -28,10 +28,19 @@ namespace SanteDB.Messaging.FHIR.Rest
     /// </summary>
     public interface IFhirClientAuthenticator
     {
-        /// <summary>
-        /// Attach to the client and authenticate on each request
-        /// </summary>
-        void AttachClient(FhirClient client, FhirDispatcherTargetConfiguration dispatchConfiguration, IDictionary<String, String> settings);
 
+        /// <summary>
+        /// Gets the configuration name of the authenticator
+        /// </summary>
+        string Name { get; }
+
+        /// <summary>
+        /// Add authentication headers to the specified client
+        /// </summary>
+        /// <param name="client">The FHIR client to which the authentication headers should be added</param>
+        /// <param name="userName">The username to use for authentication</param>
+        /// <param name="password">The password to use for authentication</param>
+        /// <param name="additionalSettings">Additional settings that should be added to the authentication</param>
+        void AddAuthenticationHeaders(FhirClient client, string userName, string password, IDictionary<String, String> additionalSettings);
     }
 }

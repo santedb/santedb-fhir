@@ -22,6 +22,7 @@ using Hl7.Fhir.Rest;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.PubSub;
@@ -29,9 +30,13 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Rest;
+using SanteDB.Messaging.FHIR.Util;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
+using System.Net.Http;
 using System.Reflection;
 
 namespace SanteDB.Messaging.FHIR.PubSub
@@ -42,6 +47,10 @@ namespace SanteDB.Messaging.FHIR.PubSub
     /// </summary>
     public class FhirPubSubMessageDispatcherFactory : IPubSubDispatcherFactory
     {
+
+        // Create authenticators
+        private static readonly IDictionary<Guid, IFhirClientAuthenticator> m_createdAuthenticators = new ConcurrentDictionary<Guid, IFhirClientAuthenticator>();
+
         /// <summary>
         /// Fhir message id
         /// </summary>
@@ -70,6 +79,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
 
             // Fhir service configuration
             private FhirServiceConfigurationSection m_fhirConfiguration;
+            private IFhirClientAuthenticator m_authenticator;
 
             /// <summary>
             /// Creates a new dispatcher for the channel
@@ -106,11 +116,19 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     this.m_client.RequestHeaders.Add(kv.Key, kv.Value);
                 }
 
-                if (this.m_configuration?.Authenticator != null)
+                if (!m_createdAuthenticators.TryGetValue(channelKey, out this.m_authenticator))
                 {
-                    var authenticator = this.m_configuration.Authenticator.Type.CreateInjected() as IFhirClientAuthenticator;
-                    authenticator.AttachClient(this.m_client, this.m_configuration, settings);
+                    if (this.m_configuration?.Authenticator != null)
+                    {
+                        this.m_authenticator = this.m_configuration.Authenticator.Type.CreateInjected() as IFhirClientAuthenticator;
+                    }
+                    else
+                    {
+                        _ = this.Settings.TryGetValue(FhirConstants.DispatcherClassSettingName, out var dispatcher) && MessageUtil.TryCreateAuthenticator(dispatcher, out this.m_authenticator);
+                        m_createdAuthenticators.Add(channelKey, this.m_authenticator);
+                    }
                 }
+
             }
 
             /// <summary>
@@ -244,6 +262,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         }
                     }
 
+                    this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
                     m_client.Create(msgBundle);
                 }
                 catch (Exception e)
@@ -298,6 +317,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         };
                     }));
 
+                    this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
                     m_client.Create(msgBundle);
                 }
                 catch (Exception e)
@@ -333,6 +353,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         }
                     });
 
+                    this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
                     m_client.Create(msgBundle);
                 }
                 catch (Exception e)
@@ -385,6 +406,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         }
                     }
 
+                    this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
                     m_client.Create(msgBundle);
                 }
                 catch (Exception e)
@@ -407,6 +429,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 this.NotifyUpdated(holder);
                 this.NotifyUpdated(target);
             }
+
         }
 
         /// <summary>
