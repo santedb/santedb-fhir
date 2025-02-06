@@ -24,6 +24,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
     /// <summary>
     /// Client authenticator that performs an OAUTH authentication
     /// </summary>
+    /// TODO: Migrate these to a common area
     public class OAuthClientAuthenticator : IFhirClientAuthenticator
     {
 
@@ -58,11 +59,14 @@ namespace SanteDB.Messaging.FHIR.Authenticator
         /// Get the scope configuration setting
         /// </summary>
         public const string OAuthGrantScopeSettingName = "$oauth.scope";
-
         /// <summary>
         /// No validating tokens
         /// </summary>
         public const string OAuthNoValidateToken = "$oauth.novalidate";
+        /// <summary>
+        /// Token to be used for authentication / refreshing
+        /// </summary>
+        public const string OAuthAuthTokenCode = "$oauth.token";
 
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(OAuthClientAuthenticator));
         private IRestClientDescription m_configuredRestDescription;
@@ -270,11 +274,10 @@ namespace SanteDB.Messaging.FHIR.Authenticator
             _ = additionalSettings.TryGetValue(OAuthClientSecretSettingName, out var client_secret);
             _ = additionalSettings.TryGetValue(OAuthGrantTypeSettingName, out var grant_type);
             _ = additionalSettings.TryGetValue(OAuthGrantScopeSettingName, out var scopes);
-
             // Is there a username or password
             _ = String.IsNullOrEmpty(userName) ? additionalSettings.TryGetValue(OAuthUsernameSettingName, out userName) : false;
             _ = String.IsNullOrEmpty(password) ? additionalSettings.TryGetValue(OAuthPasswordSettingName, out password) : false;
-
+            
             OAuthTokenResponse response = null;
             if (!String.IsNullOrEmpty(this.m_refreshToken))
             {
@@ -288,6 +291,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
                     case "client_credentials":
                         response = this.AuthenticateApp(client_id, client_secret, scopes);
                         break;
+                    
                     default:
                         throw new InvalidOperationException();
                 }
