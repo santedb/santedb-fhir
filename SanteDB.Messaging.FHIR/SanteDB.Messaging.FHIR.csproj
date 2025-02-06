@@ -62,6 +62,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hl7.Fhir.Specification.R4B" Version="4.3.0" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="RabbitMQ.Client" Version="6.5.0" />
     <PackageReference Include="System.Runtime.Caching" Version="9.0.0" />
@@ -139,7 +141,7 @@
         <PackageReference Include="SanteDB.Core.Model" Version="$(VersionNumber)" />
         <PackageReference Include="SanteDB.Rest.Common" Version="$(VersionNumber)" />
 		<PackageReference Include="SanteDB.Docker.Core" Version="$(VersionNumber)" />
-		<PackageReference Include="SanteDB.BI" Version="$(VersionNumber)" />
+		  <PackageReference Include="SanteDB.BI" Version="$(VersionNumber)" />
       </ItemGroup>
     </When>
     <Otherwise>

@@ -76,5 +76,10 @@ namespace SanteDB.Messaging.FHIR
         /// Security policy applied
         /// </summary>
         public const string SecurityPolicySystem = "http://santedb.org/security/policy";
+
+        /// <summary>
+        /// Dispatcher class setting name
+        /// </summary>
+        public const string DispatcherClassSettingName = "$authenticationProvider";
     }
 }

@@ -17,10 +17,14 @@
  * 
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Messaging.FHIR.Rest;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -29,6 +33,9 @@ namespace SanteDB.Messaging.FHIR.Util
     /// </summary>
     public static class MessageUtil
     {
+        // Authenticator
+        private static readonly IDictionary<String, Type> m_authenticationHandlers;
+
         /// <summary>
         /// The escape characters.
         /// </summary>
@@ -43,6 +50,13 @@ namespace SanteDB.Messaging.FHIR.Util
         //Base path
         private static string s_basePath = String.Empty;
 
+        static MessageUtil()
+        {
+            m_authenticationHandlers = AppDomain.CurrentDomain.GetAllTypes().Where(t => typeof(IFhirClientAuthenticator).IsAssignableFrom(t) && !t.IsAbstract && !t.IsInterface)
+                .Select(t => t.CreateInjected())
+                .OfType<IFhirClientAuthenticator>()
+                .ToDictionary(o => o.Name, o => o.GetType());
+        }
         /// <summary>
         /// Escape a string
         /// </summary>
@@ -206,6 +220,23 @@ namespace SanteDB.Messaging.FHIR.Util
         internal static string GetBaseUri()
         {
             return s_basePath;
+        }
+
+        /// <summary>
+        /// Try to get the FHIR authenticator
+        /// </summary>
+        /// <param name="authenticatorName">The authenticator name</param>
+        /// <param name="authenticator">The authenticator</param>
+        /// <returns>True if the authenticator was registered</returns>
+        internal static bool TryCreateAuthenticator(String authenticatorName, out IFhirClientAuthenticator authenticator)
+        {
+            if(m_authenticationHandlers.TryGetValue(authenticatorName, out var authenticatorType))
+            {
+                authenticator = authenticatorType.CreateInjected() as IFhirClientAuthenticator;
+                return true;
+            }
+            authenticator = null;
+            return false;
         }
     }
 }

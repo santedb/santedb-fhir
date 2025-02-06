@@ -1413,7 +1413,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (fhirAddress.Line?.Any() == true)
             {
-                address.Component.AddRange(fhirAddress.Line.Select(a => new EntityAddressComponent(AddressComponentKeys.AddressLine, a)));
+                address.Component.AddRange(fhirAddress.Line.Select(a => new EntityAddressComponent(AddressComponentKeys.StreetAddressLine, a)));
             }
 
             if (!string.IsNullOrEmpty(fhirAddress.State))

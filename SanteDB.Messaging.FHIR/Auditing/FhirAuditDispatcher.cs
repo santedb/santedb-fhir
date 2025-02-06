@@ -24,6 +24,7 @@ using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Rest;
 using SanteDB.Messaging.FHIR.Util;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 
 namespace SanteDB.Messaging.FHIR.Auditing
@@ -81,7 +82,6 @@ namespace SanteDB.Messaging.FHIR.Auditing
             if (this.m_configuration.Authenticator?.Type != null)
             {
                 this.m_authenticator = serviceManager.CreateInjected(this.m_configuration.Authenticator.Type) as IFhirClientAuthenticator;
-                this.m_authenticator.AttachClient(this.m_client, this.m_configuration, null);
             }
         }
 
@@ -98,6 +98,7 @@ namespace SanteDB.Messaging.FHIR.Auditing
             try
             {
                 var fhirAudit = DataTypeConverter.ToSecurityAudit(audit);
+                this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration.UserName, this.m_configuration.Password, new Dictionary<string, string>());
                 this.m_client.Create(fhirAudit);
             }
             catch (Exception e)
