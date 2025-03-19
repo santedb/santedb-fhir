@@ -779,7 +779,14 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             // TODO: Configure this namespace / coding scheme
-            retVal.Meta.Security = m_pipService.GetPolicies(resource).Where(o => o.Rule == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding(FhirConstants.SecurityPolicySystem, o.Policy.Oid)).ToList();
+            if (resource is IHasPolicies ihp)
+            {
+                retVal.Meta.Security = ihp.Policies?.Select(o => new Coding(FhirConstants.SecurityPolicySystem, o.LoadProperty(a => a.Policy).Oid, o.Policy.Name)).ToList();
+            }
+            else
+            {
+                retVal.Meta.Security = m_pipService.GetPolicies(resource).Where(o => o.Rule == Core.Model.Security.PolicyGrantType.Grant).Select(o => new Coding(FhirConstants.SecurityPolicySystem, o.Policy.Oid)).ToList();
+            }
             //retVal.Meta.Security.Add(new Coding("http://santedb.org/security/policy", PermissionPolicyIdentifiers.ReadClinicalData));
 
             if (retVal is Hl7.Fhir.Model.IExtendable fhirExtendable && resource is Core.Model.Interfaces.IExtendable extendableObject)
@@ -2133,6 +2140,24 @@ namespace SanteDB.Messaging.FHIR.Util
                     throw new InvalidOperationException();
             }
             return new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-population", codeValue);
+        }
+
+        /// <summary>
+        /// Convert to a security policy
+        /// </summary>
+        internal static SecurityPolicyInstance ToSecurityPolicy(Coding securityCoding)
+        {
+            if(!String.IsNullOrEmpty(securityCoding.System) && !securityCoding.System.Equals(FhirConstants.SecurityPolicySystem))
+            {
+                throw new ArgumentOutOfRangeException(nameof(securityCoding.System), $"Security policies must be drawn from the SanteDB {FhirConstants.SecurityPolicySystem}");
+            }
+            var policy = m_pipService.GetPolicy(securityCoding.Code);
+            if(policy == null)
+            {
+                throw new InvalidOperationException(String.Format(ErrorMessages.DEPENDENT_CONFIGURATION_MISSING, securityCoding.Code));
+            }
+            
+            return new SecurityPolicyInstance(new SecurityPolicy(policy.Name, policy.Oid, true, policy.CanOverride) {  Key = policy.Key }, PolicyGrantType.Grant);
         }
     }
 }
