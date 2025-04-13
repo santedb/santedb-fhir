@@ -16,6 +16,7 @@
  * the License.
  * 
  */
+using DocumentFormat.OpenXml.Office2016.Drawing.Command;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Constants;
@@ -215,6 +216,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         };
                     }
                 }
+                
+                if(relationship == null)
+                {
+                    relationship = new EntityRelationship()
+                    {
+                        Key = key
+                    };
+                }
             }
 
             // Find the source of the relationship
@@ -231,6 +240,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Relationship not found
             if (relationship == null)
             {
+                // Attempt to find a relationship between these two entities
                 relationship = new EntityRelationship()
                 {
                     Key = Guid.NewGuid(),
@@ -331,6 +341,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 person.AddTag(FhirConstants.PlaceholderTag, "true");
             }
             relationship.TargetEntity = person;
+
+            // One last check for an existing
+            var existingRel = this.m_repository.Find(o => o.SourceEntityKey == relationship.SourceEntityKey && o.RelationshipTypeKey == relationship.RelationshipTypeKey && o.TargetEntityKey == person.Key);
+            if (existingRel.Any())
+            {
+                relationship.Key = existingRel.Select(o => o.Key).First();
+            }
+
+
             return relationship;
         }
     }
