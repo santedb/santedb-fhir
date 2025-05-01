@@ -1,4 +1,24 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
+﻿/*
+ * Copyright (C) 2021 - 2025, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
+ * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
+ * 
+ * Licensed under the Apache License, Version 2.0 (the "License"); you 
+ * may not use this file except in compliance with the License. You may 
+ * obtain a copy of the License at 
+ * 
+ * http://www.apache.org/licenses/LICENSE-2.0 
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the 
+ * License for the specific language governing permissions and limitations under 
+ * the License.
+ * 
+ * User: fyfej
+ * Date: 2025-2-3
+ */
+using DocumentFormat.OpenXml.Wordprocessing;
 using Hl7.Fhir.Rest;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
@@ -24,6 +44,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
     /// <summary>
     /// Client authenticator that performs an OAUTH authentication
     /// </summary>
+    /// TODO: Migrate these to a common area
     public class OAuthClientAuthenticator : IFhirClientAuthenticator
     {
 
@@ -58,11 +79,14 @@ namespace SanteDB.Messaging.FHIR.Authenticator
         /// Get the scope configuration setting
         /// </summary>
         public const string OAuthGrantScopeSettingName = "$oauth.scope";
-
         /// <summary>
         /// No validating tokens
         /// </summary>
         public const string OAuthNoValidateToken = "$oauth.novalidate";
+        /// <summary>
+        /// Token to be used for authentication / refreshing
+        /// </summary>
+        public const string OAuthAuthTokenCode = "$oauth.token";
 
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(OAuthClientAuthenticator));
         private IRestClientDescription m_configuredRestDescription;
@@ -270,11 +294,10 @@ namespace SanteDB.Messaging.FHIR.Authenticator
             _ = additionalSettings.TryGetValue(OAuthClientSecretSettingName, out var client_secret);
             _ = additionalSettings.TryGetValue(OAuthGrantTypeSettingName, out var grant_type);
             _ = additionalSettings.TryGetValue(OAuthGrantScopeSettingName, out var scopes);
-
             // Is there a username or password
             _ = String.IsNullOrEmpty(userName) ? additionalSettings.TryGetValue(OAuthUsernameSettingName, out userName) : false;
             _ = String.IsNullOrEmpty(password) ? additionalSettings.TryGetValue(OAuthPasswordSettingName, out password) : false;
-
+            
             OAuthTokenResponse response = null;
             if (!String.IsNullOrEmpty(this.m_refreshToken))
             {
@@ -288,6 +311,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
                     case "client_credentials":
                         response = this.AuthenticateApp(client_id, client_secret, scopes);
                         break;
+                    
                     default:
                         throw new InvalidOperationException();
                 }

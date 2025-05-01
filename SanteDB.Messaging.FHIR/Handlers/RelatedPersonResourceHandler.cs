@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2024, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2025, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -15,7 +15,10 @@
  * License for the specific language governing permissions and limitations under 
  * the License.
  * 
+ * User: fyfej
+ * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Office2016.Drawing.Command;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Constants;
@@ -215,6 +218,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         };
                     }
                 }
+                
+                if(relationship == null)
+                {
+                    relationship = new EntityRelationship()
+                    {
+                        Key = key
+                    };
+                }
             }
 
             // Find the source of the relationship
@@ -231,6 +242,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Relationship not found
             if (relationship == null)
             {
+                // Attempt to find a relationship between these two entities
                 relationship = new EntityRelationship()
                 {
                     Key = Guid.NewGuid(),
@@ -331,6 +343,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 person.AddTag(FhirConstants.PlaceholderTag, "true");
             }
             relationship.TargetEntity = person;
+
+            // One last check for an existing
+            var existingRel = this.m_repository.Find(o => o.SourceEntityKey == relationship.SourceEntityKey && o.RelationshipTypeKey == relationship.RelationshipTypeKey && o.TargetEntityKey == person.Key);
+            if (existingRel.Any())
+            {
+                relationship.Key = existingRel.Select(o => o.Key).First();
+            }
+
+
             return relationship;
         }
     }
