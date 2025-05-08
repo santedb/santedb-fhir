@@ -73,7 +73,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(rct);
             }
 
-            var mat = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product).PlayerEntity;
+            var mat = model.Participations.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Product)?.PlayerEntity;
 
             // Recommend
             string status = (model.StopTime ?? model.ActTime) < DateTimeOffset.Now ? "overdue" : "due";
