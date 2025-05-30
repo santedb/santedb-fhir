@@ -220,7 +220,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 createdLocation.Status = Location.LocationStatus.Inactive;
                 createdLocation.Mode = Location.LocationMode.Kind;
-                createdLocation.Address.State = "Alberta";
+                createdLocation.Address.State = "Bluenose";
 
                 var actualUpdated = locationResourceHandler.Update(createdLocation.Id, createdLocation, TransactionMode.Commit);
 
@@ -232,7 +232,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsNotNull(updatedLocation);
                 Assert.AreEqual(Location.LocationStatus.Inactive, updatedLocation.Status);
                 Assert.AreEqual(Location.LocationMode.Kind, updatedLocation.Mode);
-                Assert.AreEqual("Alberta", updatedLocation.Address.State);
+                Assert.AreEqual("Bluenose", updatedLocation.Address.State);
             }
         }
 
@@ -289,7 +289,7 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 createdLocation.Status = Location.LocationStatus.Suspended;
                 createdLocation.Mode = Location.LocationMode.Kind;
-                createdLocation.Address.State = "Alberta";
+                createdLocation.Address.State = "Bluenose";
 
                 Assert.Throws<ArgumentException>(() => locationResourceHandler.Update(createdLocation.Id, new Patient(), TransactionMode.Commit));
             }

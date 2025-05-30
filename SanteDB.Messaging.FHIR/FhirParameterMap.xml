@@ -228,8 +228,8 @@
   <type resource="Medication">
     <map fhir="code" model="typeConcept" type="concept"/>
     <map fhir="form" model="formConcept" type="concept"/>
-    <map fhir="manufacturer" model="relationship[WarrantedProduct].source" type="reference"/>
-    <map fhir="manufacturer.name" model="relationship[WarrantedProduct].source.name.component.value" type="string"/>
+    <map fhir="manufacturer" model="relationship[ManufacturedProduct].source||relationship[Instance].source.relationship[ManufacturedProduct].source" type="reference"/>
+    <map fhir="manufacturer.name" model="relationship[ManufacturedProduct].source.name.component.value||relationship[Instance].source.relationship[ManufacturedProduct].source.name.component.value" type="string"/>
     <map fhir="lotNumber" model="lotNumber" type="string"/>
     <map fhir="expirationDate" model="expireDate" type="date"/>
     <map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/medication-status"/>

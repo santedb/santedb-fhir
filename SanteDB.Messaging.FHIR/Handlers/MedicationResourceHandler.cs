@@ -37,14 +37,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class MedicationResourceHandler : RepositoryResourceHandlerBase<Medication, ManufacturedMaterial>
     {
+        private readonly IRepositoryService<EntityRelationship> m_entityRelationshipRepository;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="MedicationResourceHandler"/> class.
         /// </summary>
         /// <param name="repositoryService">The repository service.</param>
         /// <param name="localizationService">The localization service.</param>
-        public MedicationResourceHandler(IRepositoryService<ManufacturedMaterial> repositoryService, ILocalizationService localizationService) : base(repositoryService, localizationService)
+        public MedicationResourceHandler(IRepositoryService<ManufacturedMaterial> repositoryService, IRepositoryService<EntityRelationship> entityRelationshipRepository, ILocalizationService localizationService) : base(repositoryService, localizationService)
         {
-
+            this.m_entityRelationshipRepository = entityRelationshipRepository;
         }
 
         /// <summary>
@@ -89,10 +91,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             var retVal = DataTypeConverter.CreateResource<Medication>(model);
 
-            // Code of medication code
-            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://snomed.info/sct");
-            retVal.Identifier = model.LoadProperty(o => o.Identifiers).Select(DataTypeConverter.ToFhirIdentifier).ToList();
-
             switch (model.StatusConceptKey.ToString().ToUpper())
             {
                 case StatusKeyStrings.Active:
@@ -107,12 +105,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
-            // Is brand?
-            var manufacturer = model.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct);
+            // Manufacturer updated to match LOT->INSTANCE->PRODUCT
+            var manufacturer = model.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct) ??
+                this.m_entityRelationshipRepository.Find(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct && o.TargetEntityKey == model.Key).FirstOrDefault() ??
+                this.m_entityRelationshipRepository.Find(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.ManufacturedProduct && o.TargetEntity.Relationships.Any(r=>r.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance && r.TargetEntityKey == model.Key)).FirstOrDefault();
 
+            // Code of medication code
+            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey);
+            retVal.Identifier = model.LoadProperty(o => o.Identifiers).Select(DataTypeConverter.ToFhirIdentifier).ToList();
             if (manufacturer != null)
             {
-                retVal.Manufacturer = DataTypeConverter.CreateVersionedReference<Organization>(manufacturer.LoadProperty<Entity>(nameof(EntityRelationship.TargetEntity)));
+                retVal.Manufacturer = DataTypeConverter.CreateVersionedReference<Organization>(manufacturer.LoadProperty(o=>o.SourceEntity));
             }
 
             // Form
@@ -150,6 +153,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
             }
 
+
             manufacturedMaterial.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             manufacturedMaterial.TypeConcept = DataTypeConverter.ToConcept(resource.Code?.Coding?.FirstOrDefault(), "http://snomed.info/sct");
             manufacturedMaterial.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
@@ -176,6 +180,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 manufacturedMaterial.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.ManufacturedProduct, DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(resource.Manufacturer, resource)));
             }
+
+            // Allow the extensions to do their thing
+            DataTypeConverter.AddExtensions(manufacturedMaterial, resource);
 
             return manufacturedMaterial;
         }
