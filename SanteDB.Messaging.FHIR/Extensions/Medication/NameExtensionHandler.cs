@@ -28,7 +28,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
-            if(modelObject is ManufacturedMaterial mmat)
+            if(modelObject is ManufacturedMaterial mmat && mmat.LoadProperty(o=>o.Names).Any())
             {
                 // Grab the instance relationship source
                 yield return new Extension()
