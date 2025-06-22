@@ -267,7 +267,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var updatedObservationValue = updatedObservation.Value as Quantity;
 
             Assert.AreEqual(10, updatedObservationValue.Value);
-            Assert.AreEqual(updatedEffectiveTime, updatedObservation.Effective);
+            Assert.AreEqual(updatedEffectiveTime.ToDateTimeOffset(), ((FhirDateTime)updatedObservation.Effective).ToDateTimeOffset());
         }
 
         /// <summary>
