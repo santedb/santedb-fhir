@@ -235,7 +235,7 @@ namespace SanteDB.Messaging.FHIR.Configuration.Feature
             dispatcherConfiguration.Targets.Add(this.m_configuration);
 
             configuration.GetSection<ApplicationServiceContextConfigurationSection>().ServiceProviders.RemoveAll(r => typeof(IAuditDispatchService).IsAssignableFrom(r.Type));
-            configuration.GetSection<ApplicationServiceContextConfigurationSection>().ServiceProviders.Add(new TypeReferenceConfiguration(typeof(FhirAuditDispatcher)));
+            configuration.GetSection<ApplicationServiceContextConfigurationSection>().AddService(new TypeReferenceConfiguration(typeof(FhirAuditDispatcher)));
             return true;
         }
 
