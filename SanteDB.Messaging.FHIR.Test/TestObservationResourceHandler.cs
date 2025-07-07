@@ -231,7 +231,7 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestUpdateObservation()
         {
             Resource result;
-            var updatedEffectiveTime = new FhirDateTime(new DateTimeOffset(2021, 1, 1, 12, 30, 30, 30, new TimeSpan(-5, 0, 0)));
+            var updatedEffectiveTime = new FhirDateTime(new DateTimeOffset(2021, 1, 1, 12, 30, 30, 0, new TimeSpan(-5, 0, 0)));
 
             using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
             {
@@ -267,7 +267,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var updatedObservationValue = updatedObservation.Value as Quantity;
 
             Assert.AreEqual(10, updatedObservationValue.Value);
-            Assert.AreEqual(updatedEffectiveTime, updatedObservation.Effective);
+            Assert.AreEqual(updatedEffectiveTime.ToDateTimeOffset(), ((FhirDateTime)updatedObservation.Effective).ToDateTimeOffset());
         }
 
         /// <summary>
