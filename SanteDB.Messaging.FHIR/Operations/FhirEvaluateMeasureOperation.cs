@@ -211,16 +211,21 @@ namespace SanteDB.Messaging.FHIR.Operations
                     else
                     {
                         var stratumPath = measureResult.StratifierPath.Split('/').Skip(1).ToArray();
-                        if (stratumPath.Length > 1) // TODO: Skip sub-stratifiers
+                        if(stratumPath.Length > 2)
                         {
-                            continue;
+                            throw new NotSupportedException("The FHIR interface cannot process indicators with more than two levels of stratifiers");
                         }
 
                         var stratifier = new MeasureReport.StratifierComponent()
                         {
-                            ElementId = stratumPath[0]
+                            ElementId = String.Join("/", stratumPath)
                         };
                         var stratifierDefn = measureResult.Measure.Stratifiers.Find(o => o.Name == stratumPath[0]);
+                        if (stratumPath.Length > 1) // TODO: Skip sub-stratifiers
+                        {
+                            stratifierDefn = stratifierDefn.ThenBy;
+                        }
+
                         if (stratifierDefn.Identifier != null)
                         {
                             stratifier.Code.Add(new CodeableConcept(stratifierDefn.Identifier.System, stratifierDefn.Identifier.Value));
@@ -228,7 +233,7 @@ namespace SanteDB.Messaging.FHIR.Operations
 
                         foreach (IDictionary<String, object> currentRecord in measureResult.Records)
                         {
-                            var stratName = currentRecord[currentRecord.Keys.Skip(stratumPath.Length).First()];
+                            var stratName = String.Join("/", Enumerable.Range(1, stratumPath.Length).Select(level => currentRecord[currentRecord.Keys.Skip(level).First()]));
                             var stratum = new MeasureReport.StratifierGroupComponent()
                             {
                                 Value = new CodeableConcept(null, stratName.ToString()),
