@@ -156,7 +156,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (model.GenderConceptKey.HasValue)
             {
-                retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.GenderConceptKey, "http://hl7.org/fhir/administrative-gender", true);
+                retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.GenderConceptKey, FhirConstants.CodeSystem_AdministrativeGender, true);
             }
 
             _ = model.LoadProperty(m => m.Names);
