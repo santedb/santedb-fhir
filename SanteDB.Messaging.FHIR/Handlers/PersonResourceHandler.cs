@@ -1,7 +1,10 @@
 ﻿using Hl7.Fhir.Model;
+using SanteDB.Core.Data;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Query;
+using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -16,8 +19,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class PersonResourceHandler : RepositoryResourceHandlerBase<Hl7.Fhir.Model.Person, SanteDB.Core.Model.Entities.Person>
     {
+
         ///<inheritdoc />
-        public PersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> repository, ILocalizationService localizationService) : base(repository, localizationService)
+        public PersonResourceHandler(
+            IRepositoryService<Core.Model.Entities.Person> repository,
+            ILocalizationService localizationService) : base(repository, localizationService)
         {
         }
 
@@ -54,6 +60,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var result = new Hl7.Fhir.Model.Person();
 
             result.Id = model.Key?.ToString();
+
+            if (null == result.Meta)
+                result.Meta = new Meta();
+
+            result.Meta.VersionId = model.VersionKey?.ToString();
+            result.Meta.LastUpdated = model.LastModified();
 
             var identifiers = model.LoadProperty(pers => pers.Identifiers);
 
@@ -134,13 +146,92 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
             }
 
-                return result;
+            return result;
         }
 
         ///<inheritdoc />
         protected override Core.Model.Entities.Person MapToModel(Hl7.Fhir.Model.Person resource)
         {
-            throw new NotImplementedException();
+            //First, we need to check if the entity already exists.
+            //We need to do this to determine the "type" of person we're working with.
+
+            Core.Model.Entities.Person model = null;
+
+            if (resource.Id != null && Guid.TryParse(resource.Id, out Guid entid))
+            {
+                model = m_repository.Get(entid);
+            }
+            else if (resource?.Identifier?.Any() == true)
+            {
+                foreach (var id in resource.Identifier.Select(Util.DataTypeConverter.ToEntityIdentifier))
+                {
+                    if (null == id || null == id.IdentityDomain || !id.IdentityDomain.IsUnique || string.IsNullOrWhiteSpace(id.Value))
+                        continue;
+
+                    model = m_repository.Find(pers => pers.Identifiers.Any(iid => iid.IdentityDomainKey == id.IdentityDomainKey && iid.Value == id.Value)).FirstOrDefault();
+
+                    if (null != model)
+                        break;
+                }
+            }
+
+            if (null == model) //If everything else has failed, create a new Person.
+                model = new Core.Model.Entities.Person();
+
+            var modelids = model.LoadProperty(m => m.Identifiers);
+
+            foreach(var resourceid in resource.Identifier)
+            {
+                var modelid = Util.DataTypeConverter.ToEntityIdentifier(resourceid);
+
+                if (!modelids.Any(mid => mid.IdentityDomainKey == modelid.IdentityDomainKey && mid.Value == modelid.Value))
+                {
+                    model.Identifiers.Add(modelid);
+                }
+            }
+
+            model.Names = resource.Name.Select(Util.DataTypeConverter.ToEntityName).ToList();
+            model.Telecoms = resource.Telecom.Select(Util.DataTypeConverter.ToEntityTelecomAddress).ToList();
+
+            if (null != resource.Gender)
+                model.GenderConceptKey = DataTypeConverter.ToConcept(new Coding(FhirConstants.CodeSystem_AdministrativeGender, Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
+
+            if (null != resource.BirthDateElement)
+                model.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate)?.DateTime;
+
+            model.Addresses = resource.Address.Select(Util.DataTypeConverter.ToEntityAddress).ToList();
+
+            if (null != resource.Photo)
+            {
+                model.RemoveExtension(ExtensionTypeKeys.JpegPhotoExtension);
+                model.AddExtension(ExtensionTypeKeys.JpegPhotoExtension, typeof(Core.Extensions.BinaryExtensionHandler), resource.Photo.Data);
+            }
+
+            if (resource.ManagingOrganization != null)
+            {
+                if (Util.DataTypeConverter.TryResolveResourceReference(resource.ManagingOrganization, null, out var scoper))
+                {
+                    var rels = model.LoadProperty(m => m.Relationships);
+
+                    var rel = rels.FirstOrDefault(r => r.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper && r.TargetEntityKey == scoper.Key);
+
+                    if (rel == null)
+                    {
+                        model.Relationships.Add(new Core.Model.Entities.EntityRelationship
+                        {
+                            RelationshipTypeKey = EntityRelationshipTypeKeys.Scoper,
+                            SourceEntity = model,
+                            TargetEntityKey = scoper.Key
+                        });
+                    }
+                }
+            }
+
+            //We will consciously ignore active from the FHIR resource. We'll use our own status
+
+            return model;
         }
     }
+
 }
+

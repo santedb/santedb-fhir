@@ -401,7 +401,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             patient.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
             patient.CreationTime = DateTimeOffset.Now;
-            patient.GenderConceptKey = resource.Gender == null ? null : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
+            patient.GenderConceptKey = resource.Gender == null ? null : DataTypeConverter.ToConcept(new Coding(FhirConstants.CodeSystem_AdministrativeGender, Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             patient.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             patient.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
             patient.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
