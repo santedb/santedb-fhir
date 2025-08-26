@@ -621,7 +621,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             switch (includeInstruction.JoinPath)
                             {
                                 case "generalPractitioner":
-                                    return resource.LoadCollection(o => o.Relationships)
+                                    return resource.LoadProperty(o => o.Relationships)
                                         .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Roles.Provider)
@@ -643,14 +643,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             switch (includeInstruction.JoinPath)
                             {
                                 case "managingOrganization":
-                                    return resource.LoadCollection(o => o.Relationships)
+                                    return resource.LoadProperty(o => o.Relationships)
                                         .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
                                         .Select(o => rpHandler.MapToFhir(o.TargetEntity));
 
                                 case "generalPractitioner":
-                                    return resource.LoadCollection(o => o.Relationships)
+                                    return resource.LoadProperty(o => o.Relationships)
                                         .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)

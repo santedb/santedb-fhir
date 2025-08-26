@@ -1,5 +1,6 @@
 ﻿using Hl7.Fhir.Model;
 using SanteDB.Core.Data;
+using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
@@ -30,7 +31,30 @@ namespace SanteDB.Messaging.FHIR.Handlers
         ///<inheritdoc />
         protected override IEnumerable<Resource> GetIncludes(Core.Model.Entities.Person resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+            return includePaths.SelectMany<IncludeInstruction, Resource>(instruction =>
+            {
+                switch (instruction.Type)
+                {
+                    case ResourceType.Organization:
+                        var handler = FhirResourceHandlerUtil.GetMappersFor(instruction.Type).FirstOrDefault();
+
+                        switch (instruction.JoinPath)
+                        {
+                            case "managingOrganization":
+                                return resource.LoadProperty(res => res.Relationships)
+                                    .Where(rel => rel.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
+                                        rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper &&
+                                        rel.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
+                                    .Select(rel => handler.MapToFhir(rel.TargetEntity));
+                            default:
+                                m_traceSource.TraceError(ErrorMessages.FHIR_INCLUDE_PATH_UNSUPPORTED, instruction);
+                                throw new InvalidOperationException(m_localizationService.GetString("error.type.InvalidOperation.cannotDetermine", new { param = instruction }));
+                        }
+                    default:
+                        m_traceSource.TraceError($"{instruction.Type} is not supported.");
+                        throw new InvalidOperationException(this.m_localizationService.GetString("error.type.NotSupportedException.userMessage"));
+                }
+            });
         }
 
         ///<inheritdoc />
@@ -116,7 +140,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (null != relationships)
             {
-                var scoper = relationships.FirstOrDefault(rel => rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper);
+                var scoper = relationships.FirstOrDefault(rel => rel.ClassificationKey != RelationshipClassKeys.ContainedObjectLink && rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper);
 
                 if (null != scoper)
                     result.ManagingOrganization = Util.DataTypeConverter.CreateNonVersionedReference<Organization>(scoper);
@@ -179,7 +203,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var modelids = model.LoadProperty(m => m.Identifiers);
 
-            foreach(var resourceid in resource.Identifier)
+            foreach (var resourceid in resource.Identifier)
             {
                 var modelid = Util.DataTypeConverter.ToEntityIdentifier(resourceid);
 
