@@ -2,7 +2,6 @@
 using SanteDB.Core.Data;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Query;
-using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
