@@ -452,7 +452,7 @@ namespace SanteDB.Messaging.FHIR.Rest
                 this.AuditDataAction(TypeRestfulInteraction.HistoryInstance, OutcomeIndicator.Success, result.Entry.Select(o => o.Resource).ToArray());
 
                 // Create the result
-                RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated?.DateTime ?? DateTime.Now);
+                RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta?.LastUpdated?.DateTime ?? DateTime.Now);
                 return result;
             }
             catch (Exception e)
