@@ -156,7 +156,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (model.GenderConceptKey.HasValue)
             {
-                retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.GenderConceptKey, "http://hl7.org/fhir/administrative-gender", true);
+                retVal.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.GenderConceptKey, FhirConstants.CodeSystem_AdministrativeGender, true);
             }
 
             _ = model.LoadProperty(m => m.Names);
@@ -401,7 +401,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             patient.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
             patient.CreationTime = DateTimeOffset.Now;
-            patient.GenderConceptKey = resource.Gender == null ? null : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
+            patient.GenderConceptKey = resource.Gender == null ? null : DataTypeConverter.ToConcept(new Coding(FhirConstants.CodeSystem_AdministrativeGender, Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             patient.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
             patient.LanguageCommunication = resource.Communication.Select(DataTypeConverter.ToLanguageCommunication).ToList();
             patient.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
@@ -621,7 +621,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             switch (includeInstruction.JoinPath)
                             {
                                 case "generalPractitioner":
-                                    return resource.LoadCollection(o => o.Relationships)
+                                    return resource.LoadProperty(o => o.Relationships)
                                         .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Roles.Provider)
@@ -643,14 +643,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             switch (includeInstruction.JoinPath)
                             {
                                 case "managingOrganization":
-                                    return resource.LoadCollection(o => o.Relationships)
+                                    return resource.LoadProperty(o => o.Relationships)
                                         .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)
                                         .Select(o => rpHandler.MapToFhir(o.TargetEntity));
 
                                 case "generalPractitioner":
-                                    return resource.LoadCollection(o => o.Relationships)
+                                    return resource.LoadProperty(o => o.Relationships)
                                         .Where(o => o.ClassificationKey != RelationshipClassKeys.ContainedObjectLink &&
                                             o.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider &&
                                             o.LoadProperty(r => r.TargetEntity) is Core.Model.Entities.Organization)

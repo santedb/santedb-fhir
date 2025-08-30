@@ -83,5 +83,14 @@ namespace SanteDB.Messaging.FHIR
         /// Dispatcher class setting name
         /// </summary>
         public const string DispatcherClassSettingName = "$authenticationProvider";
+
+        /// <summary>
+        /// The code system for the <see cref="Hl7.Fhir.Model.AdministrativeGender"/> enumeration.
+        /// </summary>
+        /// <remarks>
+        /// Example Usage:
+        /// <c>SanteDB.Messaging.FHIR.Util.DataTypeConverter.ToFhirEnumeration&lt;AdministrativeGender&gt;(patient.GenderConceptKey, FhirConstants.Codesystem_AdministrativeGender, true);</c>
+        /// </remarks>
+        public const string CodeSystem_AdministrativeGender = "http://hl7.org/fhir/administrative-gender";
     }
 }
