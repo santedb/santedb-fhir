@@ -152,7 +152,7 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual("Webber", actual.Name.Single().Family);
             Assert.AreEqual("Jordan", actual.Name.Single().Given.Single());
             Assert.AreEqual("Canada", actual.Address.Single().Country);
-            Assert.AreEqual("mailto:Webber@gmail.com", actual.Telecom.First().Value);
+            Assert.AreEqual("Webber@gmail.com", actual.Telecom.First().Value);
 
             Assert.NotNull(actual.Deceased);
             Assert.IsInstanceOf<FhirBoolean>(actual.Deceased);
@@ -531,7 +531,7 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.AreEqual("Webber", queriedPatient.Name.First().Family);
                 Assert.AreEqual(AdministrativeGender.Male, queriedPatient.Gender);
                 Assert.AreEqual("Hamilton", queriedPatient.Address.First().City);
-                Assert.AreEqual("mailto:Webber@gmail.com", queriedPatient.Telecom.First().Value);
+                Assert.AreEqual("Webber@gmail.com", queriedPatient.Telecom.First().Value);
                 Assert.AreEqual("2021-11-23", queriedPatient.BirthDate);
             }
         }

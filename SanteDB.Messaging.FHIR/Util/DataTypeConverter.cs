@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Wordprocessing;
 using Hl7.Fhir.Model;
 using RestSrvr;
 using SanteDB.BI.Model;
@@ -56,8 +57,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime;
+using System.Runtime.CompilerServices;
 using System.Security;
 using System.Security.Authentication;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using static Hl7.Fhir.Model.OperationOutcome;
@@ -88,6 +91,10 @@ namespace SanteDB.Messaging.FHIR.Util
 
         // Configuration
         private static readonly FhirServiceConfigurationSection m_configuration;
+
+        // This regex is used because we want to be more forgiving for parsing telecom URIs which may have 
+        // symbols like: tel:+1(905)293-4039
+        private static readonly Regex m_telecomUri = new Regex(@"^(\w+:\/{0,2})(.*)");
 
         /// <summary>
         /// Static ctor
@@ -1790,14 +1797,46 @@ namespace SanteDB.Messaging.FHIR.Util
                     typeMnemonic = Hl7.Fhir.Utility.EnumUtility.GetLiteral(fhirTelecom.System);
                 }
 
-                var retVal = new EntityTelecomAddress
+                // If the value is a URI and the scheme is OTHER
+                EntityTelecomAddress retVal = null;
+                var telecomSchemeMatch = m_telecomUri.Match(fhirTelecom.Value);
+                if (telecomSchemeMatch.Success) // Escape the values
                 {
-                    Value = fhirTelecom.Value,
-                    AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
-                    TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key,
-                    ExternalKey = m_configuration?.PersistElementId == true ? fhirTelecom.ElementId : null
-                };
+                    var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
+                    var claimedScheme = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key ?? NullReasonKeys.Other;
+                    var scheme = telecomSchemeMatch.Groups[1].Value;
+                    var schemeBin = Encoding.UTF8.GetBytes(scheme);
 
+                    var registeredScheme = conceptService.Find(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.Rfc3986SchemeExtension).Any(e => e.ExtensionValueData == schemeBin)).FirstOrDefault();
+
+                    // We couldn't find the scheme 
+                    if(registeredScheme == null)
+                    {
+                        throw new FhirException((HttpStatusCode)422, IssueType.NotSupported, $"Scheme {scheme} is not supported by this version of SanteDB");
+                    }
+                    else if(registeredScheme.Key != claimedScheme && m_configuration?.StrictProcessing == true)
+                    {
+                        throw new FhirException((HttpStatusCode)422, IssueType.CodeInvalid, $"Scheme {scheme} does not match the claimed {fhirTelecom.System}");
+                    }
+
+                    retVal = new EntityTelecomAddress()
+                    {
+                        IETFValue = fhirTelecom.Value,
+                        AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
+                        TypeConceptKey = registeredScheme.Key,
+                        ExternalKey = m_configuration?.PersistElementId == true ? fhirTelecom.ElementId : null
+                    };
+                }
+                else
+                {
+                    retVal = new EntityTelecomAddress
+                    {
+                        Value = fhirTelecom.Value,
+                        AddressUseKey = ToConcept(useMnemonic, "http://hl7.org/fhir/contact-point-use")?.Key,
+                        TypeConceptKey = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key,
+                        ExternalKey = m_configuration?.PersistElementId == true ? fhirTelecom.ElementId : null
+                    };
+                }
                 fhirTelecom.Extension.ForEach(p => p.TryApplyExtension(retVal));
                 return retVal;
             }
@@ -2045,11 +2084,13 @@ namespace SanteDB.Messaging.FHIR.Util
 
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping entity telecom address");
 
+            var system = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system") ?? ContactPoint.ContactPointSystem.Other;
+            var value = system == ContactPoint.ContactPointSystem.Other ? telecomAddress.IETFValue : telecomAddress.Value;
             return new ContactPoint
             {
-                System = ToFhirEnumeration<ContactPoint.ContactPointSystem>(telecomAddress.TypeConceptKey, "http://hl7.org/fhir/contact-point-system"),
+                System = system,
                 Use = ToFhirEnumeration<ContactPoint.ContactPointUse>(telecomAddress.AddressUseKey, "http://hl7.org/fhir/contact-point-use"),
-                Value = telecomAddress.IETFValue,
+                Value = value,
                 ElementId = m_configuration?.PersistElementId == true ? telecomAddress.ExternalKey : null,
                 Extension = new List<Extension>(telecomAddress.CreateExtensions(ResourceType.Basic, out _))
             };
