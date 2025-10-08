@@ -33,6 +33,9 @@ namespace SanteDB.Messaging.FHIR
     /// </summary>
     internal static class FhirExtensions
     {
+
+
+
         public static IQueryResultSet<ActRelationship> QueryRelationships(this IDataPersistenceService<ActRelationship> persistenceService, Guid sourceActKey, Guid relationshipTypeKey, Guid? targetTypeConceptKey = null)
         {
             if (targetTypeConceptKey != null)

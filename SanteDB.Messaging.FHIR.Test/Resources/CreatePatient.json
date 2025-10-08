@@ -21,6 +21,16 @@
       "system": "email",
       "value": "Webber@gmail.com",
       "use": "home"
+    },
+    {
+      "system": "other",
+      "value": "whatsapp://+10293920213",
+      "use": "home"
+    },
+    {
+      "system": "other",
+      "value": "mailto:bob@bobsburgers.com",
+      "use": "home"
     }
   ],
   "gender": "male",
