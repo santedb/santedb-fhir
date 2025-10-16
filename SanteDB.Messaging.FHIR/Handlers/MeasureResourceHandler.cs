@@ -179,9 +179,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Scoring = new CodeableConcept("http://terminology.hl7.org/CodeSystem/measure-scoring", definition.Measures.Any(m=>m.Computation.Any(c=>c.GetType() == typeof(BiMeasureComputationScore))) ? "continuous-variable" : "proportion")
             };
 
-            if (definition.Identifier != null)
+            if (definition.Identifier.Any())
             {
-                retVal.Identifier.Add(new Identifier(definition.Identifier.System, definition.Identifier.Value));
+                
+                retVal.Identifier.AddRange(definition.Identifier.Select(o=> new Identifier(o.System, o.Value)));
             }
 
             retVal.Extension.Add(new Extension("http://santedb.org/fhir/bi/Measure/periodicity", new FhirString(definition.Period.Name)));
@@ -195,9 +196,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var group = new Measure.GroupComponent();
                 group.ElementId = measure.Id ?? measure.Name;
 
-                if (measure.Identifier != null)
+                if (measure.Identifier.Any())
                 {
-                    group.Code = new CodeableConcept(measure.Identifier.System, measure.Identifier.Value);
+                    group.Code = new CodeableConcept(measure.Identifier.First().System, measure.Identifier.First().Value);
                 }
 
                 group.Description = measure.MetaData?.Annotation?.JsonBody;
@@ -218,9 +219,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     var stratifier = new Measure.StratifierComponent();
 
                     stratifier.ElementId = strat.Name ?? strat.ColumnReference.Name;
-                    if (strat.Identifier != null)
+                    if (strat.Identifier.Any())
                     {
-                        stratifier.Code = new CodeableConcept(strat.Identifier.System, strat.Identifier.Value);
+                        stratifier.Code = new CodeableConcept(strat.Identifier.First().System, strat.Identifier.First().Value);
                     }
 
                     stratifier.Criteria = this.ToExpression(strat.ColumnReference);
