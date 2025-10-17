@@ -171,6 +171,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             
             foreach (var indicatorResult in providerImplementation.ExecuteIndicator(indicatorDef, period, subject.Key.ToString()).GroupBy(o=>o.Measure))
             {
+                
                 var measureGroup = new MeasureReport.GroupComponent();
 
                 foreach (var measureResult in indicatorResult)
@@ -188,9 +189,9 @@ namespace SanteDB.Messaging.FHIR.Operations
                         
 
                         measureGroup.ElementId = measureResult.Measure.Id ?? measureResult.Measure.Name;
-                        if (measureResult.Measure.Identifier != null)
+                        if (measureResult.Measure.Identifier.Any())
                         {
-                            measureGroup.Code = new CodeableConcept(measureResult.Measure.Identifier.System, measureResult.Measure.Identifier.Value);
+                            measureGroup.Code = new CodeableConcept(measureResult.Measure.Identifier.FirstOrDefault()?.System, measureResult.Measure.Identifier.FirstOrDefault()?.Value);
                         }
 
                         if (scoreObtained.HasValue)
@@ -226,9 +227,9 @@ namespace SanteDB.Messaging.FHIR.Operations
                             stratifierDefn = stratifierDefn.ThenBy;
                         }
 
-                        if (stratifierDefn.Identifier != null)
+                        if (stratifierDefn.Identifier.Any())
                         {
-                            stratifier.Code.Add(new CodeableConcept(stratifierDefn.Identifier.System, stratifierDefn.Identifier.Value));
+                            stratifier.Code.Add(new CodeableConcept(stratifierDefn.Identifier.FirstOrDefault()?.System, stratifierDefn.Identifier.FirstOrDefault()?.Value));
                         }
 
                         foreach (IDictionary<String, object> currentRecord in measureResult.Records)
