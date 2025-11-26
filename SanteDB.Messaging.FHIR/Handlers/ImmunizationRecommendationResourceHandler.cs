@@ -38,12 +38,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Represents an immunization recommendation handler.
     /// </summary>
-    public class ImmunizationRecommendationResourceHandler : ResourceHandlerBase<ImmunizationRecommendation, SubstanceAdministration>
+    public class ImmunizationRecommendationResourceHandler : RepositoryResourceHandlerBase<ImmunizationRecommendation, SubstanceAdministration>
     {
+        private readonly Guid INITIAL_IMMUNIZATION = Guid.Parse("f3be6b88-bc8f-4263-a779-86f21ea10a47");
+        private readonly Guid IMMUNIZATION = Guid.Parse("6e7a3521-2967-4c0a-80ec-6c5c197b2178");
+        private readonly Guid BOOSTER_IMMUNIZATION = Guid.Parse("0331e13f-f471-4fbd-92dc-66e0a46239d5");
         /// <summary>
         /// Initializes a new instance of the <see cref="ImmunizationRecommendationResourceHandler"/> class.
         /// </summary>
-        public ImmunizationRecommendationResourceHandler(ILocalizationService localizationService) : base(localizationService)
+        public ImmunizationRecommendationResourceHandler(IRepositoryService<SubstanceAdministration> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
         }
 
@@ -118,7 +121,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <inheritdoc/>
         protected override SubstanceAdministration MapToModel(ImmunizationRecommendation resource)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+            throw new NotSupportedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
         //protected override IQueryResultSet<SubstanceAdministration> QueryInternal(Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
@@ -131,17 +134,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
         //    return base.QueryInternal(;
         //}
 
-        /// <inheritdoc/>
-        protected override SubstanceAdministration Read(Guid id, Guid versionId)
-        {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
-        }
-
-        /// <inheritdoc/>
-        protected override SubstanceAdministration Update(SubstanceAdministration model, TransactionMode mode)
-        {
-            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
-        }
 
         /// <inheritdoc/>
         protected override IEnumerable<ResourceInteractionComponent> GetInteractions()
@@ -168,7 +160,23 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <inheritdoc/>
         protected override IQueryResultSet<SubstanceAdministration> QueryInternal(Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
-            throw new NotImplementedException(ErrorMessages.NOT_SUPPORTED_IMPLEMENTATION);
+            var obsoletionReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.StatusConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(StatusKeys.Completed));
+            var typeReference = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Or,
+                System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Or,
+                    System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(INITIAL_IMMUNIZATION)),
+                    System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(IMMUNIZATION))
+                ),
+                System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(BOOSTER_IMMUNIZATION))
+            );
+            var moodCodeReferences = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.MoodConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(ActMoodKeys.Propose));
+
+            query = System.Linq.Expressions.Expression.Lambda<Func<SubstanceAdministration, bool>>(
+                System.Linq.Expressions.Expression.AndAlso(
+                    System.Linq.Expressions.Expression.AndAlso(
+                        System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), typeReference
+                    ), moodCodeReferences)
+                , query.Parameters);
+            return this.m_repository.Find(query);
         }
     }
 }
