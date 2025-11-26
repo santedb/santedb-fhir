@@ -262,7 +262,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.TypeConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(BOOSTER_IMMUNIZATION))
             );
 
-            query = System.Linq.Expressions.Expression.Lambda<Func<SubstanceAdministration, bool>>(System.Linq.Expressions.Expression.AndAlso(System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), typeReference), query.Parameters);
+            var moodCodeReferences = System.Linq.Expressions.Expression.MakeBinary(System.Linq.Expressions.ExpressionType.Equal, System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.MoodConceptKey))), typeof(Guid)), System.Linq.Expressions.Expression.Constant(ActMoodKeys.Eventoccurrence));
+
+            query = System.Linq.Expressions.Expression.Lambda<Func<SubstanceAdministration, bool>>(
+                System.Linq.Expressions.Expression.AndAlso(
+                    System.Linq.Expressions.Expression.AndAlso(
+                        System.Linq.Expressions.Expression.AndAlso(obsoletionReference, query.Body), typeReference
+                    ), moodCodeReferences)
+                , query.Parameters);
             return this.m_repository.Find(query);
         }
 
