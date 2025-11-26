@@ -132,7 +132,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Immunization.ProtocolAppliedComponent protocol = new Immunization.ProtocolAppliedComponent();
                 var dbProtocol = itm.LoadProperty<Protocol>(nameof(ActProtocol.Protocol));
-                protocol.DoseNumber = new Integer(model.SequenceId);
+                protocol.DoseNumber = new PositiveInt(model.SequenceId);
 
                 // Protocol lookup
                 protocol.Series = dbProtocol?.Name;
@@ -154,6 +154,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 ActTime = DataTypeConverter.ToDateTimeOffset(resource.RecordedElement).GetValueOrDefault(),
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 DoseQuantity = resource.DoseQuantity?.Value ?? 0,
+                SequenceId = (resource.ProtocolApplied?.FirstOrDefault()?.DoseNumber as PositiveInt)?.Value,
                 DoseUnit = resource.DoseQuantity != null ? DataTypeConverter.ToConcept<String>(resource.DoseQuantity.Unit, string.IsNullOrWhiteSpace(resource.DoseQuantity.System) ? FhirConstants.DefaultQuantityUnitSystem : resource.DoseQuantity.System) : null,
                 Identifiers = resource.Identifier?.Select(DataTypeConverter.ToActIdentifier).ToList(),
                 Key = Guid.NewGuid(),
