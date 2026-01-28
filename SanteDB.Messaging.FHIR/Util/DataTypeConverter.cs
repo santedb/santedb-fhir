@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2021 - 2025, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
+ * Copyright (C) 2021 - 2026, SanteSuite Inc. and the SanteSuite Contributors (See NOTICE.md for full copyright notices)
  * Copyright (C) 2019 - 2021, Fyfe Software Inc. and the SanteSuite Contributors
  * Portions Copyright (C) 2015-2018 Mohawk College of Applied Arts and Technology
  * 
@@ -483,7 +483,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Creates a FHIR reference from a target object
         /// </summary>
-        public static ResourceReference CreateRimReference(IdentifiedData targetObject) 
+        public static ResourceReference CreateRimReference(IdentifiedData targetObject)
         {
 
             if (targetObject == null)
@@ -492,7 +492,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             var mapper = FhirResourceHandlerUtil.GetMappersFor(targetObject.GetType()).FirstOrDefault();
-            if(mapper == null)
+            if (mapper == null)
             {
                 throw new InvalidOperationException("Configuration for mapper is not available");
             }
@@ -810,7 +810,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal.Meta.VersionId = vd.VersionKey?.ToString();
             }
 
-            if (retVal is DomainResource dr) {
+            if (retVal is DomainResource dr)
+            {
                 if (resource.TryGetTextGenerator(out var textGenerator))
                 {
                     using (var sw = new StringWriter())
@@ -828,7 +829,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
                     }
                 }
-                else if(resource is IdentifiedData idd)
+                else if (resource is IdentifiedData idd)
                 {
                     dr.Text = new Hl7.Fhir.Model.Narrative(idd.ToDisplay());
                 }
@@ -843,7 +844,7 @@ namespace SanteDB.Messaging.FHIR.Util
         public static IEnumerable<String> AddExtensions(Core.Model.Interfaces.IExtendable extendable, Hl7.Fhir.Model.IExtendable fhirExtension)
         {
             var resource = fhirExtension as Resource;
-            
+
             if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
                 fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IAnnotatedResource, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).ToList();
@@ -941,7 +942,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
                 else if (extension.ExtensionType.ExtensionHandler == typeof(ReferenceExtensionHandler))
                 {
-                    switch(fhirExtension.Value)
+                    switch (fhirExtension.Value)
                     {
                         case ResourceReference frr:
                             if (TryResolveResourceReference(frr, null, out var refr))
@@ -1050,9 +1051,14 @@ namespace SanteDB.Messaging.FHIR.Util
                             throw new NotSupportedException();
                     }
                 }
+                else if (extension.ExtensionType.ExtensionHandler == typeof(BooleanExtensionHandler) &&
+                    fhirExtension.Value is FhirBoolean fb)
+                {
+                    extension.ExtensionValue = fb.Value;
+                }
                 else
                 {
-                    throw new NotImplementedException($"Extension type is not understood");
+                    throw new NotImplementedException($"Extension type {fhirExtension.Url} is not understood (or the data type being used is invalid for the registration)");
                 }
 
                 // Now will
@@ -1192,7 +1198,7 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 retVal.Value = new FhirBoolean((bool)(ext.Value ?? new BooleanExtensionHandler().DeSerialize(ext.Data)));
             }
-            else if(ext.Value is DateTime || ext.Value is DateTimeOffset || eType.ExtensionHandler == typeof(DateExtensionHandler))
+            else if (ext.Value is DateTime || ext.Value is DateTimeOffset || eType.ExtensionHandler == typeof(DateExtensionHandler))
             {
                 retVal.Value = new FhirDateTime((DateTime)(ext.Value ?? new DateExtensionHandler().DeSerialize(ext.Data)));
             }
@@ -1586,9 +1592,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static bool TryResolveResourceReference(ResourceReference resourceRef, Resource containedWithin, out IdentifiedData data)
         {
-            if(String.IsNullOrEmpty(resourceRef.Type) && Uri.TryCreate(resourceRef.Reference, UriKind.RelativeOrAbsolute, out var uri))
+            if (String.IsNullOrEmpty(resourceRef.Type) && Uri.TryCreate(resourceRef.Reference, UriKind.RelativeOrAbsolute, out var uri))
             {
-                if(uri.IsAbsoluteUri)
+                if (uri.IsAbsoluteUri)
                 {
                     throw new InvalidOperationException("Only relative references are supported in SanteDB");
                 }
@@ -1606,13 +1612,13 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
             var resourceMapper = FhirResourceHandlerUtil.GetMappersFor(resourceRef.Type).FirstOrDefault();
-            if(resourceMapper == null)
+            if (resourceMapper == null)
             {
                 throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.TYPE_NOT_FOUND, resourceRef.Type));
             }
 
             var resolveMethod = typeof(DataTypeConverter).GetGenericMethod(nameof(ResolveEntity), new Type[] { resourceMapper.CanonicalType }, new Type[] { typeof(ResourceReference), typeof(Resource) });
-            if(resolveMethod == null)
+            if (resolveMethod == null)
             {
                 data = null;
                 return false;
@@ -1810,11 +1816,11 @@ namespace SanteDB.Messaging.FHIR.Util
                     var registeredScheme = conceptService.Find(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.Rfc3986SchemeExtension).Any(e => e.ExtensionValueData == schemeBin)).FirstOrDefault();
 
                     // We couldn't find the scheme 
-                    if(registeredScheme == null)
+                    if (registeredScheme == null)
                     {
                         throw new FhirException((HttpStatusCode)422, IssueType.NotSupported, $"Scheme {scheme} is not supported by this version of SanteDB");
                     }
-                    else if(registeredScheme.Key != claimedScheme && m_configuration?.StrictProcessing == true)
+                    else if (registeredScheme.Key != claimedScheme && m_configuration?.StrictProcessing == true)
                     {
                         throw new FhirException((HttpStatusCode)422, IssueType.CodeInvalid, $"Scheme {scheme} does not match the claimed {fhirTelecom.System}");
                     }
@@ -2190,17 +2196,17 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         internal static SecurityPolicyInstance ToSecurityPolicy(Coding securityCoding)
         {
-            if(!String.IsNullOrEmpty(securityCoding.System) && !securityCoding.System.Equals(FhirConstants.SecurityPolicySystem))
+            if (!String.IsNullOrEmpty(securityCoding.System) && !securityCoding.System.Equals(FhirConstants.SecurityPolicySystem))
             {
                 throw new ArgumentOutOfRangeException(nameof(securityCoding.System), $"Security policies must be drawn from the SanteDB {FhirConstants.SecurityPolicySystem}");
             }
             var policy = m_pipService.GetPolicy(securityCoding.Code);
-            if(policy == null)
+            if (policy == null)
             {
                 throw new InvalidOperationException(String.Format(ErrorMessages.DEPENDENT_CONFIGURATION_MISSING, securityCoding.Code));
             }
-            
-            return new SecurityPolicyInstance(new SecurityPolicy(policy.Name, policy.Oid, true, policy.CanOverride) {  Key = policy.Key }, PolicyGrantType.Grant);
+
+            return new SecurityPolicyInstance(new SecurityPolicy(policy.Name, policy.Oid, true, policy.CanOverride) { Key = policy.Key }, PolicyGrantType.Grant);
         }
     }
 }
