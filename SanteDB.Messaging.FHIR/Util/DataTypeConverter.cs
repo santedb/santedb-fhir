@@ -1274,8 +1274,16 @@ namespace SanteDB.Messaging.FHIR.Util
 
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR coding");
 
-            // Lookup
-            var retVal = conceptService.GetConceptByReferenceTerm(code, system);
+            Concept retVal = null;
+            if (FhirConstants.SanteDBConceptSystem.Equals(system))
+            {
+                retVal = conceptService.GetConcept(code);
+            }
+            else
+            {
+                retVal = conceptService.GetConceptByReferenceTerm(code, system);
+            }
+
             if (retVal == null)
             {
                 throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not map concept {system}#{code} to a concept");
@@ -1943,7 +1951,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     else
                     {
                         var concept = codeSystemService.Get(conceptKey.Value);
-                        return new CodeableConcept("http://santedb.org/concept", concept.Mnemonic)
+                        return new CodeableConcept(FhirConstants.SanteDBConceptSystem, concept.Mnemonic)
                         {
                             Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
                         };

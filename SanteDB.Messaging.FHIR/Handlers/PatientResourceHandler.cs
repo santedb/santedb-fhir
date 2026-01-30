@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             _ = model.LoadProperty(p => p.Addresses);
             retVal.Address = model.Addresses?.Select(DataTypeConverter.ToFhirAddress)?.ToList();
-            
+
 
             if (model.DateOfBirth.HasValue)
             {
@@ -168,6 +168,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Name = model.Names?.Select(DataTypeConverter.ToFhirHumanName)?.ToList();
             retVal.Telecom = model.LoadProperty(o => o.Telecoms)?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
             retVal.Communication = model.LanguageCommunication?.Select(DataTypeConverter.ToFhirCommunicationComponent)?.ToList();
+
+            if (model.MaritalStatusKey.HasValue || model.MaritalStatus != null)
+            {
+                retVal.MaritalStatus = DataTypeConverter.ToFhirCodeableConcept(model.MaritalStatusKey ?? model.MaritalStatus?.Key, "http://hl7.org/fhir/ValueSet/marital-status");
+            }
 
 
             _ = model.LoadProperty(m => m.Relationships);
@@ -412,6 +417,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).OfType<EntityExtension>());
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
             patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList();
+            patient.MaritalStatus = resource.MaritalStatus == null ? null : DataTypeConverter.ToConcept(resource.MaritalStatus);
+
             // TODO: fix
             // HACK: the date of birth precision CK only allows "Y", "M", or "D" for the precision value
             patient.DateOfBirthPrecision = dateOfBirthPrecision == DatePrecision.Full ? DatePrecision.Day : dateOfBirthPrecision;
