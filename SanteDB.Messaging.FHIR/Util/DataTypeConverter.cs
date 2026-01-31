@@ -87,8 +87,10 @@ namespace SanteDB.Messaging.FHIR.Util
         private static ISecurityRepositoryService m_secService = ApplicationServiceContext.Current.GetService<ISecurityRepositoryService>();
 
         // CX Devices
-        private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?");
+        private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+        // Refernece regex
+        private static readonly Regex m_referenceRegex = new Regex(@"^(?:urn:uuid:([A-F0-9\-]{36})|\/?(\w+?)\/([A-F0-9\-]{36}))$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         // Configuration
         private static readonly FhirServiceConfigurationSection m_configuration;
 
@@ -1640,6 +1642,40 @@ namespace SanteDB.Messaging.FHIR.Util
 
 
         /// <summary>
+        /// Attempts to resolve a resource from the same bundle as the reference
+        /// </summary>
+        /// <param name="resourceRef">The resource reference</param>
+        /// <param name="containedWithin">The resource which is being processed</param>
+        /// <param name="resolvedResource">The resolved resource</param>
+        /// <returns>True if the bundle contains the resolved resource</returns>
+        public static bool TryResolveResourceFromContained(ResourceReference resourceRef, Resource containedWithin, out Resource resolvedResource)
+        {
+
+            // First is there a bundle in the contained within
+            var fhirBundle = containedWithin?.Annotations(typeof(Bundle)).FirstOrDefault() as Bundle;
+            if(fhirBundle != null)
+            {
+                if (resourceRef.Reference.StartsWith("#") && containedWithin is DomainResource domainResource) // Rel
+                {
+                    var contained = domainResource.Contained.Find(o => o.Id.Equals(resourceRef.Reference.Substring(1)));
+                    if (contained == null)
+                    {
+                        throw new ArgumentException($"Relative reference provided but cannot find contained object {resourceRef.Reference}");
+                    }
+                    resolvedResource = contained;
+                    return true;
+                }
+                else
+                {
+                    resolvedResource = fhirBundle?.Entry.FirstOrDefault(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.Resource;
+                    return resolvedResource != null;
+                }
+            }
+            resolvedResource = null;
+            return false;
+        }
+
+        /// <summary>
         /// Resolve the specified entity
         /// </summary>
         public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin) where TEntity : BaseEntityData, ITaggable, IHasIdentifiers, new()
@@ -1705,8 +1741,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     {
                         // HACK: We don't care about the absoluteness of a URL
                         // Attempt to resolve the reference
-                        var refRegex = new Regex("^(urn:uuid:.{36}|\\/?(\\w*?)/(.{36}))$");
-                        var match = refRegex.Match(resourceRef.Reference);
+                        var match = m_referenceRegex.Match(resourceRef.Reference);
                         if (!match.Success)
                         {
                             throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");

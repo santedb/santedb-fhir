@@ -20,6 +20,7 @@
  */
 using DocumentFormat.OpenXml.Office2016.Drawing.Command;
 using Hl7.Fhir.Model;
+using SanteDB.Core;
 using SanteDB.Core.Data;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Constants;
@@ -337,11 +338,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     Key = Guid.NewGuid()
                 };
             }
-            else if (this.m_managedLinkProvider != null)
+            else 
             {
                 this.m_tracer.TraceVerbose($"The target of {relationship} will be resolved to own record for {AuthenticationContext.Current.GetAuthenticatedPrincipal()}");
-                person = this.m_managedLinkProvider?.ResolveOwnedRecord(person, AuthenticationContext.Current.GetAuthenticatedPrincipal()) as Core.Model.Entities.Person ??
-                                person; // Keep the pointer to the master 
+                person = person.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal()) ?? person;
                 this.m_tracer.TraceInfo($"Person/{person.Key} has been resolved to owned RIM record {person.Type}/{person.Key}");
 
             }
