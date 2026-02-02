@@ -1269,12 +1269,10 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
-            if (system == null)
+            if (String.IsNullOrEmpty(system))
             {
                 throw new ArgumentException("Coding must have system attached");
             }
-
-            traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR coding");
 
             Concept retVal = null;
             if (FhirConstants.SanteDBConceptSystem.Equals(system))

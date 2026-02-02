@@ -552,7 +552,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             {
                                 // Resolve the patient
                                 var targetPatient = DataTypeConverter.ResolveEntity<Entity>(rp.Patient, rp)?.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal());
-                                // The link here is a reverse link - i.e. IS A MOHTER OF or IS A HUSBAND OF so we want to create a reverese link
+                                // The link here is a reverse link - i.e. IS A MOHTER OF or IS A HUSBAND OF so we want to create a reverse link
                                 patient.Relationships.Add(
                                     new EntityRelationship()
                                     {
