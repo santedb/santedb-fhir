@@ -46,7 +46,7 @@
   "maritalStatus": {
     "coding": [
       {
-        "system": "http://santedb.org/fhir/test",
+        "system": "http://terminology.hl7.org/CodeSystem/v2-0002",
         "code": "M"
       }
     ]

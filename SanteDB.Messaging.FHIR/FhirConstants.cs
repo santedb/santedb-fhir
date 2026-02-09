@@ -92,5 +92,10 @@ namespace SanteDB.Messaging.FHIR
         /// <c>SanteDB.Messaging.FHIR.Util.DataTypeConverter.ToFhirEnumeration&lt;AdministrativeGender&gt;(patient.GenderConceptKey, FhirConstants.Codesystem_AdministrativeGender, true);</c>
         /// </remarks>
         public const string CodeSystem_AdministrativeGender = "http://hl7.org/fhir/administrative-gender";
+
+        /// <summary>
+        /// When a concept has no reference term - use the conept 
+        /// </summary>
+        public const string SanteDBConceptSystem = "http://santedb.org/concept";
     }
 }

@@ -231,6 +231,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             var sdbBundle = new Core.Model.Collection.Bundle();
+            fhirBundle.Entry.ForEach(entry =>
+            {
+                // Allow this entry to know its context in the bundle
+                entry.Resource.AddAnnotation(fhirBundle);
+                entry.Resource.AddAnnotation(sdbBundle);
+            });
+
             foreach (var entry in fhirBundle.Entry)
             {
                 if (!entry.Resource.TryDeriveResourceType(out ResourceType entryType))
@@ -239,9 +246,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
 
-                // Allow this entry to know its context in the bundle
-                entry.Resource.AddAnnotation(fhirBundle);
-                entry.Resource.AddAnnotation(sdbBundle);
+              
 
                 // Map and add to bundle
                 var itm = handler.MapToModel(entry.Resource);

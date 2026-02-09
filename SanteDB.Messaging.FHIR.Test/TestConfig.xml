@@ -130,6 +130,9 @@
     </ruleSet>
   </section>
   <section xsi:type="ApplicationServiceContextConfigurationSection" allowUnsignedAssemblies="true" threadPoolSize="4">
+	  <appSettings>
+		  <add key="allow.patient.maritalStatus" value="true" />
+	  </appSettings>
     <serviceProviders>
       <add type="SanteDB.Caching.Memory.MemoryCacheService, SanteDB.Caching.Memory" />
       <add type="SanteDB.Caching.Memory.MemoryQueryPersistenceService, SanteDB.Caching.Memory" />

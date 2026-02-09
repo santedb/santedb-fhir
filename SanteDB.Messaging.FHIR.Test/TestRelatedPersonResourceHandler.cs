@@ -218,13 +218,12 @@ namespace SanteDB.Messaging.FHIR.Test
                 Assert.IsInstanceOf<Person>(sdbRelationship.LoadProperty(o => o.TargetEntity));
 
                 // There is a patient related to the person
-                var equivRel = sdbRelatedPatient.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.EquivalentEntity);
+                // JF - This behavior has changed to perform an inbound relationship for Mother
+                var equivRel = sdbRelatedPatient.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Mother);
                 Assert.IsNotNull(equivRel);
                 // Assert created patient is a the equivalent entity
-                Assert.AreEqual(sdbRelatedPatient.Key, equivRel.SourceEntityKey); // Related Patient is the holder
+                Assert.AreEqual(sdbRelatedPatient.Key, equivRel.TargetEntityKey); // Related Patient is the holder
 
-                // Assert that the target of the related patient is the target of the relationship
-                Assert.AreEqual(sdbRelationship.TargetEntityKey, equivRel.TargetEntityKey);
 
                 // Ensure that there is a separate PERSON and separate PATIENT with the same identity 
                 var relatedPersons = this.m_personRepository.Find(o => o.Identifiers.Any(id => id.IdentityDomain.Url == "http://santedb.org/fhir/test" && id.Value == "FHR-4321"));

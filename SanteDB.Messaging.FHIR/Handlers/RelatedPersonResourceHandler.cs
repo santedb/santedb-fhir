@@ -20,11 +20,14 @@
  */
 using DocumentFormat.OpenXml.Office2016.Drawing.Command;
 using Hl7.Fhir.Model;
+using SanteDB.Core;
+using SanteDB.Core.Data;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -49,17 +52,31 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private IRepositoryService<Core.Model.Roles.Patient> m_patientRepository;
 
         private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
-
+        private readonly IDataManagedLinkProvider<Core.Model.Roles.Patient> m_managedLinkProvider;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(RelatedPersonResourceHandler));
 
         /// <summary>
         /// Create related person resource handler
         /// </summary>
-        public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo, IRepositoryService<Core.Model.Roles.Patient> patientRepository, IRepositoryService<EntityRelationship> repo, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService) : base(repo, localizationService)
+        public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo, 
+            IRepositoryService<Core.Model.Roles.Patient> patientRepository, 
+            IRepositoryService<EntityRelationship> repo, 
+            IRepositoryService<Concept> conceptRepository, 
+            ILocalizationService localizationService,
+            IDataManagementPattern dataManagementPattern = null) : base(repo, localizationService)
         {
             this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(c => c.Key.Value).ToList();
             this.m_patientRepository = patientRepository;
             this.m_personRepository = personRepo;
+
+            if (dataManagementPattern != null)
+            {
+                this.m_managedLinkProvider = dataManagementPattern.GetLinkProvider<Core.Model.Roles.Patient>();
+            }
+            else
+            {
+                 this.m_tracer.TraceWarning("Cannot locate a managed provider for Patient - links on RelatedPerson will be treated as Person objects");
+            }
         }
 
         /// <summary>
@@ -188,6 +205,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Attempt to find the existing ER
             if (Guid.TryParse(resource.Id, out Guid key))
             {
+                this.m_tracer.TraceVerbose($"Will attempt lookup of EntityRelationship/{key}");
                 relationship = this.m_repository.Get(key);
 
                 // HACK: We couldn't find the relationship via key - but it might still be an external reference to a patient
@@ -208,9 +226,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 // <tldr>RelatedPerson is evil and this is a total hack to overcome FHIR's hacking of RelatedPerson</tldr>
                 if (relationship == null)
                 {
+                    this.m_tracer.TraceVerbose($"Will attempt lookup of Person/{key}");
+
                     var lookupPerson = this.m_personRepository.Get(key);
                     if (lookupPerson != null)
                     {
+                        this.m_tracer.TraceInfo($"RelatedPerson/{key} has been resolved to RIM {lookupPerson.Type}/{lookupPerson.Key}");
+                        
+                        // The lookup person points to a MASTER we want to find the local or create one for this
+                        if(lookupPerson.ClassConceptKey == MDM_MASTER_CLASS_KEY)
+                        {
+                            lookupPerson = this.m_managedLinkProvider?.ResolveOwnedRecord(lookupPerson, AuthenticationContext.Current.GetAuthenticatedPrincipal()) as Core.Model.Entities.Person ??
+                                lookupPerson; // Keep the pointer to the master 
+                        }
+
                         relationship = new EntityRelationship()
                         {
                             Key = Guid.NewGuid(),
@@ -285,6 +314,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             Core.Model.Entities.Person person = relationship.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person;
             if (person == null && resource.Identifier?.Count > 0)
             {
+                this.m_tracer.TraceVerbose("Will resolve RelatedPerson via business identifiers");
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
                     if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
@@ -299,6 +329,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }
                 }
             }
+
             // We couldn't find any matching patients via business identifiers
             if (person == null)
             {
@@ -306,6 +337,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     Key = Guid.NewGuid()
                 };
+            }
+            else 
+            {
+                this.m_tracer.TraceVerbose($"The target of {relationship} will be resolved to own record for {AuthenticationContext.Current.GetAuthenticatedPrincipal()}");
+                person = person.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal()) ?? person;
+                this.m_tracer.TraceInfo($"Person/{person.Key} has been resolved to owned RIM record {person.Type}/{person.Key}");
+
             }
 
             // HACK: Try to figure out what tf the client is trying to convey and map it into our worldview
@@ -334,7 +372,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
                 person.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
                 // Identity
-                person.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).OfType<EntityExtension>());
+                person.LoadProperty(o => o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).OfType<EntityExtension>());
             }
             else
             {

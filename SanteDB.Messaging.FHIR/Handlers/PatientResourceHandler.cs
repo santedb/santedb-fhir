@@ -26,6 +26,7 @@ using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -104,7 +105,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             _ = model.LoadProperty(p => p.Addresses);
             retVal.Address = model.Addresses?.Select(DataTypeConverter.ToFhirAddress)?.ToList();
-            
+
 
             if (model.DateOfBirth.HasValue)
             {
@@ -168,6 +169,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Name = model.Names?.Select(DataTypeConverter.ToFhirHumanName)?.ToList();
             retVal.Telecom = model.LoadProperty(o => o.Telecoms)?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
             retVal.Communication = model.LanguageCommunication?.Select(DataTypeConverter.ToFhirCommunicationComponent)?.ToList();
+
+            if (model.MaritalStatusKey.HasValue || model.MaritalStatus != null)
+            {
+                retVal.MaritalStatus = DataTypeConverter.ToFhirCodeableConcept(model.MaritalStatusKey ?? model.MaritalStatus?.Key, "http://hl7.org/fhir/ValueSet/marital-status");
+            }
 
 
             _ = model.LoadProperty(m => m.Relationships);
@@ -412,6 +418,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).OfType<EntityExtension>());
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
             patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList();
+            patient.MaritalStatus = resource.MaritalStatus == null ? null : DataTypeConverter.ToConcept(resource.MaritalStatus);
+
             // TODO: fix
             // HACK: the date of birth precision CK only allows "Y", "M", or "D" for the precision value
             patient.DateOfBirthPrecision = dateOfBirthPrecision == DatePrecision.Full ? DatePrecision.Day : dateOfBirthPrecision;
@@ -537,28 +545,50 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         }
                     case Patient.LinkType.Seealso:
                         {
-                            var referee = DataTypeConverter.ResolveEntity<Entity>(lnk.Other, resource); // We use Entity here in lieu Patient since the code below can handle the MDM layer
-
-                            // Is this a current MDM link?
-                            if (referee.GetTag(FhirConstants.PlaceholderTag) == "true") // The referee wants us to become the data
+                            // HACK: In FHIR to indicate a RelatedPerson IS A Patient the Patient may have a SeeAlso link which points to a RelatedPerson
+                            //       if this is the case we're establishing an EntityRelationship
+                            if (DataTypeConverter.TryResolveResourceFromContained(lnk.Other, resource, out var resolved) &&
+                                resolved is RelatedPerson rp)
                             {
-                                patient.Key = referee.Key;
-                            }
-                            else if (referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks< SanteDB.Core.Model.Roles.Patient>().Any()
-                                && referee.GetTag("$mdm.type") == "M") // HACK: This is a master and someone is attempting to point another record at it
-                            {
-                                var managedLink = referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().First() as EntityRelationship;
-                                patient.Relationships.Add(new EntityRelationship()
-                                {
-                                    RelationshipTypeKey = managedLink.RelationshipTypeKey,
-                                    RelationshipRoleKey = managedLink.RelationshipRoleKey,
-                                    SourceEntityKey = referee.Key,
-                                    TargetEntityKey = patient.Key
-                                });
+                                // Resolve the patient
+                                var targetPatient = DataTypeConverter.ResolveEntity<Entity>(rp.Patient, rp)?.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal());
+                                // The link here is a reverse link - i.e. IS A MOHTER OF or IS A HUSBAND OF so we want to create a reverse link
+                                patient.Relationships.Add(
+                                    new EntityRelationship()
+                                    {
+                                        Key = Guid.TryParse(resolved.Id, out var idGuid) ? idGuid : Guid.NewGuid(),
+                                        TargetEntityKey= patient.Key, 
+                                        SourceEntityKey = targetPatient.Key,
+                                        RelationshipTypeKey = rp.Relationship.Select(o => DataTypeConverter.ToConcept(o)).Select(o => o?.Key).Distinct().FirstOrDefault(),
+                                        BatchOperation = BatchOperationType.InsertOrUpdate
+                                    }
+                                );
                             }
                             else
                             {
-                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.EquivalentEntity, referee));
+                                var referee = DataTypeConverter.ResolveEntity<Entity>(lnk.Other, resource); // We use Entity here in lieu Patient since the code below can handle the MDM layer
+
+                                // Is this a current MDM link?
+                                if (referee.GetTag(FhirConstants.PlaceholderTag) == "true") // The referee wants us to become the data
+                                {
+                                    patient.Key = referee.Key;
+                                }
+                                else if (referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().Any()
+                                    && referee.GetTag("$mdm.type") == "M") // HACK: This is a master and someone is attempting to point another record at it
+                                {
+                                    var managedLink = referee.LoadCollection(o => o.Relationships).FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().First() as EntityRelationship;
+                                    patient.Relationships.Add(new EntityRelationship()
+                                    {
+                                        RelationshipTypeKey = managedLink.RelationshipTypeKey,
+                                        RelationshipRoleKey = managedLink.RelationshipRoleKey,
+                                        SourceEntityKey = referee.Key,
+                                        TargetEntityKey = patient.Key
+                                    });
+                                }
+                                else
+                                {
+                                    patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.EquivalentEntity, referee));
+                                }
                             }
                             break;
                         }
