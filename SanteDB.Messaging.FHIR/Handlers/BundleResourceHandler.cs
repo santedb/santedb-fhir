@@ -90,6 +90,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 throw new ArgumentOutOfRangeException(this.m_localizationService.GetString("error.messaging.fhir.bundle.fhirBundle"));
             }
 
+            target = ExtensionUtil.ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, target);
+
             switch (fhirBundle.Type.GetValueOrDefault())
             {
                 case Hl7.Fhir.Model.Bundle.BundleType.Transaction:
@@ -97,7 +99,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         var sdbResult = this.m_bundleRepository.Insert(this.MapToModel(target) as Core.Model.Collection.Bundle);
                         var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
                         retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;
-
                         return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, retVal);
                     };
                 case Hl7.Fhir.Model.Bundle.BundleType.Message:
@@ -207,10 +208,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     continue; // TODO: Warn
                 }
 
-                retVal.Entry.Add(new Hl7.Fhir.Model.Bundle.EntryComponent()
+                var ec = new Hl7.Fhir.Model.Bundle.EntryComponent()
                 {
-                    Resource = handler.MapToFhir(entry)
-                });
+                    FullUrl = $"urn:uuid:{entry.Key}",
+                    Request = new Bundle.RequestComponent()
+                    {
+                        Url = $"{handler.ResourceType}/{entry.Key}",
+                        Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entry.BatchOperation)
+                    }
+                };
+
+                if (ec.Request.Method != Bundle.HTTPVerb.HEAD)
+                {
+                    ec.Resource = handler.MapToFhir(entry);
+                }
+
+                retVal.Entry.Add(ec);
             }
             return retVal;
         }
@@ -246,13 +259,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
                 var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
 
-              
-
                 // Map and add to bundle
                 var itm = handler.MapToModel(entry.Resource);
                 sdbBundle.Remove(itm.Key.GetValueOrDefault());
                 sdbBundle.Add(itm);
 
+                switch(entry.Request?.Method ?? Bundle.HTTPVerb.POST)
+                {
+                    case Bundle.HTTPVerb.PUT:
+                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Update;
+                        break;
+                    case Bundle.HTTPVerb.POST:
+                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.InsertOrUpdate;
+                        break;
+                    case Bundle.HTTPVerb.DELETE:
+                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Delete;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.ARGUMENT_OUT_OF_RANGE, entry.Request.Method, "PUT, POST, DELETE"));
+                }
                 // HACK: If the ITM is a relationship or participation insert it into the bundle
                 if (itm is ITargetedAssociation targetedAssociation && targetedAssociation.TargetEntity != null)
                 {
