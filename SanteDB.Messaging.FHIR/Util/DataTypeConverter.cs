@@ -18,8 +18,10 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Rest;
 using RestSrvr;
 using SanteDB.BI.Model;
 using SanteDB.Core;
@@ -2248,6 +2250,29 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             return new SecurityPolicyInstance(new SecurityPolicy(policy.Name, policy.Oid, true, policy.CanOverride) { Key = policy.Key }, PolicyGrantType.Grant);
+        }
+
+        /// <summary>
+        /// Convert to HTTP verb
+        /// </summary>
+        public static Hl7.Fhir.Model.Bundle.HTTPVerb ConvertBatchOperationToHttpVerb(BatchOperationType batchOperation)
+        {
+            switch(batchOperation)
+            {
+                case BatchOperationType.Auto:
+                case BatchOperationType.Insert:
+                case BatchOperationType.InsertOrUpdate:
+                    return Hl7.Fhir.Model.Bundle.HTTPVerb.POST;
+                case BatchOperationType.Delete:
+                case BatchOperationType.DeletePreserveContained:
+                    return Hl7.Fhir.Model.Bundle.HTTPVerb.DELETE;
+                case BatchOperationType.Update:
+                    return Hl7.Fhir.Model.Bundle.HTTPVerb.PUT;
+                case BatchOperationType.Ignore:
+                    return Hl7.Fhir.Model.Bundle.HTTPVerb.HEAD;
+                default:
+                    throw new NotSupportedException(String.Format(ErrorMessages.ARGUMENT_OUT_OF_RANGE, batchOperation, "Auto, Insert, InsertOrUpdate, Delete, DeletePreserveContained, Update, Ignore"));
+            }
         }
     }
 }

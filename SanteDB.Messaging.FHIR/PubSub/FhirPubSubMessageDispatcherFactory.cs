@@ -419,15 +419,33 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <inheritdoc/>
             public void NotifyLinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
             {
-                this.NotifyUpdated(holder);
-                this.NotifyUpdated(target);
+                if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.LinkAsMergeSettingName, out var linkAsMergeStr) &&
+                                   Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
+                                   linkAsMerge)
+                {
+                    this.NotifyMerged(holder, new TModel[] { target });
+                }
+                else
+                {
+                    this.NotifyUpdated(holder);
+                    this.NotifyUpdated(target);
+                }
             }
 
             /// <inheritdoc/>
             public void NotifyUnlinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
             {
-                this.NotifyUpdated(holder);
-                this.NotifyUpdated(target);
+                if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.LinkAsMergeSettingName, out var linkAsMergeStr) &&
+                   Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
+                   linkAsMerge)
+                {
+                    this.NotifyUnMerged(holder, new TModel[] { target });
+                }
+                else
+                {
+                    this.NotifyUpdated(holder);
+                    this.NotifyUpdated(target);
+                }
             }
 
         }

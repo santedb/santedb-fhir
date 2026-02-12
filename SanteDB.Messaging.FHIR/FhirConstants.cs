@@ -97,5 +97,8 @@ namespace SanteDB.Messaging.FHIR
         /// When a concept has no reference term - use the conept 
         /// </summary>
         public const string SanteDBConceptSystem = "http://santedb.org/concept";
+
+
+
     }
 }

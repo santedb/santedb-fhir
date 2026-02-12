@@ -18,13 +18,18 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Office2010.Excel;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
+using SanteDB;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Acts;
+using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.PubSub;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
@@ -34,7 +39,9 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.Tracing;
 using System.Linq;
+using System.Reflection;
 
 namespace SanteDB.Messaging.FHIR.PubSub
 {
@@ -43,6 +50,22 @@ namespace SanteDB.Messaging.FHIR.PubSub
     /// </summary>
     public class FhirPubSubRestHookDispatcherFactory : IPubSubDispatcherFactory
     {
+
+        /// <summary>
+        /// Notify the bundles
+        /// </summary>
+        public const string NotifyBundlesSettingName = "notify.bundle";
+
+        /// <summary>
+        /// Notify local instances
+        /// </summary>
+        public const string NotifyLocalSettingName = "notify.local";
+
+        /// <summary>
+        /// True if managed links should be sent as merges
+        /// </summary>
+        public const string LinkAsMergeSettingName = "linkAsMerge";
+
         // Created authenticators for each channel
         private static readonly IDictionary<Guid, IFhirClientAuthenticator> m_createdAuthenticators = new ConcurrentDictionary<Guid, IFhirClientAuthenticator>();
 
@@ -82,6 +105,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 this.Endpoint = endpoint;
                 this.Settings = settings;
 
+                this.m_relationshipMapper = FhirResourceHandlerUtil.GetMapperForInstance(new EntityRelationship());
                 this.m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>()?.GetSection<FhirDispatcherConfigurationSection>()?.Targets.Find(o => o.Endpoint == endpoint.ToString());
 
                 settings.TryGetValue("Content-Type", out string contentType);
@@ -112,7 +136,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     {
                         this.m_authenticator = this.m_configuration.Authenticator.Type.CreateInjected() as IFhirClientAuthenticator;
                     }
-                    else if (this.Settings.TryGetValue(FhirConstants.DispatcherClassSettingName, out var dispatcher) && MessageUtil.TryCreateAuthenticator(dispatcher, out this.m_authenticator)) { 
+                    else if (this.Settings.TryGetValue(FhirConstants.DispatcherClassSettingName, out var dispatcher) && MessageUtil.TryCreateAuthenticator(dispatcher, out this.m_authenticator))
+                    {
                         m_createdAuthenticators.Add(channelKey, this.m_authenticator);
                     }
                 }
@@ -134,6 +159,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// </summary>
             public IDictionary<string, string> Settings { get; }
 
+            private readonly IFhirResourceMapper m_relationshipMapper;
+
             /// <summary>
             /// Convert <paramref name="data"/> to a FHIR resource
             /// </summary>
@@ -143,18 +170,134 @@ namespace SanteDB.Messaging.FHIR.PubSub
             private Resource ConvertToResource<TModel>(TModel data)
             {
                 // First we want to ensure that this is the correct type
-                if ((!this.Settings.TryGetValue("notify.local", out var notifyLocalStr) || !Boolean.TryParse(notifyLocalStr, out bool notifiyLocal) || !notifiyLocal) && data is IdentifiedData id)
+                if ((!this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.NotifyLocalSettingName, out var notifyLocalStr) || !Boolean.TryParse(notifyLocalStr, out bool notifiyLocal) || !notifiyLocal) && data is IdentifiedData id)
                 {
                     data = (TModel)(object)id.ResolveGoldenRecord();
                 }
-
 
                 var mapper = FhirResourceHandlerUtil.GetMapperForInstance(data);
                 if (mapper == null)
                 {
                     throw new InvalidOperationException("Cannot determine how to convert resource for notification");
                 }
-                return mapper.MapToFhir(data as IdentifiedData);
+
+                if (!this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.NotifyBundlesSettingName, out var notifyBundleStr) || !Boolean.TryParse(notifyBundleStr, out bool notifyBundle) || !notifyBundle)
+                {
+                    return mapper.MapToFhir(data as IdentifiedData);
+                }
+                else if (data is IdentifiedData id2)
+                {
+                    // Create the transaction bundle 
+                    var retVal = new Bundle()
+                    {
+                        Type = Bundle.BundleType.Transaction,
+                        Entry = new List<Bundle.EntryComponent>() {
+                            new Bundle.EntryComponent()
+                            {
+                                Request = new Bundle.RequestComponent()
+                                {
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(id2.BatchOperation),
+                                    Url = $"{mapper.ResourceType}/{id2.Key}",
+                                },
+                                FullUrl = $"urn:uuid:{id2.Key}",
+                                Resource = mapper.MapToFhir(id2)
+                            }
+                        }
+                    };
+
+                    this.AddRelatedObjectsToBundle(id2, retVal);
+
+                    return retVal;
+                }
+                else
+                {
+                    throw new InvalidOperationException(String.Format(ErrorMessages.MAP_INCOMPATIBLE_TYPE, data.GetType(), typeof(IdentifiedData)));
+                }
+            }
+
+            /// <summary>
+            /// Add all related objects to the bundle as FHIR objects
+            /// </summary>
+            private void AddRelatedObjectsToBundle(IdentifiedData data, Bundle bundleToAddTo)
+            {
+                switch (data)
+                {
+                    case Entity ent:
+                        foreach (var er in ent.LoadProperty(o => o.Relationships))
+                        {
+                            if (this.m_relationshipMapper.CanMapObject(er))
+                            {
+                                bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
+                                {
+                                    Request = new Bundle.RequestComponent()
+                                    {
+                                        Method = Bundle.HTTPVerb.POST,
+                                        Url = $"{this.m_relationshipMapper.ResourceType}/{er.Key}",
+                                    },
+                                    FullUrl = $"urn:uuid:{er.Key}",
+                                    Resource = this.m_relationshipMapper.MapToFhir(er)
+                                });
+                            }
+                            else
+                            {
+                                var entity = er.LoadProperty(o => o.TargetEntity);
+                                var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
+                                if (mapper == null)
+                                {
+                                    bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
+                                    {
+                                        FullUrl = $"urn:uuid:{entity.Key}",
+                                        Request = new Bundle.RequestComponent()
+                                        {
+                                            Url = $"{mapper.ResourceType}/{entity.Key}",
+                                            Method = Bundle.HTTPVerb.POST
+                                        },
+                                        Resource = mapper.MapToFhir(entity)
+                                    });
+                                }
+                            }
+                        }
+                        break;
+                    case Act act:
+                        foreach (var ar in act.LoadProperty(o => o.Relationships))
+                        {
+                            var tact = ar.LoadProperty(o => o.TargetAct);
+                            var mapper = FhirResourceHandlerUtil.GetMapperForInstance(tact);
+                            if (mapper == null)
+                            {
+                                bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
+                                {
+                                    FullUrl = $"urn:uuid:{tact.Key}",
+                                    Request = new Bundle.RequestComponent()
+                                    {
+                                        Url = $"{mapper.ResourceType}/{tact.Key}",
+                                        Method = Bundle.HTTPVerb.POST
+                                    },
+                                    Resource = mapper.MapToFhir(tact)
+                                });
+                            }
+                        }
+                        foreach (var ap in act.LoadProperty(o => o.Participations))
+                        {
+                            var entity = ap.LoadProperty(o => o.PlayerEntity);
+                            var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
+                            if (mapper == null)
+                            {
+                                bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
+                                {
+                                    FullUrl = $"urn:uuid:{entity.Key}",
+                                    Request = new Bundle.RequestComponent()
+                                    {
+                                        Url = $"{mapper.ResourceType}/{entity.Key}",
+                                        Method = Bundle.HTTPVerb.POST
+                                    },
+                                    Resource = mapper.MapToFhir(entity)
+                                });
+                            }
+                        }
+                        break;
+                }
+
             }
 
             /// <summary>
@@ -180,7 +323,31 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// </summary>
             public void NotifyMerged<TModel>(TModel survivor, IEnumerable<TModel> subsumed) where TModel : IdentifiedData
             {
-                this.m_tracer.TraceWarning("TODO: Implement notification");
+                if (survivor is Core.Model.Roles.Patient patient)
+                {
+                    try
+                    {
+                        var resource = this.ConvertToResource(patient) as Patient;
+
+                        // Add a replaces link 
+                        subsumed.Where(ssb => !resource.Link.Any(rl => rl.Other.Reference.Contains(ssb.Key.ToString()))).ForEach(rs => resource.Link.Add(new Patient.LinkComponent()
+                        {
+                            Type = Patient.LinkType.Replaces,
+                            Other = DataTypeConverter.CreateRimReference(rs)
+                        }));
+                        this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
+                        this.m_client.Update(resource);
+                    }
+                    catch (Exception e)
+                    {
+                        this.m_tracer.TraceError("Could not send update to {0} for {1} - {2}", this.Endpoint, survivor, e);
+                        throw new DataDispatchException($"Could not send REST update to {this.Endpoint}", e);
+                    }
+                }
+                else
+                {
+                    throw new NotSupportedException("FHIR cannot express merge of this type of data");
+                }
             }
 
             /// <summary>
@@ -206,7 +373,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// </summary>
             public void NotifyUnMerged<TModel>(TModel primary, IEnumerable<TModel> unMerged) where TModel : IdentifiedData
             {
-                this.m_tracer.TraceWarning("TODO: Implement notification");
+                throw new NotSupportedException();
             }
 
             /// <summary>
@@ -230,13 +397,31 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// <inheritdoc/>
             public void NotifyLinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
             {
-                this.NotifyUpdated(holder);
+                if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.LinkAsMergeSettingName, out var linkAsMergeStr) &&
+                    Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
+                    linkAsMerge)
+                {
+                    this.NotifyMerged(holder, new TModel[] { target });
+                }
+                else
+                {
+                    this.NotifyUpdated(holder);
+                }
             }
 
             /// <inheritdoc/>
             public void NotifyUnlinked<TModel>(TModel holder, TModel target) where TModel : IdentifiedData
             {
-                this.NotifyUpdated(holder);
+                if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.LinkAsMergeSettingName, out var linkAsMergeStr) &&
+                    Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
+                    linkAsMerge)
+                {
+                    this.NotifyUnMerged(holder, new TModel[] { target });
+                }
+                else
+                {
+                    this.NotifyUpdated(holder);
+                }
             }
         }
 
