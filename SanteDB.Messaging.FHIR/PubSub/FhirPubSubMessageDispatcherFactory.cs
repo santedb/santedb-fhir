@@ -245,6 +245,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource
                     });
 
+                    DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
+
                     // Iterate over the bundle and set the HTTP request option
                     foreach (var entry in focusBundle.Entry)
                     {
@@ -280,6 +282,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 try
                 {
                     var msgBundle = this.CreateMessageBundle(out Bundle focusBundle);
+
+                    DataTypeConverter.AddRelatedObjectsToBundle(survivor, focusBundle);
 
                     // Convert the data element over to FHIR
                     focusBundle.Entry.AddRange(subsumed.Select(o =>
@@ -369,6 +373,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
             public void NotifyUnMerged<TModel>(TModel primary, IEnumerable<TModel> unMerged) where TModel : IdentifiedData
             {
                 this.m_tracer.TraceWarning("TODO: Implement notification");
+                throw new NotSupportedException();
             }
 
             /// <summary>
@@ -388,6 +393,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         FullUrl = $"urn:uuid:{data.Key}",
                         Resource = focalResource
                     });
+
+                    DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
 
                     // Iterate over the bundle and set the HTTP request option
                     foreach (var entry in focusBundle.Entry)

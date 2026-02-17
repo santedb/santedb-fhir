@@ -58,10 +58,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Create related person resource handler
         /// </summary>
-        public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo, 
-            IRepositoryService<Core.Model.Roles.Patient> patientRepository, 
-            IRepositoryService<EntityRelationship> repo, 
-            IRepositoryService<Concept> conceptRepository, 
+        public RelatedPersonResourceHandler(IRepositoryService<Core.Model.Entities.Person> personRepo,
+            IRepositoryService<Core.Model.Roles.Patient> patientRepository,
+            IRepositoryService<EntityRelationship> repo,
+            IRepositoryService<Concept> conceptRepository,
             ILocalizationService localizationService,
             IDataManagementPattern dataManagementPattern = null) : base(repo, localizationService)
         {
@@ -75,7 +75,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else
             {
-                 this.m_tracer.TraceWarning("Cannot locate a managed provider for Patient - links on RelatedPerson will be treated as Person objects");
+                this.m_tracer.TraceWarning("Cannot locate a managed provider for Patient - links on RelatedPerson will be treated as Person objects");
             }
         }
 
@@ -143,7 +143,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode") };
             relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
             relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.GenderConceptKey, "http://hl7.org/fhir/administrative-gender");
-            relative.Identifier = relModel.LoadCollection(o => o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
+            relative.Identifier = relModel.LoadCollection(o => o.Identifiers).Where(o => o.LoadProperty(i => i.IdentityDomain).AuthorityScopeXml?.Any() != true || o.IdentityDomain.AuthorityScopeXml.Contains(EntityClassKeys.Person)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
             relative.Name = relModel.LoadCollection(o => o.Names).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
             relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(model.SourceEntityKey);
             relative.Telecom = relModel.LoadCollection(o => o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
@@ -232,9 +232,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     if (lookupPerson != null)
                     {
                         this.m_tracer.TraceInfo($"RelatedPerson/{key} has been resolved to RIM {lookupPerson.Type}/{lookupPerson.Key}");
-                        
+
                         // The lookup person points to a MASTER we want to find the local or create one for this
-                        if(lookupPerson.ClassConceptKey == MDM_MASTER_CLASS_KEY)
+                        if (lookupPerson.ClassConceptKey == MDM_MASTER_CLASS_KEY)
                         {
                             lookupPerson = this.m_managedLinkProvider?.ResolveOwnedRecord(lookupPerson, AuthenticationContext.Current.GetAuthenticatedPrincipal()) as Core.Model.Entities.Person ??
                                 lookupPerson; // Keep the pointer to the master 
@@ -247,8 +247,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         };
                     }
                 }
-                
-                if(relationship == null)
+
+                if (relationship == null)
                 {
                     relationship = new EntityRelationship()
                     {
@@ -338,7 +338,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     Key = Guid.NewGuid()
                 };
             }
-            else 
+            else
             {
                 this.m_tracer.TraceVerbose($"The target of {relationship} will be resolved to own record for {AuthenticationContext.Current.GetAuthenticatedPrincipal()}");
                 person = person.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal()) ?? person;
@@ -363,7 +363,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 person.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();
                 person.DateOfBirthXml = resource.BirthDate;
                 // TODO: See DSM-42 Correction
-                person.GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
+                if (resource.Gender != null)
+                {
+                    person.GenderConceptKey = DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
+                }
+                else
+                {
+                    person.GenderConceptKey = NullReasonKeys.Unknown;
+                }
 
                 // TODO: Cross reference via identifiers
                 person.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
