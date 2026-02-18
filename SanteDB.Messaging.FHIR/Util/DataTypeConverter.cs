@@ -2274,5 +2274,100 @@ namespace SanteDB.Messaging.FHIR.Util
                     throw new NotSupportedException(String.Format(ErrorMessages.ARGUMENT_OUT_OF_RANGE, batchOperation, "Auto, Insert, InsertOrUpdate, Delete, DeletePreserveContained, Update, Ignore"));
             }
         }
+
+
+        /// <summary>
+        /// Add all related objects to the bundle as FHIR objects
+        /// </summary>
+        internal static void AddRelatedObjectsToBundle(IdentifiedData data, Bundle bundleToAddTo)
+        {
+            var relationshipMapper = FhirResourceHandlerUtil.GetMapperForInstance(new EntityRelationship() {  RelationshipTypeKey = EntityRelationshipTypeKeys.Mother });
+
+            switch (data)
+            {
+                case Entity ent:
+                    foreach (var er in ent.LoadProperty(o => o.Relationships))
+                    {
+                        Bundle.EntryComponent entryComponent = null;
+                        if (relationshipMapper.CanMapObject(er))
+                        {
+                            entryComponent = new Bundle.EntryComponent()
+                            {
+                                Request = new Bundle.RequestComponent()
+                                {
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation),
+                                    Url = $"{relationshipMapper.ResourceType}/{er.Key}",
+                                },
+                                FullUrl = $"urn:uuid:{er.Key}",
+                                Resource = relationshipMapper.MapToFhir(er)
+                            };
+                        }
+                        else
+                        {
+                            var entity = er.LoadProperty(o => o.TargetEntity);
+                            var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
+                            if (mapper == null)
+                            {
+                                entryComponent = new Bundle.EntryComponent()
+                                {
+                                    FullUrl = $"urn:uuid:{entity.Key}",
+                                    Request = new Bundle.RequestComponent()
+                                    {
+                                        Url = $"{mapper.ResourceType}/{entity.Key}",
+                                        Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                    },
+                                    Resource = mapper.MapToFhir(entity)
+                                };
+                            }
+                        }
+
+                        if (!bundleToAddTo.Entry.Any(e => e.FullUrl == entryComponent.FullUrl))
+                        {
+                            bundleToAddTo.Entry.Add(entryComponent);
+                        }
+                    }
+                    break;
+                case Act act:
+                    foreach (var ar in act.LoadProperty(o => o.Relationships))
+                    {
+                        var tact = ar.LoadProperty(o => o.TargetAct);
+                        var mapper = FhirResourceHandlerUtil.GetMapperForInstance(tact);
+                        if (mapper != null && 
+                            !bundleToAddTo.Entry.Any(e=>e.FullUrl == $"urn:uuid:{tact.Key}"))
+                        {
+                            bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
+                            {
+                                FullUrl = $"urn:uuid:{tact.Key}",
+                                Request = new Bundle.RequestComponent()
+                                {
+                                    Url = $"{mapper.ResourceType}/{tact.Key}",
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation)
+                                },
+                                Resource = mapper.MapToFhir(tact)
+                            });
+                        }
+                    }
+                    foreach (var ap in act.LoadProperty(o => o.Participations))
+                    {
+                        var entity = ap.LoadProperty(o => o.PlayerEntity);
+                        var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
+                        if (mapper != null && !bundleToAddTo.Entry.Any(e => e.FullUrl == $"urn:uuid:{entity.Key}"))
+                        {
+                            bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
+                            {
+                                FullUrl = $"urn:uuid:{entity.Key}",
+                                Request = new Bundle.RequestComponent()
+                                {
+                                    Url = $"{mapper.ResourceType}/{entity.Key}",
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                },
+                                Resource = mapper.MapToFhir(entity)
+                            });
+                        }
+                    }
+                    break;
+            }
+
+        }
     }
 }

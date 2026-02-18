@@ -105,7 +105,6 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 this.Endpoint = endpoint;
                 this.Settings = settings;
 
-                this.m_relationshipMapper = FhirResourceHandlerUtil.GetMapperForInstance(new EntityRelationship());
                 this.m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>()?.GetSection<FhirDispatcherConfigurationSection>()?.Targets.Find(o => o.Endpoint == endpoint.ToString());
 
                 settings.TryGetValue("Content-Type", out string contentType);
@@ -159,7 +158,6 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// </summary>
             public IDictionary<string, string> Settings { get; }
 
-            private readonly IFhirResourceMapper m_relationshipMapper;
 
             /// <summary>
             /// Convert <paramref name="data"/> to a FHIR resource
@@ -205,7 +203,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         }
                     };
 
-                    this.AddRelatedObjectsToBundle(id2, retVal);
+                    DataTypeConverter.AddRelatedObjectsToBundle(id2, retVal);
 
                     return retVal;
                 }
@@ -215,90 +213,6 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 }
             }
 
-            /// <summary>
-            /// Add all related objects to the bundle as FHIR objects
-            /// </summary>
-            private void AddRelatedObjectsToBundle(IdentifiedData data, Bundle bundleToAddTo)
-            {
-                switch (data)
-                {
-                    case Entity ent:
-                        foreach (var er in ent.LoadProperty(o => o.Relationships))
-                        {
-                            if (this.m_relationshipMapper.CanMapObject(er))
-                            {
-                                bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
-                                {
-                                    Request = new Bundle.RequestComponent()
-                                    {
-                                        Method = Bundle.HTTPVerb.POST,
-                                        Url = $"{this.m_relationshipMapper.ResourceType}/{er.Key}",
-                                    },
-                                    FullUrl = $"urn:uuid:{er.Key}",
-                                    Resource = this.m_relationshipMapper.MapToFhir(er)
-                                });
-                            }
-                            else
-                            {
-                                var entity = er.LoadProperty(o => o.TargetEntity);
-                                var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
-                                if (mapper == null)
-                                {
-                                    bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
-                                    {
-                                        FullUrl = $"urn:uuid:{entity.Key}",
-                                        Request = new Bundle.RequestComponent()
-                                        {
-                                            Url = $"{mapper.ResourceType}/{entity.Key}",
-                                            Method = Bundle.HTTPVerb.POST
-                                        },
-                                        Resource = mapper.MapToFhir(entity)
-                                    });
-                                }
-                            }
-                        }
-                        break;
-                    case Act act:
-                        foreach (var ar in act.LoadProperty(o => o.Relationships))
-                        {
-                            var tact = ar.LoadProperty(o => o.TargetAct);
-                            var mapper = FhirResourceHandlerUtil.GetMapperForInstance(tact);
-                            if (mapper == null)
-                            {
-                                bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
-                                {
-                                    FullUrl = $"urn:uuid:{tact.Key}",
-                                    Request = new Bundle.RequestComponent()
-                                    {
-                                        Url = $"{mapper.ResourceType}/{tact.Key}",
-                                        Method = Bundle.HTTPVerb.POST
-                                    },
-                                    Resource = mapper.MapToFhir(tact)
-                                });
-                            }
-                        }
-                        foreach (var ap in act.LoadProperty(o => o.Participations))
-                        {
-                            var entity = ap.LoadProperty(o => o.PlayerEntity);
-                            var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
-                            if (mapper == null)
-                            {
-                                bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
-                                {
-                                    FullUrl = $"urn:uuid:{entity.Key}",
-                                    Request = new Bundle.RequestComponent()
-                                    {
-                                        Url = $"{mapper.ResourceType}/{entity.Key}",
-                                        Method = Bundle.HTTPVerb.POST
-                                    },
-                                    Resource = mapper.MapToFhir(entity)
-                                });
-                            }
-                        }
-                        break;
-                }
-
-            }
 
             /// <summary>
             /// Notify that an object was created
