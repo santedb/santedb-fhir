@@ -283,7 +283,6 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 {
                     var msgBundle = this.CreateMessageBundle(out Bundle focusBundle);
 
-                    DataTypeConverter.AddRelatedObjectsToBundle(survivor, focusBundle);
 
                     // Convert the data element over to FHIR
                     focusBundle.Entry.AddRange(subsumed.Select(o =>
@@ -320,6 +319,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             }
                         };
                     }));
+                    DataTypeConverter.AddRelatedObjectsToBundle(survivor, focusBundle);
 
                     this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
                     m_client.Create(msgBundle);

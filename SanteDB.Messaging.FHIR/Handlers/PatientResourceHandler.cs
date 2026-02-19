@@ -32,6 +32,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using static Hl7.Fhir.Model.CapabilityStatement;
 using DatePrecision = SanteDB.Core.Model.DataTypes.DatePrecision;
 
@@ -271,7 +272,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         var relative = FhirResourceHandlerUtil.GetMapperForInstance(rel).MapToFhir(rel);
                         partOfBundle.Entry.Add(new Bundle.EntryComponent()
                         {
-                            FullUrl = $"{MessageUtil.GetBaseUri()}/RelatedPerson/{rel.Key}",
+                            FullUrl = $"urn:uuid:{rel.Key}",
                             Resource = relative,
                         });
                     }
@@ -361,21 +362,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             Core.Model.Roles.Patient patient = null;
 
-            // Attempt to XRef
+            // Attempt to XRef via UUID - if the remote has passed us a UUID we may be able to directly load it
             if (Guid.TryParse(resource.Id, out Guid key))
             {
                 patient = this.m_repository.Get(key);
-
-                // Patient doesn't exist?
-                if (patient == null)
-                {
-                    patient = new Core.Model.Roles.Patient
-                    {
-                        Key = key
-                    };
-                }
             }
-            else if (resource.Identifier.Any())
+            
+            // If the result of the previous resolution was not found, and there is a business identifier we try to resolve by unique id
+            if (patient == null && resource.Identifier.Any())
             {
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
@@ -388,20 +382,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         break;
                     }
                 }
-
-                if (patient == null)
-                {
-                    patient = new Core.Model.Roles.Patient
-                    {
-                        Key = Guid.NewGuid()
-                    };
-                }
             }
-            else
+            
+            // Finally if hte patiet could not be resolved we will create a new one and use the uuid of the resource if it is one
+            if(patient == null)
             {
                 patient = new Core.Model.Roles.Patient
                 {
-                    Key = Guid.NewGuid()
+                    Key = Guid.TryParse(resource.Id, out key) ? key : Guid.NewGuid()
                 };
             }
 

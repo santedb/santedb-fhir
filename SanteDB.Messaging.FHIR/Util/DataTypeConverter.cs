@@ -2306,7 +2306,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         {
                             var entity = er.LoadProperty(o => o.TargetEntity);
                             var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
-                            if (mapper == null)
+                            if (mapper != null)
                             {
                                 entryComponent = new Bundle.EntryComponent()
                                 {
@@ -2321,9 +2321,9 @@ namespace SanteDB.Messaging.FHIR.Util
                             }
                         }
 
-                        if (!bundleToAddTo.Entry.Any(e => e.FullUrl == entryComponent.FullUrl))
+                        if (entryComponent != null && !bundleToAddTo.Entry.Any(e => e.FullUrl == entryComponent.FullUrl))
                         {
-                            bundleToAddTo.Entry.Add(entryComponent);
+                            bundleToAddTo.Entry.Insert(0, entryComponent);
                         }
                     }
                     break;
@@ -2335,7 +2335,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         if (mapper != null && 
                             !bundleToAddTo.Entry.Any(e=>e.FullUrl == $"urn:uuid:{tact.Key}"))
                         {
-                            bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
+                            bundleToAddTo.Entry.Insert(0, new Bundle.EntryComponent()
                             {
                                 FullUrl = $"urn:uuid:{tact.Key}",
                                 Request = new Bundle.RequestComponent()
@@ -2353,7 +2353,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
                         if (mapper != null && !bundleToAddTo.Entry.Any(e => e.FullUrl == $"urn:uuid:{entity.Key}"))
                         {
-                            bundleToAddTo.Entry.Add(new Bundle.EntryComponent()
+                            bundleToAddTo.Entry.Insert(0, new Bundle.EntryComponent()
                             {
                                 FullUrl = $"urn:uuid:{entity.Key}",
                                 Request = new Bundle.RequestComponent()

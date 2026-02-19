@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var parent = model.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Parent);
             if (parent != null)
             {
-                retVal.PartOf = DataTypeConverter.CreateVersionedReference<Location>(parent.LoadProperty(o => o.TargetEntity));
+                retVal.PartOf = DataTypeConverter.CreateNonVersionedReference<Location>(parent.LoadProperty(o => o.TargetEntity));
             }
 
             if(model.GeoTag != null)

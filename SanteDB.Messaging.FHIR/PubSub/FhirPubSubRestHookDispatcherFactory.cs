@@ -39,6 +39,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Reflection;
@@ -65,6 +66,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
         /// True if managed links should be sent as merges
         /// </summary>
         public const string LinkAsMergeSettingName = "linkAsMerge";
+
+        /// <summary>
+        /// Notifications should any MDM metadata
+        /// </summary>
+        public const string NotifyMdmMetaSettingName = "notify.includeMetaData";
 
         // Created authenticators for each channel
         private static readonly IDictionary<Guid, IFhirClientAuthenticator> m_createdAuthenticators = new ConcurrentDictionary<Guid, IFhirClientAuthenticator>();
@@ -170,7 +176,20 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 // First we want to ensure that this is the correct type
                 if ((!this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.NotifyLocalSettingName, out var notifyLocalStr) || !Boolean.TryParse(notifyLocalStr, out bool notifiyLocal) || !notifiyLocal) && data is IdentifiedData id)
                 {
-                    data = (TModel)(object)id.ResolveGoldenRecord();
+                    data = (TModel)(object)id.ResolveGoldenRecord().Clone();
+                }
+                // Strip out the MDM metadata so the remote service simply receives a simple resource
+                if(!this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.NotifyMdmMetaSettingName, out var notifyMdmDataStr) || !Boolean.TryParse(notifyMdmDataStr, out var notifyMdmData) || !notifyMdmData)
+                {
+                    if(data is ITaggable itg)
+                    {
+                        itg.RemoveAllTags(o => o.TagKey.StartsWith("$")); // strip off metadata
+                    }
+                    // Remove any relationships which managed reference links
+                    if(data is IHasRelationships ihr)
+                    {
+                        ihr.FilterManagedReferenceLinks().ToArray().ForEach(r => ihr.RemoveRelationship(r));
+                    }
                 }
 
                 var mapper = FhirResourceHandlerUtil.GetMapperForInstance(data);
