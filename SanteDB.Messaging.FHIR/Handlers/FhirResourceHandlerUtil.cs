@@ -72,7 +72,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <returns>The mapper (if present)</returns>
         public static IEnumerable<IFhirResourceMapper> GetMappersFor(Type resourceOrModelType)
         {
-            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().Where(o => o.CanonicalType == resourceOrModelType || o.ResourceClrType == resourceOrModelType);
+            return s_messageProcessors.Select(o => o.Value).OfType<IFhirResourceMapper>().Where(o => o.CanonicalType.IsAssignableFrom(resourceOrModelType) || o.ResourceClrType == resourceOrModelType);
         }
 
         /// <summary>
