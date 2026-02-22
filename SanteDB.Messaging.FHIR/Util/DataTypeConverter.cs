@@ -2388,7 +2388,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <exception cref="NotImplementedException"></exception>
         internal static string CreateResourceLocation(IdentifiedData resource)
         {
-            var builder = new UriBuilder(m_configuration.ResourceBaseUri ?? $"{m_restConfiguration.ExternalHostPort}/fhir");
+            var builder = new UriBuilder(m_configuration?.ResourceBaseUri ?? $"{m_restConfiguration?.ExternalHostPort}/fhir");
             var resourceHandler = FhirResourceHandlerUtil.GetMapperForInstance(resource);
             var resourcePath = Hl7.Fhir.Utility.EnumUtility.GetLiteral(resourceHandler.ResourceType);
             if (resource is IVersionedData ivd)
