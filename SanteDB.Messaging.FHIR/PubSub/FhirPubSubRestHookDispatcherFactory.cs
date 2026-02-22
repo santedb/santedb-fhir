@@ -72,6 +72,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
         /// </summary>
         public const string NotifyMdmMetaSettingName = "notify.includeMetaData";
 
+        /// <summary>
+        /// Bundle any related items
+        /// </summary>
+        public const string BundleRelatedItems = "notify.includeRelated";
+
         // Created authenticators for each channel
         private static readonly IDictionary<Guid, IFhirClientAuthenticator> m_createdAuthenticators = new ConcurrentDictionary<Guid, IFhirClientAuthenticator>();
 
@@ -179,14 +184,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     data = (TModel)(object)id.ResolveGoldenRecord().Clone();
                 }
                 // Strip out the MDM metadata so the remote service simply receives a simple resource
-                if(!this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.NotifyMdmMetaSettingName, out var notifyMdmDataStr) || !Boolean.TryParse(notifyMdmDataStr, out var notifyMdmData) || !notifyMdmData)
+                if (!this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.NotifyMdmMetaSettingName, out var notifyMdmDataStr) || !Boolean.TryParse(notifyMdmDataStr, out var notifyMdmData) || !notifyMdmData)
                 {
-                    if(data is ITaggable itg)
+                    if (data is ITaggable itg)
                     {
                         itg.RemoveAllTags(o => o.TagKey.StartsWith("$")); // strip off metadata
                     }
                     // Remove any relationships which managed reference links
-                    if(data is IHasRelationships ihr)
+                    if (data is IHasRelationships ihr)
                     {
                         ihr.FilterManagedReferenceLinks().ToArray().ForEach(r => ihr.RemoveRelationship(r));
                     }
@@ -222,7 +227,10 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         }
                     };
 
-                    DataTypeConverter.AddRelatedObjectsToBundle(id2, retVal);
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    {
+                        DataTypeConverter.AddRelatedObjectsToBundle(id2, retVal);
+                    }
 
                     return retVal;
                 }

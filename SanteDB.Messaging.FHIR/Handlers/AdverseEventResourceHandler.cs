@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Office2013.Excel;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -41,17 +42,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class AdverseEventResourceHandler : RepositoryResourceHandlerBase<AdverseEvent, Act>
     {
+        private readonly Guid?[] m_adverseEventTypes;
+
         /// <summary>
         /// Adverse event repo
         /// </summary>
-        public AdverseEventResourceHandler(IRepositoryService<Act> repo, ILocalizationService localizationService) : base(repo, localizationService)
+        public AdverseEventResourceHandler(IRepositoryService<Act> repo, IConceptRepositoryService conceptRepositoryService, ILocalizationService localizationService) : base(repo, localizationService)
         {
+            this.m_adverseEventTypes = conceptRepositoryService.ExpandConceptSet(ConceptSetKeys.AdverseEventActs).Select(o=>o.Key).ToArray();
         }
 
         /// <inheritdoc/>
         public override bool CanMapObject(object instance)
         {
-            return base.CanMapObject(instance);
+            return instance is AdverseEvent ||
+                instance is Act act &&
+                m_adverseEventTypes.Contains(act.TypeConceptKey.GetValueOrDefault()); 
         }
 
         /// <inheritdoc/>

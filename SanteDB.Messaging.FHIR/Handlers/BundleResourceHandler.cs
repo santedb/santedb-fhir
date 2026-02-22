@@ -100,7 +100,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
                         retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;
                         return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, retVal);
-                    };
+                    }
+                    ;
                 case Hl7.Fhir.Model.Bundle.BundleType.Message:
                     {
                         var processMessageHandler = ExtensionUtil.GetOperation(null, "process-message");
@@ -215,6 +216,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         Url = $"{handler.ResourceType}/{entry.Key}",
                         Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entry.BatchOperation)
+                    },
+                    Response = new Bundle.ResponseComponent()
+                    {
+                        Etag = $"W/{entry.Tag}",
+                        Location = DataTypeConverter.CreateResourceLocation(entry),
+                        LastModified = entry.ModifiedOn,
+                        Status = entry.BatchOperation == Core.Model.DataTypes.BatchOperationType.Insert || entry.BatchOperation == Core.Model.DataTypes.BatchOperationType.Update ? "201" : "200",
+                        Outcome = new OperationOutcome()
+                        {
+                            Issue = new List<OperationOutcome.IssueComponent>()
+                            {
+                                new OperationOutcome.IssueComponent()
+                                {
+                                    Diagnostics = $"{entry.BatchOperation} {entry}",
+                                    Severity = OperationOutcome.IssueSeverity.Information
+                                }
+                            }
+                        }
                     }
                 };
 
@@ -264,7 +283,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 sdbBundle.Remove(itm.Key.GetValueOrDefault());
                 sdbBundle.Add(itm);
 
-                switch(entry.Request?.Method ?? Bundle.HTTPVerb.POST)
+                switch (entry.Request?.Method ?? Bundle.HTTPVerb.POST)
                 {
                     case Bundle.HTTPVerb.PUT:
                         itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Update;
@@ -275,8 +294,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     case Bundle.HTTPVerb.DELETE:
                         itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Delete;
                         break;
+                    case Bundle.HTTPVerb.GET:
+                    case Bundle.HTTPVerb.HEAD:
+                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Ignore;
+                        break;
                     default:
-                        throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.ARGUMENT_OUT_OF_RANGE, entry.Request.Method, "PUT, POST, DELETE"));
+                        throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.ARGUMENT_OUT_OF_RANGE, entry.Request.Method, "PUT, POST, DELETE, GET, HEAD"));
                 }
                 // HACK: If the ITM is a relationship or participation insert it into the bundle
                 if (itm is ITargetedAssociation targetedAssociation && targetedAssociation.TargetEntity != null)

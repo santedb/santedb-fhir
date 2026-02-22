@@ -21,9 +21,12 @@
 using Hl7.Fhir.Model;
 using SanteDB.Core.Extensions;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Security;
+using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -37,6 +40,18 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// </summary>
     public class BirthTimeExtension : IFhirExtensionHandler
     {
+        private readonly IDataPersistenceService<DateObservation> m_dateObsPersistence;
+
+        private static readonly Guid BIRTHTIME_OBSERVATION_GUID = Guid.Parse("409538df-26e0-4ffa-b9fc-11a244eae0e5");
+
+        /// <summary>
+        /// Date time observation
+        /// </summary>
+        public BirthTimeExtension(IDataPersistenceService<DateObservation> dtPersistence = null)
+        {
+            this.m_dateObsPersistence = dtPersistence;
+        }
+
         /// <summary>
         /// Gets the resource type this applies to
         /// </summary>
@@ -59,11 +74,20 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (modelObject is Person person)
             {
-                var btExtension = person.LoadProperty(o => o.Extensions).FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.BirthTimeExtension);
+                var btExtension = person.LoadProperty(o => o.Extensions)?.FirstOrDefault(o => o.ExtensionTypeKey == ExtensionTypeKeys.BirthTimeExtension);
                 if (btExtension != null)
                 {
                     person.Extensions.Remove(btExtension);
                     yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirDateTime((DateTime)btExtension.ExtensionValue));
+                }
+                // Attempt to find the birth registration event
+                else if (this.m_dateObsPersistence == null)
+                {
+                    var btObs = this.m_dateObsPersistence.Query(o => o.TypeConceptKey == BIRTHTIME_OBSERVATION_GUID && o.Participations.Where(p => p.ParticipationRoleKey == ActParticipationKeys.RecordTarget).Any(p => p.PlayerEntityKey == person.Key) && o.StatusConceptKey == StatusKeys.Completed && o.IsNegated == false, AuthenticationContext.SystemPrincipal).OrderByDescending(o => o.CreationTime).FirstOrDefault();
+                    if (btObs != null)
+                    {
+                        yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirDateTime((DateTime)btObs.Value));
+                    }
                 }
             }
         }
@@ -79,6 +103,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 person.Extensions.Add(new EntityExtension(ExtensionTypeKeys.BirthTimeExtension, typeof(DateExtensionHandler), dateTime.ToDateTime()));
                 return true;
             }
+
 
             return false;
         }

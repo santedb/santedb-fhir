@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Office2019.Drawing.Model3D;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
@@ -245,7 +246,10 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource
                     });
 
-                    DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    {
+                        DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
+                    }
 
                     // Iterate over the bundle and set the HTTP request option
                     foreach (var entry in focusBundle.Entry)
@@ -319,7 +323,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             }
                         };
                     }));
-                    DataTypeConverter.AddRelatedObjectsToBundle(survivor, focusBundle);
+
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    {
+                        DataTypeConverter.AddRelatedObjectsToBundle(survivor, focusBundle);
+                    }
 
                     this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
                     m_client.Create(msgBundle);
@@ -394,7 +402,10 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource
                     });
 
-                    DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    {
+                        DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
+                    }
 
                     // Iterate over the bundle and set the HTTP request option
                     foreach (var entry in focusBundle.Entry)
