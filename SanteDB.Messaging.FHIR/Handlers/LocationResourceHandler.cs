@@ -184,14 +184,20 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
+            place.ClassConceptKey = DataTypeConverter.ToConcept(resource.PhysicalType)?.Key ?? place.ClassConceptKey ?? EntityClassKeys.Place;
+
             // add the textual representation of the name of the place as the address text property for search purposes
             // see the BirthPlaceExtension class
             if (!string.IsNullOrEmpty(resource.Address?.Text))
             {
+                place.LoadProperty(o => o.Names).RemoveAll(o => o.NameUseKey == NameUseKeys.Search);
                 place.LoadProperty(o => o.Names).Add(new EntityName(NameUseKeys.Search, resource.Address.Text));
             }
-
-            place.LoadProperty(o => o.Names).Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name));
+            place.LoadProperty(o => o.Names).Add(new EntityName(NameUseKeys.OfficialRecord, resource.Name)
+            {
+                Key = place.Names.FirstOrDefault(o=>o.NameUseKey == NameUseKeys.OfficialRecord)?.Key
+            });
+            place.LoadProperty(o => o.Names).RemoveAll(o => o.NameUseKey == NameUseKeys.Pseudonym);
             place.LoadProperty(o => o.Names).AddRange(resource.Alias.Select(o => new EntityName(NameUseKeys.Pseudonym, o)));
 
             if (resource.Mode == Location.LocationMode.Kind)

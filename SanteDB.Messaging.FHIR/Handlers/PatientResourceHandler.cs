@@ -403,7 +403,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
             patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
             patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
-            patient.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, patient)).OfType<EntityExtension>());
+            patient.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o =>
+            {
+                o.AddAnnotation(resource);
+                return DataTypeConverter.ToEntityExtension(o, patient);
+            }).OfType<EntityExtension>());
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
             patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList();
             patient.MaritalStatus = resource.MaritalStatus == null ? null : DataTypeConverter.ToConcept(resource.MaritalStatus);

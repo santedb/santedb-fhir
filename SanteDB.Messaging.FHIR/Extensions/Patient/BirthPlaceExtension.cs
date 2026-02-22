@@ -19,6 +19,7 @@
  * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Data.Quality;
 using SanteDB.Core.Model;
@@ -41,6 +42,12 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// </summary>
     public class BirthPlaceExtension : IFhirExtensionHandler
     {
+
+        /// <summary>
+        /// Extended birthplace reference which is non-standard but allows SanteDB to explicitly link to a location
+        /// </summary>
+        public const string ExtendedBirthplaceReferenceExtensionUrl = "http://santedb.org/fhir/profile#patient-birthPlace-ref";
+
         // Address Hierarchy
         private readonly Guid[] AddressHierarchy = {
             EntityClassKeys.ServiceDeliveryLocation,
@@ -100,7 +107,13 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                     var address = DataTypeConverter.ToFhirAddress(birthPlaceRelationship.LoadProperty(o => o.TargetEntity).LoadCollection(o => o.Addresses)?.FirstOrDefault());
                     var test = birthPlaceRelationship.TargetEntity.LoadCollection(o => o.Names);
                     address.Text = birthPlaceRelationship.TargetEntity.LoadCollection(o => o.Names)?.FirstOrDefault()?.ToDisplay();
-                    yield return new Extension(this.Uri.ToString(), address);
+                    yield return new Extension(this.Uri.ToString(), address)
+                    {
+                        Extension = new List<Extension>()
+                        {
+                            new Extension(ExtendedBirthplaceReferenceExtensionUrl , DataTypeConverter.CreateRimReference(birthPlaceRelationship.TargetEntity))
+                        }
+                    };
                 }
             }
         }
@@ -112,53 +125,79 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (modelObject is SanteDB.Core.Model.Roles.Patient patient && fhirExtension.Value is Hl7.Fhir.Model.Address address)
             {
+                
                 // TODO: Update this to use the new more efficient method of getting data from database
                 // Something like: Query by names, then order by the address hierarchy?
                 var birthPlaceRelationship = patient.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Birthplace);
 
                 IEnumerable<Place> places = null;
 
-                foreach (var itm in this.m_lookupExpressions)
+                var directLink = fhirExtension.Extension.Find(o => o.Url == ExtendedBirthplaceReferenceExtensionUrl);
+                if (directLink?.Value is ResourceReference rr)
                 {
-                    if (itm.Key(address))
+                    var birthPlace = DataTypeConverter.ResolveEntity<Place>(rr, fhirExtension.Annotations<Hl7.Fhir.Model.Patient>().FirstOrDefault());
+                    if (birthPlace == null)
                     {
-                        places = this.m_placeRepository.Find(itm.Value(address));
-
-                        var placeCount = places.Count();
-                        if (placeCount > 1)
-                        {
-                            var placeClasses = places.ToArray().GroupBy(o => o.ClassConceptKey).OrderBy(o => Array.IndexOf(AddressHierarchy, o.Key.Value));
-                            // Take the first wrung of the address hierarchy
-                            var loadedPlaces = placeClasses.First();
-                            if (loadedPlaces.Count() > 1) // Still more than one type of place
-                            {
-                                throw new KeyNotFoundException("Cannot find unique birth place registration.");
-                            }
-                            else
-                            {
-                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, loadedPlaces.First()));
-                                return true;
-                            }
-                        }
-                        else if (placeCount == 1)
-                        {
-                            if (birthPlaceRelationship == null)
-                            {
-                                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, places.Select(o => o.Key).First()));
-                            }
-                            else
-                            {
-                                birthPlaceRelationship.TargetEntityKey = places.Select(o => o.Key).First();
-                            }
-
-                            return true;
-                        }
-                       
+                        throw new ArgumentOutOfRangeException($"Cannot find {rr.Reference}");
+                    }
+                    else if (birthPlaceRelationship != null)
+                    {
+                        birthPlaceRelationship.TargetEntityKey = birthPlace.Key;
+                        return true;
+                    }
+                    else
+                    {
+                        patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, birthPlace.Key));
+                        return true;
                     }
                 }
+                else
+                {
+                    // Does the extension have an extenion that 
+                    foreach (var itm in this.m_lookupExpressions)
+                    {
+                        if (itm.Key(address))
+                        {
+                            places = this.m_placeRepository.Find(itm.Value(address));
 
-                throw new FhirException((System.Net.HttpStatusCode)422, OperationOutcome.IssueType.MultipleMatches, "Cannot find birthplace registration.");
+                            var placeCount = places.Count();
+                            if (placeCount > 1)
+                            {
+                                var placeClasses = places.ToArray().GroupBy(o => o.ClassConceptKey).OrderBy(o => Array.IndexOf(AddressHierarchy, o.Key.Value));
+                                // Take the first wrung of the address hierarchy
+                                var loadedPlaces = placeClasses.First();
+                                if (loadedPlaces.Count() > 1) // Still more than one type of place
+                                {
+                                    throw new KeyNotFoundException("Cannot find unique birth place registration.");
+                                }
+                                else
+                                {
+                                    patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, loadedPlaces.First())
+                                    {
+                                        Key = birthPlaceRelationship?.Key
+                                    });
+                                    return true;
+                                }
+                            }
+                            else if (placeCount == 1)
+                            {
+                                if (birthPlaceRelationship == null)
+                                {
+                                    patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Birthplace, places.Select(o => o.Key).First()));
+                                }
+                                else
+                                {
+                                    birthPlaceRelationship.TargetEntityKey = places.Select(o => o.Key).First();
+                                }
 
+                                return true;
+                            }
+
+                        }
+                    }
+
+                    throw new FhirException((System.Net.HttpStatusCode)422, OperationOutcome.IssueType.MultipleMatches, "Cannot find birthplace registration.");
+                }
             }
             return false;
         }

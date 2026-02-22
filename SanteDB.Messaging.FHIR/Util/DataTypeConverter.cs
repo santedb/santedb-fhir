@@ -48,6 +48,7 @@ using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
+using SanteDB.Rest.Common.Configuration;
 using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
@@ -95,6 +96,7 @@ namespace SanteDB.Messaging.FHIR.Util
         private static readonly Regex m_referenceRegex = new Regex(@"^(?:urn:uuid:([A-F0-9\-]{36})|\/?(\w+?)\/([A-F0-9\-]{36}))$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         // Configuration
         private static readonly FhirServiceConfigurationSection m_configuration;
+        private static readonly RestConfigurationSection m_restConfiguration;
 
         // This regex is used because we want to be more forgiving for parsing telecom URIs which may have 
         // symbols like: tel:+1(905)293-4039
@@ -105,7 +107,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         static DataTypeConverter()
         {
-            m_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
+            var configService = ApplicationServiceContext.Current.GetService<IConfigurationManager>();
+            m_configuration = configService.GetSection<FhirServiceConfigurationSection>();
+            m_restConfiguration = configService.GetSection<RestConfigurationSection>();
         }
 
         /// <summary>
@@ -2301,7 +2305,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             {
                                 Request = new Bundle.RequestComponent()
                                 {
-                                    Method = Bundle.HTTPVerb.GET, // DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation),
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation),
                                     Url = $"{relationshipMapper.ResourceType}/{er.Key}",
                                 },
                                 FullUrl = $"urn:uuid:{er.Key}",
@@ -2320,7 +2324,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                     Request = new Bundle.RequestComponent()
                                     {
                                         Url = $"{mapper.ResourceType}/{entity.Key}",
-                                        Method = Bundle.HTTPVerb.GET, //DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                        Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
                                     },
                                     Resource = mapper.MapToFhir(entity)
                                 };
@@ -2347,7 +2351,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 Request = new Bundle.RequestComponent()
                                 {
                                     Url = $"{mapper.ResourceType}/{tact.Key}",
-                                    Method = Bundle.HTTPVerb.GET // DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation)
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation)
                                 },
                                 Resource = mapper.MapToFhir(tact)
                             });
@@ -2365,7 +2369,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 Request = new Bundle.RequestComponent()
                                 {
                                     Url = $"{mapper.ResourceType}/{entity.Key}",
-                                    Method = Bundle.HTTPVerb.GET // DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
                                 },
                                 Resource = mapper.MapToFhir(entity)
                             });
@@ -2384,16 +2388,16 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <exception cref="NotImplementedException"></exception>
         internal static string CreateResourceLocation(IdentifiedData resource)
         {
-            var builder = new UriBuilder(RestOperationContext.Current.IncomingRequest.Url);
+            var builder = new UriBuilder(m_configuration?.ResourceBaseUri ?? $"{m_restConfiguration?.ExternalHostPort ?? "http://localhost:8080/"}/fhir");
             var resourceHandler = FhirResourceHandlerUtil.GetMapperForInstance(resource);
             var resourcePath = Hl7.Fhir.Utility.EnumUtility.GetLiteral(resourceHandler.ResourceType);
             if (resource is IVersionedData ivd)
             {
-                builder.Path = $"/fhir/{resourcePath}/{resource.Key}/_history/{ivd.VersionKey}";
+                builder.Path += $"/{resourcePath}/{resource.Key}/_history/{ivd.VersionKey}";
             }
             else
             {
-                builder.Path = $"/fhir/{resourcePath}/{resource.Key}";
+                builder.Path += $"/{resourcePath}/{resource.Key}";
             }
             return builder.ToString();
 
