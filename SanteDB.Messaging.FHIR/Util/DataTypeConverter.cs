@@ -1065,6 +1065,12 @@ namespace SanteDB.Messaging.FHIR.Util
                     throw new NotImplementedException($"Extension type {fhirExtension.Url} is not understood (or the data type being used is invalid for the registration)");
                 }
 
+                // Now set the key if it already exists
+                if (context is Core.Model.Interfaces.IExtendable iext) {
+                    var existingExtension = iext.LoadProperty(o => o.Extensions)?.FirstOrDefault(o=>o.ExtensionTypeKey == extension.ExtensionTypeKey);
+                    extension.Key = existingExtension?.Key; 
+                }
+
                 // Now will
                 return extension;
             }
@@ -2269,7 +2275,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 case BatchOperationType.Update:
                     return Hl7.Fhir.Model.Bundle.HTTPVerb.PUT;
                 case BatchOperationType.Ignore:
-                    return Hl7.Fhir.Model.Bundle.HTTPVerb.HEAD;
+                    return Hl7.Fhir.Model.Bundle.HTTPVerb.GET;
                 default:
                     throw new NotSupportedException(String.Format(ErrorMessages.ARGUMENT_OUT_OF_RANGE, batchOperation, "Auto, Insert, InsertOrUpdate, Delete, DeletePreserveContained, Update, Ignore"));
             }
@@ -2295,7 +2301,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             {
                                 Request = new Bundle.RequestComponent()
                                 {
-                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation),
+                                    Method = Bundle.HTTPVerb.GET, // DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation),
                                     Url = $"{relationshipMapper.ResourceType}/{er.Key}",
                                 },
                                 FullUrl = $"urn:uuid:{er.Key}",
@@ -2314,7 +2320,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                     Request = new Bundle.RequestComponent()
                                     {
                                         Url = $"{mapper.ResourceType}/{entity.Key}",
-                                        Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                        Method = Bundle.HTTPVerb.GET, //DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
                                     },
                                     Resource = mapper.MapToFhir(entity)
                                 };
@@ -2341,7 +2347,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 Request = new Bundle.RequestComponent()
                                 {
                                     Url = $"{mapper.ResourceType}/{tact.Key}",
-                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation)
+                                    Method = Bundle.HTTPVerb.GET // DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation)
                                 },
                                 Resource = mapper.MapToFhir(tact)
                             });
@@ -2359,7 +2365,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 Request = new Bundle.RequestComponent()
                                 {
                                     Url = $"{mapper.ResourceType}/{entity.Key}",
-                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                    Method = Bundle.HTTPVerb.GET // DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
                                 },
                                 Resource = mapper.MapToFhir(entity)
                             });
@@ -2367,6 +2373,29 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                     break;
             }
+
+        }
+        
+        /// <summary>
+        /// Create a resource location on the <paramref name="resource"/>
+        /// </summary>
+        /// <param name="resource"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        internal static string CreateResourceLocation(IdentifiedData resource)
+        {
+            var builder = new UriBuilder(RestOperationContext.Current.IncomingRequest.Url);
+            var resourceHandler = FhirResourceHandlerUtil.GetMapperForInstance(resource);
+            var resourcePath = Hl7.Fhir.Utility.EnumUtility.GetLiteral(resourceHandler.ResourceType);
+            if (resource is IVersionedData ivd)
+            {
+                builder.Path = $"/fhir/{resourcePath}/{resource.Key}/_history/{ivd.VersionKey}";
+            }
+            else
+            {
+                builder.Path = $"/fhir/{resourcePath}/{resource.Key}";
+            }
+            return builder.ToString();
 
         }
     }
