@@ -2305,7 +2305,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             {
                                 Request = new Bundle.RequestComponent()
                                 {
-                                    Method = Bundle.HTTPVerb.GET, // DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation),
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation),
                                     Url = $"{relationshipMapper.ResourceType}/{er.Key}",
                                 },
                                 FullUrl = $"urn:uuid:{er.Key}",
@@ -2324,7 +2324,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                     Request = new Bundle.RequestComponent()
                                     {
                                         Url = $"{mapper.ResourceType}/{entity.Key}",
-                                        Method = Bundle.HTTPVerb.GET, //DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                        Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
                                     },
                                     Resource = mapper.MapToFhir(entity)
                                 };
@@ -2351,7 +2351,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 Request = new Bundle.RequestComponent()
                                 {
                                     Url = $"{mapper.ResourceType}/{tact.Key}",
-                                    Method = Bundle.HTTPVerb.GET // DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation)
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation)
                                 },
                                 Resource = mapper.MapToFhir(tact)
                             });
@@ -2369,7 +2369,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 Request = new Bundle.RequestComponent()
                                 {
                                     Url = $"{mapper.ResourceType}/{entity.Key}",
-                                    Method = Bundle.HTTPVerb.GET // DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
                                 },
                                 Resource = mapper.MapToFhir(entity)
                             });
