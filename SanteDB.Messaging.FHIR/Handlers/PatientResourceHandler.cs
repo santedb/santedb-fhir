@@ -170,11 +170,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Name = model.Names?.Select(DataTypeConverter.ToFhirHumanName)?.ToList();
             retVal.Telecom = model.LoadProperty(o => o.Telecoms)?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
             retVal.Communication = model.LanguageCommunication?.Select(DataTypeConverter.ToFhirCommunicationComponent)?.ToList();
-
-            if (model.MaritalStatusKey.HasValue || model.MaritalStatus != null)
-            {
-                retVal.MaritalStatus = DataTypeConverter.ToFhirCodeableConcept(model.MaritalStatusKey ?? model.MaritalStatus?.Key, "http://hl7.org/fhir/ValueSet/marital-status");
-            }
+            retVal.MaritalStatus = DataTypeConverter.ToFhirCodeableConceptPreferred(model.LoadProperty(o=>o.MaritalStatus), "http://hl7.org/fhir/ValueSet/marital-status");
 
 
             _ = model.LoadProperty(m => m.Relationships);
@@ -252,7 +248,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         Resource = FhirResourceHandlerUtil.GetMapperForInstance(practitioner).MapToFhir(practitioner),
                     });
                 }
-                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces)
+                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && rel.LoadProperty(o=>o.TargetEntity) is Core.Model.Roles.Patient) // only convey replacement of other patients
                 {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
                 }
@@ -274,6 +270,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             FullUrl = $"urn:uuid:{rel.Key}",
                             Resource = relative,
+                            Request = new Bundle.RequestComponent()
+                            {
+                                Method = Bundle.HTTPVerb.POST,
+                                Url = $"RelatedPerson/{rel.Key}"
+                            }
                         });
                     }
                 }

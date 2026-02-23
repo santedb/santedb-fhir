@@ -75,6 +75,13 @@ namespace SanteDB.Messaging.FHIR.Util
     /// </summary>
     public static class DataTypeConverter
     {
+
+        private static readonly Guid[] IGNORE_RELATIONS_INBUNDLE = new Guid[]
+        {
+            EntityRelationshipTypeKeys.Replaces,
+            ActRelationshipTypeKeys.Replaces
+        };
+
         /// <summary>
         /// The trace source.
         /// </summary>
@@ -2303,7 +2310,7 @@ namespace SanteDB.Messaging.FHIR.Util
             switch (data)
             {
                 case Entity ent:
-                    foreach (var er in ent.LoadProperty(o => o.Relationships))
+                    foreach (var er in ent.LoadProperty(o => o.Relationships).Where(r=>!IGNORE_RELATIONS_INBUNDLE.Contains(r.RelationshipTypeKey.Value)))
                     {
                         Bundle.EntryComponent entryComponent = null;
                         if (relationshipMapper.CanMapObject(er))
@@ -2345,7 +2352,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                     break;
                 case Act act:
-                    foreach (var ar in act.LoadProperty(o => o.Relationships))
+                    foreach (var ar in act.LoadProperty(o => o.Relationships).Where(r => !IGNORE_RELATIONS_INBUNDLE.Contains(r.RelationshipTypeKey.Value)))
                     {
                         var tact = ar.LoadProperty(o => o.TargetAct);
                         var mapper = FhirResourceHandlerUtil.GetMapperForInstance(tact);
@@ -2364,7 +2371,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             });
                         }
                     }
-                    foreach (var ap in act.LoadProperty(o => o.Participations))
+                    foreach (var ap in act.LoadProperty(o => o.Participations).Where(r => !IGNORE_RELATIONS_INBUNDLE.Contains(r.ParticipationRoleKey.Value)))
                     {
                         var entity = ap.LoadProperty(o => o.PlayerEntity);
                         var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
