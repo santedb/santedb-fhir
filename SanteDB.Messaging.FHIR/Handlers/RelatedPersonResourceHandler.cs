@@ -45,6 +45,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         // MDM MAster key
         private readonly Guid MDM_MASTER_CLASS_KEY = Guid.Parse("49328452-7e30-4dcd-94cd-fd532d111578");
 
+        // Family member set
+        private readonly Guid FAMILY_MEMBER_CONCEPT_SET = Guid.Parse("d3692f40-1033-48ea-94cb-31fc0f352a4e");
+
         // Relationships to family members
         private List<Guid> m_relatedPersons;
 
@@ -54,6 +57,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private IRepositoryService<Core.Model.Entities.Person> m_personRepository;
         private readonly IDataManagedLinkProvider<Core.Model.Roles.Patient> m_managedLinkProvider;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(RelatedPersonResourceHandler));
+        
 
         /// <summary>
         /// Create related person resource handler
@@ -65,7 +69,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             ILocalizationService localizationService,
             IDataManagementPattern dataManagementPattern = null) : base(repo, localizationService)
         {
-            this.m_relatedPersons = conceptRepository.Find(x => x.ReferenceTerms.Any(r => r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v2-0131" || r.ReferenceTerm.CodeSystem.Url == "http://terminology.hl7.org/CodeSystem/v3-RoleCode")).Select(c => c.Key.Value).ToList();
+            this.m_relatedPersons = conceptRepository.Find(x => x.ConceptSets.Any(c => c.Key == FAMILY_MEMBER_CONCEPT_SET)).Select(c => c.Key.Value).ToList();
             this.m_patientRepository = patientRepository;
             this.m_personRepository = personRepo;
 

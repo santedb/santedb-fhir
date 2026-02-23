@@ -76,7 +76,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Name = model.LoadProperty(o => o.Names).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value;
             retVal.Alias = model.LoadProperty(o => o.Names).Where(o => o.NameUseKey != NameUseKeys.OfficialRecord)?.Select(n => n.LoadCollection<EntityNameComponent>("Component")?.FirstOrDefault()?.Value).ToList();
-            retVal.PhysicalType = DataTypeConverter.ToFhirCodeableConcept(model.ClassConceptKey, "http://terminology.hl7.org/CodeSystem/location-physical-type");
+            retVal.PhysicalType = DataTypeConverter.ToFhirCodeableConceptPreferred(model.LoadProperty(o=>o.ClassConcept), "http://terminology.hl7.org/CodeSystem/location-physical-type");
             // Convert the determiner code
             if (model.DeterminerConceptKey == DeterminerKeys.Described)
             {
@@ -87,7 +87,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Mode = Location.LocationMode.Instance;
             }
 
-            retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://terminology.hl7.org/ValueSet/v3-ServiceDeliveryLocationRoleType") };
+            retVal.Type = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConceptPreferred(model.LoadProperty(o => o.TypeConcept), "http://terminology.hl7.org/ValueSet/v3-ServiceDeliveryLocationRoleType") };
             retVal.Telecom = model.LoadProperty(o => o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
             retVal.Address = DataTypeConverter.ToFhirAddress(model.LoadProperty(o => o.Addresses).FirstOrDefault());
 

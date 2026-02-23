@@ -75,6 +75,13 @@ namespace SanteDB.Messaging.FHIR.Util
     /// </summary>
     public static class DataTypeConverter
     {
+
+        private static readonly Guid[] IGNORE_RELATIONS_INBUNDLE = new Guid[]
+        {
+            EntityRelationshipTypeKeys.Replaces,
+            ActRelationshipTypeKeys.Replaces
+        };
+
         /// <summary>
         /// The trace source.
         /// </summary>
@@ -1070,9 +1077,10 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
 
                 // Now set the key if it already exists
-                if (context is Core.Model.Interfaces.IExtendable iext) {
-                    var existingExtension = iext.LoadProperty(o => o.Extensions)?.FirstOrDefault(o=>o.ExtensionTypeKey == extension.ExtensionTypeKey);
-                    extension.Key = existingExtension?.Key; 
+                if (context is Core.Model.Interfaces.IExtendable iext)
+                {
+                    var existingExtension = iext.LoadProperty(o => o.Extensions)?.FirstOrDefault(o => o.ExtensionTypeKey == extension.ExtensionTypeKey);
+                    extension.Key = existingExtension?.Key;
                 }
 
                 // Now will
@@ -1248,7 +1256,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping codeable concept");
 
-            var retVal = codeableConcept?.Coding.Select(o => DataTypeConverter.ToConcept(o)).FirstOrDefault(o => o != null);
+            var retVal = codeableConcept?.Coding.Select(o => DataTypeConverter.TryToConcept(o.Code, o.System, out var concept) ? concept : null).FirstOrDefault(o => o != null);
 
             if (retVal == null)
             {
@@ -1279,6 +1287,18 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static Concept ToConcept(string code, string system)
         {
+            if (!TryToConcept(code, system, out var retVal))
+            {
+                throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not map concept {system}#{code} to a concept");
+            }
+
+            return retVal;
+        }
+
+        /// <summary>
+        /// Convert to concept
+        /// </summary>
+        public static bool TryToConcept(String code, String system, out Concept concept) { 
             var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
             if (String.IsNullOrEmpty(system))
@@ -1286,22 +1306,16 @@ namespace SanteDB.Messaging.FHIR.Util
                 throw new ArgumentException("Coding must have system attached");
             }
 
-            Concept retVal = null;
             if (FhirConstants.SanteDBConceptSystem.Equals(system))
             {
-                retVal = conceptService.GetConcept(code);
+                concept = conceptService.GetConcept(code);
             }
             else
             {
-                retVal = conceptService.GetConceptByReferenceTerm(code, system);
+                concept = conceptService.GetConceptByReferenceTerm(code, system);
             }
 
-            if (retVal == null)
-            {
-                throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not map concept {system}#{code} to a concept");
-            }
-
-            return retVal;
+            return concept != null;
         }
 
         /// <summary>
@@ -1663,7 +1677,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             // First is there a bundle in the contained within
             var fhirBundle = containedWithin?.Annotations(typeof(Bundle)).FirstOrDefault() as Bundle;
-            if(fhirBundle != null)
+            if (fhirBundle != null)
             {
                 if (resourceRef.Reference.StartsWith("#") && containedWithin is DomainResource domainResource) // Rel
                 {
@@ -2267,7 +2281,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static Hl7.Fhir.Model.Bundle.HTTPVerb ConvertBatchOperationToHttpVerb(BatchOperationType batchOperation)
         {
-            switch(batchOperation)
+            switch (batchOperation)
             {
                 case BatchOperationType.Auto:
                 case BatchOperationType.Insert:
@@ -2291,12 +2305,12 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         internal static void AddRelatedObjectsToBundle(IdentifiedData data, Bundle bundleToAddTo)
         {
-            var relationshipMapper = FhirResourceHandlerUtil.GetMapperForInstance(new EntityRelationship() {  RelationshipTypeKey = EntityRelationshipTypeKeys.Mother });
+            var relationshipMapper = FhirResourceHandlerUtil.GetMapperForInstance(new EntityRelationship() { RelationshipTypeKey = EntityRelationshipTypeKeys.Mother });
 
             switch (data)
             {
                 case Entity ent:
-                    foreach (var er in ent.LoadProperty(o => o.Relationships))
+                    foreach (var er in ent.LoadProperty(o => o.Relationships).Where(r=>!IGNORE_RELATIONS_INBUNDLE.Contains(r.RelationshipTypeKey.Value)))
                     {
                         Bundle.EntryComponent entryComponent = null;
                         if (relationshipMapper.CanMapObject(er))
@@ -2338,12 +2352,12 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                     break;
                 case Act act:
-                    foreach (var ar in act.LoadProperty(o => o.Relationships))
+                    foreach (var ar in act.LoadProperty(o => o.Relationships).Where(r => !IGNORE_RELATIONS_INBUNDLE.Contains(r.RelationshipTypeKey.Value)))
                     {
                         var tact = ar.LoadProperty(o => o.TargetAct);
                         var mapper = FhirResourceHandlerUtil.GetMapperForInstance(tact);
-                        if (mapper != null && 
-                            !bundleToAddTo.Entry.Any(e=>e.FullUrl == $"urn:uuid:{tact.Key}"))
+                        if (mapper != null &&
+                            !bundleToAddTo.Entry.Any(e => e.FullUrl == $"urn:uuid:{tact.Key}"))
                         {
                             bundleToAddTo.Entry.Insert(0, new Bundle.EntryComponent()
                             {
@@ -2357,7 +2371,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             });
                         }
                     }
-                    foreach (var ap in act.LoadProperty(o => o.Participations))
+                    foreach (var ap in act.LoadProperty(o => o.Participations).Where(r => !IGNORE_RELATIONS_INBUNDLE.Contains(r.ParticipationRoleKey.Value)))
                     {
                         var entity = ap.LoadProperty(o => o.PlayerEntity);
                         var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
@@ -2379,7 +2393,7 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
         }
-        
+
         /// <summary>
         /// Create a resource location on the <paramref name="resource"/>
         /// </summary>
@@ -2400,6 +2414,28 @@ namespace SanteDB.Messaging.FHIR.Util
                 builder.Path += $"/{resourcePath}/{resource.Key}";
             }
             return builder.ToString();
+
+        }
+
+        /// <summary>
+        /// Creates a codeable concept where the preferred terminology binding is the first in the list and subsequent terminology bindings are 
+        /// provided afterwards
+        /// </summary>
+        public static CodeableConcept ToFhirCodeableConceptPreferred(Concept concept, String preferredTerminology)
+        {
+            if (concept == null)
+            {
+                return null;
+            }
+            var codeSystemService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
+            var codings = codeSystemService.FindReferenceTermsByConcept(concept.Key.Value, String.Empty)
+                    .Select(o => ToCoding(o.LoadProperty(p => p.ReferenceTerm)))
+                    .OrderBy(o => o.System == preferredTerminology ? 0 : 1);
+            return new CodeableConcept()
+            {
+                Coding = codings.ToList(),
+                Text = concept.ConceptNames?.FirstOrDefault()?.Name
+            };
 
         }
     }

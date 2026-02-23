@@ -209,23 +209,25 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 }
                 else if (data is IdentifiedData id2)
                 {
+
                     // Create the transaction bundle 
                     var retVal = new Bundle()
                     {
                         Type = Bundle.BundleType.Transaction,
-                        Entry = new List<Bundle.EntryComponent>() {
-                            new Bundle.EntryComponent()
-                            {
-                                Request = new Bundle.RequestComponent()
-                                {
-                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(id2.BatchOperation),
-                                    Url = $"{mapper.ResourceType}/{id2.Key}",
-                                },
-                                FullUrl = $"urn:uuid:{id2.Key}",
-                                Resource = mapper.MapToFhir(id2)
-                            }
-                        }
+                        Entry = new List<Bundle.EntryComponent>() 
                     };
+
+                    id2.AddAnnotation(retVal);
+                    retVal.Entry.Add(new Bundle.EntryComponent()
+                    {
+                        Request = new Bundle.RequestComponent()
+                        {
+                            Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(id2.BatchOperation),
+                            Url = $"{mapper.ResourceType}/{id2.Key}",
+                        },
+                        FullUrl = $"urn:uuid:{id2.Key}",
+                        Resource = mapper.MapToFhir(id2)
+                    });
 
                     if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
