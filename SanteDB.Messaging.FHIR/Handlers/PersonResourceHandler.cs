@@ -105,7 +105,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (null != telecoms)
                 result.Telecom = telecoms.Select(Util.DataTypeConverter.ToFhirTelecom).ToList();
 
-            if (null == model.GenderConceptKey)
+            if (null == model.GenderConceptKey || NullReasonKeys.MissingInformation.Contains(model.GenderConceptKey.Value))
                 result.Gender = null;
             else
                 result.Gender = Util.DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.GenderConceptKey, FhirConstants.CodeSystem_AdministrativeGender, true);
