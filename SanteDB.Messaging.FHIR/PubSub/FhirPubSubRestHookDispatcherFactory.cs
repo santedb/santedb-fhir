@@ -328,7 +328,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 {
                     var resource = this.ConvertToResource(data);
                     this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
-                    this.m_client.Update(resource);
+                    if (resource is Bundle)
+                    {
+                        this.m_client.Create(resource);
+                    }
+                    else
+                    {
+                        this.m_client.Update(resource);
+                    }
                 }
                 catch (Exception e)
                 {

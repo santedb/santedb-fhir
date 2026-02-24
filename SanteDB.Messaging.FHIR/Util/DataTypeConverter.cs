@@ -1260,7 +1260,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (retVal == null)
             {
-                throw new ConstraintException($"Can't find any reference term mappings from '{codeableConcept.Coding?.FirstOrDefault()?.Code}' in {codeableConcept.Coding?.FirstOrDefault()?.System} to a Concept");
+                throw new FhirException(HttpStatusCode.BadRequest, IssueType.CodeInvalid, $"Can't find any reference term mappings from '{codeableConcept.Coding?.FirstOrDefault()?.Code}' in {codeableConcept.Coding?.FirstOrDefault()?.System} to a Concept");
             }
 
             return retVal;
