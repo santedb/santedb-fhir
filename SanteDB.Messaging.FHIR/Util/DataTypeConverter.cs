@@ -22,6 +22,7 @@ using DocumentFormat.OpenXml.Office2010.Excel;
 using DocumentFormat.OpenXml.Wordprocessing;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
+using Hl7.Fhir.Utility;
 using RestSrvr;
 using SanteDB.BI.Model;
 using SanteDB.Core;
@@ -1049,7 +1050,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     switch (fhirExtension.Value)
                     {
                         case ResourceReference frr:
-                            if (TryResolveResourceReference(frr, null, out var refr))
+                            if (TryResolveResourceReference(frr, frr.Annotation<Patient>() ?? frr.Annotation<Location>() ?? frr.Annotation<RelatedPerson>() ?? frr.Annotation<Resource>(), out var refr))
                             {
                                 extension.ExtensionValue = refr;
                             }
