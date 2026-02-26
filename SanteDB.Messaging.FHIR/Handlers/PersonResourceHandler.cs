@@ -85,7 +85,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             result.Id = model.Key?.ToString();
 
             if (null == result.Meta)
+            {
                 result.Meta = new Meta();
+            }
 
             result.Meta.VersionId = model.VersionKey?.ToString();
             result.Meta.LastUpdated = model.LastModified();
@@ -93,32 +95,48 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var identifiers = model.LoadProperty(pers => pers.Identifiers);
 
             if (null != identifiers)
+            {
                 result.Identifier = identifiers.Select(Util.DataTypeConverter.ToFhirIdentifier).ToList();
+            }
 
             var names = model.LoadProperty(pers => pers.Names);
 
             if (null != names)
+            {
                 result.Name = names.Select(Util.DataTypeConverter.ToFhirHumanName).ToList();
+            }
 
             var telecoms = model.LoadProperty(pers => pers.Telecoms);
 
             if (null != telecoms)
+            {
                 result.Telecom = telecoms.Select(Util.DataTypeConverter.ToFhirTelecom).ToList();
+            }
 
             if (null == model.GenderConceptKey || NullReasonKeys.MissingInformation.Contains(model.GenderConceptKey.Value))
+            {
                 result.Gender = null;
+            }
             else
+            {
                 result.Gender = Util.DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(model.GenderConceptKey, FhirConstants.CodeSystem_AdministrativeGender, true);
+            }
 
             if (null == model.DateOfBirth)
+            {
                 result.BirthDate = null;
+            }
             else
+            {
                 result.BirthDateElement = Util.DataTypeConverter.ToFhirDate(model.DateOfBirth);
+            }
 
             var addresses = model.LoadProperty(pers => pers.Addresses);
 
             if (null != addresses)
+            {
                 result.Address = addresses.Select(Util.DataTypeConverter.ToFhirAddress).ToList();
+            }
 
             var extensions = model.LoadProperty(pers => pers.Extensions);
 
@@ -199,7 +217,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             if (null == model) //If everything else has failed, create a new Person.
+            {
                 model = new Core.Model.Entities.Person();
+            }
 
             var modelids = model.LoadProperty(m => m.Identifiers);
 
@@ -217,10 +237,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
             model.Telecoms = resource.Telecom.Select(Util.DataTypeConverter.ToEntityTelecomAddress).ToList();
 
             if (null != resource.Gender)
+            {
                 model.GenderConceptKey = DataTypeConverter.ToConcept(new Coding(FhirConstants.CodeSystem_AdministrativeGender, Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
+            }
 
             if (null != resource.BirthDateElement)
+            {
                 model.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate)?.DateTime;
+            }
 
             model.Addresses = resource.Address.Select(Util.DataTypeConverter.ToEntityAddress).ToList();
 
