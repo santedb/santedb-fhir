@@ -124,6 +124,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     if (this.m_configuration?.Authenticator != null)
                     {
                         this.m_authenticator = this.m_configuration.Authenticator.Type.CreateInjected() as IFhirClientAuthenticator;
+                        m_createdAuthenticators.Add(channelKey, this.m_authenticator);
                     }
                     else if( this.Settings.TryGetValue(FhirConstants.DispatcherClassSettingName, out var dispatcher) && MessageUtil.TryCreateAuthenticator(dispatcher, out this.m_authenticator)) { 
                         m_createdAuthenticators.Add(channelKey, this.m_authenticator);

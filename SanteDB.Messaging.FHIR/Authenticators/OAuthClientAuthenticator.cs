@@ -222,6 +222,12 @@ namespace SanteDB.Messaging.FHIR.Authenticator
         /// </summary>
         private void SetTokenValidationParameters(String validAudiences)
         {
+            // Already configured
+            if(this.m_tokenValidationParameters != null)
+            {
+                return;
+            }
+
             var discoverydocument = this.GetDiscoveryDocument();
 
             if (discoverydocument == null)

@@ -135,7 +135,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                 var directLink = fhirExtension.Extension.Find(o => o.Url == ExtendedBirthplaceReferenceExtensionUrl);
                 if (directLink?.Value is ResourceReference rr)
                 {
-                    var birthPlace = DataTypeConverter.ResolveEntity<Place>(rr, fhirExtension.Annotations<Hl7.Fhir.Model.Patient>().FirstOrDefault());
+                    var birthPlace = DataTypeConverter.ResolveEntity<Place>(rr, fhirExtension.Annotation<Hl7.Fhir.Model.Patient>());
                     if (birthPlace == null)
                     {
                         throw new ArgumentOutOfRangeException($"Cannot find {rr.Reference}");
