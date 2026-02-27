@@ -252,10 +252,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
                 }
-                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
-                {
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso));
-                }
                 else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
                 {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
