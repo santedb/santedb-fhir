@@ -1710,92 +1710,106 @@ namespace SanteDB.Messaging.FHIR.Util
             // First is there a bundle in the contained within
             var sdbBundle = containedWithin?.Annotations(typeof(Core.Model.Collection.Bundle)).FirstOrDefault() as Core.Model.Collection.Bundle;
             var fhirBundle = containedWithin?.Annotations(typeof(Bundle)).FirstOrDefault() as Bundle;
+            var currentProcessing = sdbBundle?.GetAnnotations<List<String>>()?.FirstOrDefault();
 
-            TEntity retVal = null;
-
-            if (resourceRef.Identifier != null)
+            if(currentProcessing == null) // prevent stack overflow
             {
-                // Already exists in SDB bundle?
-                var identifier = DataTypeConverter.ToEntityIdentifier(resourceRef.Identifier);
-                retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.IdentityDomain.Key == identifier.IdentityDomainKey && i.Value == identifier.Value)).FirstOrDefault();
-                if (retVal == null) // Not been processed in bundle
+                currentProcessing = new List<string>() { $"{typeof(TEntity).Name}/{containedWithin.Id}" };
+                sdbBundle?.AddAnnotation(currentProcessing);
+            }
+
+            try
+            {
+                TEntity retVal = null;
+
+                if (resourceRef.Identifier != null)
                 {
-                    retVal = repo.Find(o => o.Identifiers.Any(a => a.IdentityDomain.Key == identifier.IdentityDomainKey && a.Value == identifier.Value)).SingleOrDefault();
-                    if (retVal == null)
+                    // Already exists in SDB bundle?
+                    var identifier = DataTypeConverter.ToEntityIdentifier(resourceRef.Identifier);
+                    retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.IdentityDomain.Key == identifier.IdentityDomainKey && i.Value == identifier.Value)).FirstOrDefault();
+                    if (retVal == null) // Not been processed in bundle
                     {
-                        throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.IdentityDomain.Url ?? identifier.IdentityDomain.Oid}");
+                        retVal = repo.Find(o => o.Identifiers.Any(a => a.IdentityDomain.Key == identifier.IdentityDomainKey && a.Value == identifier.Value)).SingleOrDefault();
+                        if (retVal == null)
+                        {
+                            throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.IdentityDomain.Url ?? identifier.IdentityDomain.Oid}");
+                        }
                     }
                 }
-            }
-            else if (!string.IsNullOrEmpty(resourceRef.Reference))
-            {
-                if (resourceRef.Reference.StartsWith("#") && containedWithin is DomainResource domainResource) // Rel
+                else if (!string.IsNullOrEmpty(resourceRef.Reference))
                 {
-                    var contained = domainResource.Contained.Find(o => o.Id.Equals(resourceRef.Reference.Substring(1)));
-                    if (contained == null)
+                    if (resourceRef.Reference.StartsWith("#") && containedWithin is DomainResource domainResource) // Rel
                     {
-                        throw new ArgumentException($"Relative reference provided but cannot find contained object {resourceRef.Reference}");
-                    }
+                        var contained = domainResource.Contained.Find(o => o.Id.Equals(resourceRef.Reference.Substring(1)));
+                        if (contained == null)
+                        {
+                            throw new ArgumentException($"Relative reference provided but cannot find contained object {resourceRef.Reference}");
+                        }
 
-                    var mapper = FhirResourceHandlerUtil.GetMapperForInstance(contained);
-                    if (mapper == null)
+                        var mapper = FhirResourceHandlerUtil.GetMapperForInstance(contained);
+                        if (mapper == null)
+                        {
+                            throw new ArgumentException($"Don't understand how to convert {contained.TypeName}");
+                        }
+
+                        retVal = (TEntity)mapper.MapToModel(contained);
+                    }
+                    else
                     {
-                        throw new ArgumentException($"Don't understand how to convert {contained.TypeName}");
-                    }
+                        retVal = sdbBundle?.Item.OfType<TEntity>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference);
 
-                    retVal = (TEntity)mapper.MapToModel(contained);
+                        if (retVal == null) // attempt to resolve via fhir bundle
+                        {
+                            // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
+                            //var fhirResource = fhirBundle.FindEntry(resourceRef);
+                            var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.FirstOrDefault();
+                            if (fhirResource != null && !currentProcessing.Contains($"{typeof(TEntity).Name}/{containedWithin.Id}"))
+                            {
+                                // TODO: Error trapping
+                                retVal = (TEntity)FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.Resource).MapToModel(fhirResource.Resource);
+                                sdbBundle.Item.Add(retVal);
+                            }
+                        }
+
+                        if (retVal == null)
+                        {
+                            // HACK: We don't care about the absoluteness of a URL
+                            // Attempt to resolve the reference
+                            var match = m_referenceRegex.Match(resourceRef.Reference);
+                            if (!match.Success)
+                            {
+                                throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
+                            }
+
+                            if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value.Replace("urn:uuid:", string.Empty), out Guid relUuid)) // rel reference
+                            {
+                                retVal = repo.Get(relUuid); // Allow any triggers to fire
+                            }
+                            // HACK: Need to removed the urn:uuid: at the front of the guid.
+                            else if (Guid.TryParse(match.Groups[1].Value.Replace("urn:uuid:", string.Empty), out Guid absRef))
+                            {
+                                retVal = repo.Get(absRef);
+                            }
+                        }
+                    }
                 }
                 else
                 {
-                    retVal = sdbBundle?.Item.OfType<TEntity>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference);
-
-                    if (retVal == null) // attempt to resolve via fhir bundle
-                    {
-                        // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
-                        //var fhirResource = fhirBundle.FindEntry(resourceRef);
-                        var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference);
-                        if (fhirResource?.Any() == true)
-                        {
-                            // TODO: Error trapping
-                            retVal = (TEntity)FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.FirstOrDefault().Resource).MapToModel(fhirResource.FirstOrDefault().Resource);
-                            sdbBundle.Item.Add(retVal);
-                        }
-                    }
-
-                    if (retVal == null)
-                    {
-                        // HACK: We don't care about the absoluteness of a URL
-                        // Attempt to resolve the reference
-                        var match = m_referenceRegex.Match(resourceRef.Reference);
-                        if (!match.Success)
-                        {
-                            throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not find {resourceRef.Reference} as a previous entry in this submission. Cannot resolve from database unless reference is either urn:uuid:UUID or Type/UUID");
-                        }
-
-                        if (!string.IsNullOrEmpty(match.Groups[2].Value) && Guid.TryParse(match.Groups[3].Value.Replace("urn:uuid:", string.Empty), out Guid relUuid)) // rel reference
-                        {
-                            retVal = repo.Get(relUuid); // Allow any triggers to fire
-                        }
-                        // HACK: Need to removed the urn:uuid: at the front of the guid.
-                        else if (Guid.TryParse(match.Groups[1].Value.Replace("urn:uuid:", string.Empty), out Guid absRef))
-                        {
-                            retVal = repo.Get(absRef);
-                        }
-                    }
+                    throw new ArgumentException("Could not understand resource reference");
                 }
-            }
-            else
-            {
-                throw new ArgumentException("Could not understand resource reference");
-            }
 
-            // TODO: Weak references
-            if (retVal == null)
-            {
-                throw new FhirException((System.Net.HttpStatusCode)422, IssueType.NotSupported, $"Weak references (to other servers) are not currently supported (ref: {resourceRef.Reference})");
-            }
+                // TODO: Weak references
+                if (retVal == null)
+                {
+                    throw new FhirException((System.Net.HttpStatusCode)422, IssueType.NotSupported, $"Weak references (to other servers) are not currently supported (ref: {resourceRef.Reference})");
+                }
 
-            return retVal;
+                return retVal;
+            }
+            finally
+            {
+                currentProcessing.Remove($"{typeof(TEntity).Name}/{containedWithin.Id}");
+            }
         }
 
         /// <summary>
