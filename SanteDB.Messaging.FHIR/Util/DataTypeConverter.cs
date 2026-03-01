@@ -1299,7 +1299,8 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Convert to concept
         /// </summary>
-        public static bool TryToConcept(String code, String system, out Concept concept) { 
+        public static bool TryToConcept(String code, String system, out Concept concept)
+        {
             var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
             if (String.IsNullOrEmpty(system))
@@ -1712,10 +1713,15 @@ namespace SanteDB.Messaging.FHIR.Util
             var fhirBundle = containedWithin?.Annotations(typeof(Bundle)).FirstOrDefault() as Bundle;
             var currentProcessing = sdbBundle?.GetAnnotations<List<String>>()?.FirstOrDefault();
 
-            if(currentProcessing == null) // prevent stack overflow
+            if (currentProcessing == null) // prevent stack overflow
             {
                 currentProcessing = new List<string>() { $"{typeof(TEntity).Name}/{containedWithin.Id}" };
                 sdbBundle?.AddAnnotation(currentProcessing);
+            }
+            else if (currentProcessing.Contains($"{typeof(TEntity).Name}/{containedWithin.Id}"))
+            {
+                traceSource.TraceWarning($"{typeof(TEntity).Name}/{containedWithin.Id} appears to be a circular reference");
+                throw new InvalidOperationException(String.Format(ErrorMessages.DATA_CIRCULAR_REFERNCE_DETAIL, String.Join(" > ", currentProcessing)));
             }
 
             try
@@ -1763,7 +1769,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
                             //var fhirResource = fhirBundle.FindEntry(resourceRef);
                             var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.FirstOrDefault();
-                            if (fhirResource != null && !currentProcessing.Contains($"{typeof(TEntity).Name}/{containedWithin.Id}"))
+                            if (fhirResource != null)
                             {
                                 // TODO: Error trapping
                                 retVal = (TEntity)FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.Resource).MapToModel(fhirResource.Resource);
@@ -2325,7 +2331,7 @@ namespace SanteDB.Messaging.FHIR.Util
             switch (data)
             {
                 case Entity ent:
-                    foreach (var er in ent.LoadProperty(o => o.Relationships).Where(r=>!IGNORE_RELATIONS_INBUNDLE.Contains(r.RelationshipTypeKey.Value)))
+                    foreach (var er in ent.LoadProperty(o => o.Relationships).Where(r => !IGNORE_RELATIONS_INBUNDLE.Contains(r.RelationshipTypeKey.Value)))
                     {
                         Bundle.EntryComponent entryComponent = null;
                         if (relationshipMapper.CanMapObject(er))

@@ -326,7 +326,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
 
             this.m_bearerToken = response.AccessToken;
             this.m_refreshToken = response.RefreshToken;
-            this.m_bearerTokenExpiration = DateTime.Now.AddMilliseconds(response.ExpiresIn);
+            this.m_bearerTokenExpiration = DateTimeOffset.Now.AddSeconds(response.ExpiresIn);
             return this.m_bearerToken;
         }
 
