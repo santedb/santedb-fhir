@@ -152,6 +152,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(model.SourceEntityKey);
             relative.Telecom = relModel.LoadCollection(o => o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
             relative.Id = model.Key.ToString();
+            relative.BirthDateElement = DataTypeConverter.ToFhirDate(person.DateOfBirth);
             return relative;
         }
 
