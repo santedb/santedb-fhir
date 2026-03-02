@@ -346,8 +346,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             else
             {
                 this.m_tracer.TraceVerbose($"The target of {relationship} will be resolved to own record for {AuthenticationContext.Current.GetAuthenticatedPrincipal()}");
-                person = person.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal()) ?? person;
-                this.m_tracer.TraceInfo($"Person/{person.Key} has been resolved to owned RIM record {person.Type}/{person.Key}");
+                var resolved = person.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal()) ?? person;
+                this.m_tracer.TraceInfo($"Person/{person.Key} has been resolved to owned RIM record {resolved.Type}/{resolved.Key}");
+                person = resolved;
 
             }
 
