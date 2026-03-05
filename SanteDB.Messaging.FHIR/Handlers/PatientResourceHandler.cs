@@ -20,6 +20,7 @@
  */
 using DynamicExpresso;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
@@ -165,7 +166,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             _ = model.LoadProperty(m => m.Addresses);
             _ = model.LoadProperty(m => m.LanguageCommunication);
 
-            retVal.Identifier = model.Identifiers?.Select(DataTypeConverter.ToFhirIdentifier).ToList();
+            retVal.Identifier = model.Identifiers?
+                .GroupBy(o=>$"{o.IdentityDomainKey}{o.Value}") // In some cases MDM will return multiple identifiers which are the same (from the various sources) while this is need for HDSI in FHIR it is confusing
+                .Select(id => id.OrderByDescending(o => o.ExpiryDate ?? DateTimeOffset.Now).First()) // Select the identifier that expires last
+                .Select(DataTypeConverter.ToFhirIdentifier)
+                .ToList();
             retVal.MultipleBirth = model.MultipleBirthOrder == 0 ? (DataType)new FhirBoolean(true) : model.MultipleBirthOrder.HasValue ? new Integer(model.MultipleBirthOrder.Value) : null;
             retVal.Name = model.Names?.Select(DataTypeConverter.ToFhirHumanName)?.ToList();
             retVal.Telecom = model.LoadProperty(o => o.Telecoms)?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
@@ -507,8 +512,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                 }));
                             }
 
-                            replacee.StatusConceptKey = StatusKeys.Obsolete;
+                            replacee.BatchOperation = BatchOperationType.Update;
+                            replacee.StatusConceptKey = StatusKeys.Inactive;
                             patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, replacee));
+                            // Part of bundle? add the replacee to the bundle for good measure
+                            if(resource.TryGetAnnotation<SanteDB.Core.Model.Collection.Bundle>(out var partOf))
+                            {
+                                partOf.Add(replacee);
+                            }
                             break;
                         }
                     case Patient.LinkType.ReplacedBy:

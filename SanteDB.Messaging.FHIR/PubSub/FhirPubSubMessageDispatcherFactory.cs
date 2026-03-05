@@ -442,7 +442,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                                    Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
                                    linkAsMerge)
                 {
-                    this.NotifyMerged(holder, new TModel[] { target });
+                    this.NotifyMerged(target, new TModel[] { holder });
                 }
                 else
                 {
@@ -458,7 +458,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                    Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
                    linkAsMerge)
                 {
-                    this.NotifyUnMerged(holder, new TModel[] { target });
+                    this.NotifyUnMerged(target, new TModel[] { holder });
                 }
                 else
                 {

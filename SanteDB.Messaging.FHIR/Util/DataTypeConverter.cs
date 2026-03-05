@@ -1735,14 +1735,28 @@ namespace SanteDB.Messaging.FHIR.Util
                     retVal = sdbBundle?.Item.OfType<TEntity>().Where(e => e.Identifiers.Any(i => i.IdentityDomain.Key == identifier.IdentityDomainKey && i.Value == identifier.Value)).FirstOrDefault();
                     if (retVal == null) // Not been processed in bundle
                     {
-                        retVal = repo.Find(o => o.Identifiers.Any(a => a.IdentityDomain.Key == identifier.IdentityDomainKey && a.Value == identifier.Value)).SingleOrDefault();
-                        if (retVal == null)
+                        var foundMatches = repo.Find(o => o.Identifiers.Any(a => a.IdentityDomain.Key == identifier.IdentityDomainKey && a.Value == identifier.Value));
+
+                        if (foundMatches.Count() == 0)
                         {
                             throw new FhirException(System.Net.HttpStatusCode.NotFound, IssueType.NotFound, $"Could not locate {typeof(TEntity).Name} with identifier {identifier.Value} in domain {identifier.IdentityDomain.Url ?? identifier.IdentityDomain.Oid}");
                         }
+                        else if (foundMatches.Count() == 1)
+                        {
+                            retVal = foundMatches.First();
+                        }
+                        else if (string.IsNullOrEmpty(resourceRef.Reference))
+                        {
+                            throw new FhirException(HttpStatusCode.BadRequest, IssueType.MultipleMatches, $"Resource reference {resourceRef} is ambiguous or resulted in multiple matches");
+                        }
+                        else
+                        {
+                            traceSource.TraceWarning("Resolution of resource via business identifier resulted in an ambiguous reference");
+                        }
                     }
                 }
-                else if (!string.IsNullOrEmpty(resourceRef.Reference))
+
+                if (!string.IsNullOrEmpty(resourceRef.Reference))
                 {
                     if (resourceRef.Reference.StartsWith("#") && containedWithin is DomainResource domainResource) // Rel
                     {
