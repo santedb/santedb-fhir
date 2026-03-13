@@ -284,5 +284,17 @@ namespace SanteDB.Messaging.FHIR.Util
 
             return resource;
         }
+
+        /// <summary>
+        /// Get message operations
+        /// </summary>
+        internal static IEnumerable<SupportedMessageComponent> GetMessageOperations()
+        {
+            return s_messageOperations.Select(o => new SupportedMessageComponent()
+            {
+                Definition = o.Key.ToString(),
+                Mode = EventCapabilityMode.Receiver
+            });
+        }
     }
 }

@@ -1080,7 +1080,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 // Now set the key if it already exists
                 if (context is Core.Model.Interfaces.IExtendable iext)
                 {
-                    var existingExtension = iext.LoadProperty(o => o.Extensions)?.FirstOrDefault(o => o.ExtensionTypeKey == extension.ExtensionTypeKey);
+                    var existingExtension = iext.LoadProperty(o => o.Extensions)?.FirstOrDefault(o => o.ExtensionTypeKey == (extension.ExtensionType?.Key ?? extension.ExtensionTypeKey));
                     extension.Key = existingExtension?.Key;
                 }
 
