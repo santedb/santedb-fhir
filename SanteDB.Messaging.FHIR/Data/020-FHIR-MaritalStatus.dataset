@@ -1,0 +1,246 @@
+<?xml version="1.0"?>
+<dataset xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="FHIR Marital Status Codes V01.0" xmlns="http://santedb.org/data">
+  <update skipIfError="false" insertIfNotExists="true">
+    <CodeSystem xmlns="http://santedb.org/model">
+      <id>9abb1284-1e4d-11f1-9ce2-c796915ddcea</id>
+      <name>FHIR Marital Status Codes</name>
+      <oid>2.16.840.1.113883.4.642.3.29</oid>
+      <authority>FHIRMaritalStatus</authority>
+      <url>http://hl7.org/fhir/ValueSet/marital-status</url>
+      <version>4.0.1</version>
+      <description>This value set defines the set of codes that can be used to indicate the marital status of a person.</description>
+    </CodeSystem>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>0c41a169-af3a-4f4c-a2b2-a0342575d33a</id>
+      <mnemonic>A</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>ab931a02-1e4d-11f1-8ed0-dfc3c0cc91fc</id>
+        <language>en</language>
+        <value>Annulled</value>
+        <source>0c41a169-af3a-4f4c-a2b2-a0342575d33a</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>1a41e809-166c-4739-9c75-c0b3d53fcd57</id>
+      <mnemonic>D</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>b2a1fcbe-1e4d-11f1-9ce3-032bf2d5f885</id>
+        <language>en</language>
+        <value>Divorced</value>
+        <source>1a41e809-166c-4739-9c75-c0b3d53fcd57</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>4099153f-c6fe-495a-84f6-afc4b2b6d6e7</id>
+      <mnemonic>I</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>bc8f6036-1e4d-11f1-8ed2-979f2bd3bc53</id>
+        <language>en</language>
+        <value>Interlocutory</value>
+        <source>4099153f-c6fe-495a-84f6-afc4b2b6d6e7</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>bf2c14a8-9d0b-4dd3-a92d-adc2d04b5c40</id>
+      <mnemonic>L</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>c7756d38-1e4d-11f1-b21f-63dff64fc959</id>
+        <language>en</language>
+        <value>Legally Separated</value>
+        <source>bf2c14a8-9d0b-4dd3-a92d-adc2d04b5c40</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>deb781c1-5b11-4aaf-b290-3852129d9e97</id>
+      <mnemonic>M</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>cf99d828-1e4d-11f1-937d-7399f0b2fe7a</id>
+        <language>en</language>
+        <value>Married</value>
+        <source>deb781c1-5b11-4aaf-b290-3852129d9e97</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>4b785671-6790-44ca-8ba7-a48c5ad72b4a</id>
+      <mnemonic>P</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>d9ace47c-1e4d-11f1-b221-6714f8d77b2d</id>
+        <language>en</language>
+        <value>Polygamous</value>
+        <source>4b785671-6790-44ca-8ba7-a48c5ad72b4a</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>acf7b028-69c6-4b0d-867f-c2dbdcec5978</id>
+      <mnemonic>S</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>e5d96432-1e4d-11f1-b223-db0d8e48838f</id>
+        <language>en</language>
+        <value>Never Married</value>
+        <source>acf7b028-69c6-4b0d-867f-c2dbdcec5978</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>6623d4b1-ee0d-47f9-b5d8-e5d4ba7da4b0</id>
+      <mnemonic>T</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>f64ca3ba-1e4d-11f1-842e-3b0fb0ec54fc</id>
+        <language>en</language>
+        <value>Domestic Partner</value>
+        <source>6623d4b1-ee0d-47f9-b5d8-e5d4ba7da4b0</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>50ccbb56-b603-47bf-9d3a-dd00ae58a8e6</id>
+      <mnemonic>U</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>00837660-1e4e-11f1-b225-4fb669a2d897</id>
+        <language>en</language>
+        <value>unmarried</value>
+        <source>50ccbb56-b603-47bf-9d3a-dd00ae58a8e6</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>cf43e327-1b04-4b5f-b7ec-f12b06ec6fe3</id>
+      <mnemonic>UNK</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>16c4f7a0-1e4e-11f1-937f-5fdb4a9a8e19</id>
+        <language>en</language>
+        <value>unknown</value>
+        <source>cf43e327-1b04-4b5f-b7ec-f12b06ec6fe3</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ReferenceTerm xmlns="http://santedb.org/model">
+      <id>740abff2-b696-4223-803b-3e07ceccf138</id>
+      <mnemonic>W</mnemonic>
+      <codeSystem>9abb1284-1e4d-11f1-9ce2-c796915ddcea</codeSystem>
+      <name>
+        <id>065c873e-1e4e-11f1-b227-83afd59bd0a6</id>
+        <language>en</language>
+        <value>Widowed</value>
+        <source>740abff2-b696-4223-803b-3e07ceccf138</source>
+      </name>
+    </ReferenceTerm>
+  </update>
+  <!-- Link code system to concepts -->
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>ab949cce-1e4d-11f1-8ed1-6fb0414933bf</id>
+      <source>5234829c-2be6-440f-b043-dc42e70931df</source>
+      <term>0c41a169-af3a-4f4c-a2b2-a0342575d33a</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>b2a29d2c-1e4d-11f1-9ce4-bf68d7c5bef9</id>
+      <source>9f0a6c4c-efdb-4ad2-9d54-7b21f9da0bf5</source>
+      <term>1a41e809-166c-4739-9c75-c0b3d53fcd57</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>bc8fbd10-1e4d-11f1-8ed3-bbe063032482</id>
+      <source>b90cc87c-1653-4294-9fb4-ab7eb1dea42a</source>
+      <term>4099153f-c6fe-495a-84f6-afc4b2b6d6e7</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>c7765612-1e4d-11f1-b220-afd1efe0f3e5</id>
+      <source>b106d625-4508-423f-963a-1beb295ae054</source>
+      <term>bf2c14a8-9d0b-4dd3-a92d-adc2d04b5c40</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>d9ad87ce-1e4d-11f1-b222-ebd27c9ab47c</id>
+      <source>23357fee-a80b-4916-98ab-0d6b32ce9428</source>
+      <term>4b785671-6790-44ca-8ba7-a48c5ad72b4a</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>e5d9eaba-1e4d-11f1-b224-83c330065167</id>
+      <source>e17a1c26-c33d-4df1-889d-80986d9c2f0e</source>
+      <term>acf7b028-69c6-4b0d-867f-c2dbdcec5978</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>0083d51a-1e4e-11f1-b226-8b63b9d84295</id>
+      <source>9e92162f-28d2-4083-b452-6fe0500a5df3</source>
+      <term>50ccbb56-b603-47bf-9d3a-dd00ae58a8e6</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>065d313e-1e4e-11f1-b228-8768d1ceb966</id>
+      <source>e69ab261-5dc7-4438-a8db-e60ccb21883d</source>
+      <term>740abff2-b696-4223-803b-3e07ceccf138</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>cf9b4b9a-1e4d-11f1-937e-c3bafaf48501</id>
+      <source>cdc05cff-5d4c-44b0-b9e1-787383f42e87</source>
+      <term>deb781c1-5b11-4aaf-b290-3852129d9e97</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>16c57d7e-1e4e-11f1-9380-03dea4912824</id>
+      <source>70fe34ce-caff-4f46-b6e6-9cd6d8f289d6</source>
+      <term>cf43e327-1b04-4b5f-b7ec-f12b06ec6fe3</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+  <update skipIfError="false" insertIfNotExists="true">
+    <ConceptReferenceTerm xmlns="http://santedb.org/model">
+      <id>f64db0ac-1e4d-11f1-842f-f7397fd0003b</id>
+      <source>88988472-7c26-4840-b494-1dd41aaf5f3a</source>
+      <term>6623d4b1-ee0d-47f9-b5d8-e5d4ba7da4b0</term>
+      <relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+    </ConceptReferenceTerm>
+  </update>
+</dataset>
