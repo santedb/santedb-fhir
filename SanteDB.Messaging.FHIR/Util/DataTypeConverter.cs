@@ -1489,8 +1489,20 @@ namespace SanteDB.Messaging.FHIR.Util
                 address.Component.Add(new EntityAddressComponent(AddressComponentKeys.County, fhirAddress.District));
             }
 
+            // HACK: Apply any SanteDB extended address components 
+            fhirAddress.Extension.Where(o => o.Url.StartsWith(FhirConstants.SanteDBProfile + "#address-")).ForEach(ae =>
+            {
+                var addressPart = ae.Url.Substring(FhirConstants.SanteDBProfile.Length + 9);
+                if (TryToConcept(addressPart, FhirConstants.SanteDBConceptSystem, out var componentType) && 
+                    ae.Value is FhirString fs)
+                {
+                    address.Component.Add(new EntityAddressComponent(componentType.Key.Value, fs.Value));
+                }
+            });
+
             // HACK: Apply extension to address
             fhirAddress.Extension.ForEach(p => p.TryApplyExtension(address));
+
             return address;
         }
 
