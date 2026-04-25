@@ -403,13 +403,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
             patient.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
             patient.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
-            patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
+
+            var fhirRelationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
+            // Mark any existing FHIR relationships of the type specified to delete 
+            patient.LoadProperty(o => o.Relationships).Where(pr => fhirRelationships.Any(fr => fr.RelationshipTypeKey == pr.RelationshipTypeKey)).ForEach(pr => pr.BatchOperation = BatchOperationType.Delete);
+            patient.LoadProperty(o => o.Relationships).AddRange(fhirRelationships);
             patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
-            patient.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o =>
+
+            var fhirExtensions = resource.Extension.Select(o =>
             {
                 o.AddAnnotation(resource);
                 return DataTypeConverter.ToEntityExtension(o, patient);
-            }).OfType<EntityExtension>());
+            }).OfType<EntityExtension>().ToList();
+            // Remove any duplicated extensions
+            patient.LoadProperty(o=>o.Extensions).Where(pe => fhirExtensions.Any(fe => fe.ExtensionTypeKey == pe.ExtensionTypeKey)).ForEach(pe=>pe.BatchOperation= BatchOperationType.Delete);
+            patient.Extensions.AddRange(fhirExtensions);
+
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
             patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList();
             patient.MaritalStatus = resource.MaritalStatus == null ? null : DataTypeConverter.ToConcept(resource.MaritalStatus);
@@ -614,6 +623,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 patient.Extensions.RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
                 patient.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
+            }
+
+            // Indicate the data is external 
+            if (String.IsNullOrEmpty(patient.GetTag(SystemTagNames.External)))
+            {
+                patient.AddTag(SystemTagNames.External, "true");
             }
 
             return patient;
