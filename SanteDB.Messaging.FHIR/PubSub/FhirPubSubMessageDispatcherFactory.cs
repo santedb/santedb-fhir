@@ -304,7 +304,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             patient.Link.Add(new Patient.LinkComponent()
                             {
                                 Type = Patient.LinkType.ReplacedBy,
-                                Other = new ResourceReference($"Patient/{patient.Id}")
+                                Other = new ResourceReference($"Patient/{survivor.Key}")
                             });
                         }
 

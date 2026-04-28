@@ -29,6 +29,7 @@ using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -505,6 +506,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Links
             foreach (var lnk in resource.Link)
             {
+                if(lnk.Other.Reference.Equals($"Patient/{patient.Key}"))
+                {
+                    throw new FhirException(System.Net.HttpStatusCode.NotAcceptable, OperationOutcome.IssueType.BusinessRule, "Patient links cannot point to themselves");
+                }
+
                 switch (lnk.Type.Value)
                 {
                     case Patient.LinkType.Replaces:
