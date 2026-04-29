@@ -162,6 +162,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     data = (TModel)(object)id.ResolveGoldenRecord();
                 }
 
+                // We want to notify of only specific domains
+                if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.RestrictIdentityDomainsSettingName, out var identityDomainRestrictSetting) &&
+                    data is IHasIdentifiers ihi)
+                {
+                    var removeSetting = identityDomainRestrictSetting.Split(';');
+                    ihi.RemoveIdentifier(o => !removeSetting.Contains(o.IdentityDomain.DomainName) && !removeSetting.Contains(o.IdentityDomain.Url));
+                }
+
                 var mapper = FhirResourceHandlerUtil.GetMapperForInstance(data);
                 if (mapper == null)
                 {
@@ -247,7 +255,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource
                     });
 
-                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
                     }
@@ -325,7 +333,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         };
                     }));
 
-                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(survivor, focusBundle);
                     }
@@ -403,7 +411,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource
                     });
 
-                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
                     }
