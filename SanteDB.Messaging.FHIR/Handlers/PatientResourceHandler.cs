@@ -411,17 +411,27 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.LoadProperty(o => o.Relationships).AddRange(fhirRelationships);
             patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
 
+            // JIMS-1349 -> Extensions to clear these may not be present in the FHIR message - so we clear and then allow extension handlers to reset
+            patient.VipStatusKey =
+                patient.EducationLevelKey =
+                patient.NationalityKey =
+                patient.OccupationKey =
+                patient.ReligiousAffiliationKey =
+                patient.EthnicGroupKey =
+                patient.LivingArrangementKey =
+                patient.MaritalStatusKey = null;
+
             var fhirExtensions = resource.Extension.Select(o =>
             {
                 o.AddAnnotation(resource);
                 return DataTypeConverter.ToEntityExtension(o, patient);
-            }).OfType<EntityExtension>().ToList();
+            }).OfType<EntityExtension>().ToList(); // apply extensions
             // Remove any duplicated extensions
             patient.LoadProperty(o=>o.Extensions).Where(pe => fhirExtensions.Any(fe => fe.ExtensionTypeKey == pe.ExtensionTypeKey)).ForEach(pe=>pe.BatchOperation= BatchOperationType.Delete);
             patient.Extensions.AddRange(fhirExtensions);
 
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
-            patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList();
+            patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList() ?? new List<Core.Model.Security.SecurityPolicyInstance>();
             patient.MaritalStatus = resource.MaritalStatus == null ? null : DataTypeConverter.ToConcept(resource.MaritalStatus);
 
             // TODO: fix
