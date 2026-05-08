@@ -98,6 +98,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
         private readonly int[] m_retryTimes = { 1, 10, 30 };
         private readonly JsonWebTokenHandler m_tokenHandler = new JsonWebTokenHandler();
         private TokenValidationParameters m_tokenValidationParameters;
+        private string m_audience;
 
         /// <summary>
         /// Create a new client authenticator
@@ -220,25 +221,25 @@ namespace SanteDB.Messaging.FHIR.Authenticator
         /// <summary>
         /// Set the token validation parameter to be used 
         /// </summary>
-        private void SetTokenValidationParameters(String validAudiences)
+        private TokenValidationParameters GetTokenValidationParameters()
         {
             // Already configured
-            if(this.m_tokenValidationParameters != null)
+            if(this.m_tokenValidationParameters != null || String.IsNullOrEmpty(this.m_audience))
             {
-                return;
+                return this.m_tokenValidationParameters;
             }
 
             var discoverydocument = this.GetDiscoveryDocument();
 
             if (discoverydocument == null)
             {
-                return;
+                return this.m_tokenValidationParameters;
             }
 
             this.m_tokenValidationParameters = this.m_tokenValidationParameters ?? new TokenValidationParameters();
 
             this.m_tokenValidationParameters.ValidIssuers = new[] { discoverydocument.Issuer };
-            this.m_tokenValidationParameters.ValidAudiences = new[] { validAudiences };
+            this.m_tokenValidationParameters.ValidAudiences = new[] { this.m_audience };
             this.m_tokenValidationParameters.ValidateAudience = true;
             this.m_tokenValidationParameters.ValidateIssuer = true;
             this.m_tokenValidationParameters.ValidateIssuerSigningKey = true;
@@ -248,7 +249,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
             var jwksendpoint = discoverydocument.SigningKeyEndpoint;
 
             this.m_tokenValidationParameters.IssuerSigningKeys = GetJsonWebKeySet(jwksendpoint)?.GetSigningKeys();
-
+            return this.m_tokenValidationParameters;
         }
 
         /// <summary>
@@ -276,7 +277,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
 
                 if(additionalSettings.TryGetValue(OAuthClientIdSettingName, out var clientId) && (!additionalSettings.TryGetValue(OAuthNoValidateToken, out var noValStr) || bool.TryParse(noValStr, out var noVal) && !noVal))
                 {
-                    this.SetTokenValidationParameters(clientId);
+                    this.m_audience = clientId;
                 }
             }
             else
@@ -337,12 +338,12 @@ namespace SanteDB.Messaging.FHIR.Authenticator
         private void ValidateToken(OAuthTokenResponse tokenResponse)
         {
 
-            if(this.m_tokenValidationParameters == null)
+            if(this.GetTokenValidationParameters() == null)
             {
                 return;
             } // validation of the token 
 
-            var tokenvalidationresult = this.m_tokenHandler.ValidateToken(tokenResponse.IdToken, this.m_tokenValidationParameters);
+            var tokenvalidationresult = this.m_tokenHandler.ValidateToken(tokenResponse.IdToken, this.GetTokenValidationParameters());
             if (tokenvalidationresult?.IsValid != true)
             {
                 throw tokenvalidationresult.Exception ?? new SecurityTokenException("Token validation failed");
@@ -362,7 +363,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
                 Scope = scope,
                 GrantType = "client_credentials"
             };
-            return this.m_restClient.Post<OAuthTokenRequest, OAuthTokenResponse>(this.m_discoveryDocument.TokenEndpoint, "application/x-www-form-urlencoded", request);
+            return this.m_restClient.Post<OAuthTokenRequest, OAuthTokenResponse>(this.GetDiscoveryDocument().TokenEndpoint, "application/x-www-form-urlencoded", request);
         }
 
         /// <summary>
@@ -378,7 +379,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
                 Scope = scope,
                 GrantType = "password"
             };
-            return this.m_restClient.Post<OAuthTokenRequest, OAuthTokenResponse>(this.m_discoveryDocument.TokenEndpoint, "application/x-www-form-urlencoded", request);
+            return this.m_restClient.Post<OAuthTokenRequest, OAuthTokenResponse>(this.GetDiscoveryDocument().TokenEndpoint, "application/x-www-form-urlencoded", request);
         }
 
         /// <summary>
@@ -391,7 +392,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
                 RefreshToken = m_refreshToken,
                 GrantType = "refresh_token"
             };
-            return this.m_restClient.Post<OAuthTokenRequest, OAuthTokenResponse>(this.m_discoveryDocument.TokenEndpoint, "application/x-www-form-urlencoded", request);
+            return this.m_restClient.Post<OAuthTokenRequest, OAuthTokenResponse>(this.GetDiscoveryDocument().TokenEndpoint, "application/x-www-form-urlencoded", request);
         }
 
 

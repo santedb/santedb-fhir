@@ -75,7 +75,12 @@ namespace SanteDB.Messaging.FHIR.PubSub
         /// <summary>
         /// Bundle any related items
         /// </summary>
-        public const string BundleRelatedItems = "notify.includeRelated";
+        public const string BundleRelatedItemsSettingName = "notify.includeRelated";
+
+        /// <summary>
+        /// Resitrict the identity domains
+        /// </summary>
+        public const string RestrictIdentityDomainsSettingName = "notify.domains";
 
         // Created authenticators for each channel
         private static readonly IDictionary<Guid, IFhirClientAuthenticator> m_createdAuthenticators = new ConcurrentDictionary<Guid, IFhirClientAuthenticator>();
@@ -204,6 +209,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     throw new InvalidOperationException("Cannot determine how to convert resource for notification");
                 }
 
+                // We want to notify of only specific domains
+                if(this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.RestrictIdentityDomainsSettingName, out var identityDomainRestrictSetting) &&
+                    data is IHasIdentifiers ihi)
+                {
+                    var removeSetting = identityDomainRestrictSetting.Split(';');
+                    ihi.RemoveIdentifier(o => !removeSetting.Contains(o.IdentityDomain.DomainName) && !removeSetting.Contains(o.IdentityDomain.Url));
+                }
+
                 if (!this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.NotifyBundlesSettingName, out var notifyBundleStr) || !Boolean.TryParse(notifyBundleStr, out bool notifyBundle) || !notifyBundle)
                 {
                     return mapper.MapToFhir(data as IdentifiedData);
@@ -230,7 +243,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = mapper.MapToFhir(id2)
                     });
 
-                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(id2, retVal);
                     }

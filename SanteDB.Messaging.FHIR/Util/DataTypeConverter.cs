@@ -1788,7 +1788,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                     else
                     {
-                        retVal = sdbBundle?.Item.OfType<TEntity>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference);
+                        retVal = sdbBundle?.Item.OfType<TEntity>().FirstOrDefault(e => e.GetTag(FhirConstants.OriginalUrlTag) == resourceRef.Reference || e.GetTag(FhirConstants.OriginalIdTag) == resourceRef.Reference) ?? retVal;
 
                         if (retVal == null) // attempt to resolve via fhir bundle
                         {
