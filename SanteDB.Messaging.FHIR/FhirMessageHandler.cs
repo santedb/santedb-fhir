@@ -117,6 +117,10 @@ namespace SanteDB.Messaging.FHIR
             this.Starting?.Invoke(this, EventArgs.Empty);
 
             // This service relies on other services so let's wait until the entire context starts
+            if (ApplicationServiceContext.Current.HostType == SanteDBHostType.Test)
+            {
+                return true;
+            }
 
             ApplicationServiceContext.Current.Started += (o, evt) =>
             {
