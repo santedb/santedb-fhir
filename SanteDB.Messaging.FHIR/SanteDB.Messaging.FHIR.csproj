@@ -1,229 +1,81 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup Condition="'$(VersionNumber)' == ''">
-    <VersionNumber>3.0-debug</VersionNumber>
-  </PropertyGroup>
-  <PropertyGroup>
-    <TargetFrameworks>netstandard2.0</TargetFrameworks>
-  </PropertyGroup>
-  <PropertyGroup>
-    <PackageId>SanteDB.Messaging.FHIR</PackageId>
-    <Title>SanteDB FHIR Messaging</Title>
-    <Version>$(VersionNumber)</Version>
-    <Description>Allows SanteDB iCDR to accept FHIR messages.</Description>
-    <Authors>SanteSuite Contributors</Authors>
-    <PackageTags>SanteDB</PackageTags>
-    <RepositoryUrl>https://github.com/santedb/santedb-fhir</RepositoryUrl>
-    <RepositoryType>git</RepositoryType>
-    <GenerateDocumentationFile>true</GenerateDocumentationFile>
-    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
-    <IncludeSymbols>true</IncludeSymbols>
-    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-	    <Product>SanteDB</Product>
-    <Copyright>Copyright (C) 2015-2026 SanteSuite Contributors (See: NOTICES)</Copyright>
-    <Company>SanteSuite Contributors</Company>
-    <PackageIconUrl>http://santesuite.org/assets/img/logo.png</PackageIconUrl>
-    <PackageProjectUrl>http://santesuite.org</PackageProjectUrl>
-  </PropertyGroup>   
-  <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{33836324-C699-4139-AB9C-7524570A04D5}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SanteDB.Messaging.FHIR</RootNamespace>
-    <AssemblyName>SanteDB.Messaging.FHIR</AssemblyName>
-    <FileAlignment>512</FileAlignment>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>..\bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>..\bin\Debug\SanteDB.Messaging.FHIR.xml</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>..\bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>..\bin\Release\SanteDB.Messaging.FHIR.xml</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Debug|netstandard2.0|AnyCPU'">
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(TargetFramework)|$(Platform)'=='Release|netstandard2.0|AnyCPU'">
-    <DebugType>portable</DebugType>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Hl7.Fhir.Specification.R4B" Version="4.3.0" />
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.3.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="System.Runtime.Caching" Version="9.0.0" />
-   <!-- <Reference Include="System" />
-    <Reference Include="System.Configuration" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.IdentityModel" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions">
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />-->
-  </ItemGroup>
- <!-- <ItemGroup>
-    <Compile Include="Configuration\FhirServiceConfigurationSection.cs" />
-    <Compile Include="Docker\FhirDockerFeature.cs" />
-    <Compile Include="Extensions\IFhirExtensionHandler.cs" />
-    <Compile Include="Extensions\IFhirRestBehaviorModifier.cs" />
-    <Compile Include="FhirConstants.cs" />
-    <Compile Include="FhirMessageHandler.cs" />
-    <Compile Include="FhirQuery.cs" />
-    <Compile Include="FhirQueryResult.cs" />
-    <Compile Include="Handlers\AdverseEventResourceHandler.cs" />
-    <Compile Include="Handlers\AllergyIntoleranceResourceHandler.cs" />
-    <Compile Include="Handlers\BundleResourceHandler.cs" />
-    <Compile Include="Handlers\ConditionResourceHandler.cs" />
-    <Compile Include="Handlers\EncounterResourceHandler.cs" />
-    <Compile Include="Handlers\FhirResourceHandlerUtil.cs" />
-    <Compile Include="Handlers\IFhirResourceHandler.cs" />
-    <Compile Include="Handlers\IFhirResourceMapper.cs" />
-    <Compile Include="Handlers\LocationResourceHandler.cs" />
-    <Compile Include="Handlers\MedicationAdministrationResourceHandler.cs" />
-    <Compile Include="Handlers\MedicationResourceHandler.cs" />
-    <Compile Include="Handlers\OrganizationResourceHandler.cs" />
-    <Compile Include="Handlers\PractitionerResourceHandler.cs" />
-    <Compile Include="Handlers\RepositoryResourceHandlerBase.cs" />
-    <Compile Include="Handlers\ImmunizationRecommendationResourceHandler.cs" />
-    <Compile Include="Handlers\ImmunizationResourceHandler.cs" />
-    <Compile Include="Handlers\ObservationResourceHandler.cs" />
-    <Compile Include="Handlers\PatientResourceHandler.cs" />
-    <Compile Include="Handlers\ResourceHandlerBase.cs" />
-    <Compile Include="Handlers\StructureDefinitionHandler.cs" />
-    <Compile Include="Handlers\SubscriptionResourceHandler.cs" />
-    <Compile Include="Handlers\SubstanceResourceHandler.cs" />
-    <Compile Include="Extensions\IFhirProfileValidationHandler.cs" />
-    <Compile Include="Extensions\IFhirOperationHandler.cs" />
-    <Compile Include="Operations\FhirMatchResourceOperation.cs" />
-    <Compile Include="Operations\FhirValidateResourceOperation.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="PubSub\FhirPubSubMessageDispatcherFactory.cs" />
-    <Compile Include="PubSub\FhirPubSubRestHookDispatcherFactory.cs" />
-    <Compile Include="Rest\Behaviors\FhirMessageDispatchFormatterEndpointBehavior.cs" />
-    <Compile Include="Util\ConformanceUtil.cs" />
-    <Compile Include="Util\DataTypeConverter.cs" />
-    <Compile Include="Util\IBundleResourceHandler.cs" />
-    <Compile Include="Util\MessageUtil.cs" />
-    <Compile Include="Util\ModelExtensions.cs" />
-    <Compile Include="Util\ExtensionUtil.cs" />
-    <Compile Include="Util\QueryRewriter.cs" />
-    <Compile Include="Util\QueryParameterMap.cs" />
-    <Compile Include="Util\StructureDefinitionUtil.cs" />
-    <Compile Include="Rest\Behaviors\FhirErrorServiceBehavior.cs" />
-    <Compile Include="Rest\FhirServiceBehavior.cs" />
-    <Compile Include="Rest\IFhirServiceContract.cs" />
-    <Compile Include="Rest\Serialization\FhirMessageDispatchFormatter.cs" />
-  </ItemGroup>-->
-  <Choose>
-    <When Condition="$(SolutionName.Contains('-nuget'))">
-      <ItemGroup>
-        <PackageReference Include="RestSrvr" Version="$(VersionNumber)" />
-        <PackageReference Include="SanteDB.Core.Api" Version="$(VersionNumber)" />
-        <PackageReference Include="SanteDB.Core.Model" Version="$(VersionNumber)" />
-        <PackageReference Include="SanteDB.Rest.Common" Version="$(VersionNumber)" />
-		<PackageReference Include="SanteDB.Docker.Core" Version="$(VersionNumber)" />
-		  <PackageReference Include="SanteDB.BI" Version="$(VersionNumber)" />
-      </ItemGroup>
-    </When>
-    <Otherwise>
-      <ItemGroup>
-        <ProjectReference Include="..\..\restsrvr\RestSrvr\RestSrvr.csproj" />
-		  <ProjectReference Include="..\..\santedb-bis\SanteDB.BI\SanteDB.BI.csproj" />
-		  <ProjectReference Include="..\..\santedb-api\SanteDB.Core.Api\SanteDB.Core.Api.csproj" />
-        <ProjectReference Include="..\..\santedb-model\SanteDB.Core.Model\SanteDB.Core.Model.csproj" />
-        <ProjectReference Include="..\..\santedb-restsvc\SanteDB.Rest.Common\SanteDB.Rest.Common.csproj" />
-        <ProjectReference Include="..\..\santedb-docker\SanteDB.Docker.Core\SanteDB.Docker.Core.csproj" />
-      </ItemGroup>
-    </Otherwise>
-  </Choose>
-  <ItemGroup>
-    <EmbeddedResource Include="FhirParameterMap.xml">
-      <SubType>Designer</SubType>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="..\SanteDB.licenseheader">
-      <Link>SanteDB.licenseheader</Link>
-    </None>
-    <None Include="app.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="Docker\FhirFeature.xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="applet\controllers\config\fhir.js" />
-    <None Include="applet\manifest.xml" />
-    <None Include="applet\views\config\fhir\content.html" />
-    <EmbeddedResource Include="Configuration\Default.xml" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Update="Data\004-DischargeDisposition.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-AddressUseCodes.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-AdministrativeGenderCodes.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-AdverseEventSeverity.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-AllergyIntoleranceCriticality.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-ContactPointSystemCodes.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-ContactPointUseCodes.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-LocationTypes.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-NameUseCodes.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-ObservationCategory.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-ReligiousAffiliationCodes.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-RoleCode.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-ServiceDeliveryLocationRoleType.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Data\004-FHIR-ServiceType.dataset">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+	<PropertyGroup Condition="'$(VersionNumber)' == ''">
+		<VersionNumber>3.0-debug</VersionNumber>
+	</PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net10.0;net48;netstandard2.0</TargetFrameworks>
+	</PropertyGroup>
+	<PropertyGroup>
+		<PackageId>SanteDB.Messaging.FHIR</PackageId>
+		<Title>SanteDB FHIR Messaging</Title>
+		<Version>$(VersionNumber)</Version>
+		<Description>Allows SanteDB iCDR to accept FHIR messages.</Description>
+		<Authors>SanteSuite Contributors</Authors>
+		<PackageTags>SanteDB</PackageTags>
+		<RepositoryUrl>https://github.com/santedb/santedb-fhir</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<IncludeSymbols>true</IncludeSymbols>
+		<Product>SanteDB</Product>
+		<Copyright>Copyright (C) 2015-2026 SanteSuite Contributors (See: NOTICES)</Copyright>
+		<Company>SanteSuite Contributors</Company>
+		<PackageIconUrl>http://santesuite.org/assets/img/logo.png</PackageIconUrl>
+		<PackageProjectUrl>http://santesuite.org</PackageProjectUrl>
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Hl7.Fhir.Specification.R4B" Version="4.3.0" />
+		<PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
+		<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.3.0" />
+		<PackageReference Include="Newtonsoft.Json" Version="[13.0.4,13.1)" />
+		<PackageReference Include="System.Runtime.Caching" Version="9.0.0" />
+	</ItemGroup>
+	<Choose>
+		<When Condition="$(SolutionName.Contains('-nuget'))">
+			<ItemGroup>
+				<PackageReference Include="RestSrvr" Version="$(VersionNumber)" />
+				<PackageReference Include="SanteDB.Core.Api" Version="$(VersionNumber)" />
+				<PackageReference Include="SanteDB.Core.Model" Version="$(VersionNumber)" />
+				<PackageReference Include="SanteDB.Rest.Common" Version="$(VersionNumber)" />
+				<PackageReference Include="SanteDB.Docker.Core" Version="$(VersionNumber)" />
+				<PackageReference Include="SanteDB.BI" Version="$(VersionNumber)" />
+			</ItemGroup>
+		</When>
+		<Otherwise>
+			<ItemGroup>
+				<ProjectReference Include="..\..\restsrvr\RestSrvr\RestSrvr.csproj" />
+				<ProjectReference Include="..\..\santedb-bis\SanteDB.BI\SanteDB.BI.csproj" />
+				<ProjectReference Include="..\..\santedb-api\SanteDB.Core.Api\SanteDB.Core.Api.csproj" />
+				<ProjectReference Include="..\..\santedb-model\SanteDB.Core.Model\SanteDB.Core.Model.csproj" />
+				<ProjectReference Include="..\..\santedb-restsvc\SanteDB.Rest.Common\SanteDB.Rest.Common.csproj" />
+				<ProjectReference Include="..\..\santedb-docker\SanteDB.Docker.Core\SanteDB.Docker.Core.csproj" />
+			</ItemGroup>
+		</Otherwise>
+	</Choose>
+	<ItemGroup>
+		<EmbeddedResource Include="FhirParameterMap.xml">
+			<SubType>Designer</SubType>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</EmbeddedResource>
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="..\SanteDB.licenseheader">
+			<Link>SanteDB.licenseheader</Link>
+		</None>
+	</ItemGroup>
+	<ItemGroup>
+		<None Remove="applet\**\*" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Docker\FhirFeature.xml" />
+	</ItemGroup>
+	<ItemGroup>
+		<EmbeddedResource Include="Configuration\Default.xml" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Update="Data\*.dataset">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+	</ItemGroup>
 </Project>
