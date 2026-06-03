@@ -20,6 +20,7 @@
  */
 using DynamicExpresso;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
@@ -28,6 +29,7 @@ using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -165,7 +167,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             _ = model.LoadProperty(m => m.Addresses);
             _ = model.LoadProperty(m => m.LanguageCommunication);
 
-            retVal.Identifier = model.Identifiers?.Select(DataTypeConverter.ToFhirIdentifier).ToList();
+            retVal.Identifier = model.Identifiers?
+                .GroupBy(o=>$"{o.IdentityDomainKey}{o.Value}") // In some cases MDM will return multiple identifiers which are the same (from the various sources) while this is need for HDSI in FHIR it is confusing
+                .Select(id => id.OrderByDescending(o => o.ExpiryDate ?? DateTimeOffset.Now).First()) // Select the identifier that expires last
+                .Select(DataTypeConverter.ToFhirIdentifier)
+                .ToList();
             retVal.MultipleBirth = model.MultipleBirthOrder == 0 ? (DataType)new FhirBoolean(true) : model.MultipleBirthOrder.HasValue ? new Integer(model.MultipleBirthOrder.Value) : null;
             retVal.Name = model.Names?.Select(DataTypeConverter.ToFhirHumanName)?.ToList();
             retVal.Telecom = model.LoadProperty(o => o.Telecoms)?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
@@ -251,10 +257,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && rel.LoadProperty(o=>o.TargetEntity) is Core.Model.Roles.Patient) // only convey replacement of other patients
                 {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
-                }
-                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Duplicate)
-                {
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Seealso));
                 }
                 else if (rel.ClassificationKey == EntityRelationshipTypeKeys.EquivalentEntity)
                 {
@@ -402,15 +404,34 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
             patient.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
             patient.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
-            patient.Relationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
+
+            var fhirRelationships = resource.Contact.Select(r => DataTypeConverter.ToEntityRelationship(r, resource)).ToList();
+            // Mark any existing FHIR relationships of the type specified to delete 
+            patient.LoadProperty(o => o.Relationships).Where(pr => fhirRelationships.Any(fr => fr.RelationshipTypeKey == pr.RelationshipTypeKey)).ForEach(pr => pr.BatchOperation = BatchOperationType.Delete);
+            patient.LoadProperty(o => o.Relationships).AddRange(fhirRelationships);
             patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
-            patient.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o =>
+
+            // JIMS-1349 -> Extensions to clear these may not be present in the FHIR message - so we clear and then allow extension handlers to reset
+            patient.VipStatusKey =
+                patient.EducationLevelKey =
+                patient.NationalityKey =
+                patient.OccupationKey =
+                patient.ReligiousAffiliationKey =
+                patient.EthnicGroupKey =
+                patient.LivingArrangementKey =
+                patient.MaritalStatusKey = null;
+
+            var fhirExtensions = resource.Extension.Select(o =>
             {
                 o.AddAnnotation(resource);
                 return DataTypeConverter.ToEntityExtension(o, patient);
-            }).OfType<EntityExtension>());
+            }).OfType<EntityExtension>().ToList(); // apply extensions
+            // Remove any duplicated extensions
+            patient.LoadProperty(o=>o.Extensions).Where(pe => fhirExtensions.Any(fe => fe.ExtensionTypeKey == pe.ExtensionTypeKey)).ForEach(pe=>pe.BatchOperation= BatchOperationType.Delete);
+            patient.Extensions.AddRange(fhirExtensions);
+
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
-            patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList();
+            patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList() ?? new List<Core.Model.Security.SecurityPolicyInstance>();
             patient.MaritalStatus = resource.MaritalStatus == null ? null : DataTypeConverter.ToConcept(resource.MaritalStatus);
 
             // TODO: fix
@@ -495,6 +516,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Links
             foreach (var lnk in resource.Link)
             {
+                if(lnk.Other.Reference.Equals($"Patient/{patient.Key}"))
+                {
+                    throw new FhirException(System.Net.HttpStatusCode.NotAcceptable, OperationOutcome.IssueType.BusinessRule, "Patient links cannot point to themselves");
+                }
+
                 switch (lnk.Type.Value)
                 {
                     case Patient.LinkType.Replaces:
@@ -511,8 +537,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                 }));
                             }
 
-                            replacee.StatusConceptKey = StatusKeys.Obsolete;
+                            replacee.BatchOperation = BatchOperationType.Update;
+                            replacee.StatusConceptKey = StatusKeys.Inactive;
                             patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, replacee));
+                            // Part of bundle? add the replacee to the bundle for good measure
+                            if(resource.TryGetAnnotation<SanteDB.Core.Model.Collection.Bundle>(out var partOf))
+                            {
+                                partOf.Add(replacee);
+                            }
                             break;
                         }
                     case Patient.LinkType.ReplacedBy:
@@ -607,6 +639,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 patient.Extensions.RemoveAll(o => o.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension);
                 patient.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
+            }
+
+            // Indicate the data is external 
+            if (String.IsNullOrEmpty(patient.GetTag(SystemTagNames.External)))
+            {
+                patient.AddTag(SystemTagNames.External, "true");
             }
 
             return patient;

@@ -75,7 +75,12 @@ namespace SanteDB.Messaging.FHIR.PubSub
         /// <summary>
         /// Bundle any related items
         /// </summary>
-        public const string BundleRelatedItems = "notify.includeRelated";
+        public const string BundleRelatedItemsSettingName = "notify.includeRelated";
+
+        /// <summary>
+        /// Resitrict the identity domains
+        /// </summary>
+        public const string RestrictIdentityDomainsSettingName = "notify.domains";
 
         // Created authenticators for each channel
         private static readonly IDictionary<Guid, IFhirClientAuthenticator> m_createdAuthenticators = new ConcurrentDictionary<Guid, IFhirClientAuthenticator>();
@@ -204,6 +209,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     throw new InvalidOperationException("Cannot determine how to convert resource for notification");
                 }
 
+                // We want to notify of only specific domains
+                if(this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.RestrictIdentityDomainsSettingName, out var identityDomainRestrictSetting) &&
+                    data is IHasIdentifiers ihi)
+                {
+                    var removeSetting = identityDomainRestrictSetting.Split(';');
+                    ihi.RemoveIdentifier(o => !removeSetting.Contains(o.IdentityDomain.DomainName) && !removeSetting.Contains(o.IdentityDomain.Url));
+                }
+
                 if (!this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.NotifyBundlesSettingName, out var notifyBundleStr) || !Boolean.TryParse(notifyBundleStr, out bool notifyBundle) || !notifyBundle)
                 {
                     return mapper.MapToFhir(data as IdentifiedData);
@@ -230,7 +243,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = mapper.MapToFhir(id2)
                     });
 
-                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(id2, retVal);
                     }
@@ -267,20 +280,44 @@ namespace SanteDB.Messaging.FHIR.PubSub
             /// </summary>
             public void NotifyMerged<TModel>(TModel survivor, IEnumerable<TModel> subsumed) where TModel : IdentifiedData
             {
-                if (survivor is Core.Model.Roles.Patient patient)
+                if (!(survivor is Core.Model.Roles.Patient patient))
+                {
+                    patient = survivor.ResolveGoldenRecord() as Core.Model.Roles.Patient;
+                }
+
+                if (patient != null)
                 {
                     try
                     {
-                        var resource = this.ConvertToResource(patient) as Patient;
+                        var converted = this.ConvertToResource(patient);
+                        var resource = converted as Patient;
+
+                        if(resource == null && converted is Bundle bdl)
+                        {
+                            resource = bdl.Entry.Select(o => o.Resource).OfType<Patient>().SingleOrDefault() as Patient;
+                        }
+                        if(resource == null)
+                        {
+                            throw new InvalidOperationException(String.Format(ErrorMessages.ARGUMENT_INCOMPATIBLE_TYPE, resource.GetType(), typeof(Patient)));
+                        }
 
                         // Add a replaces link 
+                        resource.Link = resource.Link ?? new List<Patient.LinkComponent>();
                         subsumed.Where(ssb => !resource.Link.Any(rl => rl.Other.Reference.Contains(ssb.Key.ToString()))).ForEach(rs => resource.Link.Add(new Patient.LinkComponent()
                         {
                             Type = Patient.LinkType.Replaces,
                             Other = DataTypeConverter.CreateRimReference(rs)
                         }));
                         this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
-                        this.m_client.Update(resource);
+
+                        if (converted is Bundle)
+                        {
+                            this.m_client.Create(converted);
+                        }
+                        else
+                        {
+                            this.m_client.Update(converted);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -352,7 +389,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
                     linkAsMerge)
                 {
-                    this.NotifyMerged(holder, new TModel[] { target });
+                    this.NotifyMerged(target, new TModel[] { holder });
                 }
                 else
                 {
@@ -367,7 +404,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
                     linkAsMerge)
                 {
-                    this.NotifyUnMerged(holder, new TModel[] { target });
+                    this.NotifyUnMerged(target, new TModel[] { holder });
                 }
                 else
                 {

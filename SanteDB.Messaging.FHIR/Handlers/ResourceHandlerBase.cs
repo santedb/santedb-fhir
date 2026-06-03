@@ -254,7 +254,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Interaction = this.GetInteractions().ToList(),
                 SearchParam = QueryRewriter.GetSearchParams<TFhirResource, TModel>().ToList(),
                 Type = Hl7.Fhir.Utility.EnumUtility.ParseLiteral<ResourceType>(typeof(TFhirResource).GetCustomAttribute<FhirTypeAttribute>().Name),
-                Profile = $"/StructureDefinition/SanteDB/_history/{Assembly.GetEntryAssembly().GetName().Version}"
+                ReferencePolicy = new List<ReferenceHandlingPolicy?>() { ReferenceHandlingPolicy.Local },
             };
         }
 

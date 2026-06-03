@@ -111,7 +111,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     PreferredFormat = ContentType.GetResourceFormatFromFormatParam(contentType ?? "xml"),
                     PreferCompressedResponses = true,
                     VerifyFhirVersion = false,
-                    Timeout = 5000
+                    Timeout = 5000,
                 });
 
                 foreach (var kv in this.Settings.Where(z => z.Key != "Content-Type" && !z.Key.StartsWith("$")))
@@ -160,6 +160,14 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 if((!this.Settings.TryGetValue("notify.local", out var notifyLocalStr) || !Boolean.TryParse(notifyLocalStr, out bool notifiyLocal) || !notifiyLocal) && data is IdentifiedData id)
                 {
                     data = (TModel)(object)id.ResolveGoldenRecord();
+                }
+
+                // We want to notify of only specific domains
+                if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.RestrictIdentityDomainsSettingName, out var identityDomainRestrictSetting) &&
+                    data is IHasIdentifiers ihi)
+                {
+                    var removeSetting = identityDomainRestrictSetting.Split(';');
+                    ihi.RemoveIdentifier(o => !removeSetting.Contains(o.IdentityDomain.DomainName) && !removeSetting.Contains(o.IdentityDomain.Url));
                 }
 
                 var mapper = FhirResourceHandlerUtil.GetMapperForInstance(data);
@@ -247,7 +255,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource
                     });
 
-                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
                     }
@@ -304,7 +312,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             patient.Link.Add(new Patient.LinkComponent()
                             {
                                 Type = Patient.LinkType.ReplacedBy,
-                                Other = new ResourceReference($"Patient/{patient.Id}")
+                                Other = new ResourceReference($"Patient/{survivor.Key}")
                             });
                         }
 
@@ -325,7 +333,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         };
                     }));
 
-                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(survivor, focusBundle);
                     }
@@ -403,7 +411,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         Resource = focalResource
                     });
 
-                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItems, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
+                    if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
                     }
@@ -442,7 +450,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                                    Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
                                    linkAsMerge)
                 {
-                    this.NotifyMerged(holder, new TModel[] { target });
+                    this.NotifyMerged(target, new TModel[] { holder });
                 }
                 else
                 {
@@ -458,7 +466,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                    Boolean.TryParse(linkAsMergeStr, out var linkAsMerge) &&
                    linkAsMerge)
                 {
-                    this.NotifyUnMerged(holder, new TModel[] { target });
+                    this.NotifyUnMerged(target, new TModel[] { holder });
                 }
                 else
                 {
