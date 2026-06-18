@@ -29,6 +29,7 @@ using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Annotation;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -50,16 +51,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private readonly IRepositoryService<EntityRelationship> m_EntityRelationshipRepository;
         private readonly IAdhocCacheService m_AdhocCacheService;
         private readonly IRepositoryService<Concept> m_ConceptRepository;
+        private readonly IRepositoryService<Core.Model.Entities.Person> m_personRepository;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(PatientResourceHandler));
 
         /// <summary>
         /// Resource handler subscription
         /// </summary>
-        public PatientResourceHandler(IRepositoryService<Core.Model.Roles.Patient> repo, IRepositoryService<EntityRelationship> entityRelationshipRepository, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService, IAdhocCacheService adhocCacheService = null) : base(repo, localizationService)
+        public PatientResourceHandler(IRepositoryService<Core.Model.Roles.Patient> repo, IRepositoryService<EntityRelationship> entityRelationshipRepository, IRepositoryService<Core.Model.Entities.Person> personRepository, IRepositoryService<Concept> conceptRepository, ILocalizationService localizationService, IAdhocCacheService adhocCacheService = null) : base(repo, localizationService)
         {
             this.m_EntityRelationshipRepository = entityRelationshipRepository;
             this.m_AdhocCacheService = adhocCacheService;
             this.m_ConceptRepository = conceptRepository;
+            this.m_personRepository = personRepository;
         }
 
         /// <summary>
@@ -168,7 +171,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             _ = model.LoadProperty(m => m.LanguageCommunication);
 
             retVal.Identifier = model.Identifiers?
-                .GroupBy(o=>$"{o.IdentityDomainKey}{o.Value}") // In some cases MDM will return multiple identifiers which are the same (from the various sources) while this is need for HDSI in FHIR it is confusing
+                .GroupBy(o => $"{o.IdentityDomainKey}{o.Value}") // In some cases MDM will return multiple identifiers which are the same (from the various sources) while this is need for HDSI in FHIR it is confusing
                 .Select(id => id.OrderByDescending(o => o.ExpiryDate ?? DateTimeOffset.Now).First()) // Select the identifier that expires last
                 .Select(DataTypeConverter.ToFhirIdentifier)
                 .ToList();
@@ -176,8 +179,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Name = model.Names?.Select(DataTypeConverter.ToFhirHumanName)?.ToList();
             retVal.Telecom = model.LoadProperty(o => o.Telecoms)?.Select(DataTypeConverter.ToFhirTelecom)?.ToList();
             retVal.Communication = model.LanguageCommunication?.Select(DataTypeConverter.ToFhirCommunicationComponent)?.ToList();
-            retVal.MaritalStatus = DataTypeConverter.ToFhirCodeableConceptPreferred(model.LoadProperty(o=>o.MaritalStatus), "http://hl7.org/fhir/ValueSet/marital-status");
-
+            retVal.MaritalStatus = DataTypeConverter.ToFhirCodeableConceptPreferred(model.LoadProperty(o => o.MaritalStatus), "http://hl7.org/fhir/ValueSet/marital-status");
 
             _ = model.LoadProperty(m => m.Relationships);
             foreach (var rel in model.Relationships)
@@ -254,7 +256,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         Resource = FhirResourceHandlerUtil.GetMapperForInstance(practitioner).MapToFhir(practitioner),
                     });
                 }
-                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && rel.LoadProperty(o=>o.TargetEntity) is Core.Model.Roles.Patient) // only convey replacement of other patients
+                else if (rel.RelationshipTypeKey == EntityRelationshipTypeKeys.Replaces && rel.LoadProperty(o => o.TargetEntity) is Core.Model.Roles.Patient) // only convey replacement of other patients
                 {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Replaces));
                 }
@@ -283,7 +285,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // MDM links
-            model.Relationships.FilterManagedReferenceLinks< SanteDB.Core.Model.Roles.Patient>().ToList().ForEach(rel =>
+            model.Relationships.FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().ToList().ForEach(rel =>
             {
                 if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
                 {
@@ -301,6 +303,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var reverseRelationships = this.m_EntityRelationshipRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
             foreach (var rrv in reverseRelationships)
             {
+                rrv.AddAnnotation(new FhirMinimumRelatedPersonAnnotation());
+
                 retVal.Link.Add(new Patient.LinkComponent
                 {
                     Type = Patient.LinkType.Seealso,
@@ -364,31 +368,73 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override Core.Model.Roles.Patient MapToModel(Patient resource)
         {
             Core.Model.Roles.Patient patient = null;
+            Core.Model.Collection.Bundle partOfBundle = resource.Annotation<Core.Model.Collection.Bundle>();
 
             // Attempt to XRef via UUID - if the remote has passed us a UUID we may be able to directly load it
             if (Guid.TryParse(resource.Id, out Guid key))
             {
                 patient = this.m_repository.Get(key);
             }
-            
+
             // If the result of the previous resolution was not found, and there is a business identifier we try to resolve by unique id
-            if (patient == null && resource.Identifier.Any())
+            using (AuthenticationContext.EnterSystemContext())
             {
-                foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
+                if (patient == null && resource.Identifier.Any())
                 {
-                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
+                    foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                     {
-                        patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
-                    }
-                    if (patient != null)
-                    {
-                        break;
+                        if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
+                        {
+                            patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+
+                            if (patient == null)
+                            {
+                                // Perhaps it is a person? - We don't query using PersonRepository because it may be a Patient
+                                var personKey = this.m_personRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).Select(o => o.Key).FirstOrDefault();
+
+                                if (personKey != null)
+                                {
+                                    // Rewrite 
+                                    var relationships = this.m_EntityRelationshipRepository.Find(o => o.TargetEntityKey == personKey && o.RelationshipType.ConceptSets.Any(c => c.Mnemonic == "FamilyMember")).ToArray();
+                                    var newPatientKey = Guid.TryParse(resource.Id, out key) ? key : Guid.NewGuid();
+                                    patient = new Core.Model.Roles.Patient()
+                                    {
+                                        Key = newPatientKey,
+                                        Relationships = new List<EntityRelationship>(relationships.Select(o=> new EntityRelationship()
+                                        {
+                                            Key = o.Key,
+                                            BatchOperation = BatchOperationType.Delete
+                                        }))
+                                    {
+                                        new EntityRelationship(EntityRelationshipTypeKeys.Replaces, personKey)
+                                    }
+                                    };
+
+                                    // Remove any relationships from the part of bundle
+                                    // We want to remove those - basically our instructions override those instructions
+                                    partOfBundle?.Item.RemoveAll(o => o is EntityRelationship er && relationships.Any(r => r.Key == o.Key || (r.Holder?.Key ?? r.HolderKey) == (er.SourceEntity?.Key ?? er.SourceEntityKey) && (r.TargetEntity?.Key ?? r.TargetEntityKey) == (er.TargetEntity?.Key ?? er.TargetEntityKey))); 
+                                    var deletePerson = new Core.Model.Entities.Person()
+                                    {
+                                        Key = personKey,
+                                        StatusConceptKey = StatusKeys.Obsolete,
+                                        BatchOperation = BatchOperationType.Delete
+                                    };
+                                    deletePerson.PreventDelayLoad();
+                                    partOfBundle?.Add(deletePerson);
+                                }
+                            }
+                        }
+
+                        if (patient != null)
+                        {
+                            break;
+                        }
                     }
                 }
             }
-            
+
             // Finally if hte patiet could not be resolved we will create a new one and use the uuid of the resource if it is one
-            if(patient == null)
+            if (patient == null)
             {
                 patient = new Core.Model.Roles.Patient
                 {
@@ -427,7 +473,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 return DataTypeConverter.ToEntityExtension(o, patient);
             }).OfType<EntityExtension>().ToList(); // apply extensions
             // Remove any duplicated extensions
-            patient.LoadProperty(o=>o.Extensions).Where(pe => fhirExtensions.Any(fe => fe.ExtensionTypeKey == pe.ExtensionTypeKey)).ForEach(pe=>pe.BatchOperation= BatchOperationType.Delete);
+            patient.LoadProperty(o => o.Extensions).Where(pe => fhirExtensions.Any(fe => fe.ExtensionTypeKey == pe.ExtensionTypeKey)).ForEach(pe => pe.BatchOperation = BatchOperationType.Delete);
             patient.Extensions.AddRange(fhirExtensions);
 
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
@@ -516,7 +562,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Links
             foreach (var lnk in resource.Link)
             {
-                if(lnk.Other.Reference.Equals($"Patient/{patient.Key}"))
+                if (lnk.Other.Reference.Equals($"Patient/{patient.Key}"))
                 {
                     throw new FhirException(System.Net.HttpStatusCode.NotAcceptable, OperationOutcome.IssueType.BusinessRule, "Patient links cannot point to themselves");
                 }
@@ -541,7 +587,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             replacee.StatusConceptKey = StatusKeys.Inactive;
                             patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Replaces, replacee));
                             // Part of bundle? add the replacee to the bundle for good measure
-                            if(resource.TryGetAnnotation<SanteDB.Core.Model.Collection.Bundle>(out var partOf))
+                            if (resource.TryGetAnnotation<SanteDB.Core.Model.Collection.Bundle>(out var partOf))
                             {
                                 partOf.Add(replacee);
                             }
@@ -577,17 +623,27 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             {
                                 // Resolve the patient
                                 var targetPatient = DataTypeConverter.ResolveEntity<Entity>(rp.Patient, rp)?.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal());
-                                // The link here is a reverse link - i.e. IS A MOHTER OF or IS A HUSBAND OF so we want to create a reverse link
-                                patient.Relationships.Add(
-                                    new EntityRelationship()
+                                foreach (var relTyp in rp.Relationship.Select(o => DataTypeConverter.ToConcept(o)).Select(o => o?.Key).Distinct()) {
+
+                                    var relationship = new EntityRelationship()
                                     {
                                         Key = Guid.TryParse(resolved.Id, out var idGuid) ? idGuid : Guid.NewGuid(),
-                                        TargetEntityKey= patient.Key, 
+                                        TargetEntityKey = patient.Key,
                                         SourceEntityKey = targetPatient.Key,
-                                        RelationshipTypeKey = rp.Relationship.Select(o => DataTypeConverter.ToConcept(o)).Select(o => o?.Key).Distinct().FirstOrDefault(),
+                                        RelationshipTypeKey = relTyp,
                                         BatchOperation = BatchOperationType.InsertOrUpdate
+                                    };
+
+                                    if (partOfBundle?.Item.OfType<EntityRelationship>().Any(o => o.Key == relationship.Key) == true) // A related person handler has already emitted the relationship into the bundle
+                                    {
+                                        partOfBundle.Item.OfType<EntityRelationship>().FirstOrDefault(o => o.Key == relationship.Key).TargetEntityKey = patient.Key;
                                     }
-                                );
+                                    else {
+                                        // The link here is a reverse link - i.e. IS A MOHTER OF or IS A HUSBAND OF so we want to create a reverse link
+                                        rp.AddAnnotation(new FhirAlreadyProcessedAnnotation(relationship));
+                                        patient.Relationships.Add(relationship);
+                                    }
+                                }
                             }
                             else
                             {

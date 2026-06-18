@@ -20,6 +20,7 @@
  */
 using DocumentFormat.OpenXml.Office2016.Drawing.Command;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Data;
 using SanteDB.Core.Diagnostics;
@@ -29,6 +30,7 @@ using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Annotation;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -145,14 +147,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
             relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value) && model.ObsoleteVersionSequenceId.HasValue == false;
             relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode") };
-            relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
-            relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.GenderConceptKey, "http://hl7.org/fhir/administrative-gender");
-            relative.Identifier = relModel.LoadCollection(o => o.Identifiers).Where(o => o.LoadProperty(i => i.IdentityDomain).AuthorityScopeXml?.Any() != true || o.IdentityDomain.AuthorityScopeXml.Contains(EntityClassKeys.Person)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
-            relative.Name = relModel.LoadCollection(o => o.Names).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
             relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(model.SourceEntityKey);
-            relative.Telecom = relModel.LoadCollection(o => o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+
+            // HACK: Represent minimum relationship type
+            if (!model.GetAnnotations<FhirMinimumRelatedPersonAnnotation>().Any())
+            {
+                relative.Address = relModel.LoadCollection(o => o.Addresses).Select(o => DataTypeConverter.ToFhirAddress(o)).ToList();
+                relative.Gender = DataTypeConverter.ToFhirEnumeration<AdministrativeGender>(person.GenderConceptKey, "http://hl7.org/fhir/administrative-gender");
+                relative.Identifier = relModel.LoadCollection(o => o.Identifiers).Where(o => o.LoadProperty(i => i.IdentityDomain).AuthorityScopeXml?.Any() != true || o.IdentityDomain.AuthorityScopeXml.Contains(EntityClassKeys.Person)).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
+                relative.Name = relModel.LoadCollection(o => o.Names).Select(o => DataTypeConverter.ToFhirHumanName(o)).ToList();
+                relative.Telecom = relModel.LoadCollection(o => o.Telecoms).Select(o => DataTypeConverter.ToFhirTelecom(o)).ToList();
+                relative.BirthDateElement = DataTypeConverter.ToFhirDate(person.DateOfBirth);
+            }
+
             relative.Id = model.Key.ToString();
-            relative.BirthDateElement = DataTypeConverter.ToFhirDate(person.DateOfBirth);
+
             return relative;
         }
 
@@ -317,19 +326,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
             relationship.RelationshipTypeKey = relationshipTypes.First();
 
             Core.Model.Entities.Person person = relationship.LoadProperty(o => o.TargetEntity) as Core.Model.Entities.Person;
+
             if (person == null && resource.Identifier?.Count > 0)
             {
                 this.m_tracer.TraceVerbose("Will resolve RelatedPerson via business identifiers");
                 foreach (var ii in resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier))
                 {
-                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
+                    var backRefCheck = resource.Annotation<Bundle>().Entry.OfType<Patient>().Any(p => p.Identifier.Select(DataTypeConverter.ToEntityIdentifier).Any(i => i.IdentityDomainKey == ii.IdentityDomainKey && i.Value == ii.Value));
+                    if (ii.LoadProperty(o => o.IdentityDomain).IsUnique && !backRefCheck)
                     {
+                        
                         person = this.m_patientRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault() ??
                             this.m_personRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (person != null)
                     {
-                        person.AddTag(FhirConstants.PlaceholderTag, "true"); // This is just a placeholder entry in case there are other patients
                         break;
                     }
                 }
@@ -352,17 +363,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             }
 
-            // HACK: Try to figure out what tf the client is trying to convey and map it into our worldview
-            // <rant>
-            // If you needed further evidence of how RelatedPerson is evil, this bit of code shows it - basically some clients (and examples)
-            // will send RelatedPerson as a combo of Person+Relationship, however other clients (and examples) use RelatedPerson as only a Relationship
-            // so we have to handle both cases. Basically, if the client sent us a RelatedPerson with only an identifier and relationship type then we
-            // treat it as *only* a relationship indicator (i.e. the client is relying on us to reference or resolve an existing person to relate) , however
-            // if the client sends us name, address, or telecom, we can assume the client is attempting to create (or perhaps update, who really knows?)
-            // the person to which the relationship points to.
-            // </rant>
-            // <tldr>RelatedPerson is evil - it could be a person + relationship or just a relationship and we have to handle both cases which is why this ugly code is here</tldr>
-            if (resource.Name.Any() || resource.Address.Any() || resource.Telecom.Any())
+            if (resource.Name.Any() || resource.Address.Any() || resource.Telecom.Any() || person.DateOfBirthXml != null)
             {
                 // Set the relationship
                 // Attempt to find the relationship this is talking about
@@ -389,9 +390,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else
             {
-                // TODO: Cross reference via identifiers
                 person.Identifiers = resource.Identifier.Select(DataTypeConverter.ToEntityIdentifier).ToList();
-                person.AddTag(FhirConstants.PlaceholderTag, "true");
+                person.BatchOperation = BatchOperationType.Ignore;
             }
             relationship.TargetEntity = person;
 

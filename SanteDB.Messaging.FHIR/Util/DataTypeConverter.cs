@@ -45,6 +45,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Security.Services;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Annotation;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
@@ -80,7 +81,9 @@ namespace SanteDB.Messaging.FHIR.Util
         private static readonly Guid[] IGNORE_RELATIONS_INBUNDLE = new Guid[]
         {
             EntityRelationshipTypeKeys.Replaces,
-            ActRelationshipTypeKeys.Replaces
+            ActRelationshipTypeKeys.Replaces,
+            EntityRelationshipTypeKeys.Duplicate
+            
         };
 
         /// <summary>
@@ -1795,10 +1798,15 @@ namespace SanteDB.Messaging.FHIR.Util
                             // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
                             //var fhirResource = fhirBundle.FindEntry(resourceRef);
                             var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.FirstOrDefault();
-                            if (fhirResource != null)
+                            if(fhirResource?.HasAnnotation<FhirAlreadyProcessedAnnotation>() == true)
+                            {
+                                retVal = (TEntity)fhirResource.Annotation<FhirAlreadyProcessedAnnotation>().ProcessedResource;
+                            }
+                            else if (fhirResource != null)
                             {
                                 // TODO: Error trapping
                                 retVal = (TEntity)FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.Resource).MapToModel(fhirResource.Resource);
+                                fhirResource.AddAnnotation(new FhirAlreadyProcessedAnnotation(retVal));
                                 sdbBundle.Item.Add(retVal);
                             }
                         }

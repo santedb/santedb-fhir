@@ -19,11 +19,14 @@
  * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Annotation;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -272,44 +275,69 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             foreach (var entry in fhirBundle.Entry)
             {
+                IdentifiedData processedObject = null;
                 if (!entry.Resource.TryDeriveResourceType(out ResourceType entryType))
                 {
                     continue;
                 }
-                var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
+                else if (!entry.HasAnnotation<FhirAlreadyProcessedAnnotation>() &&
+                    !entry.Resource.HasAnnotation<FhirAlreadyProcessedAnnotation>()
+                )
+                {
+                    // has not been processed
 
-                // Map and add to bundle
-                var itm = handler.MapToModel(entry.Resource);
-                sdbBundle.Remove(itm.Key.GetValueOrDefault());
-                sdbBundle.Add(itm);
+                    var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
+                    if (handler == null)
+                    {
+                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, $"Resource {entryType} not supported on this server");
+                    }
+
+                    // Map and add to bundle
+                    processedObject = handler.MapToModel(entry.Resource);
+                    if (processedObject == null)
+                    {
+                        continue;
+                    }
+
+                    entry.AddAnnotation(new FhirAlreadyProcessedAnnotation(processedObject));
+
+                    sdbBundle.Remove(processedObject.Key.GetValueOrDefault());
+                    sdbBundle.Add(processedObject);
+
+                }
+                else
+                {
+                    // Attempt to find the bundle object
+                    processedObject = entry.Annotation<FhirAlreadyProcessedAnnotation>()?.ProcessedResource ??
+                        entry.Resource.Annotation<FhirAlreadyProcessedAnnotation>()?.ProcessedResource;
+                }
 
                 switch (entry.Request?.Method ?? Bundle.HTTPVerb.POST)
                 {
                     case Bundle.HTTPVerb.PUT:
-                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Update;
-                        break;
                     case Bundle.HTTPVerb.POST:
-                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.InsertOrUpdate;
+                        processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.InsertOrUpdate;
                         break;
                     case Bundle.HTTPVerb.DELETE:
-                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Delete;
+                        processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.Delete;
                         break;
                     case Bundle.HTTPVerb.GET:
                     case Bundle.HTTPVerb.HEAD:
-                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Ignore;
+                        processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.Ignore;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.ARGUMENT_OUT_OF_RANGE, entry.Request.Method, "PUT, POST, DELETE, GET, HEAD"));
                 }
+
                 // HACK: If the ITM is a relationship or participation insert it into the bundle
-                if (itm is ITargetedAssociation targetedAssociation && targetedAssociation.TargetEntity != null)
+                if (processedObject is ITargetedAssociation targetedAssociation && targetedAssociation.TargetEntity != null)
                 {
                     sdbBundle.Insert(sdbBundle.Item.Count - 1, targetedAssociation.TargetEntity as IdentifiedData);
-                    itm = targetedAssociation.TargetEntity as IdentifiedData;
+                    processedObject = targetedAssociation.TargetEntity as IdentifiedData;
                 }
 
                 // Add original URLs so that subsequent bundle entries (which might reference this entry) can resolve
-                if (itm is ITaggable taggable)
+                if (processedObject is ITaggable taggable)
                 {
                     taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
                     taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
@@ -317,7 +345,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 if (entry.Request != null)
                 {
-                    sdbBundle.FocalObjects.Add(itm.Key.Value);
+                    sdbBundle.FocalObjects.Add(processedObject.Key.Value);
                 }
             }
 
