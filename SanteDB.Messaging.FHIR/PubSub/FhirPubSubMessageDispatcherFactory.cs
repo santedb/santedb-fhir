@@ -263,7 +263,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     // Iterate over the bundle and set the HTTP request option
                     foreach (var entry in focusBundle.Entry)
                     {
-                        if (entry.Request == null)
+                        if (entry.Request == null && entry.Resource != null)
                         {
                             entry.Request = new Bundle.RequestComponent()
                             {
@@ -419,7 +419,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     // Iterate over the bundle and set the HTTP request option
                     foreach (var entry in focusBundle.Entry)
                     {
-                        if (entry.Request == null)
+                        if (entry.Request == null && entry.Resource != null)
                         {
                             entry.Request = new Bundle.RequestComponent()
                             {

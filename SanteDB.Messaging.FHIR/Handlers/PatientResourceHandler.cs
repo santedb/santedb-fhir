@@ -181,6 +181,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Communication = model.LanguageCommunication?.Select(DataTypeConverter.ToFhirCommunicationComponent)?.ToList();
             retVal.MaritalStatus = DataTypeConverter.ToFhirCodeableConceptPreferred(model.LoadProperty(o => o.MaritalStatus), "http://hl7.org/fhir/ValueSet/marital-status");
 
+            var familyRelationships = this.GetRelatedPersonConceptUuids();
             _ = model.LoadProperty(m => m.Relationships);
             foreach (var rel in model.Relationships)
             {
@@ -267,7 +268,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 else if (partOfBundle != null) // This is part of a bundle and we need to include it
                 {
                     // HACK: This piece of code is used to add any RelatedPersons to the container bundle if it is part of a bundle
-                    if (this.GetRelatedPersonConceptUuids().Contains(rel.RelationshipTypeKey.Value))
+                    if (familyRelationships.Contains(rel.RelationshipTypeKey.Value))
                     {
                         var relative = FhirResourceHandlerUtil.GetMapperForInstance(rel).MapToFhir(rel);
                         partOfBundle.Entry.Add(new Bundle.EntryComponent()
@@ -282,6 +283,21 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         });
                     }
                 }
+            }
+
+            // Include any removed relationships and explicitly instruct the remote to remove them
+            if(partOfBundle != null)
+            {
+                var removedRelationships = this.m_EntityRelationshipRepository.Find(o => o.SourceEntityKey == model.Key && o.ObsoleteVersionSequenceId != null && familyRelationships.Contains(o.RelationshipTypeKey.Value)).ToArray();
+                partOfBundle.Entry.AddRange(removedRelationships.Select(o => new Bundle.EntryComponent()
+                {
+                    FullUrl = $"urn:uuid:{o.Key}",
+                    Request = new Bundle.RequestComponent()
+                    {
+                        Method = Bundle.HTTPVerb.DELETE,
+                        Url = $"RelatedPerson/{o.Key}"
+                    }
+                }));
             }
 
             // MDM links

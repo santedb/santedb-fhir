@@ -18,11 +18,13 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Annotation;
@@ -31,6 +33,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -269,14 +272,31 @@ namespace SanteDB.Messaging.FHIR.Handlers
             fhirBundle.Entry.ForEach(entry =>
             {
                 // Allow this entry to know its context in the bundle
-                entry.Resource.AddAnnotation(fhirBundle);
-                entry.Resource.AddAnnotation(sdbBundle);
+                entry.Resource?.AddAnnotation(fhirBundle);
+                entry.Resource?.AddAnnotation(sdbBundle);
             });
 
             foreach (var entry in fhirBundle.Entry)
             {
                 IdentifiedData processedObject = null;
-                if (!entry.Resource.TryDeriveResourceType(out ResourceType entryType))
+                if(entry.Resource == null)
+                {
+                    // Attempt to load any resource
+                    if (String.IsNullOrEmpty(entry.Request.Url))
+                    {
+                        throw new ArgumentNullException(String.Format(ErrorMessages.MISSING_VALUE, "result"));
+                    }
+                    var parts = entry.Request.Url.Split('/');
+                    var handler = FhirResourceHandlerUtil.GetMappersFor(parts[0]).SingleOrDefault();
+                    // Create a new reference 
+                    processedObject = new IdentifiedDataReference()
+                    {
+                        ReferencedType = handler.CanonicalType,
+                        Key = Guid.Parse(parts[1])
+                    };
+                    sdbBundle.Add(processedObject);
+                }
+                else if (!entry.Resource.TryDeriveResourceType(out ResourceType entryType))
                 {
                     continue;
                 }
@@ -340,7 +360,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 if (processedObject is ITaggable taggable)
                 {
                     taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
-                    taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
+                    taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource?.Id);
                 }
 
                 if (entry.Request != null)

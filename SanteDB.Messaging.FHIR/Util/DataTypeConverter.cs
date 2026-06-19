@@ -78,12 +78,17 @@ namespace SanteDB.Messaging.FHIR.Util
     public static class DataTypeConverter
     {
 
+        private static readonly Guid[] IGNORE_EXTENSIONS = new Guid[]
+        {
+            ExtensionTypeKeys.JpegPhotoExtension,
+            ExtensionTypeKeys.DataQualityExtension,
+        };
+
         private static readonly Guid[] IGNORE_RELATIONS_INBUNDLE = new Guid[]
         {
             EntityRelationshipTypeKeys.Replaces,
             ActRelationshipTypeKeys.Replaces,
             EntityRelationshipTypeKeys.Duplicate
-            
         };
 
         /// <summary>
@@ -867,7 +872,7 @@ namespace SanteDB.Messaging.FHIR.Util
             if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
                 fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IAnnotatedResource, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).ToList();
-                fhirExtension.Extension.AddRange(extendable.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension));
+                fhirExtension.Extension.AddRange(extendable.Extensions.Where(o => !IGNORE_EXTENSIONS.Contains(o.ExtensionTypeKey)).Select(DataTypeConverter.ToExtension));
 
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
@@ -1708,7 +1713,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
                 else
                 {
-                    resolvedResource = fhirBundle?.Entry.FirstOrDefault(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.Resource;
+                    resolvedResource = fhirBundle?.Entry.FirstOrDefault(o => o.FullUrl == resourceRef.Reference || o.Resource != null && $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.Resource;
                     return resolvedResource != null;
                 }
             }
@@ -1797,7 +1802,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         {
                             // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
                             //var fhirResource = fhirBundle.FindEntry(resourceRef);
-                            var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.FirstOrDefault();
+                            var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || o.Resource != null && $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.FirstOrDefault();
                             if(fhirResource?.HasAnnotation<FhirAlreadyProcessedAnnotation>() == true)
                             {
                                 retVal = (TEntity)fhirResource.Annotation<FhirAlreadyProcessedAnnotation>().ProcessedResource;
