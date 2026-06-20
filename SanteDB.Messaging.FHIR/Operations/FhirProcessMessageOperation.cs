@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             }
 
             // Message must have a message header
-            var messageHeader = contentParameter.Entry.Find(o => o.Resource?.TryDeriveResourceType(out ResourceType rt) == true && rt == ResourceType.MessageHeader)?.Resource as MessageHeader;
+            var messageHeader = contentParameter.Entry.Find(o => o.Resource != null & o.Resource.TryDeriveResourceType(out ResourceType rt) == true && rt == ResourceType.MessageHeader)?.Resource as MessageHeader;
             if (messageHeader == null)
             {
                 this.m_tracer.TraceError("Message bundle does not contain a MessageHeader");
