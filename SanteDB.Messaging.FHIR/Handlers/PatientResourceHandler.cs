@@ -265,74 +265,97 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
                 }
-                else if (partOfBundle != null) // This is part of a bundle and we need to include it
+                else if (partOfBundle != null && partOfBundle.Type != Bundle.BundleType.Searchset && familyRelationships.Contains(rel.RelationshipTypeKey.Value) &&
+                    !model.GetAnnotations<FhirMinimumRelatedPersonAnnotation>().Any())
                 {
-                    // HACK: This piece of code is used to add any RelatedPersons to the container bundle if it is part of a bundle
-                    if (familyRelationships.Contains(rel.RelationshipTypeKey.Value))
+
+                    var mapper = FhirResourceHandlerUtil.GetMapperForInstance(rel);
+                    if(rel.LoadProperty(o=>o.TargetEntity) is Core.Model.Roles.Patient relPat)
                     {
-                        var relative = FhirResourceHandlerUtil.GetMapperForInstance(rel).MapToFhir(rel);
+                        rel.AddAnnotation(new FhirMinimumRelatedPersonAnnotation());
+                        relPat.AddAnnotation(new FhirMinimumRelatedPersonAnnotation());
+                        var fhirPat = this.MapToFhir(relPat);
                         partOfBundle.Entry.Add(new Bundle.EntryComponent()
                         {
-                            FullUrl = $"urn:uuid:{rel.Key}",
-                            Resource = relative,
+                            FullUrl = $"urn:uuid:{relPat.Key}",
+                            Resource = fhirPat,
                             Request = new Bundle.RequestComponent()
                             {
                                 Method = Bundle.HTTPVerb.POST,
-                                Url = $"RelatedPerson/{rel.Key}"
+                                Url = $"{this.ResourceType}/{relPat.Key}"
                             }
                         });
+                        fhirPat.Link.Add(new Patient.LinkComponent()
+                        {
+                            Type = Patient.LinkType.Seealso,
+                            Other = new ResourceReference($"{mapper.ResourceType}/{rel.Key}")
+                        });
                     }
-                }
-            }
 
-            // Include any removed relationships and explicitly instruct the remote to remove them
-            if(partOfBundle != null)
-            {
-                var removedRelationships = this.m_EntityRelationshipRepository.Find(o => o.SourceEntityKey == model.Key && o.ObsoleteVersionSequenceId != null && familyRelationships.Contains(o.RelationshipTypeKey.Value)).ToArray();
-                partOfBundle.Entry.AddRange(removedRelationships.Select(o => new Bundle.EntryComponent()
-                {
-                    FullUrl = $"urn:uuid:{o.Key}",
-                    Request = new Bundle.RequestComponent()
+                    var relative = mapper.MapToFhir(rel);
+                    partOfBundle.Entry.Add(new Bundle.EntryComponent()
                     {
-                        Method = Bundle.HTTPVerb.DELETE,
-                        Url = $"RelatedPerson/{o.Key}"
-                    }
-                }));
+                        FullUrl = $"urn:uuid:{rel.Key}",
+                        Resource = relative,
+                        Request = new Bundle.RequestComponent()
+                        {
+                            Method = Bundle.HTTPVerb.POST,
+                            Url = $"{mapper.ResourceType}/{rel.Key}"
+                        }
+                    });
+                }
             }
 
-            // MDM links
-            model.Relationships.FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().ToList().ForEach(rel =>
-            {
-                if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
-                {
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso));
-                }
-                else // Is a local
-                {
-                    retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
-                }
-            });
-
-            // Reverse relationships of family member?
             var uuids = model.Relationships.FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().Select(r => r.SourceEntityKey).Union(new Guid?[] { model.Key }).ToArray();
-            var familyMemberConcepts = this.GetFamilyMemberUuids();
-            var reverseRelationships = this.m_EntityRelationshipRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
-            foreach (var rrv in reverseRelationships)
+            if (!model.GetAnnotations<FhirMinimumRelatedPersonAnnotation>().Any())
             {
-                rrv.AddAnnotation(new FhirMinimumRelatedPersonAnnotation());
-
-                retVal.Link.Add(new Patient.LinkComponent
+                // Include any removed relationships and explicitly instruct the remote to remove them
+                if (partOfBundle != null)
                 {
-                    Type = Patient.LinkType.Seealso,
-                    Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rrv),
+                    var removedRelationships = this.m_EntityRelationshipRepository.Find(o => o.SourceEntityKey == model.Key && o.ObsoleteVersionSequenceId != null && familyRelationships.Contains(o.RelationshipTypeKey.Value)).ToArray();
+                    partOfBundle.Entry.AddRange(removedRelationships.Select(o => new Bundle.EntryComponent()
+                    {
+                        FullUrl = $"urn:uuid:{o.Key}",
+                        Request = new Bundle.RequestComponent()
+                        {
+                            Method = Bundle.HTTPVerb.DELETE,
+                            Url = $"RelatedPerson/{o.Key}"
+                        }
+                    }));
+                }
+
+                // MDM links
+                model.Relationships.FilterManagedReferenceLinks<SanteDB.Core.Model.Roles.Patient>().ToList().ForEach(rel =>
+                {
+                    if (rel.SourceEntityKey.HasValue && rel.SourceEntityKey != model.Key)
+                    {
+                        retVal.Link.Add(this.CreateLink<Patient>(rel.SourceEntityKey.Value, Patient.LinkType.Seealso));
+                    }
+                    else // Is a local
+                    {
+                        retVal.Link.Add(this.CreateLink<Patient>(rel.TargetEntityKey.Value, Patient.LinkType.Refer));
+                    }
                 });
 
-                // If this is part of a bundle, include it
-                partOfBundle?.Entry.Add(new Bundle.EntryComponent
+                var familyMemberConcepts = this.GetFamilyMemberUuids();
+                var reverseRelationships = this.m_EntityRelationshipRepository.Find(o => uuids.Contains(o.TargetEntityKey) && familyMemberConcepts.Contains(o.RelationshipTypeKey.Value) && o.ObsoleteVersionSequenceId == null);
+                foreach (var rrv in reverseRelationships)
                 {
-                    FullUrl = $"{MessageUtil.GetBaseUri()}/RelatedPerson/{rrv.Key}",
-                    Resource = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rrv),
-                });
+                    rrv.AddAnnotation(new FhirMinimumRelatedPersonAnnotation());
+
+                    retVal.Link.Add(new Patient.LinkComponent
+                    {
+                        Type = Patient.LinkType.Seealso,
+                        Other = DataTypeConverter.CreateNonVersionedReference<RelatedPerson>(rrv),
+                    });
+
+                    // If this is part of a bundle, include it
+                    partOfBundle?.Entry.Add(new Bundle.EntryComponent
+                    {
+                        FullUrl = $"RelatedPerson/{rrv.Key}",
+                        Resource = FhirResourceHandlerUtil.GetMappersFor(ResourceType.RelatedPerson).First().MapToFhir(rrv),
+                    });
+                }
             }
 
             // Was this record replaced?
@@ -416,7 +439,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     patient = new Core.Model.Roles.Patient()
                                     {
                                         Key = newPatientKey,
-                                        Relationships = new List<EntityRelationship>(relationships.Select(o=> new EntityRelationship()
+                                        Relationships = new List<EntityRelationship>(relationships.Select(o => new EntityRelationship()
                                         {
                                             Key = o.Key,
                                             BatchOperation = BatchOperationType.Delete
@@ -428,7 +451,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                                     // Remove any relationships from the part of bundle
                                     // We want to remove those - basically our instructions override those instructions
-                                    partOfBundle?.Item.RemoveAll(o => o is EntityRelationship er && relationships.Any(r => r.Key == o.Key || (r.Holder?.Key ?? r.HolderKey) == (er.SourceEntity?.Key ?? er.SourceEntityKey) && (r.TargetEntity?.Key ?? r.TargetEntityKey) == (er.TargetEntity?.Key ?? er.TargetEntityKey))); 
+                                    partOfBundle?.Item.RemoveAll(o => o is EntityRelationship er && relationships.Any(r => r.Key == o.Key || (r.Holder?.Key ?? r.HolderKey) == (er.SourceEntity?.Key ?? er.SourceEntityKey) && (r.TargetEntity?.Key ?? r.TargetEntityKey) == (er.TargetEntity?.Key ?? er.TargetEntityKey)));
                                     var deletePerson = new Core.Model.Entities.Person()
                                     {
                                         Key = personKey,
@@ -639,7 +662,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                             {
                                 // Resolve the patient
                                 var targetPatient = DataTypeConverter.ResolveEntity<Entity>(rp.Patient, rp)?.ResolveOwnedRecord(AuthenticationContext.Current.GetAuthenticatedPrincipal());
-                                foreach (var relTyp in rp.Relationship.Select(o => DataTypeConverter.ToConcept(o)).Select(o => o?.Key).Distinct()) {
+                                foreach (var relTyp in rp.Relationship.Select(o => DataTypeConverter.ToConcept(o)).Select(o => o?.Key).Distinct())
+                                {
 
                                     var relationship = new EntityRelationship()
                                     {
@@ -654,7 +678,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     {
                                         partOfBundle.Item.OfType<EntityRelationship>().FirstOrDefault(o => o.Key == relationship.Key).TargetEntityKey = patient.Key;
                                     }
-                                    else {
+                                    else
+                                    {
                                         // The link here is a reverse link - i.e. IS A MOHTER OF or IS A HUSBAND OF so we want to create a reverse link
                                         rp.AddAnnotation(new FhirAlreadyProcessedAnnotation(relationship));
                                         patient.Relationships.Add(relationship);
