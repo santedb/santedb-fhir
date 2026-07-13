@@ -1807,6 +1807,10 @@ namespace SanteDB.Messaging.FHIR.Util
                             {
                                 retVal = (TEntity)fhirResource.Annotation<FhirAlreadyProcessedAnnotation>().ProcessedResource;
                             }
+                            else if (fhirResource?.Resource?.HasAnnotation<FhirAlreadyProcessedAnnotation>() == true)
+                            {
+                                retVal = (TEntity)fhirResource.Resource.Annotation<FhirAlreadyProcessedAnnotation>().ProcessedResource;
+                            }
                             else if (fhirResource != null)
                             {
                                 // TODO: Error trapping
