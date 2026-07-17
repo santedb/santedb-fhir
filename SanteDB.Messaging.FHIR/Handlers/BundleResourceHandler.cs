@@ -319,7 +319,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         continue;
                     }
 
-                    entry.AddAnnotation(new FhirAlreadyProcessedAnnotation(processedObject));
+                    if (!entry.HasAnnotation<FhirAlreadyProcessedAnnotation>())
+                    {
+                        entry.AddAnnotation(new FhirAlreadyProcessedAnnotation(processedObject));
+                    }
 
                     sdbBundle.Remove(processedObject.Key.GetValueOrDefault());
                     sdbBundle.Add(processedObject);

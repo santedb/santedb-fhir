@@ -598,6 +598,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 patient.Relationships.Add(er);
             }
 
+            // Prevent circular references by indicating the already processed 
+            resource.AddAnnotation(new FhirAlreadyProcessedAnnotation(patient));
             // Links
             foreach (var lnk in resource.Link)
             {

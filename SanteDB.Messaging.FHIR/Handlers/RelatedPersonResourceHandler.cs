@@ -146,8 +146,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
             relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value) && model.ObsoleteVersionSequenceId.HasValue == false;
-            relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode") };
-            relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(model.SourceEntityKey);
+            relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode", "http://terminology.hl7.org/CodeSystem/v3-RoleClass") };
+            relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(model.SourceEntityKey); 
 
             // HACK: Represent minimum relationship type
             if (!model.GetAnnotations<FhirMinimumRelatedPersonAnnotation>().Any())

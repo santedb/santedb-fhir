@@ -62,8 +62,8 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hl7.Fhir.Specification.R4B" Version="4.3.0" />
-    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
-    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.3.0" />
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="[8.19.2, 9)" />
+    <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="[8.19.2, 9)" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <PackageReference Include="System.Runtime.Caching" Version="9.0.0" />
    <!-- <Reference Include="System" />
@@ -216,6 +216,12 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Data\004-FHIR-ServiceType.dataset">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\015-V3MaritalStatus.dataset">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Data\020-FHIR-MaritalStatus.dataset">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
