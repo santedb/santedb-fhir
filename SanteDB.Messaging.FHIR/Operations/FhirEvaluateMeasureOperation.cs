@@ -27,6 +27,7 @@ using SanteDB.BI.Util;
 using SanteDB.Core;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Security.Services;
 using SanteDB.Core.Services;
 using SanteDB.Core.Services.Impl;
 using SanteDB.Messaging.FHIR.Exceptions;
@@ -48,7 +49,7 @@ namespace SanteDB.Messaging.FHIR.Operations
     {
         private readonly IBiMetadataRepository m_repository;
         private readonly IBiDataSource m_defaultDataSource;
-        private readonly IAuditDispatchService m_auditService;
+        private readonly IAuditService m_auditService;
         private readonly IServiceManager m_serviceManager;
         private const string MEASURE_PARM_NAME = "measure";
         private const string PERIOD_START_PARM_NAME = "periodStart";
@@ -58,7 +59,7 @@ namespace SanteDB.Messaging.FHIR.Operations
         /// <summary>
         /// DI ctor
         /// </summary>
-        public FhirEvaluateMeasureOperation(IBiMetadataRepository biMetadataRepository, IServiceManager serviceManager, IAuditDispatchService auditService, IBiDataSource biDataSource = null)
+        public FhirEvaluateMeasureOperation(IBiMetadataRepository biMetadataRepository, IServiceManager serviceManager, IAuditService auditService, IBiDataSource biDataSource = null)
         {
             this.m_repository = biMetadataRepository;
             this.m_defaultDataSource = biDataSource;
