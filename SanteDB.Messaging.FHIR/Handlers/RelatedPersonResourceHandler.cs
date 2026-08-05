@@ -31,6 +31,7 @@ using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Annotation;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -144,8 +145,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }));
             }
 
+            if(relModel == null)
+            {
+                throw new FhirException(System.Net.HttpStatusCode.NotFound, OperationOutcome.IssueType.Incomplete, "Model is incomplete to perform this operation");
+            }
+
             var relative = DataTypeConverter.CreateResource<RelatedPerson>(relModel);
-            relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.Value) && model.ObsoleteVersionSequenceId.HasValue == false;
+            relative.Active = StatusKeys.ActiveStates.Contains(relModel.StatusConceptKey.GetValueOrDefault()) && model.ObsoleteVersionSequenceId.HasValue == false;
             relative.Relationship = new List<CodeableConcept>() { DataTypeConverter.ToFhirCodeableConcept(model.RelationshipTypeKey, "http://terminology.hl7.org/CodeSystem/v2-0131", "http://terminology.hl7.org/CodeSystem/v3-RoleCode", "http://terminology.hl7.org/CodeSystem/v3-RoleClass") };
             relative.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(model.SourceEntityKey); 
 
