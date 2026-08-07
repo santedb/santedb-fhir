@@ -254,6 +254,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         FullUrl = $"urn:uuid:{data.Key}",
                         Resource = focalResource
                     });
+                    focusBundle.Link.Add(new Bundle.LinkComponent()
+                    {
+                        Relation = "about",
+                        Url = $"urn:uuid:{data.Key}"
+                    });
 
                     if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
@@ -297,6 +302,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     var msgBundle = this.CreateMessageBundle(out Bundle focusBundle);
 
 
+                    focusBundle.Link = subsumed.Select(o => new Bundle.LinkComponent()
+                    {
+                        Relation = "about",
+                        Url = $"urn:uuid:{o.Key}"
+                    }).ToList();
                     // Convert the data element over to FHIR
                     focusBundle.Entry.AddRange(subsumed.Select(o =>
                     {
@@ -359,6 +369,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
 
                     // Convert the data element over
                     var focalResource = this.ConvertToResource(data);
+                    focusBundle.Link.Add(new Bundle.LinkComponent()
+                    {
+                        Relation = "about",
+                        Url = $"urn:uuid:{data.Key}"
+                    });
                     focusBundle.Entry.Add(new Bundle.EntryComponent()
                     {
                         FullUrl = $"urn:uuid:{data.Key}",
@@ -409,6 +424,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     {
                         FullUrl = $"urn:uuid:{data.Key}",
                         Resource = focalResource
+                    });
+                    focusBundle.Link.Add(new Bundle.LinkComponent()
+                    {
+                        Relation = "about",
+                        Url = $"urn:uuid:{data.Key}"
                     });
 
                     if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)

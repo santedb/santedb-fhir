@@ -276,6 +276,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 entry.Resource?.AddAnnotation(sdbBundle);
             });
 
+            // Is there a focal set of objects
+            var aboutEntries = fhirBundle.Link.Where(o => o.Relation == "about").Select(o => o.Url);
+
             foreach (var entry in fhirBundle.Entry)
             {
                 IdentifiedData processedObject = null;
@@ -366,7 +369,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource?.Id);
                 }
 
-                if (entry.Request != null)
+                if (entry.Request != null &&
+                    (
+                    !aboutEntries.Any() ||
+                    aboutEntries.Contains(entry.FullUrl)
+                    )
+                )
                 {
                     sdbBundle.FocalObjects.Add(processedObject.Key.Value);
                 }
