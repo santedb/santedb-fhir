@@ -242,6 +242,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         FullUrl = $"urn:uuid:{id2.Key}",
                         Resource = mapper.MapToFhir(id2)
                     });
+                    retVal.Link.Add(new Bundle.LinkComponent()
+                    {
+                        Relation = "about",
+                        Url = $"urn:uuid:{id2.Key}"
+                    });
 
                     if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
