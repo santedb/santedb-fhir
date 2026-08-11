@@ -627,12 +627,14 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// To quantity
         /// </summary>
-        public static Quantity ToQuantity(decimal? quantity, Guid? unitConceptKey)
+        public static Quantity ToQuantity(decimal? quantity, Guid? unitConceptKey, Concept quantityConcept = null)
         {
+            var ucumCode = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code;
             return new Quantity()
             {
                 Value = quantity,
-                Unit = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code
+                Unit = ucumCode ?? quantityConcept?.Mnemonic,
+                System = ucumCode == null ? FhirConstants.SanteDBConceptSystem : null
             };
         }
 
