@@ -183,7 +183,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 case "PQ":
                     var qty = model as QuantityObservation;
-                    retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey);
+                    retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
                     break;
 
                 case "ED":

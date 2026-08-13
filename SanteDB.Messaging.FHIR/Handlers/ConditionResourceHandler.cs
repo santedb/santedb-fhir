@@ -157,7 +157,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (recordTarget != null)
             {
                 this.m_traceSource.TraceInfo("RCT: {0}", recordTarget.PlayerEntityKey);
-                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>("PlayerEntity"));
+                retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(recordTarget.LoadProperty<Entity>("PlayerEntity"));
             }
 
             // Onset

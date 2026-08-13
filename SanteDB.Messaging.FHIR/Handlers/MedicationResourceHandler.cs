@@ -115,7 +115,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Identifier = model.LoadProperty(o => o.Identifiers).Select(DataTypeConverter.ToFhirIdentifier).ToList();
             if (manufacturer != null)
             {
-                retVal.Manufacturer = DataTypeConverter.CreateVersionedReference<Organization>(manufacturer.LoadProperty(o=>o.SourceEntity));
+                retVal.Manufacturer = DataTypeConverter.CreateNonVersionedReference<Organization>(manufacturer.LoadProperty(o=>o.SourceEntity));
             }
 
             // Form

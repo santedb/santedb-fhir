@@ -2504,5 +2504,17 @@ namespace SanteDB.Messaging.FHIR.Util
             };
 
         }
+
+        /// <summary>
+        /// Convert to an annotation
+        /// </summary>
+        internal static Hl7.Fhir.Model.Annotation ToAnnotation(ActNote note)
+        {
+            return new Hl7.Fhir.Model.Annotation()
+            {
+                Author = DataTypeConverter.CreateNonVersionedReference<Practitioner>(note.LoadProperty(o => o.Author)),
+                Text = new Markdown(note.Text)
+            };
+        }
     }
 }

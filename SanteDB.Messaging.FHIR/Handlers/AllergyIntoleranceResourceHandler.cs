@@ -117,14 +117,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 if (null != recordtarget)
                 {
-                    retVal.Patient = DataTypeConverter.CreateVersionedReference<Patient>(recordtarget.LoadProperty<Entity>(nameof(recordtarget.PlayerEntity)));
+                    retVal.Patient = DataTypeConverter.CreateNonVersionedReference<Patient>(recordtarget.LoadProperty<Entity>(nameof(recordtarget.PlayerEntity)));
                 }
 
                 var asserter = participations.FirstOrDefault(p => p.ParticipationRoleKey == ActParticipationKeys.Authororiginator);
 
                 if (null != asserter)
                 {
-                    retVal.Asserter = DataTypeConverter.CreateVersionedReference<Practitioner>(asserter.LoadProperty<Entity>(nameof(asserter.PlayerEntity)));
+                    retVal.Asserter = DataTypeConverter.CreateNonVersionedReference<Practitioner>(asserter.LoadProperty<Entity>(nameof(asserter.PlayerEntity)));
                 }
 
                 if (model.TypeConceptKey == IntoleranceObservationTypeKeys.OtherIntolerance)

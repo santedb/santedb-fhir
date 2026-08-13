@@ -248,7 +248,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     var practitioner = rel.LoadProperty(o => o.TargetEntity);
 
-                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateVersionedReference<Practitioner>(practitioner));
+                    retVal.GeneralPractitioner.Add(DataTypeConverter.CreateNonVersionedReference<Practitioner>(practitioner));
 
                     // If this is part of a bundle, include it
                     partOfBundle?.Entry.Add(new Bundle.EntryComponent

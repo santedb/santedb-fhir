@@ -146,7 +146,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         ExpiryElement = DataTypeConverter.ToFhirDateTime(matl.ExpiryDate),
                         Identifier = DataTypeConverter.ToFhirIdentifier(matl.LoadProperty(o=>o.Identifiers).FirstOrDefault()),
-                        Quantity = DataTypeConverter.ToQuantity(matl.Quantity, matl.QuantityConceptKey),
+                        Quantity = DataTypeConverter.ToQuantity(matl.Quantity, matl.QuantityConceptKey, matl.LoadProperty(o=>o.QuantityConcept)),
                         Extension = new List<Extension>()
                         {
                             new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-perQuantity", new Quantity((decimal?)m.Quantity ?? 1, model.LoadProperty(o=>o.QuantityConcept)?.Mnemonic)),
@@ -162,7 +162,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     ExpiryElement = DataTypeConverter.ToFhirDateTime(m.ExpiryDate),
                     Identifier = DataTypeConverter.ToFhirIdentifier(m.LoadProperty(o=>o.Identifiers).FirstOrDefault()),
-                    Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.QuantityConceptKey),
+                    Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.QuantityConceptKey, m.LoadProperty(o=>o.QuantityConcept)),
                     Extension = new List<Extension>()
                         {
                             new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-batchNumber", new FhirString(m.LotNumber)),
@@ -178,7 +178,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     new Substance.InstanceComponent
                     {
                         ExpiryElement = DataTypeConverter.ToFhirDateTime(model.ExpiryDate),
-                        Quantity = DataTypeConverter.ToQuantity(model.Quantity, model.QuantityConceptKey)
+                        Quantity = DataTypeConverter.ToQuantity(model.Quantity, model.QuantityConceptKey, model.LoadProperty(o=>o.QuantityConcept))
                     }
                 };
             }
