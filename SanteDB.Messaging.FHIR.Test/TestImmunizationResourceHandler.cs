@@ -276,7 +276,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var randomGuidKey = Guid.NewGuid();
 
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>());
+            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ActRelationship>>());
 
             //check to ensure immunization instance can be mapped
             var result = immunizationResourceHandler.CanMapObject(new Immunization());
@@ -317,7 +317,7 @@ namespace SanteDB.Messaging.FHIR.Test
         public void TestGetInteractions()
         {
             var localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>());
+            var immunizationResourceHandler = new ImmunizationResourceHandler(m_substanceAdministrationRepositoryService, localizationService, ApplicationServiceContext.Current.GetService<IRepositoryService<Material>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ManufacturedMaterial>>(), ApplicationServiceContext.Current.GetService<IRepositoryService<ActRelationship>>());
             var methodInfo = typeof(ImmunizationResourceHandler).GetMethod("GetInteractions", BindingFlags.Instance | BindingFlags.NonPublic);
             var interactions = methodInfo.Invoke(immunizationResourceHandler, null);
 

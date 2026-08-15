@@ -102,7 +102,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 case Hl7.Fhir.Model.Bundle.BundleType.Transaction:
                     {
-                        var sdbResult = this.m_bundleRepository.Insert(this.MapToModel(target) as Core.Model.Collection.Bundle);
+                        var rqBundle = this.MapToModel(target) as Core.Model.Collection.Bundle;
+                        var submittedIds = rqBundle.Item.Select(o => o.Key).ToArray();
+                        var sdbResult = this.m_bundleRepository.Insert(rqBundle);
+
+                        // Clean up the bundle
+                        sdbResult.Item.RemoveAll(rs => !submittedIds.Contains(rs.Key));
+
                         var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
                         retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;
                         return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, retVal);

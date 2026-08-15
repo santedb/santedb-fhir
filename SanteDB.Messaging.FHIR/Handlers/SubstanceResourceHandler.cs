@@ -18,7 +18,10 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Wordprocessing;
 using Hl7.Fhir.Model;
+using SanteDB.Core;
+using SanteDB.Core.Configuration;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -37,11 +40,30 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// </summary>
     public class SubstanceResourceHandler : RepositoryResourceHandlerBase<Substance, Material>
     {
+
+        private static readonly Dictionary<Guid, String[]> s_SubstanceCategoryMap = new Dictionary<Guid, string[]>()
+        {
+            { Guid.Parse("ab16722f-dcf5-4f5a-9957-8f87dbb390d5"), new string[] { "drug" } }, // Vaccine Types
+            { Guid.Parse("17331147-6e27-4adb-84b4-da105bf41094"), new string[] { "material" } }, // Non vaccine materials
+            { Guid.Parse("95adad16-ee63-11f0-b880-473a6773217a"), new string[] { "allergen" } }, // Allergens and drugs
+            { Guid.Parse("b0a6517c-ee63-11f0-9845-bb9c635e6df3"), new string[] { "allergen", "food" } }, // Foods and allergens
+            { Guid.Parse("d9e73f44-330f-11ef-9f7d-a344f6cb283f"), new string[] { "drug" } } // Supplements
+        };
+
+
+        private readonly IConceptRepositoryService m_conceptRepository;
+        private readonly IRepositoryService<EntityRelationship> m_relationshipRepository;
+
         /// <summary>
         /// Create new resource handler
         /// </summary>
-        public SubstanceResourceHandler(IRepositoryService<Material> repo, ILocalizationService localizationService) : base(repo, localizationService)
+        public SubstanceResourceHandler(IRepositoryService<Material> repo, 
+            IRepositoryService<EntityRelationship> relationshipRepository, 
+            IConceptRepositoryService conceptRepository,
+            ILocalizationService localizationService) : base(repo, localizationService)
         {
+            this.m_conceptRepository = conceptRepository;
+            this.m_relationshipRepository = relationshipRepository;
         }
 
         /// <inheritdoc />
@@ -100,20 +122,53 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Category and code
             retVal.Category = new List<CodeableConcept>
             {
-                DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://terminology.hl7.org/CodeSystem/substance-category")
+                DataTypeConverter.ToFhirCodeableConcept(model.ClassConceptKey, "http://terminology.hl7.org/CodeSystem/substance-category")
             };
 
-            retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey, "http://snomed.info/sct");
-            retVal.Description = model.LoadCollection<EntityName>(nameof(model.Names)).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>(nameof(EntityName.Component))?.FirstOrDefault()?.Value;
-
-            // TODO: Instance or kind
-            if (model.DeterminerConceptKey == DeterminerKeys.Described)
+            foreach(var km in s_SubstanceCategoryMap)
             {
-                retVal.Instance = model.LoadCollection<EntityRelationship>(nameof(model.Relationships)).Where(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance).Select(s => s.LoadProperty<Material>(nameof(EntityRelationship.TargetEntity))).Select(m => new Substance.InstanceComponent
+                if(this.m_conceptRepository.IsMember(km.Key, model.TypeConceptKey.Value)) {
+                    retVal.Category.AddRange(km.Value.Where(v => !retVal.Category.OfType<CodeableConcept>().Any(c => c.GetCoding()?.Code == v)).Select(c => new CodeableConcept("http://terminology.hl7.org/CodeSystem/substance-category", c)));
+                }
+            }
+
+            retVal.Category.RemoveAll(o => !(o is CodeableConcept));
+
+            retVal.Code = DataTypeConverter.ToFhirCodeableConceptPreferred(model.LoadProperty(o => o.TypeConcept), "http://snomed.info/sct");
+            retVal.Description = model.LoadCollection<EntityName>(nameof(model.Names)).FirstOrDefault(o => o.NameUseKey == NameUseKeys.OfficialRecord)?.LoadCollection<EntityNameComponent>(nameof(EntityName.Component))?.FirstOrDefault()?.Value;
+            
+            // TODO: Instance or kind
+            if(model.DeterminerConceptKey == DeterminerKeys.Described)
+            {
+                retVal.Instance = this.m_relationshipRepository.Find(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.HasGenerialization && o.TargetEntityKey == model.Key && o.ObsoleteVersionSequenceId == null).ToArray().Select(m => {
+                    var matl = m.LoadProperty(o => o.SourceEntity) as Material;
+                    return new Substance.InstanceComponent()
+                    {
+                        ExpiryElement = DataTypeConverter.ToFhirDateTime(matl.ExpiryDate),
+                        Identifier = DataTypeConverter.ToFhirIdentifier(matl.LoadProperty(o=>o.Identifiers).FirstOrDefault()),
+                        Quantity = DataTypeConverter.ToQuantity(matl.Quantity, matl.QuantityConceptKey),
+                        Extension = new List<Extension>()
+                        {
+                            new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-perQuantity", new Quantity((decimal?)m.Quantity ?? 1, model.LoadProperty(o=>o.QuantityConcept)?.Mnemonic)),
+                            new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-name", new FhirString(matl.LoadProperty(o=>o.Names).FirstOrDefault()?.ToDisplay())),
+                            matl is ManufacturedMaterial ? new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-ref", DataTypeConverter.CreateNonVersionedReference<Medication>(matl)) : new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-ref", DataTypeConverter.CreateNonVersionedReference<Substance>(matl)),
+                        }
+                    };
+                }).ToList();
+            }
+            else if (model.DeterminerConceptKey == DeterminerKeys.DescribedQualified)
+            {
+                retVal.Instance = model.LoadProperty(o=>o.Relationships).Where(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance).Select(s => s.LoadProperty<ManufacturedMaterial>(nameof(EntityRelationship.TargetEntity))).Select(m => new Substance.InstanceComponent
                 {
-                    ExpiryElement = DataTypeConverter.ToFhirDateTime(model.ExpiryDate),
-                    Identifier = DataTypeConverter.ToFhirIdentifier(m.LoadCollection<EntityIdentifier>(nameof(m.Identifiers))?.FirstOrDefault()),
-                    Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.QuantityConceptKey)
+                    ExpiryElement = DataTypeConverter.ToFhirDateTime(m.ExpiryDate),
+                    Identifier = DataTypeConverter.ToFhirIdentifier(m.LoadProperty(o=>o.Identifiers).FirstOrDefault()),
+                    Quantity = DataTypeConverter.ToQuantity(m.Quantity, m.QuantityConceptKey),
+                    Extension = new List<Extension>()
+                        {
+                            new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-batchNumber", new FhirString(m.LotNumber)),
+                            new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-name", new FhirString(m.LoadProperty(o=>o.Names).FirstOrDefault()?.ToDisplay())),
+                            new Extension($"{FhirConstants.SanteDBProfile}/extensions/substanceInstance-ref", DataTypeConverter.CreateNonVersionedReference<Medication>(m))
+                        }
                 }).ToList();
             }
             else if (model.DeterminerConceptKey == DeterminerKeys.Specific)

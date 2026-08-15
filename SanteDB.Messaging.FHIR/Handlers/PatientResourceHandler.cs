@@ -516,7 +516,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Extensions.AddRange(fhirExtensions);
 
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
-            patient.Policies = resource.Meta?.Security?.Select(o => DataTypeConverter.ToSecurityPolicy(o)).ToList() ?? new List<Core.Model.Security.SecurityPolicyInstance>();
+            patient.Policies = resource.Meta?.Security?.SelectMany(o => DataTypeConverter.ToSecurityPolicy(o)).Distinct(new SecurityPolicyInstanceComparer()).ToList() ?? new List<Core.Model.Security.SecurityPolicyInstance>();
             patient.MaritalStatus = resource.MaritalStatus == null ? null : DataTypeConverter.ToConcept(resource.MaritalStatus);
 
             // TODO: fix
@@ -855,6 +855,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             });
         }
+
     }
 }
 #pragma warning restore
