@@ -54,7 +54,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         {
             if (modelObject is Core.Model.Roles.Patient patient && (patient.VipStatusKey.HasValue || patient.VipStatus != null))
             {
-                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.VipStatusKey ?? patient.VipStatus?.Key));
+                yield return new Extension(this.Uri.ToString(), DataTypeConverter.ToFhirCodeableConcept(patient.VipStatusKey ?? patient.VipStatus?.Key, "http://terminology.hl7.org/CodeSystem/v3-PatientImportance", "http://hl7.org/fhir/v3-NullFlavor"));
             }
         }
 

@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup Condition="'$(VersionNumber)' == ''">
-		<VersionNumber>3.0-debug</VersionNumber>
+		<VersionNumber>3.1-debug</VersionNumber>
 	</PropertyGroup>
 	<PropertyGroup>
 		<TargetFrameworks>net10.0;net48;netstandard2.0</TargetFrameworks>
@@ -26,10 +26,10 @@
 	</PropertyGroup>
 	<ItemGroup>
 		<PackageReference Include="Hl7.Fhir.Specification.R4B" Version="4.3.0" />
-		<PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.3.0" />
-		<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.3.0" />
+		<PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="[8.19.2, 9)" />
+		<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="[8.19.2, 9)" />
 		<PackageReference Include="Newtonsoft.Json" Version="[13.0.4,13.1)" />
-		<PackageReference Include="System.Runtime.Caching" Version="9.0.0" />
+		<PackageReference Include="System.Runtime.Caching" Version="[9.0.0,10)" />
 	</ItemGroup>
 	<Choose>
 		<When Condition="$(SolutionName.Contains('-nuget'))">

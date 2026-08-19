@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Operations
             }
 
             // Message must have a message header
-            var messageHeader = contentParameter.Entry.Find(o => o.Resource.TryDeriveResourceType(out ResourceType rt) && rt == ResourceType.MessageHeader)?.Resource as MessageHeader;
+            var messageHeader = contentParameter.Entry.Find(o => o.Resource != null & o.Resource.TryDeriveResourceType(out ResourceType rt) == true && rt == ResourceType.MessageHeader)?.Resource as MessageHeader;
             if (messageHeader == null)
             {
                 this.m_tracer.TraceError("Message bundle does not contain a MessageHeader");
@@ -130,7 +130,7 @@ namespace SanteDB.Messaging.FHIR.Operations
                 try
                 {
                     // HACK: The .EndsWith is a total hack - FHIR wants .FullUrl to be absolute, but many senders will send relative references which
-                    var opReturn = handler.Invoke(messageHeader, contentParameter.Entry.Where(o => messageHeader.Focus.Any(f => o.FullUrl == f.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == f.Reference)).ToArray());
+                    var opReturn = handler.Invoke(messageHeader, contentParameter.Entry.Where(o => messageHeader.Focus.Any(f => o.FullUrl == f.Reference || o.Resource != null && $"{o.Resource.TypeName}/{o.Resource.Id}" == f.Reference)).ToArray());
 
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {

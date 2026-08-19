@@ -18,16 +18,22 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Annotation;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -96,7 +102,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 case Hl7.Fhir.Model.Bundle.BundleType.Transaction:
                     {
-                        var sdbResult = this.m_bundleRepository.Insert(this.MapToModel(target) as Core.Model.Collection.Bundle);
+                        var rqBundle = this.MapToModel(target) as Core.Model.Collection.Bundle;
+                        var submittedIds = rqBundle.Item.Select(o => o.Key).ToArray();
+                        var sdbResult = this.m_bundleRepository.Insert(rqBundle);
+
+                        // Clean up the bundle
+                        sdbResult.Item.RemoveAll(rs => !submittedIds.Contains(rs.Key));
+
                         var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
                         retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;
                         return ExtensionUtil.ExecuteBeforeSendResponseBehavior(TypeRestfulInteraction.Create, ResourceType.Bundle, retVal);
@@ -266,58 +278,111 @@ namespace SanteDB.Messaging.FHIR.Handlers
             fhirBundle.Entry.ForEach(entry =>
             {
                 // Allow this entry to know its context in the bundle
-                entry.Resource.AddAnnotation(fhirBundle);
-                entry.Resource.AddAnnotation(sdbBundle);
+                entry.Resource?.AddAnnotation(fhirBundle);
+                entry.Resource?.AddAnnotation(sdbBundle);
             });
+
+            // Is there a focal set of objects
+            var aboutEntries = fhirBundle.Link.Where(o => o.Relation == "about").Select(o => o.Url);
 
             foreach (var entry in fhirBundle.Entry)
             {
-                if (!entry.Resource.TryDeriveResourceType(out ResourceType entryType))
+                IdentifiedData processedObject = null;
+                if(entry.Resource == null)
+                {
+                    // Attempt to load any resource
+                    if (String.IsNullOrEmpty(entry.Request.Url))
+                    {
+                        throw new ArgumentNullException(String.Format(ErrorMessages.MISSING_VALUE, "result"));
+                    }
+                    var parts = entry.Request.Url.Split('/');
+                    var handler = FhirResourceHandlerUtil.GetMappersFor(parts[0]).SingleOrDefault();
+                    // Create a new reference 
+                    processedObject = new IdentifiedDataReference()
+                    {
+                        ReferencedType = handler.CanonicalType,
+                        Key = Guid.Parse(parts[1])
+                    };
+                    sdbBundle.Add(processedObject);
+                }
+                else if (!entry.Resource.TryDeriveResourceType(out ResourceType entryType))
                 {
                     continue;
                 }
-                var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
+                else if (!entry.HasAnnotation<FhirAlreadyProcessedAnnotation>() &&
+                    !entry.Resource.HasAnnotation<FhirAlreadyProcessedAnnotation>()
+                )
+                {
+                    // has not been processed
 
-                // Map and add to bundle
-                var itm = handler.MapToModel(entry.Resource);
-                sdbBundle.Remove(itm.Key.GetValueOrDefault());
-                sdbBundle.Add(itm);
+                    var handler = FhirResourceHandlerUtil.GetResourceHandler(entryType) as IFhirResourceMapper;
+                    if (handler == null)
+                    {
+                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, $"Resource {entryType} not supported on this server");
+                    }
+
+                    // Map and add to bundle
+                    processedObject = handler.MapToModel(entry.Resource);
+                    if (processedObject == null)
+                    {
+                        continue;
+                    }
+
+                    if (!entry.HasAnnotation<FhirAlreadyProcessedAnnotation>())
+                    {
+                        entry.AddAnnotation(new FhirAlreadyProcessedAnnotation(processedObject));
+                    }
+
+                    sdbBundle.Remove(processedObject.Key.GetValueOrDefault());
+                    sdbBundle.Add(processedObject);
+
+                }
+                else
+                {
+                    // Attempt to find the bundle object
+                    processedObject = entry.Annotation<FhirAlreadyProcessedAnnotation>()?.ProcessedResource ??
+                        entry.Resource.Annotation<FhirAlreadyProcessedAnnotation>()?.ProcessedResource;
+                }
 
                 switch (entry.Request?.Method ?? Bundle.HTTPVerb.POST)
                 {
                     case Bundle.HTTPVerb.PUT:
-                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Update;
-                        break;
                     case Bundle.HTTPVerb.POST:
-                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.InsertOrUpdate;
+                        processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.InsertOrUpdate;
                         break;
                     case Bundle.HTTPVerb.DELETE:
-                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Delete;
+                        processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.Delete;
                         break;
                     case Bundle.HTTPVerb.GET:
                     case Bundle.HTTPVerb.HEAD:
-                        itm.BatchOperation = Core.Model.DataTypes.BatchOperationType.Ignore;
+                        processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.Ignore;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.ARGUMENT_OUT_OF_RANGE, entry.Request.Method, "PUT, POST, DELETE, GET, HEAD"));
                 }
+
                 // HACK: If the ITM is a relationship or participation insert it into the bundle
-                if (itm is ITargetedAssociation targetedAssociation && targetedAssociation.TargetEntity != null)
+                if (processedObject is ITargetedAssociation targetedAssociation && targetedAssociation.TargetEntity != null)
                 {
                     sdbBundle.Insert(sdbBundle.Item.Count - 1, targetedAssociation.TargetEntity as IdentifiedData);
-                    itm = targetedAssociation.TargetEntity as IdentifiedData;
+                    processedObject = targetedAssociation.TargetEntity as IdentifiedData;
                 }
 
                 // Add original URLs so that subsequent bundle entries (which might reference this entry) can resolve
-                if (itm is ITaggable taggable)
+                if (processedObject is ITaggable taggable)
                 {
                     taggable.AddTag(FhirConstants.OriginalUrlTag, entry.FullUrl);
-                    taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource.Id);
+                    taggable.AddTag(FhirConstants.OriginalIdTag, entry.Resource?.Id);
                 }
 
-                if (entry.Request != null)
+                if (entry.Request != null &&
+                    (
+                    !aboutEntries.Any() ||
+                    aboutEntries.Contains(entry.FullUrl)
+                    )
+                )
                 {
-                    sdbBundle.FocalObjects.Add(itm.Key.Value);
+                    sdbBundle.FocalObjects.Add(processedObject.Key.Value);
                 }
             }
 

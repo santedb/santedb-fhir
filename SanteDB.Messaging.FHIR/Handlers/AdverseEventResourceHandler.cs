@@ -330,10 +330,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         protected override IQueryResultSet<Act> QueryInternal(Expression<Func<Act, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
-            var typeReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(Act).GetProperty(nameof(Act.ClassConceptKey))), typeof(Guid)), Expression.Constant(ActClassKeys.Condition));
+            var typeReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(Act).GetProperty(nameof(Act.ClassConceptKey))), typeof(Guid)), Expression.Constant(ActClassKeys.Cluster));
 
             var anyRef = this.CreateConceptSetFilter(ConceptSetKeys.AdverseEventActs, query.Parameters[0]);
-            query = Expression.Lambda<Func<Act, bool>>(Expression.AndAlso(Expression.AndAlso(query.Body, anyRef), typeReference), query.Parameters);
+            query = Expression.Lambda<Func<Act, bool>>(Expression.AndAlso(query.Body, Expression.AndAlso(Expression.AndAlso(query.Body, anyRef), typeReference)), query.Parameters);
 
             return base.QueryInternal(query, fhirParameters, hdsiParameters);
         }

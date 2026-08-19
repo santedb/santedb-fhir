@@ -45,6 +45,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Security.Services;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Annotation;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
@@ -77,10 +78,17 @@ namespace SanteDB.Messaging.FHIR.Util
     public static class DataTypeConverter
     {
 
+        private static readonly Guid[] IGNORE_EXTENSIONS = new Guid[]
+        {
+            ExtensionTypeKeys.JpegPhotoExtension,
+            ExtensionTypeKeys.DataQualityExtension,
+        };
+
         private static readonly Guid[] IGNORE_RELATIONS_INBUNDLE = new Guid[]
         {
             EntityRelationshipTypeKeys.Replaces,
-            ActRelationshipTypeKeys.Replaces
+            ActRelationshipTypeKeys.Replaces,
+            EntityRelationshipTypeKeys.Duplicate
         };
 
         /// <summary>
@@ -96,6 +104,9 @@ namespace SanteDB.Messaging.FHIR.Util
 
         // Security repository
         private static ISecurityRepositoryService m_secService = ApplicationServiceContext.Current.GetService<ISecurityRepositoryService>();
+
+        // Security Repository
+        private static IConceptRepositoryService m_conceptRepository = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
         // CX Devices
         private static readonly Regex m_cxDevice = new Regex(@"^(.*?)\^\^\^([A-Z_0-9]*)(?:&(.*?)&ISO)?", RegexOptions.Compiled | RegexOptions.IgnoreCase);
@@ -125,7 +136,6 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static AuditEvent ToSecurityAudit(AuditEventData audit)
         {
-            var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
             var retVal = new AuditEvent()
             {
@@ -134,7 +144,7 @@ namespace SanteDB.Messaging.FHIR.Util
             };
 
             // Event type primary classifier
-            var idConcept = conceptService.GetConceptReferenceTerm($"SecurityAuditCode-{audit.EventIdentifier}", "DCM");
+            var idConcept = m_conceptRepository.GetConceptReferenceTerm($"SecurityAuditCode-{audit.EventIdentifier}", "DCM");
             if (idConcept != null)
             {
                 retVal.Type = ToCoding(idConcept);
@@ -143,7 +153,7 @@ namespace SanteDB.Messaging.FHIR.Util
             // Event sub-type
             if (audit.EventTypeCode != null)
             {
-                var refTerm = conceptService.GetConceptReferenceTerm(audit.EventTypeCode.Code, "DCM");
+                var refTerm = m_conceptRepository.GetConceptReferenceTerm(audit.EventTypeCode.Code, "DCM");
                 if (refTerm != null)
                 {
                     retVal.Subtype.Add(ToCoding(refTerm));
@@ -231,8 +241,8 @@ namespace SanteDB.Messaging.FHIR.Util
                 retVal.Agent.Add(new AuditEvent.AgentComponent()
                 {
                     AltId = act.AlternativeUserId,
-                    Role = act.ActorRoleCode.Skip(1).Select(o => ToFhirCodeableConcept(conceptService.GetConceptByReferenceTerm(o.Code, o.CodeSystem).Key)).ToList(),
-                    Type = act.ActorRoleCode.Take(1).Select(o => ToFhirCodeableConcept(conceptService.GetConceptByReferenceTerm(o.Code, o.CodeSystem).Key)).FirstOrDefault(),
+                    Role = act.ActorRoleCode.Skip(1).Select(o => ToFhirCodeableConcept(m_conceptRepository.GetConceptByReferenceTerm(o.Code, o.CodeSystem).Key)).ToList(),
+                    Type = act.ActorRoleCode.Take(1).Select(o => ToFhirCodeableConcept(m_conceptRepository.GetConceptByReferenceTerm(o.Code, o.CodeSystem).Key)).FirstOrDefault(),
                     Name = act.UserName,
                     Network = new AuditEvent.NetworkComponent()
                     {
@@ -619,12 +629,14 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// To quantity
         /// </summary>
-        public static Quantity ToQuantity(decimal? quantity, Guid? unitConceptKey)
+        public static Quantity ToQuantity(decimal? quantity, Guid? unitConceptKey, Concept quantityConcept = null)
         {
+            var ucumCode = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code;
             return new Quantity()
             {
                 Value = quantity,
-                Unit = DataTypeConverter.ToFhirCodeableConcept(unitConceptKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code
+                Unit = ucumCode ?? quantityConcept?.Mnemonic,
+                System = ucumCode == null ? FhirConstants.SanteDBConceptSystem : null
             };
         }
 
@@ -806,7 +818,7 @@ namespace SanteDB.Messaging.FHIR.Util
             // TODO: Configure this namespace / coding scheme
             if (resource is IHasPolicies ihp)
             {
-                retVal.Meta.Security = ihp.Policies?.Select(o => new Coding(FhirConstants.SecurityPolicySystem, o.LoadProperty(a => a.Policy).Oid, o.Policy.Name)).ToList();
+                retVal.Meta.Security = ihp.Policies?.SelectMany(DataTypeConverter.ToSecurityCoding).OfType<Coding>().Distinct(new CodingEquityComparer()).ToList();
             }
             else
             {
@@ -854,6 +866,20 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// To security coding
+        /// </summary>
+        private static IEnumerable<Coding> ToSecurityCoding(SecurityPolicyInstance instance)
+        {
+            yield return new Coding(FhirConstants.SecurityPolicySystem, instance.LoadProperty(a => a.Policy).Oid, instance.Policy.Name);
+
+            // Attempt to get a standardized classification
+            if (instance.Policy.ClassConceptKey.HasValue)
+            {
+                yield return DataTypeConverter.ToFhirCodeableConcept(instance.Policy.ClassConceptKey, "http://terminology.hl7.org/CodeSystem/v3-Confidentiality", "http://terminology.hl7.org/CodeSystem/v3-ActCode")?.GetCoding();
+            }
+        }
+
+        /// <summary>
         /// Add extensions from <paramref name="extendable"/> to <paramref name="fhirExtension"/>
         /// </summary>
         /// <returns>The extensions that were applied</returns>
@@ -864,7 +890,7 @@ namespace SanteDB.Messaging.FHIR.Util
             if (resource != null && resource.TryDeriveResourceType(out ResourceType rt))
             {
                 fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IAnnotatedResource, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).ToList();
-                fhirExtension.Extension.AddRange(extendable.Extensions.Where(o => o.ExtensionTypeKey != ExtensionTypeKeys.JpegPhotoExtension).Select(DataTypeConverter.ToExtension));
+                fhirExtension.Extension.AddRange(extendable.Extensions.Where(o => !IGNORE_EXTENSIONS.Contains(o.ExtensionTypeKey)).Select(DataTypeConverter.ToExtension));
 
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
@@ -1301,7 +1327,6 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static bool TryToConcept(String code, String system, out Concept concept)
         {
-            var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
             if (String.IsNullOrEmpty(system))
             {
@@ -1310,11 +1335,11 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (FhirConstants.SanteDBConceptSystem.Equals(system))
             {
-                concept = conceptService.GetConcept(code);
+                concept = m_conceptRepository.GetConcept(code);
             }
             else
             {
-                concept = conceptService.GetConceptByReferenceTerm(code, system);
+                concept = m_conceptRepository.GetConceptByReferenceTerm(code, system);
             }
 
             return concept != null;
@@ -1493,7 +1518,7 @@ namespace SanteDB.Messaging.FHIR.Util
             fhirAddress.Extension.Where(o => o.Url.StartsWith(FhirConstants.SanteDBProfile + "#address-")).ForEach(ae =>
             {
                 var addressPart = ae.Url.Substring(FhirConstants.SanteDBProfile.Length + 9);
-                if (TryToConcept(addressPart, FhirConstants.SanteDBConceptSystem, out var componentType) && 
+                if (TryToConcept(addressPart, FhirConstants.SanteDBConceptSystem, out var componentType) &&
                     ae.Value is FhirString fs)
                 {
                     address.Component.Add(new EntityAddressComponent(componentType.Key.Value, fs.Value));
@@ -1705,7 +1730,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
                 else
                 {
-                    resolvedResource = fhirBundle?.Entry.FirstOrDefault(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.Resource;
+                    resolvedResource = fhirBundle?.Entry.FirstOrDefault(o => o.FullUrl == resourceRef.Reference || o.Resource != null && $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.Resource;
                     return resolvedResource != null;
                 }
             }
@@ -1794,11 +1819,20 @@ namespace SanteDB.Messaging.FHIR.Util
                         {
                             // HACK: the .FindEntry might not work since the fullUrl may be relative - we should be permissive on a reference resolution to allow for relative links
                             //var fhirResource = fhirBundle.FindEntry(resourceRef);
-                            var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.FirstOrDefault();
-                            if (fhirResource != null)
+                            var fhirResource = fhirBundle?.Entry.Where(o => o.FullUrl == resourceRef.Reference || o.Resource != null && $"{o.Resource.TypeName}/{o.Resource.Id}" == resourceRef.Reference)?.FirstOrDefault();
+                            if (fhirResource?.HasAnnotation<FhirAlreadyProcessedAnnotation>() == true)
+                            {
+                                retVal = (TEntity)fhirResource.Annotation<FhirAlreadyProcessedAnnotation>().ProcessedResource;
+                            }
+                            else if (fhirResource?.Resource?.HasAnnotation<FhirAlreadyProcessedAnnotation>() == true)
+                            {
+                                retVal = (TEntity)fhirResource.Resource.Annotation<FhirAlreadyProcessedAnnotation>().ProcessedResource;
+                            }
+                            else if (fhirResource != null)
                             {
                                 // TODO: Error trapping
                                 retVal = (TEntity)FhirResourceHandlerUtil.GetMapperForInstance(fhirResource.Resource).MapToModel(fhirResource.Resource);
+                                fhirResource.AddAnnotation(new FhirAlreadyProcessedAnnotation(retVal));
                                 sdbBundle.Item.Add(retVal);
                             }
                         }
@@ -1922,12 +1956,11 @@ namespace SanteDB.Messaging.FHIR.Util
                 var telecomSchemeMatch = m_telecomUri.Match(fhirTelecom.Value);
                 if (telecomSchemeMatch.Success) // Escape the values
                 {
-                    var conceptService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
                     var claimedScheme = ToConcept(typeMnemonic, "http://hl7.org/fhir/contact-point-system")?.Key ?? NullReasonKeys.Other;
                     var scheme = telecomSchemeMatch.Groups[1].Value;
                     var schemeBin = Encoding.UTF8.GetBytes(scheme);
 
-                    var registeredScheme = conceptService.Find(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.Rfc3986SchemeExtension).Any(e => e.ExtensionValueData == schemeBin)).FirstOrDefault();
+                    var registeredScheme = m_conceptRepository.Find(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.Rfc3986SchemeExtension).Any(e => e.ExtensionValueData == schemeBin)).FirstOrDefault();
 
                     // We couldn't find the scheme 
                     if (registeredScheme == null)
@@ -2040,38 +2073,37 @@ namespace SanteDB.Messaging.FHIR.Util
                     return null;
                 }
 
-                var codeSystemService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
 
                 // No preferred CS then all
                 if (!preferredCodeSystem.Any())
                 {
-                    var refTerms = codeSystemService.FindReferenceTermsByConcept(conceptKey.Value, String.Empty);
+                    var refTerms = m_conceptRepository.FindReferenceTermsByConcept(conceptKey.Value, String.Empty);
                     if (refTerms.Any())
                     {
                         return new CodeableConcept
                         {
                             Coding = refTerms.Where(o => o.RelationshipTypeKey == ConceptRelationshipTypeKeys.SameAs).Select(o => ToCoding(o.LoadProperty(t => t.ReferenceTerm))).ToList(),
-                            Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                            Text = m_conceptRepository.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
                         };
                     }
                     else
                     {
-                        var concept = codeSystemService.Get(conceptKey.Value);
+                        var concept = m_conceptRepository.Get(conceptKey.Value);
                         return new CodeableConcept(FhirConstants.SanteDBConceptSystem, concept.Mnemonic)
                         {
-                            Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                            Text = m_conceptRepository.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
                         };
                     }
                 }
                 else
                 {
-                    var refTerms = preferredCodeSystem.Select(o => codeSystemService.GetConceptReferenceTerm(conceptKey.Value, o, false)).OfType<ReferenceTerm>().ToArray();
+                    var refTerms = preferredCodeSystem.Select(o => m_conceptRepository.GetConceptReferenceTerm(conceptKey.Value, o, false)).OfType<ReferenceTerm>().ToArray();
                     if (refTerms.Any())
                     {
                         return new CodeableConcept
                         {
                             Coding = refTerms.Select(o => ToCoding(o)).ToList(),
-                            Text = codeSystemService.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
+                            Text = m_conceptRepository.GetName(conceptKey.Value, CultureInfo.CurrentCulture.TwoLetterISOLanguageName)
                         };
                     }
                     else
@@ -2308,19 +2340,38 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Convert to a security policy
         /// </summary>
-        internal static SecurityPolicyInstance ToSecurityPolicy(Coding securityCoding)
+        internal static IEnumerable<SecurityPolicyInstance> ToSecurityPolicy(Coding securityCoding)
         {
             if (!String.IsNullOrEmpty(securityCoding.System) && !securityCoding.System.Equals(FhirConstants.SecurityPolicySystem))
             {
-                throw new ArgumentOutOfRangeException(nameof(securityCoding.System), $"Security policies must be drawn from the SanteDB {FhirConstants.SecurityPolicySystem}");
+                var concept = m_conceptRepository.GetConceptByReferenceTerm(securityCoding.Code, securityCoding.System);
+                // Attempt to find the security policy which is classified as the provided code 
+                if (concept == null)
+                {
+                    throw new FhirException(HttpStatusCode.BadRequest, IssueType.CodeInvalid, $"{securityCoding.Code} in system {securityCoding.System} is not configured");
+                }
+
+                var policies = m_pipService.GetPoliciesByClassification(concept.Key.Value);
+                if (!policies.Any())
+                {
+                    throw new FhirException(HttpStatusCode.BadRequest, IssueType.BusinessRule, $"{securityCoding.Code} in system {securityCoding.System} is not mapped to any security policies");
+                }
+
+                foreach (var pol in policies)
+                {
+                    yield return new SecurityPolicyInstance(new SecurityPolicy(pol.Name, pol.Oid, true, pol.CanOverride, pol.Classification) { Key = pol.Key }, PolicyGrantType.Grant);
+                }
             }
-            var policy = m_pipService.GetPolicy(securityCoding.Code);
-            if (policy == null)
+            else
             {
-                throw new InvalidOperationException(String.Format(ErrorMessages.DEPENDENT_CONFIGURATION_MISSING, securityCoding.Code));
+                var policy = m_pipService.GetPolicy(securityCoding.Code);
+                if (policy == null)
+                {
+                    throw new InvalidOperationException(String.Format(ErrorMessages.DEPENDENT_CONFIGURATION_MISSING, securityCoding.Code));
+                }
+                yield return new SecurityPolicyInstance(new SecurityPolicy(policy.Name, policy.Oid, true, policy.CanOverride, policy.Classification) { Key = policy.Key }, PolicyGrantType.Grant);
             }
 
-            return new SecurityPolicyInstance(new SecurityPolicy(policy.Name, policy.Oid, true, policy.CanOverride) { Key = policy.Key }, PolicyGrantType.Grant);
         }
 
         /// <summary>
@@ -2474,8 +2525,8 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 return null;
             }
-            var codeSystemService = ApplicationServiceContext.Current.GetService<IConceptRepositoryService>();
-            var codings = codeSystemService.FindReferenceTermsByConcept(concept.Key.Value, String.Empty)
+
+            var codings = m_conceptRepository.FindReferenceTermsByConcept(concept.Key.Value, String.Empty)
                     .Select(o => ToCoding(o.LoadProperty(p => p.ReferenceTerm)))
                     .OrderBy(o => o.System == preferredTerminology ? 0 : 1);
             return new CodeableConcept()
@@ -2485,5 +2536,32 @@ namespace SanteDB.Messaging.FHIR.Util
             };
 
         }
+    }
+
+    /// <summary>
+    /// Coding equity comparer
+    /// </summary>
+    internal class CodingEquityComparer : IEqualityComparer<Coding>
+    {
+        public bool Equals(Coding x, Coding y)
+        {
+            return x?.Code == y?.Code && x.System == y?.System;
+        }
+
+        public int GetHashCode(Coding obj)
+        {
+            return (obj?.Code?.GetHashCode() ?? 0) ^
+                (obj.System?.GetHashCode() ?? 0);
+        }
+    }
+
+    /// <summary>
+    /// Policy instance equality comparer
+    /// </summary>
+    internal class SecurityPolicyInstanceComparer : IEqualityComparer<SecurityPolicyInstance>
+    {
+        public bool Equals(SecurityPolicyInstance x, SecurityPolicyInstance y) => (x?.PolicyKey ?? x.Policy?.Key) == (y?.PolicyKey ?? y.Policy?.Key);
+
+        public int GetHashCode(SecurityPolicyInstance obj) => (obj.PolicyKey ?? obj.Policy?.Key ?? Guid.Empty).GetHashCode();
     }
 }
