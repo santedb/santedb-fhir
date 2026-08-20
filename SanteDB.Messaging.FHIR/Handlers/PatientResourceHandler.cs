@@ -53,6 +53,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private readonly IRepositoryService<Concept> m_ConceptRepository;
         private readonly IRepositoryService<Core.Model.Entities.Person> m_personRepository;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(PatientResourceHandler));
+        
 
         /// <summary>
         /// Resource handler subscription
@@ -494,6 +495,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Mark any existing FHIR relationships of the type specified to delete 
             patient.LoadProperty(o => o.Relationships).Where(pr => fhirRelationships.Any(fr => fr.RelationshipTypeKey == pr.RelationshipTypeKey)).ForEach(pr => pr.BatchOperation = BatchOperationType.Delete);
             patient.LoadProperty(o => o.Relationships).AddRange(fhirRelationships);
+
+            // JF: Some relationships cannot be explicitly handled by FHIR (dedicated service delivery location, assigned facility, management organization) 
+            //      so we want to remove those from the relationships to allow the submitter for the FHIR bundle to indicate those relationships
+            patient.Relationships.Where(o => o.SourceEntityKey == patient.Key && o.ClassificationKey == RelationshipClassKeys.ContainedObjectLink || o.ClassificationKey == RelationshipClassKeys.ReferencedObjectLink).ForEach(rel => rel.BatchOperation = BatchOperationType.Delete);
+
             patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
 
             // JIMS-1349 -> Extensions to clear these may not be present in the FHIR message - so we clear and then allow extension handlers to reset
@@ -566,7 +572,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         }));
                     }
 
-                    return new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey);
+                    return new EntityRelationship(EntityRelationshipTypeKeys.HealthcareProvider, referenceKey) { ClassificationKey = RelationshipClassKeys.ReferencedObjectLink };
                 }));
             }
             if (resource.ManagingOrganization != null)
@@ -582,7 +588,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     }));
                 }
 
-                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Scoper, referenceKey));
+                patient.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.Scoper, referenceKey) {  ClassificationKey = RelationshipClassKeys.ReferencedObjectLink });
             }
 
             // Process contained related persons
@@ -603,7 +609,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Links
             foreach (var lnk in resource.Link)
             {
-                if (lnk.Other.Reference.Equals($"Patient/{patient.Key}"))
+                if (lnk.Other.Reference?.Equals($"Patient/{patient.Key}") == true)
                 {
                     throw new FhirException(System.Net.HttpStatusCode.NotAcceptable, OperationOutcome.IssueType.BusinessRule, "Patient links cannot point to themselves");
                 }
@@ -676,9 +682,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                         BatchOperation = BatchOperationType.InsertOrUpdate
                                     };
 
-                                    if (partOfBundle?.Item.OfType<EntityRelationship>().Any(o => o.Key == relationship.Key) == true) // A related person handler has already emitted the relationship into the bundle
+                                    var alreadyProcessedResolved = resolved.Annotation<FhirAlreadyProcessedAnnotation>();
+
+                                    var previousEntry = partOfBundle?.Item.OfType<EntityRelationship>().FirstOrDefault(o => o.Key == relationship.Key || o == alreadyProcessedResolved?.ProcessedResource);
+                                    if (previousEntry != null) // A related person handler has already emitted the relationship into the bundle
                                     {
-                                        partOfBundle.Item.OfType<EntityRelationship>().FirstOrDefault(o => o.Key == relationship.Key).TargetEntityKey = patient.Key;
+                                        partOfBundle?.Item.OfType<SanteDB.Core.Model.Entities.Person>().Where(o => o.Key == (previousEntry.TargetEntityKey ?? previousEntry.TargetEntity?.Key)).ForEach(r => r.BatchOperation = BatchOperationType.Ignore);
+                                        previousEntry.TargetEntity = null;
+                                        previousEntry.CopyObjectData(relationship, overwritePopulatedWithNull: true, ignoreTypeMismatch: false, declaredOnly: false, onlyNullFields: false);
                                     }
                                     else
                                     {
