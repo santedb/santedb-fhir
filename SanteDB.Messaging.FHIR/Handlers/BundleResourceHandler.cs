@@ -107,7 +107,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         var sdbResult = this.m_bundleRepository.Insert(rqBundle);
 
                         // Clean up the bundle
-                        sdbResult.Item.RemoveAll(rs => !submittedIds.Contains(rs.Key));
+                        sdbResult.Item.RemoveAll(rs => !submittedIds.Contains(rs.Key) || rs.BatchOperation == BatchOperationType.Ignore);
 
                         var retVal = this.MapToFhir(sdbResult) as Hl7.Fhir.Model.Bundle;
                         retVal.Type = Hl7.Fhir.Model.Bundle.BundleType.TransactionResponse;

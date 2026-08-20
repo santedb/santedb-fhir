@@ -609,7 +609,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Links
             foreach (var lnk in resource.Link)
             {
-                if (lnk.Other.Reference.Equals($"Patient/{patient.Key}"))
+                if (lnk.Other.Reference?.Equals($"Patient/{patient.Key}") == true)
                 {
                     throw new FhirException(System.Net.HttpStatusCode.NotAcceptable, OperationOutcome.IssueType.BusinessRule, "Patient links cannot point to themselves");
                 }
@@ -687,8 +687,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     var previousEntry = partOfBundle?.Item.OfType<EntityRelationship>().FirstOrDefault(o => o.Key == relationship.Key || o == alreadyProcessedResolved?.ProcessedResource);
                                     if (previousEntry != null) // A related person handler has already emitted the relationship into the bundle
                                     {
-                                        previousEntry.TargetEntityKey = patient.Key;
+                                        partOfBundle?.Item.OfType<SanteDB.Core.Model.Entities.Person>().Where(o => o.Key == (previousEntry.TargetEntityKey ?? previousEntry.TargetEntity?.Key)).ForEach(r => r.BatchOperation = BatchOperationType.Ignore);
                                         previousEntry.TargetEntity = null;
+                                        previousEntry.CopyObjectData(relationship, overwritePopulatedWithNull: true, ignoreTypeMismatch: false, declaredOnly: false, onlyNullFields: false);
                                     }
                                     else
                                     {
