@@ -1743,6 +1743,15 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin) where TEntity : BaseEntityData, ITaggable, IHasIdentifiers, new()
         {
+            if (resourceRef == null)
+            {
+                throw new ArgumentNullException(nameof(resourceRef));
+            }
+            else if (resourceRef.Identifier == null && String.IsNullOrEmpty(resourceRef.Reference))
+            {
+                throw new ArgumentException("Could not understand resource reference - either a reference or business identifier is required.");
+            }
+            
             var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TEntity>>();
 
             // First is there a bundle in the contained within
@@ -1765,6 +1774,8 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 TEntity retVal = null;
 
+                // Attempt resolution by business identifier 
+                // This may result in more than one entity - in which case this block will throw if no reference is found
                 if (resourceRef.Identifier != null)
                 {
                     // Already exists in SDB bundle?
@@ -1793,7 +1804,8 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                 }
 
-                if (!string.IsNullOrEmpty(resourceRef.Reference))
+                /// Resolve via the reference
+                if (retVal == null && !string.IsNullOrEmpty(resourceRef.Reference))
                 {
                     if (resourceRef.Reference.StartsWith("#") && containedWithin is DomainResource domainResource) // Rel
                     {
@@ -1859,10 +1871,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         }
                     }
                 }
-                else
-                {
-                    throw new ArgumentException("Could not understand resource reference");
-                }
+
 
                 // TODO: Weak references
                 if (retVal == null)
