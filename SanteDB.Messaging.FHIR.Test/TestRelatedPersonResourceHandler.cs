@@ -21,6 +21,7 @@ using NUnit.Framework;
 using SanteDB.Core;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Model.EntityLoader;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Handlers;
 using System;
@@ -219,15 +220,14 @@ namespace SanteDB.Messaging.FHIR.Test
 
                 // There is a patient related to the person
                 // JF - This behavior has changed to perform an inbound relationship for Mother
-                var equivRel = sdbRelatedPatient.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Mother);
+                var equivRel = EntitySource.Current.Provider.GetInverseRelations(typeof(EntityRelationship), Guid.Parse(createdFhirRelatedPatient.Id)).OfType<EntityRelationship>().FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.Mother);
                 Assert.IsNotNull(equivRel);
                 // Assert created patient is a the equivalent entity
                 Assert.AreEqual(sdbRelatedPatient.Key, equivRel.TargetEntityKey); // Related Patient is the holder
 
-
-                // Ensure that there is a separate PERSON and separate PATIENT with the same identity 
+                // Ensure that there is only ONE person and patient from this equivalence
                 var relatedPersons = this.m_personRepository.Find(o => o.Identifiers.Any(id => id.IdentityDomain.Url == "http://santedb.org/fhir/test" && id.Value == "FHR-4321"));
-                Assert.AreEqual(2, relatedPersons.Count());
+                Assert.AreEqual(1, relatedPersons.Count());
                 Assert.AreEqual(1, relatedPersons.OfType<Patient>().Count());
 
                 // Ensure that a QUERY for focal patient returns

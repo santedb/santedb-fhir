@@ -24,6 +24,7 @@ using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Data;
 using SanteDB.Core.Diagnostics;
+using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -53,6 +54,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         // Relationships to family members
         private List<Guid> m_relatedPersons;
+
+        private readonly Guid[] TARGET_CLASS_KEYS = new Guid[]
+        {
+            EntityClassKeys.Patient,
+            EntityClassKeys.Person
+        };
 
         // Patient repository
         private IRepositoryService<Core.Model.Roles.Patient> m_patientRepository;
@@ -174,6 +181,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <inheritdoc />
         protected override IQueryResultSet<EntityRelationship> QueryInternal(System.Linq.Expressions.Expression<Func<EntityRelationship, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
         {
+            
             System.Linq.Expressions.Expression typeReference = null;
             System.Linq.Expressions.Expression typeProperty = System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(EntityRelationship).GetProperty(nameof(EntityRelationship.RelationshipTypeKey)));
             foreach (var tr in this.m_relatedPersons)
@@ -189,13 +197,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
             }
 
-            var classReference = System.Linq.Expressions.Expression.MakeBinary(
-                System.Linq.Expressions.ExpressionType.Equal,
-                System.Linq.Expressions.Expression.Convert(
+            var classReference = System.Linq.Expressions.Expression.Call(
+               null,
+               (System.Reflection.MethodInfo)typeof(Enumerable).GetGenericMethod(nameof(Enumerable.Contains), new Type[] { typeof(Guid) }, new Type[] { typeof(IEnumerable<Guid>), typeof(Guid) }),
+               System.Linq.Expressions.Expression.Constant(TARGET_CLASS_KEYS),
+               System.Linq.Expressions.Expression.Convert(
                     System.Linq.Expressions.Expression.MakeMemberAccess(
                         System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(EntityRelationship).GetProperty(nameof(EntityRelationship.TargetEntity))),
                         typeof(Entity).GetProperty(nameof(Entity.ClassConceptKey))
-                    ), typeof(Guid)), System.Linq.Expressions.Expression.Constant(EntityClassKeys.Person));
+                    ), typeof(Guid))
+           );
 
             query = System.Linq.Expressions.Expression.Lambda<Func<EntityRelationship, bool>>(System.Linq.Expressions.Expression.AndAlso(typeReference, System.Linq.Expressions.Expression.AndAlso(classReference, query.Body)), query.Parameters);
 
