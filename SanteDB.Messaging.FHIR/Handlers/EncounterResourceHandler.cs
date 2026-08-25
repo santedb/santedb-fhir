@@ -167,7 +167,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (cst != null)
             {
-                retVal.ServiceProvider = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Organization>(cst.PlayerEntity);
+                retVal.ServiceProvider = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Organization>(cst.PlayerEntity);
             }
 
             // Participants
@@ -177,7 +177,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     DataTypeConverter.ToFhirCodeableConcept(o.ParticipationRoleKey)
                 },
-                Individual = DataTypeConverter.CreateVersionedReference<Practitioner>(o.PlayerEntity)
+                Individual = DataTypeConverter.CreateNonVersionedReference<Practitioner>(o.PlayerEntity)
             }).ToList();
 
             return retVal;

@@ -101,7 +101,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var recordTarget = modelparticipations?.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
             if (recordTarget != null)
             {
-                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>(nameof(recordTarget.PlayerEntity)));
+                retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Patient>(recordTarget.LoadProperty<Entity>(nameof(recordTarget.PlayerEntity)));
             }
 
             // Main topic of the concern
@@ -125,7 +125,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var location = modelparticipations?.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Location);
             if (location != null)
             {
-                retVal.Location = DataTypeConverter.CreateVersionedReference<Location>(location.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)));
+                retVal.Location = DataTypeConverter.CreateNonVersionedReference<Location>(location.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)));
             }
 
             // Severity

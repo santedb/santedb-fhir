@@ -141,18 +141,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             if (consumableRelationship != null)
             {
-                retVal.Medication = DataTypeConverter.CreateVersionedReference<Medication>(consumableRelationship.LoadProperty<ManufacturedMaterial>("PlayerEntity"));
+                retVal.Medication = DataTypeConverter.CreateNonVersionedReference<Medication>(consumableRelationship.LoadProperty<ManufacturedMaterial>("PlayerEntity"));
             }
             else if (productRelationship != null)
             {
-                retVal.Medication = DataTypeConverter.CreateVersionedReference<Substance>(productRelationship.LoadProperty<Material>("PlayerEntity"));
+                retVal.Medication = DataTypeConverter.CreateNonVersionedReference<Substance>(productRelationship.LoadProperty<Material>("PlayerEntity"));
                 //retVal.Medication = DataTypeConverter.ToFhirCodeableConcept(productRelationship.LoadProperty<Material>("PlayerEntity").LoadProperty<Concept>("TypeConcept"));
             }
 
             var rct = model.LoadCollection<ActParticipation>(nameof(Act.Participations)).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
             if (rct != null)
             {
-                retVal.Subject = DataTypeConverter.CreateVersionedReference<Hl7.Fhir.Model.Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
+                retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Patient>(rct.LoadProperty<Entity>("PlayerEntity"));
             }
 
             // Encounter

@@ -124,7 +124,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 if (null != asserter)
                 {
-                    retVal.Asserter = DataTypeConverter.CreateVersionedReference<Practitioner>(asserter.LoadProperty<Entity>(nameof(asserter.PlayerEntity)));
+                    retVal.Asserter = DataTypeConverter.CreateNonVersionedReference<Practitioner>(asserter.LoadProperty<Entity>(nameof(asserter.PlayerEntity)));
                 }
 
                 if (model.TypeConceptKey == IntoleranceObservationTypeKeys.OtherIntolerance)
