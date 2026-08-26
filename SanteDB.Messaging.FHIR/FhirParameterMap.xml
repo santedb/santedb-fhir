@@ -232,13 +232,13 @@
 		<map fhir="manufacturer" model="relationship[ManufacturedProduct].source||relationship[Instance].source.relationship[ManufacturedProduct].source" type="reference"/>
 		<map fhir="manufacturer.name" model="relationship[ManufacturedProduct].source.name.component.value||relationship[Instance].source.relationship[ManufacturedProduct].source.name.component.value" type="string"/>
 		<map fhir="lotNumber" model="lotNumber" type="string"/>
-		<map fhir="expirationDate" model="expireDate" type="date"/>
+		<map fhir="expirationDate" model="expiryDate" type="date"/>
 		<map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/medication-status"/>
 	</type>
 
 	<type resource="Substance">
 		<map fhir="code" model="typeConcept" type="concept"/>
-		<map fhir="expiry" model="expireDate" type="date"/>
+		<map fhir="expiry" model="expiryDate" type="date"/>
 		<map fhir="identifier" model="identifier" type="identifier"/>
 		<map fhir="status" model="statusConcept" type="concept" defaultCodeSystem="http://hl7.org/fhir/substance-status"/>
 	</type>
