@@ -176,6 +176,19 @@
     <EmbeddedResource Include="Configuration\Default.xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Update="Resources\FhirErrorMessages.Designer.cs">
+      <DesignTime>True</DesignTime>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>FhirErrorMessages.resx</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Update="Resources\FhirErrorMessages.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>FhirErrorMessages.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
     <None Update="Data\004-DischargeDisposition.dataset">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
