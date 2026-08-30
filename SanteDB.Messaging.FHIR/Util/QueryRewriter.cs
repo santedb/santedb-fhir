@@ -419,7 +419,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
                 else if (parmMap == null)
                 {
-                    if (s_configuration.StrictProcessing && !s_defaultParameters.Any(r => r.Name == kv))
+                    if (s_configuration?.StrictProcessing  == true && !s_defaultParameters.Any(r => r.Name == kv))
                     {
                         throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, String.Format(FhirErrorMessages.QueryParameterNotFound, kv));
                     }
