@@ -214,6 +214,26 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
+            // Allow for fetching of existing via ID
+            if (!Guid.TryParse(resource.Id, out var key))
+            {
+                key = Guid.NewGuid();
+            }
+            else
+            {
+                foreach (var vid in retVal.Identifiers.Where(i => i.LoadProperty(o => o.IdentityDomain).IsUnique))
+                {
+                    var existingKey = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == vid.IdentityDomainKey).Any(i => i.Value == vid.Value)).Select(o => o.Key).FirstOrDefault();
+                    if (existingKey.HasValue)
+                    {
+                        key = existingKey.Value;
+                        break;
+                    }
+                }
+            }
+            retVal.Key = key;
+            DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
+
             retVal.ReasonConcept = DataTypeConverter.ToConcept(resource.StatusReason.FirstOrDefault());
 
             switch (resource.Status)
@@ -325,7 +345,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <inheritdoc />
-		protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+		protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null)
         {
             var obsoletionReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(SubstanceAdministration).GetProperty(nameof(SubstanceAdministration.StatusConceptKey))), typeof(Guid)), Expression.Constant(StatusKeys.Completed));
             var typeReference = Expression.Not(System.Linq.Expressions.Expression.Call(

@@ -102,6 +102,9 @@ namespace SanteDB.Messaging.FHIR.Util
         // Policy information service
         private static IPolicyInformationService m_pipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
 
+        // Policy enforcement
+        private static IPolicyEnforcementService m_pepService = ApplicationServiceContext.Current.GetService<IPolicyEnforcementService>();
+
         // Security repository
         private static ISecurityRepositoryService m_secService = ApplicationServiceContext.Current.GetService<ISecurityRepositoryService>();
 
@@ -2556,6 +2559,39 @@ namespace SanteDB.Messaging.FHIR.Util
                 Author = DataTypeConverter.CreateNonVersionedReference<Practitioner>(note.LoadProperty(o => o.Author)),
                 Text = new Markdown(note.Text)
             };
+        }
+
+        /// <summary>
+        /// Set the model policies
+        /// </summary>
+        internal static void SetModelPolicies<TModel>(TModel model, List<Coding> securityPolicies)
+            where TModel : IHasPolicies
+        {
+            if(securityPolicies?.Any() != true)
+            {
+                return;
+            }
+
+            // Get the current policies
+            var currentPolicies = m_pipService.GetPolicies(model);
+            var newPolicies = securityPolicies?.SelectMany(o => DataTypeConverter.ToSecurityPolicy(o)).Distinct(new SecurityPolicyInstanceComparer()).ToList() ?? new List<Core.Model.Security.SecurityPolicyInstance>();
+
+            if(!currentPolicies.OrderBy(o => o.Policy.Oid).Select(o=>o.Policy.Oid).SequenceEqual(newPolicies.OrderBy(o=>o.Policy.Oid).Select(o=>o.Policy.Oid)))
+            {
+                m_pepService.Demand(PermissionPolicyIdentifiers.AssignPolicy);
+            }
+            
+            switch(model)
+            {
+                case Entity e:
+                    e.Policies = newPolicies;
+                    break;
+                case Act a:
+                    a.Policies = newPolicies; ;
+                    break;
+                default:
+                    throw new InvalidOperationException(String.Format(ErrorMessages.WOULD_RESULT_INVALID_STATE, nameof(SetModelPolicies)));
+            }
         }
     }
 

@@ -242,9 +242,28 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Participations = new List<ActParticipation>(),
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text),
                 MoodConceptKey = MoodConceptKeys.Eventoccurrence,
+                Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList()
             };
 
-            retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
+            // Allow for fetching of existing via ID
+            if (!Guid.TryParse(resource.Id, out var key))
+            {
+                key = Guid.NewGuid();
+            }
+            else
+            {
+                foreach (var vid in retVal.Identifiers.Where(i => i.LoadProperty(o => o.IdentityDomain).IsUnique))
+                {
+                    var existingKey = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == vid.IdentityDomainKey).Any(i => i.Value == vid.Value)).Select(o => o.Key).FirstOrDefault();
+                    if (existingKey.HasValue)
+                    {
+                        key = existingKey.Value;
+                        break;
+                    }
+                }
+            }
+            retVal.Key = key;
+            DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
 
             switch (resource.ClinicalStatus.TypeName)
             {
@@ -339,7 +358,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query filter
         /// </summary>
-        protected override IQueryResultSet<CodedObservation> QueryInternal(Expression<Func<CodedObservation, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+        protected override IQueryResultSet<CodedObservation> QueryInternal(Expression<Func<CodedObservation, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null)
         {
             var anyRef = this.CreateConceptSetFilter(ConceptSetKeys.ProblemObservations, query.Parameters[0]);
             query = Expression.Lambda<Func<CodedObservation, bool>>(Expression.AndAlso(query.Body, anyRef), query.Parameters);

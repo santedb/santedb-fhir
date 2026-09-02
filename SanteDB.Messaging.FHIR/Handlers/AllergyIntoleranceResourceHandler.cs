@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DynamicExpresso;
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Model.Acts;
@@ -224,6 +225,27 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
+            // Allow for fetching of existing via ID
+            if (!Guid.TryParse(resource.Id, out var key))
+            {
+                key = Guid.NewGuid();
+            }
+            else 
+            {
+                foreach (var vid in retVal.Identifiers.Where(i => i.LoadProperty(o => o.IdentityDomain).IsUnique))
+                {
+                    var existingKey = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == vid.IdentityDomainKey).Any(i => i.Value == vid.Value)).Select(o => o.Key).FirstOrDefault();
+                    if(existingKey.HasValue)
+                    {
+                        key = existingKey.Value;
+                        break;
+                    }
+                }
+            }
+            retVal.Key = key;
+            DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
+
+
             switch (resource.ClinicalStatus.TypeName)
             {
                 case "active":
@@ -378,7 +400,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query which filters only allergies and intolerances
         /// </summary>
-        protected override IQueryResultSet<CodedObservation> QueryInternal(Expression<Func<CodedObservation, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+        protected override IQueryResultSet<CodedObservation> QueryInternal(Expression<Func<CodedObservation, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null)
         {
             var anyRef = base.CreateConceptSetFilter(ConceptSetKeys.AllergyIntoleranceTypes, query.Parameters[0]);
             query = System.Linq.Expressions.Expression.Lambda<Func<CodedObservation, bool>>(System.Linq.Expressions.Expression.AndAlso(query.Body, anyRef), query.Parameters);

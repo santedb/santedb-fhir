@@ -184,12 +184,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             substanceAdministration.Extensions = resource.Extension?.Select(o => DataTypeConverter.ToActExtension(o, substanceAdministration)).ToList();
 
-
-            Guid key;
-            if (Guid.TryParse(resource.Id, out key))
+            // Allow for fetching of existing via ID
+            if (!Guid.TryParse(resource.Id, out var key))
             {
-                substanceAdministration.Key = key;
+                key = Guid.NewGuid();
             }
+            else
+            {
+                foreach (var vid in substanceAdministration.Identifiers.Where(i => i.LoadProperty(o => o.IdentityDomain).IsUnique))
+                {
+                    var existingKey = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == vid.IdentityDomainKey).Any(i => i.Value == vid.Value)).Select(o => o.Key).FirstOrDefault();
+                    if (existingKey.HasValue)
+                    {
+                        key = existingKey.Value;
+                        break;
+                    }
+                }
+            }
+            substanceAdministration.Key = key;
+            DataTypeConverter.SetModelPolicies(substanceAdministration, resource.Meta?.Security);
 
             // Patient
             if (resource.Patient != null)
@@ -266,7 +279,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="fhirParameters">The fhir parameters provided in the query.</param>
         /// <param name="hdsiParameters">The translated hdsi parameters that can be executed by the query.</param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
-        protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+        protected override IQueryResultSet<SubstanceAdministration> QueryInternal(System.Linq.Expressions.Expression<Func<SubstanceAdministration, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null)
         {
             var typeConcepts = new Guid[]
             {

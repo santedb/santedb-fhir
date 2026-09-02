@@ -172,6 +172,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
             }
 
+
+            DataTypeConverter.SetModelPolicies(place, resource.Meta?.Security);
+
             switch (resource.Status)
             {
                 case Location.LocationStatus.Active:

@@ -246,9 +246,29 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     retVal = new Core.Model.Acts.Observation();
                     break;
             }
+            retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
+
+            // Allow for fetching of existing via ID
+            if (!Guid.TryParse(resource.Id, out var key))
+            {
+                key = Guid.NewGuid();
+            }
+            else
+            {
+                foreach (var vid in retVal.Identifiers.Where(i => i.LoadProperty(o => o.IdentityDomain).IsUnique))
+                {
+                    var existingKey = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == vid.IdentityDomainKey).Any(i => i.Value == vid.Value)).Select(o => o.Key).FirstOrDefault();
+                    if (existingKey.HasValue)
+                    {
+                        key = existingKey.Value;
+                        break;
+                    }
+                }
+            }
+            retVal.Key = key;
+            DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
 
             retVal.Extensions = resource.Extension.Select(o=>DataTypeConverter.ToActExtension(o, retVal)).OfType<ActExtension>().ToList();
-            retVal.Identifiers = resource.Identifier.Select(DataTypeConverter.ToActIdentifier).ToList();
             retVal.Notes = DataTypeConverter.ToNote<ActNote>(resource.Text);
 
             retVal.MoodConceptKey = MoodConceptKeys.Eventoccurrence;
@@ -426,14 +446,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         ///<inheritdoc />
-        protected override IQueryResultSet<Core.Model.Acts.Observation> QueryInternal(Expression<Func<Core.Model.Acts.Observation, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+        protected override IQueryResultSet<Core.Model.Acts.Observation> QueryInternal(Expression<Func<Core.Model.Acts.Observation, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters  = null)
         {
-            if (fhirParameters["value-concept"] != null)
+            if (fhirParameters != null && fhirParameters["value-concept"] != null)
             {
                 var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiParameters);
                 return this.QueryInternalEx<CodedObservation>(predicate, fhirParameters, hdsiParameters).AsResultSet<Core.Model.Acts.Observation>();
             }
-            else if (fhirParameters["value-quantity"] != null)
+            else if (fhirParameters != null && fhirParameters["value-quantity"] != null)
             {
                 var predicate = QueryExpressionParser.BuildLinqExpression<QuantityObservation>(hdsiParameters);
                 return this.QueryInternalEx<QuantityObservation>(predicate, fhirParameters, hdsiParameters).AsResultSet<Core.Model.Acts.Observation>();
