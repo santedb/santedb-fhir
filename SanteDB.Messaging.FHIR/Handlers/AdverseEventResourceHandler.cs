@@ -25,6 +25,7 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
+using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -101,7 +102,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var recordTarget = modelparticipations?.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.RecordTarget);
             if (recordTarget != null)
             {
-                retVal.Subject = DataTypeConverter.CreateVersionedReference<Patient>(recordTarget.LoadProperty<Entity>(nameof(recordTarget.PlayerEntity)));
+                retVal.Subject = DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Patient>(recordTarget.LoadProperty<Entity>(nameof(recordTarget.PlayerEntity)));
             }
 
             // Main topic of the concern
@@ -125,7 +126,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var location = modelparticipations?.FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Location);
             if (location != null)
             {
-                retVal.Location = DataTypeConverter.CreateVersionedReference<Location>(location.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)));
+                retVal.Location = DataTypeConverter.CreateNonVersionedReference<Location>(location.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)));
             }
 
             // Severity
@@ -212,21 +213,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Notes = DataTypeConverter.ToNote<ActNote>(resource.Text)
             };
 
+            // map identifier to identifiers
+            var identifer = DataTypeConverter.ToActIdentifier(resource.Identifier);
+            retVal.Identifiers.Add(identifer);
+            // Allow for fetching of existing via ID
             if (!Guid.TryParse(resource.Id, out var key))
             {
                 key = Guid.NewGuid();
             }
+            else if(identifer.LoadProperty(o=>o.IdentityDomain).IsUnique)
+            {
+                key = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == identifer.IdentityDomainKey).Any(i => i.Value == identifer.Value)).Select(o=>o.Key).FirstOrDefault() ?? Guid.NewGuid();
+            }
+            retVal.Key = key;
+            DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
 
             retVal.ClassConceptKey = ActClassKeys.Act;
-
-            //      retVal.StatusConceptKey = StatusKeys.Active;
-
-            retVal.Key = key;
-
             retVal.MoodConceptKey = ActMoodKeys.Eventoccurrence;
 
-            // map identifier to identifiers
-            retVal.Identifiers.Add(DataTypeConverter.ToActIdentifier(resource.Identifier));
             /* retVal.Identifiers = new List<ActIdentifier>
             {
                 DataTypeConverter.ToActIdentifier(resource.Identifier)
@@ -328,7 +332,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Query for specified adverse event
         /// </summary>
-        protected override IQueryResultSet<Act> QueryInternal(Expression<Func<Act, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+        protected override IQueryResultSet<Act> QueryInternal(Expression<Func<Act, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null)
         {
             var typeReference = Expression.MakeBinary(ExpressionType.Equal, Expression.Convert(Expression.MakeMemberAccess(query.Parameters[0], typeof(Act).GetProperty(nameof(Act.ClassConceptKey))), typeof(Guid)), Expression.Constant(ActClassKeys.Cluster));
 

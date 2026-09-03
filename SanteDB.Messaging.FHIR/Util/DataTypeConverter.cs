@@ -102,6 +102,9 @@ namespace SanteDB.Messaging.FHIR.Util
         // Policy information service
         private static IPolicyInformationService m_pipService = ApplicationServiceContext.Current.GetService<IPolicyInformationService>();
 
+        // Policy enforcement
+        private static IPolicyEnforcementService m_pepService = ApplicationServiceContext.Current.GetService<IPolicyEnforcementService>();
+
         // Security repository
         private static ISecurityRepositoryService m_secService = ApplicationServiceContext.Current.GetService<ISecurityRepositoryService>();
 
@@ -1743,6 +1746,15 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static TEntity ResolveEntity<TEntity>(ResourceReference resourceRef, Resource containedWithin) where TEntity : BaseEntityData, ITaggable, IHasIdentifiers, new()
         {
+            if (resourceRef == null)
+            {
+                throw new ArgumentNullException(nameof(resourceRef));
+            }
+            else if (resourceRef.Identifier == null && String.IsNullOrEmpty(resourceRef.Reference))
+            {
+                throw new ArgumentException("Could not understand resource reference - either a reference or business identifier is required.");
+            }
+            
             var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TEntity>>();
 
             // First is there a bundle in the contained within
@@ -1765,6 +1777,8 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 TEntity retVal = null;
 
+                // Attempt resolution by business identifier 
+                // This may result in more than one entity - in which case this block will throw if no reference is found
                 if (resourceRef.Identifier != null)
                 {
                     // Already exists in SDB bundle?
@@ -1793,7 +1807,8 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                 }
 
-                if (!string.IsNullOrEmpty(resourceRef.Reference))
+                /// Resolve via the reference
+                if (retVal == null && !string.IsNullOrEmpty(resourceRef.Reference))
                 {
                     if (resourceRef.Reference.StartsWith("#") && containedWithin is DomainResource domainResource) // Rel
                     {
@@ -1859,10 +1874,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         }
                     }
                 }
-                else
-                {
-                    throw new ArgumentException("Could not understand resource reference");
-                }
+
 
                 // TODO: Weak references
                 if (retVal == null)
@@ -2535,6 +2547,51 @@ namespace SanteDB.Messaging.FHIR.Util
                 Text = concept.ConceptNames?.FirstOrDefault()?.Name
             };
 
+        }
+
+        /// <summary>
+        /// Convert to an annotation
+        /// </summary>
+        internal static Hl7.Fhir.Model.Annotation ToAnnotation(ActNote note)
+        {
+            return new Hl7.Fhir.Model.Annotation()
+            {
+                Author = DataTypeConverter.CreateNonVersionedReference<Practitioner>(note.LoadProperty(o => o.Author)),
+                Text = new Markdown(note.Text)
+            };
+        }
+
+        /// <summary>
+        /// Set the model policies
+        /// </summary>
+        internal static void SetModelPolicies<TModel>(TModel model, List<Coding> securityPolicies)
+            where TModel : IHasPolicies
+        {
+            if(securityPolicies?.Any() != true)
+            {
+                return;
+            }
+
+            // Get the current policies
+            var currentPolicies = m_pipService.GetPolicies(model);
+            var newPolicies = securityPolicies?.SelectMany(o => DataTypeConverter.ToSecurityPolicy(o)).Distinct(new SecurityPolicyInstanceComparer()).ToList() ?? new List<Core.Model.Security.SecurityPolicyInstance>();
+
+            if(!currentPolicies.OrderBy(o => o.Policy.Oid).Select(o=>o.Policy.Oid).SequenceEqual(newPolicies.OrderBy(o=>o.Policy.Oid).Select(o=>o.Policy.Oid)))
+            {
+                m_pepService.Demand(PermissionPolicyIdentifiers.AssignPolicy);
+            }
+            
+            switch(model)
+            {
+                case Entity e:
+                    e.Policies = newPolicies;
+                    break;
+                case Act a:
+                    a.Policies = newPolicies; ;
+                    break;
+                default:
+                    throw new InvalidOperationException(String.Format(ErrorMessages.WOULD_RESULT_INVALID_STATE, nameof(SetModelPolicies)));
+            }
         }
     }
 

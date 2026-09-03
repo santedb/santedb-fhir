@@ -290,7 +290,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Do the query
             var predicate = QueryExpressionParser.BuildLinqExpression<TModel>(hdsiQuery, null, false, false);
 
-            var hdsiResults = this.QueryInternal(predicate, hdsiQuery, hdsiQuery);
+            var hdsiResults = this.QueryInternal(predicate, parameters, hdsiQuery);
             var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<TModel>();
 
             var auth = AuthenticationContext.Current;
@@ -518,7 +518,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <param name="fhirParameters"></param>
         /// <returns>Returns the list of models which match the given parameters.</returns>
         /// <param name="hdsiParameters"></param>
-        protected abstract IQueryResultSet<TModel> QueryInternal(Expression<Func<TModel, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters);
+        protected abstract IQueryResultSet<TModel> QueryInternal(Expression<Func<TModel, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null);
 
         /// <summary>
         /// Read the specified FHIR object.

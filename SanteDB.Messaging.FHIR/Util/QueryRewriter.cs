@@ -18,7 +18,9 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Drawing.Diagrams;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Rest;
 using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
@@ -26,13 +28,16 @@ using SanteDB.Core.i18n;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Serialization;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
+using SanteDB.Messaging.FHIR.Resources;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Xml.Serialization;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
@@ -53,6 +58,10 @@ namespace SanteDB.Messaging.FHIR.Util
         // Default
         private static QueryParameterType s_default;
 
+        private static readonly string[] s_totalValues = { "none", "estimate", "accurate" };
+
+        private static readonly Regex s_parmExtract = new Regex(@"^(?:\<=?|\>=?|\!|\~)?(.*)$", RegexOptions.Compiled);
+
         /// <summary>
         /// Default parameters
         /// </summary>
@@ -70,6 +79,30 @@ namespace SanteDB.Messaging.FHIR.Util
                 new SearchParamComponent() { Name = "_total", Type = SearchParamType.Token }
             };
 
+        private static Dictionary<QueryParameterRewriteType, Func<string, bool>> s_paramValidators = new Dictionary<QueryParameterRewriteType, Func<string, bool>>()
+        {
+            { QueryParameterRewriteType.Date, (o) => DateTimeOffset.TryParse(o, out _) },
+            { QueryParameterRewriteType.Int, (o) => Decimal.TryParse(o, out _) },
+            { QueryParameterRewriteType.Quantity, (o) =>
+                {
+                    var ncomps = o.Split('|');
+                    return ncomps.Length <= 3 && Decimal.TryParse(ncomps[0], out _);
+                }
+            },
+            { QueryParameterRewriteType.Identifier, (o) => o.Split('|').Length <= 2 },
+            { QueryParameterRewriteType.Concept, (o) => {
+                    var ncomps = o.Split('|');
+                    return ncomps.Length <= 2 &&
+                        (ncomps.Length == 1 ||
+                        ncomps[0] .StartsWith("http") || ncomps[0].StartsWith("urn:"));
+                }
+            },
+            { QueryParameterRewriteType.Tag, (o) => o.Split('|').Length <= 2 }
+        };
+
+        // Configuration
+        private static readonly FhirServiceConfigurationSection s_configuration;
+
         /// <summary>
         /// Static CTOR
         /// </summary>
@@ -85,6 +118,9 @@ namespace SanteDB.Messaging.FHIR.Util
                     OpenMapping(s);
                 }
             }
+
+            // Get the configuration
+            s_configuration = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
         }
 
         /// <summary>
@@ -277,6 +313,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns></returns>
         public static FhirQuery RewriteFhirQuery(Type fhirType, Type modelType, NameValueCollection fhirQuery, out NameValueCollection hdsiQuery)
         {
+
             // Try parse
             if (fhirQuery == null)
             {
@@ -287,23 +324,35 @@ namespace SanteDB.Messaging.FHIR.Util
             int count = 0, offset = 0, page = 0;
             if (!Int32.TryParse(fhirQuery["_count"] ?? "25", out count))
             {
-                throw new ArgumentException("_count");
+                throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, "_count", fhirQuery["_count"]));
             }
 
             if (!Int32.TryParse(fhirQuery["_offset"] ?? "0", out offset))
             {
-                throw new ArgumentException("_offset");
+                throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, "_offset", fhirQuery["_offset"]));
             }
 
-            if (fhirQuery["_page"] != null && Int32.TryParse(fhirQuery["_page"], out page))
+            if (Int32.TryParse(fhirQuery["_page"] ?? "0", out page))
             {
                 offset = page * count;
+            }
+            else
+            {
+                throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, "_page", fhirQuery["_page"]));
+            }
+
+            if(!String.IsNullOrEmpty(fhirQuery["_lastUpdated"]) && !DateTimeOffset.TryParse(fhirQuery["_lastUpdated"], out _))
+            {
+                throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, "_lastUpdated", fhirQuery["_lastUpdated"]));
             }
 
             Guid queryId = Guid.Empty;
             if (fhirQuery["_stateid"] != null)
             {
-                queryId = Guid.Parse(fhirQuery["_stateid"]);
+                if (!Guid.TryParse(fhirQuery["_stateid"], out queryId))
+                {
+                    throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, "_stateid", fhirQuery["_stateid"]));
+                }
             }
             else if (fhirQuery["_total"] == "accurate") // to get an accurate total we have to persist query state
             {
@@ -312,6 +361,19 @@ namespace SanteDB.Messaging.FHIR.Util
             else
             {
                 queryId = Guid.Empty;
+            }
+
+            // Validate the _lastUpdated behavior
+
+            // Validate _summary behavior 
+            if (!String.IsNullOrEmpty(fhirQuery["_summary"]) && !EnumUtility.ParseLiteral<SummaryType>(fhirQuery["_summary"], true).HasValue)
+            {
+                throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, FhirErrorMessages.InvalidSummaryParameterValue);
+            }
+            // Validate _total behavior
+            if (!String.IsNullOrEmpty(fhirQuery["_total"]) && !s_totalValues.Contains(fhirQuery["_total"]))
+            {
+                throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, FhirErrorMessages.InvalidTotalParameterValue);
             }
 
             // Return new query
@@ -324,7 +386,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 QueryId = queryId,
                 IncludeHistory = false,
                 IncludeContained = false,
-                ExactTotal = fhirQuery["_total"] == "exact"
+                ExactTotal = fhirQuery["_total"] == "estimate"
             };
 
             var hdsiInternal = hdsiQuery = new NameValueCollection();
@@ -357,6 +419,10 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
                 else if (parmMap == null)
                 {
+                    if (s_configuration?.StrictProcessing  == true && !s_defaultParameters.Any(r => r.Name == kv))
+                    {
+                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, String.Format(FhirErrorMessages.QueryParameterNotFound, kv));
+                    }
                     continue;
                 }
 
@@ -448,6 +514,9 @@ namespace SanteDB.Messaging.FHIR.Util
                         }
                     }
 
+                    // Validate
+
+
                     retVal.ActualParameters.Add(kv, filterValue);
                     value.Add(opValue + filterValue.Substring(chop ? 2 : 0));
                 }
@@ -461,6 +530,16 @@ namespace SanteDB.Messaging.FHIR.Util
                 if (!String.IsNullOrEmpty(parmMap.Function))
                 {
                     value = value.Select(o => parmMap.Function.Replace("$1", o)).ToList();
+                }
+
+                // Validate?
+                if (s_paramValidators.TryGetValue(parmMap.FhirType, out var val))
+                {
+                    var invalidValue = value.Select(o => !s_parmExtract.IsMatch(o) ? o : s_parmExtract.Match(o).Groups[1].Value).Where(o => !val(o)).FirstOrDefault();
+                    if (!String.IsNullOrEmpty(invalidValue))
+                    {
+                       throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, kv, invalidValue));
+                    }
                 }
 
                 // Query 
