@@ -21,13 +21,13 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
     public class AdministeredSubstanceExtensionHandler : IFhirExtensionHandler
     {
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/administered-substance");
+        public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/administered-substance");
 
         /// <inheritdoc/>
-        public Uri ProfileUri => this.Uri;
+        public Uri ProfileUri => Uri;
 
         /// <inheritdoc/>
-        public ResourceType? AppliesTo => ResourceType.Immunization;
+        public virtual ResourceType? AppliesTo => ResourceType.Immunization;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
@@ -37,7 +37,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
             {
 
                 foreach (var prod in adm.Participations.Where(p => p.ParticipationRoleKey == ActParticipationKeys.Product)) {
-                    yield return new Extension(this.Uri.ToString(), DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Substance>(prod.LoadProperty(o => o.PlayerEntity)));
+                    yield return new Extension(Uri.ToString(), DataTypeConverter.CreateNonVersionedReference<Substance>(prod.LoadProperty(o => o.PlayerEntity)));
                 }
             }
         }
@@ -48,7 +48,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
             if(modelObject is SubstanceAdministration sbadm && 
                 fhirExtension.Value is ResourceReference rr)
             {
-                var resolved = DataTypeConverter.ResolveEntity<Material>(rr, (Resource)fhirExtension.Annotation<Hl7.Fhir.Model.Immunization>() ?? (Resource)fhirExtension.Annotation<Hl7.Fhir.Model.MedicationAdministration>());
+                var resolved = DataTypeConverter.ResolveEntity<Material>(rr, (Resource)fhirExtension.Annotation<Hl7.Fhir.Model.Immunization>() ?? fhirExtension.Annotation<Hl7.Fhir.Model.MedicationAdministration>());
                 if (resolved == null || resolved.DeterminerConceptKey == DeterminerKeys.Described)
                 {
                     return false;

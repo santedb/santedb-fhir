@@ -23,13 +23,13 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
         private readonly string ConsumedQuantityExtensionUrl = $"{FhirConstants.SanteDBProfile}/extensions/consumed-material#consumed-quantity";
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/consumed-material");
+        public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/consumed-material");
 
         /// <inheritdoc/>
-        public Uri ProfileUri => this.Uri;
+        public Uri ProfileUri => Uri;
 
         /// <inheritdoc/>
-        public ResourceType? AppliesTo => ResourceType.Immunization;
+        public virtual ResourceType? AppliesTo => ResourceType.Immunization;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
@@ -40,11 +40,11 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
 
                 foreach (var prod in adm.Participations.Where(p => p.ParticipationRoleKey == ActParticipationKeys.Consumable))
                 {
-                    yield return new Extension(this.Uri.ToString(), DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Medication>(prod.LoadProperty(o => o.PlayerEntity)))
+                    yield return new Extension(Uri.ToString(), DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Medication>(prod.LoadProperty(o => o.PlayerEntity)))
                     {
                         Extension = new List<Extension>()
                         {
-                            new Extension(this.ConsumedQuantityExtensionUrl, new FhirDecimal(prod.Quantity))
+                            new Extension(ConsumedQuantityExtensionUrl, new FhirDecimal(prod.Quantity))
                         }
                     };
                 }
@@ -57,13 +57,13 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
             if (modelObject is SubstanceAdministration sbadm &&
                 fhirExtension.Value is ResourceReference rr)
             {
-                var resolved = DataTypeConverter.ResolveEntity<ManufacturedMaterial>(rr, (Resource)fhirExtension.Annotation<Hl7.Fhir.Model.Immunization>() ?? (Resource)fhirExtension.Annotation<Hl7.Fhir.Model.MedicationAdministration>());
+                var resolved = DataTypeConverter.ResolveEntity<ManufacturedMaterial>(rr, (Resource)fhirExtension.Annotation<Hl7.Fhir.Model.Immunization>() ?? fhirExtension.Annotation<Hl7.Fhir.Model.MedicationAdministration>());
                 if (resolved == null || resolved.DeterminerConceptKey == DeterminerKeys.Specific)
                 {
                     return false;
                 }
 
-                var quantity = fhirExtension.Extension.Find(o => o.Url == this.ConsumedQuantityExtensionUrl)?.Value as FhirDecimal;
+                var quantity = fhirExtension.Extension.Find(o => o.Url == ConsumedQuantityExtensionUrl)?.Value as FhirDecimal;
 
                 var existing = sbadm.LoadProperty(o => o.Participations).FirstOrDefault(o => o.ParticipationRoleKey == ActParticipationKeys.Consumable && o.PlayerEntityKey == resolved.Key);
                 if(existing == null)

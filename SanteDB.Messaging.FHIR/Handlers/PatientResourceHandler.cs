@@ -499,7 +499,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // JF: Some relationships cannot be explicitly handled by FHIR (dedicated service delivery location, assigned facility, management organization) 
             //      so we want to remove those from the relationships to allow the submitter for the FHIR bundle to indicate those relationships
             patient.Relationships.Where(o => o.SourceEntityKey == patient.Key && o.ClassificationKey == RelationshipClassKeys.ContainedObjectLink || o.ClassificationKey == RelationshipClassKeys.ReferencedObjectLink).ForEach(rel => rel.BatchOperation = BatchOperationType.Delete);
-
             patient.DateOfBirth = DataTypeConverter.ToDateTimeOffset(resource.BirthDate, out var dateOfBirthPrecision)?.DateTime;
 
             // JIMS-1349 -> Extensions to clear these may not be present in the FHIR message - so we clear and then allow extension handlers to reset
@@ -522,7 +521,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             patient.Extensions.AddRange(fhirExtensions);
 
             patient.Notes = DataTypeConverter.ToNote<EntityNote>(resource.Text);
-            patient.Policies = resource.Meta?.Security?.SelectMany(o => DataTypeConverter.ToSecurityPolicy(o)).Distinct(new SecurityPolicyInstanceComparer()).ToList() ?? new List<Core.Model.Security.SecurityPolicyInstance>();
+
+            DataTypeConverter.SetModelPolicies(patient, resource.Meta?.Security);
+            
             patient.MaritalStatus = resource.MaritalStatus == null ? null : DataTypeConverter.ToConcept(resource.MaritalStatus);
 
             // TODO: fix

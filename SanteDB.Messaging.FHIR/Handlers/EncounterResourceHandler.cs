@@ -159,7 +159,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Location = associated.Where(o => o.LoadProperty<Entity>("PlayerEntity") is Place).Select(o => new Encounter.LocationComponent
             {
                 Period = DataTypeConverter.ToPeriod(model.CreationTime, null),
-                Location = DataTypeConverter.CreateVersionedReference<Location>(o.PlayerEntity)
+                Location = DataTypeConverter.CreateNonVersionedReference<Location>(o.PlayerEntity)
             }).ToList();
 
             // Service provider
@@ -209,13 +209,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
             };
 
             retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToActExtension(o, retVal)).OfType<ActExtension>().ToList();
-
+            // Allow for fetching of existing via ID
             if (!Guid.TryParse(resource.Id, out var key))
             {
                 key = Guid.NewGuid();
             }
-
+            else
+            {
+                foreach (var vid in retVal.Identifiers.Where(i => i.LoadProperty(o => o.IdentityDomain).IsUnique))
+                {
+                    var existingKey = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == vid.IdentityDomainKey).Any(i => i.Value == vid.Value)).Select(o => o.Key).FirstOrDefault();
+                    if (existingKey.HasValue)
+                    {
+                        key = existingKey.Value;
+                        break;
+                    }
+                }
+            }
             retVal.Key = key;
+            DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
 
             // Attempt to resolve relationships
             if (resource.Subject != null)

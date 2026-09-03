@@ -135,6 +135,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
             }
 
+            DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
             // Organization
             retVal.TypeConcept = resource.Type.Select(o => DataTypeConverter.ToConcept(o)).OfType<Concept>().FirstOrDefault();
             retVal.Addresses = resource.Address.Select(DataTypeConverter.ToEntityAddress).ToList();

@@ -112,7 +112,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         /// <inheritdoc />
-        protected override IQueryResultSet<TModel> QueryInternal(Expression<Func<TModel, bool>> query, NameValueCollection fhirParameters, NameValueCollection hdsiParameters)
+        protected override IQueryResultSet<TModel> QueryInternal(Expression<Func<TModel, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null)
         {
             return m_repository.Find(query);
         }
