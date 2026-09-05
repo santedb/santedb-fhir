@@ -255,4 +255,11 @@
 		<map fhir="patient" model="source" type="reference"/>
 		<map fhir="date" model="creationTime" type="date"/>
 	</type>
+
+	<type resource="CodeSystem">
+		<map fhir="url" model="url" />
+		<map filr="system" model="url" />
+		<map fhir="name" model="domain" type="string" />
+		<map fhir="title" model="name" type="string" />
+	</type>
 </QueryParameterMap>

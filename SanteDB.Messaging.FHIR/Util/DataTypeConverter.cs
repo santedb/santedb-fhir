@@ -50,6 +50,7 @@ using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
+using SanteDB.Messaging.FHIR.Resources;
 using SanteDB.Rest.Common.Configuration;
 using System;
 using System.Buffers.Text;
@@ -2263,7 +2264,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Add provenance information to the target entity
         /// </summary>
-        public static void AddContextProvenanceData(IIdentifiedResource targetEntity)
+        public static void AddContextProvenanceData(Resource fhirResource, IIdentifiedResource targetEntity)
         {
             object provenanceObject = null;
             if (RestOperationContext.Current?.Data.TryGetValue(FhirConstants.ProvenanceHeaderName, out provenanceObject) != true ||
@@ -2272,9 +2273,34 @@ namespace SanteDB.Messaging.FHIR.Util
                 return;
             }
 
-            if (prov.Location != null)
+            // TODO: Validate that the prov.target actually points to the target entity
+            if(!prov.Target.Any() && m_configuration.StrictProcessing)
             {
-                var target = DataTypeConverter.ResolveEntity<Place>(prov.Location, null);
+                throw new InvalidOperationException(FhirErrorMessages.ProvenanceMissingTarget);
+            }
+
+            foreach(var pt in prov.Target)
+            {
+                if(DataTypeConverter.TryResolveResourceReference(pt, fhirResource, out var idd))
+                {
+                    AddContextProvenanceDataLocated(prov, idd);
+                }
+                else if (m_configuration.StrictProcessing)
+                {
+                    throw new FhirException(HttpStatusCode.BadRequest, IssueType.NotFound, pt.ToString());
+                }
+                else
+                {
+                    traceSource.TraceWarning("Cannot apply provenance information to {0}", pt);
+                }
+            }
+        }
+
+        private static void AddContextProvenanceDataLocated(Provenance provenanceToApply, IIdentifiedResource targetEntity) 
+        { 
+            if (provenanceToApply.Location != null)
+            {
+                var target = DataTypeConverter.ResolveEntity<Place>(provenanceToApply.Location, null);
                 switch (targetEntity)
                 {
                     case Entity ent:
@@ -2286,13 +2312,13 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
 
-            if (prov.Agent != null)
+            if (provenanceToApply.Agent != null)
             {
-                foreach (var agnt in prov.Agent)
+                foreach (var agnt in provenanceToApply.Agent)
                 {
                     if (agnt.Who == null)
                     {
-                        throw new ArgumentNullException($"{nameof(prov.Agent)}.{nameof(agnt.Who)}");
+                        throw new ArgumentNullException($"{nameof(provenanceToApply.Agent)}.{nameof(agnt.Who)}");
                     }
                     var agent = DataTypeConverter.ResolveEntity<Entity>(agnt.Who, null);
                     if (agent == null)
@@ -2317,6 +2343,18 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
 
                 }
+            }
+
+            switch(targetEntity)
+            {
+                case Entity ent:
+                    ent.CreationTime = provenanceToApply.Recorded.GetValueOrDefault();
+                    break;
+                case Act act:
+                    act.CreationTime = provenanceToApply.Recorded.GetValueOrDefault();
+                    act.ReasonConcept = DataTypeConverter.ToConcept(provenanceToApply.Reason?.FirstOrDefault());
+
+                    break;
             }
         }
 

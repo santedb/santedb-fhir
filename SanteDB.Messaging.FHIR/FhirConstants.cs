@@ -85,6 +85,11 @@ namespace SanteDB.Messaging.FHIR
         public const string DispatcherClassSettingName = "$authenticationProvider";
 
         /// <summary>
+        /// Oid system
+        /// </summary>
+        public const string OidSystem = "urn:ietf:rfc:3986";
+
+        /// <summary>
         /// The code system for the <see cref="Hl7.Fhir.Model.AdministrativeGender"/> enumeration.
         /// </summary>
         /// <remarks>
