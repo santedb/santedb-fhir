@@ -2579,11 +2579,18 @@ namespace SanteDB.Messaging.FHIR.Util
             var codings = m_conceptRepository.FindReferenceTermsByConcept(concept.Key.Value, String.Empty)
                     .Select(o => ToCoding(o.LoadProperty(p => p.ReferenceTerm)))
                     .OrderBy(o => o.System == preferredTerminology ? 0 : 1);
-            return new CodeableConcept()
-            {
-                Coding = codings.ToList(),
-                Text = concept.ConceptNames?.FirstOrDefault()?.Name
-            };
+
+            if (codings?.Any() == true)
+                return new CodeableConcept()
+                {
+                    Coding = codings.ToList(),
+                    Text = concept.ConceptNames?.FirstOrDefault()?.Name
+                };
+            else
+                return new CodeableConcept(FhirConstants.SanteDBConceptSystem, concept.Mnemonic)
+                {
+                    Text = concept.ConceptNames?.FirstOrDefault()?.Name
+                };
 
         }
 
