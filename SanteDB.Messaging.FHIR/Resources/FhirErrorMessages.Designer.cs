@@ -88,6 +88,15 @@ namespace SanteDB.Messaging.FHIR.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Provenance is missing target.
+        /// </summary>
+        internal static string ProvenanceMissingTarget {
+            get {
+                return ResourceManager.GetString("ProvenanceMissingTarget", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Don&apos;t understand the query parameter &apos;{0}&apos;.
         /// </summary>
         internal static string QueryParameterNotFound {

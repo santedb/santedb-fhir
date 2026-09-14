@@ -187,7 +187,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         param = "Model"
                     }));
                 }
-                DataTypeConverter.AddContextProvenanceData(modelInstance);
+
+
+                DataTypeConverter.AddContextProvenanceData(fhirResource, modelInstance);
 
                 var result = this.Create(modelInstance, mode);
 
@@ -439,7 +441,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     param = "Request"
                 }));
             }
-            DataTypeConverter.AddContextProvenanceData(modelInstance);
+            DataTypeConverter.AddContextProvenanceData(resource, modelInstance);
 
             // Guid identifier
             var guidId = Guid.Empty;

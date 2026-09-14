@@ -167,7 +167,7 @@ namespace SanteDB.Messaging.FHIR.Util
             var retVal = new RestComponent()
             {
                 Mode = RestfulCapabilityMode.Server,
-                Documentation = new Markdown("SanteDB REST Instance"),
+                Documentation = new Markdown($"SanteDB Hl7 FHIR Service - SanteDB v.{typeof(ConformanceUtil).Assembly.GetName().Version} {typeof(ConformanceUtil).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion}"),
                 Security = new SecurityComponent()
                 {
                     Cors = configuration.Behaviors.Any(r=>r.Type == typeof(CorsEndpointBehavior)),

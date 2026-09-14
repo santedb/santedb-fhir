@@ -126,6 +126,9 @@
   <data name="InvalidTotalParameterValue" xml:space="preserve">
     <value>The _total parameter must be one of 'accurate','estimate', or 'none'</value>
   </data>
+  <data name="ProvenanceMissingTarget" xml:space="preserve">
+    <value>Provenance is missing target</value>
+  </data>
   <data name="QueryParameterNotFound" xml:space="preserve">
     <value>Don't understand the query parameter '{0}'</value>
   </data>
