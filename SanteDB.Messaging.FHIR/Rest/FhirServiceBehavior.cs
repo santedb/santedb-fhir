@@ -52,9 +52,9 @@ using static Hl7.Fhir.Model.CapabilityStatement;
 namespace SanteDB.Messaging.FHIR.Rest
 {
     /// <summary>
-    /// HL7 Fast Health Interoperability Resources (FHIR) R4
+    /// HL7 Fast Health Interoperability Resources (FHIR) R4B
     /// </summary>
-    /// <remarks>SanteSB Server implementation of the HL7 FHIR R4 Contract</remarks>
+    /// <remarks>SanteSB Server implementation of the HL7 FHIR R4B Contract. This interface is used to exchange HL7 FHIR messages with the SanteDB iCDR/dCDR server</remarks>
     [ExcludeFromCodeCoverage]
     [ServiceBehavior(Name = FhirMessageHandler.ConfigurationName, InstanceMode = ServiceInstanceMode.Singleton)]
     public class FhirServiceBehavior : IFhirServiceContract, IServiceBehaviorMetadataProvider
