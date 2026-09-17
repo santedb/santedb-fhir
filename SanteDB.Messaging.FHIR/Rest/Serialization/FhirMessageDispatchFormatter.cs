@@ -34,6 +34,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Tracing;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Xml;
@@ -41,6 +42,7 @@ using Formatting = Newtonsoft.Json.Formatting;
 
 namespace SanteDB.Messaging.FHIR.Rest.Serialization
 {
+
     /// <summary>
     /// Represents a dispatch message formatter which uses the JSON.NET serialization
     /// </summary>
@@ -49,6 +51,10 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
     [ExcludeFromCodeCoverage]
     public class FhirMessageDispatchFormatter : IDispatchMessageFormatter
     {
+
+        public const string FHIR_CONTENT_TYPE_JSON = "application/fhir+json";
+        public const string FHIR_CONTENT_TYPE_XML = "application/fhir+xml";
+        
         // Configuration for the service
         private readonly FhirServiceConfigurationSection m_configuration;
 
@@ -94,7 +100,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                     }
 
                     // Use XML Serializer
-                    if (contentType?.StartsWith("application/fhir+xml") == true)
+                    if (contentType?.StartsWith(FHIR_CONTENT_TYPE_XML) == true)
                     {
                         var parser = new FhirXmlParser(this.m_settings);
                         using (var xr = XmlReader.Create(request.Body))
@@ -103,7 +109,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                         }
                     }
                     // Use JSON Serializer
-                    else if (contentType?.StartsWith("application/fhir+json") == true)
+                    else if (contentType?.StartsWith(FHIR_CONTENT_TYPE_JSON) == true)
                     {
                         var parser = new FhirJsonParser(this.m_settings);
                         using (var sr = new StreamReader(request.Body))
@@ -156,11 +162,13 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 // No specified content type
                 if (String.IsNullOrEmpty(contentType))
                 {
-                    contentType = this.m_configuration.DefaultResponseFormat == FhirResponseFormatConfiguration.Json ? "application/fhir+json" : "application/fhir+xml";
+                    contentType = this.m_configuration.DefaultResponseFormat == FhirResponseFormatConfiguration.Json ? FHIR_CONTENT_TYPE_JSON : FHIR_CONTENT_TYPE_XML;
                 }
 
-                var charset = ContentType.GetCharSetFromHeaderValue(contentType);
-                var format = ContentType.GetMediaTypeFromHeaderValue(contentType);
+                var mostPreferredContentType = httpRequest.GetMostPreferredResponseContentType(FHIR_CONTENT_TYPE_JSON, FHIR_CONTENT_TYPE_XML) ?? new System.Net.Mime.ContentType(FHIR_CONTENT_TYPE_JSON);
+
+                var charset = mostPreferredContentType.CharSet;
+                var format = mostPreferredContentType.MediaType;
 
                 if (result is Base baseObject)
                 {
@@ -168,7 +176,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                     // The request was in JSON or the accept is JSON
                     switch (format)
                     {
-                        case "application/fhir+xml":
+                        case FHIR_CONTENT_TYPE_XML:
                             using (var xw = XmlWriter.Create(ms, new XmlWriterSettings
                             {
                                 Encoding = new UTF8Encoding(false),
@@ -180,7 +188,7 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
 
                             break;
 
-                        case "application/fhir+json":
+                        case FHIR_CONTENT_TYPE_JSON:
                             using (var sw = new StreamWriter(ms, new UTF8Encoding(false), 1024, true))
                             using (var jw = new JsonTextWriter(sw)
                             {
