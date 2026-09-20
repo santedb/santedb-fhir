@@ -493,7 +493,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 break;
                             case "contains":
                                 opValue = "~";
-                                filterValue = $"*{filterValue}*";
+                                filterValue = $"{filterValue}";
                                 break;
                             case "exact":
                                 opValue = "";
