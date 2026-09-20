@@ -34,6 +34,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         /// <inheritdoc/>
         public ResourceType? AppliesTo => ResourceType.Medication;
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(ResourceReference);
+
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {

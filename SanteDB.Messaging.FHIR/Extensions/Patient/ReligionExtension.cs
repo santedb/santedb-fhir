@@ -47,6 +47,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public ResourceType? AppliesTo => ResourceType.Patient;
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(CodeableConcept);
+
         /// <summary>
         /// Construct the extension
         /// </summary>

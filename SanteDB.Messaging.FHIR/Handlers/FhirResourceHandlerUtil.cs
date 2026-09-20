@@ -147,6 +147,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 var resourceDef = o.GetResourceDefinition();
                 var structureDef = o.GetStructureDefinition();
+                resourceDef.Profile = structureDef.Url;
                 return resourceDef;
             });
         }

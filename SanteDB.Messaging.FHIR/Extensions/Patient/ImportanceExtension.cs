@@ -47,6 +47,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-importance");
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(CodeableConcept);
+
         /// <summary>
         /// Construct the extension
         /// </summary>

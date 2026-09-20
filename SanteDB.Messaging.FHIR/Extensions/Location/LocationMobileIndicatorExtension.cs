@@ -42,6 +42,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Location
         /// <inheritdoc/>
         public ResourceType? AppliesTo => ResourceType.Location;
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(FhirBoolean);
+
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {

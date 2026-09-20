@@ -29,6 +29,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
         /// <inheritdoc/>
         public virtual ResourceType? AppliesTo => ResourceType.Immunization;
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(ResourceReference);
+
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {

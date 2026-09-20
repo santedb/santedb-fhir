@@ -67,6 +67,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-birthTime");
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(FhirDateTime);
+
         /// <summary>
         /// Construct the extension
         /// </summary>

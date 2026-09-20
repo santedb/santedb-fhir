@@ -70,6 +70,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         // Place repository
         private IRepositoryService<SanteDB.Core.Model.Entities.Place> m_placeRepository;
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(Hl7.Fhir.Model.Address);
+
         /// <summary>
         /// DI injection
         /// </summary>

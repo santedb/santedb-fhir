@@ -23,6 +23,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// <inheritdoc/>
         public ResourceType? AppliesTo => ResourceType.Patient;
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(CodeableConcept);
+
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {

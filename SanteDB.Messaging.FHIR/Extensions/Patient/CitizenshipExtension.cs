@@ -42,6 +42,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// </summary>
         private readonly IRepositoryService<Place> m_placeRepository;
 
+        /// <inhertidoc/>
+        public Type ValueType => typeof(CodeableConcept);
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CitizenshipExtension"/> class.
         /// </summary>
