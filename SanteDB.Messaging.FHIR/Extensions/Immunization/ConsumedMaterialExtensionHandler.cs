@@ -16,7 +16,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
     /// <summary>
     /// Consumed materials handler
     /// </summary>
-    public class ConsumedMaterialExtensionHandler : IFhirExtensionHandler
+    public class ConsumedMaterialExtensionHandler : IFhirExtensionHandlerEx
     {
 
         // consumed quantity
@@ -32,7 +32,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
         public virtual ResourceType? AppliesTo => ResourceType.Immunization;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(ResourceReference);
+        public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

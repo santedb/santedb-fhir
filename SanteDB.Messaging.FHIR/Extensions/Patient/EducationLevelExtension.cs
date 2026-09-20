@@ -11,7 +11,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Education level
     /// </summary>
-    public class EducationLevelExtension : IFhirExtensionHandler
+    public class EducationLevelExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/patient-education");
@@ -23,7 +23,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         public ResourceType? AppliesTo => ResourceType.Patient;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(CodeableConcept);
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

@@ -13,7 +13,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Identifies the classification of the medication
     /// </summary>
-    public class ProductClassExtensionTypeHandler : IFhirExtensionHandler
+    public class ProductClassExtensionTypeHandler : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/classification");
@@ -25,7 +25,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         public ResourceType? AppliesTo => ResourceType.Medication;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(CodeableConcept);
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

@@ -17,7 +17,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Extension handler for presentation
     /// </summary>
-    public class ProductPresentationExtensionHandler : IFhirExtensionHandler
+    public class ProductPresentationExtensionHandler : IFhirExtensionHandlerEx
     {
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ProductPresentationExtensionHandler));
         private readonly IRepositoryService<EntityRelationship> m_entityRelationshipService;
@@ -40,7 +40,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         public ResourceType? AppliesTo => ResourceType.Medication;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(Quantity);
+        public FHIRAllTypes ValueType => FHIRAllTypes.Quantity;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

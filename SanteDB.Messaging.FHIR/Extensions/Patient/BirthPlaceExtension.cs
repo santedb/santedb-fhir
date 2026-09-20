@@ -40,7 +40,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Implementation of the birthplace extension
     /// </summary>
-    public class BirthPlaceExtension : IFhirExtensionHandler
+    public class BirthPlaceExtension : IFhirExtensionHandlerEx
     {
 
         /// <summary>
@@ -71,7 +71,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         private IRepositoryService<SanteDB.Core.Model.Entities.Place> m_placeRepository;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(Hl7.Fhir.Model.Address);
+        public FHIRAllTypes ValueType => FHIRAllTypes.Address;
 
         /// <summary>
         /// DI injection

@@ -11,7 +11,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Patient ehtnicity
     /// </summary>
-    public class EhtnicityExtension : IFhirExtensionHandler
+    public class EhtnicityExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/patient-ethnicity");
@@ -23,7 +23,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         public ResourceType? AppliesTo => ResourceType.Patient;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(CodeableConcept);
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
+
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

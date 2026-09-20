@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.InkML;
 using DynamicExpresso;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
@@ -389,6 +390,63 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             return retVal;
+        }
+
+        public override StructureDefinition GetStructureDefinition()
+        {
+            var retVal = base.GetStructureDefinition();
+
+            // Restrictions
+            retVal.ConstrainField("dateOfBirth")
+                .WithComment("Partial dates are supported when exact date is unknown - example: 2009, 2009-01")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DateOfBirth);
+
+            retVal.ConstrainField("deceasedDate")
+                .WithComment("Partial dates are supported when exact date is unknown - example: 2009, 2009-01")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DeceasedDate);
+
+
+            retVal.ConstrainField("deceasedBoolean").
+                WithComment("When true, deceased date in CDR is indicated as 0001-01-01")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DeceasedDate);
+
+            retVal.ConstrainField("identifier.system")
+                .WithComment("Must be registered with SanteDB instance. Can be urn:oid: or URL")
+                .WithMustSupport()
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.Select(r => r.IdentityDomain.Url)); ;
+
+            retVal.ConstrainField("gender")
+                .WithMinOccurs(1)
+                .WithMustSupport()
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.GenderConcept);
+
+
+            retVal.ConstrainField("multipleBirthBoolean")
+                .WithComment("Multiple birth indicator results in a 0 in the multiple birth order field (non-null indicator)")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.MultipleBirthOrder);
+
+            retVal.ConstrainField("photo")
+                .WithComment("Only image/jpeg is supported")
+                .WithMaxOccurs("1")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension).FirstOrDefault());
+
+            retVal.ConstrainField("contact.organization")
+                .WithComment("When present, other attributes are ignored - target of relationship IS an organization");
+
+
+            retVal.ConstrainField("generalPractitioner")
+                .WithComment("All references must be registered with this SanteDB server")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Relationships.Where(r => r.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider).FirstOrDefault().TargetEntity);
+
+            retVal.ConstrainField("managingOrganization")
+                .WithComment("All references must be registered with this SanteDB server")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Relationships.Where(r => r.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper).FirstOrDefault().TargetEntity);
+
+            retVal.ConstrainField("link")
+                .WithComment("replaces and replaced-by may be routed through merging/matching logic on this server. see-also references may be ignored based on type");
+
+            return retVal;
+
         }
 
         /// <summary>

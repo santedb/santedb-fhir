@@ -52,11 +52,6 @@ namespace SanteDB.Messaging.FHIR.Extensions
         ResourceType? AppliesTo { get; }
 
         /// <summary>
-        /// Gets the type of extension that the handler returns / uses
-        /// </summary>
-        Type ValueType { get; }
-
-        /// <summary>
         /// Before returning the model object to the caller
         /// </summary>
         /// <param name="modelObject">The object which the construction occurs from</param>

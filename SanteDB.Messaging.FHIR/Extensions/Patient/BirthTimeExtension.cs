@@ -38,7 +38,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Birth-time extension
     /// </summary>
-    public class BirthTimeExtension : IFhirExtensionHandler
+    public class BirthTimeExtension : IFhirExtensionHandlerEx
     {
         private readonly IDataPersistenceService<DateObservation> m_dateObsPersistence;
 
@@ -68,7 +68,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-birthTime");
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(FhirDateTime);
+        public FHIRAllTypes ValueType => FHIRAllTypes.DateTime;
 
         /// <summary>
         /// Construct the extension

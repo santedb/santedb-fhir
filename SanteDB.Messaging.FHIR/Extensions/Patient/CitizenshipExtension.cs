@@ -35,7 +35,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Represents a citizenship extension handler.
     /// </summary>
-    public class CitizenshipExtension : IFhirExtensionHandler
+    public class CitizenshipExtension : IFhirExtensionHandlerEx
     {
         /// <summary>
         /// The place repository service.
@@ -43,7 +43,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         private readonly IRepositoryService<Place> m_placeRepository;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(CodeableConcept);
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CitizenshipExtension"/> class.

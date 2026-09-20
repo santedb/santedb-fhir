@@ -14,7 +14,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Trade name for a medication
     /// </summary>
-    public class NameExtensionHandler : IFhirExtensionHandler
+    public class NameExtensionHandler : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/name");
@@ -26,7 +26,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         public ResourceType? AppliesTo => ResourceType.Medication;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(FhirString);
+        public FHIRAllTypes ValueType => FHIRAllTypes.String;
+
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

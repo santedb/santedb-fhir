@@ -30,7 +30,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Nationality extension
     /// </summary>
-    public class NationalityExtension : IFhirExtensionHandler
+    public class NationalityExtension : IFhirExtensionHandlerEx
     {
         /// <summary>
         /// Gets the URI of this extension
@@ -48,7 +48,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         public ResourceType? AppliesTo => ResourceType.Patient;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(CodeableConcept);
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <summary>
         /// Construct the extension

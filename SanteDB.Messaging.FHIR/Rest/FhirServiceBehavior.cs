@@ -27,6 +27,7 @@ using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Exceptions;
 using SanteDB.Core.Interop;
 using SanteDB.Core.Interop.Description;
+using SanteDB.Core.Model.Attributes;
 using SanteDB.Core.Model.Audit;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Json.Formatter;
@@ -339,7 +340,16 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Process incoming request
                 var result = resourceProcessor.Query(RestOperationContext.Current.IncomingRequest.QueryString);
 
-                this.AuditDataAction(TypeRestfulInteraction.SearchType, OutcomeIndicator.Success, result.Entry.Select(o => o.Resource).ToArray());
+                var sensitivity = resourceProcessor.GetType().GetCustomAttribute<ResourceSensitivityAttribute>();
+                if (sensitivity?.Classification == ResourceSensitivityClassification.Administrative ||
+                    sensitivity?.Classification == ResourceSensitivityClassification.Metadata)
+                {
+                    this.m_tracer.TraceInfo("Ignoring audit for non-sensitive resource");
+                }
+                else
+                {
+                    this.AuditDataAction(TypeRestfulInteraction.SearchType, OutcomeIndicator.Success, result.Entry.Select(o => o.Resource).ToArray());
+                }
                 // Create the Atom feed
                 return result;
             }
@@ -507,7 +517,16 @@ namespace SanteDB.Messaging.FHIR.Rest
                 // Process incoming request
                 var result = resourceProcessor.Read(id, vid);
 
-                this.AuditDataAction(String.IsNullOrEmpty(vid) ? TypeRestfulInteraction.Read : TypeRestfulInteraction.Vread, OutcomeIndicator.Success, result);
+                var sensitivity = resourceProcessor.GetType().GetCustomAttribute<ResourceSensitivityAttribute>();
+                if (sensitivity?.Classification == ResourceSensitivityClassification.Administrative ||
+                    sensitivity?.Classification == ResourceSensitivityClassification.Metadata)
+                {
+                    this.m_tracer.TraceInfo("Ignoring audit for non-sensitive resource");
+                }
+                else
+                {
+                    this.AuditDataAction(String.IsNullOrEmpty(vid) ? TypeRestfulInteraction.Read : TypeRestfulInteraction.Vread, OutcomeIndicator.Success, result);
+                }
 
                 // Create the result
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(result.Meta.LastUpdated.Value.DateTime);
@@ -624,38 +643,38 @@ namespace SanteDB.Messaging.FHIR.Rest
                 }
 
                 var parms = new Parameters();
-                foreach(var parm in handler.Parameters)
+                foreach (var parm in handler.Parameters)
                 {
                     var restValue = RestOperationContext.Current.IncomingRequest.QueryString[parm.Key];
-                    if(!String.IsNullOrEmpty(restValue))
+                    if (!String.IsNullOrEmpty(restValue))
                     {
                         Base value = null;
-                        switch(parm.Value)
+                        switch (parm.Value)
                         {
                             case FHIRAllTypes.String:
                                 value = new FhirString(restValue);
                                 break;
                             case FHIRAllTypes.Date:
                             case FHIRAllTypes.DateTime:
-                                if(DateTime.TryParse(restValue, out var dt))
+                                if (DateTime.TryParse(restValue, out var dt))
                                 {
                                     value = new FhirDateTime(dt);
                                 }
                                 break;
                             case FHIRAllTypes.Integer:
-                                if(Int32.TryParse(restValue, out var intVal))
+                                if (Int32.TryParse(restValue, out var intVal))
                                 {
                                     value = new Integer(intVal);
                                 }
                                 break;
                             case FHIRAllTypes.Decimal:
-                                if(Decimal.TryParse(restValue, out var decVal))
+                                if (Decimal.TryParse(restValue, out var decVal))
                                 {
                                     value = new FhirDecimal(decVal);
                                 }
                                 break;
                             case FHIRAllTypes.Boolean:
-                                if(Boolean.TryParse(restValue, out var boolVal))
+                                if (Boolean.TryParse(restValue, out var boolVal))
                                 {
                                     value = new FhirBoolean(boolVal);
                                 }
@@ -770,12 +789,12 @@ namespace SanteDB.Messaging.FHIR.Rest
                 {
                     foreach (var op in def.Interaction)
                     {
-                        
+
                         ServiceOperationDescription operationDescription = null;
                         switch (op.Code.Value)
                         {
                             case CapabilityStatement.TypeRestfulInteraction.Create:
-                                
+
                                 operationDescription = new ServiceOperationDescription("POST", $"/{def.Type.Value}", acceptProduces, true);
                                 operationDescription.Responses.Add(HttpStatusCode.Created, def.Type.Value.CreateDescription());
                                 operationDescription.Parameters.Add(new OperationParameterDescription("body", def.Type.Value.CreateDescription(), OperationParameterLocation.Body));

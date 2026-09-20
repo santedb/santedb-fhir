@@ -23,11 +23,14 @@ using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using SanteDB.Core;
+using SanteDB.Core.Model;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Extensions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -45,7 +48,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Get the structure definition for the specified handler
         /// </summary>
-        public static StructureDefinition GetStructureDefinition(this IFhirExtensionHandler handler)
+        public static StructureDefinition GetStructureDefinition(this IFhirExtensionHandlerEx handler)
         {
             if(handler == null)
             {
@@ -57,11 +60,16 @@ namespace SanteDB.Messaging.FHIR.Util
                 Abstract = false,
                 Description = new Markdown(handler.GetType().GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description),
                 Url = handler.ProfileUri.ToString(),
-                Name = handler.Uri.Segments.Last(),
+                Name = handler.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName,
                 FhirVersion = FHIRVersion.N4_3_0,
+                Id = handler.ProfileUri.Segments.Last(),
                 DateElement = DataTypeConverter.ToFhirDateTime(DateTimeOffset.Now),
                 Kind = StructureDefinition.StructureDefinitionKind.ComplexType,
                 Type = "Extension",
+                Meta = new Meta()
+                {
+                    LastUpdated = String.IsNullOrEmpty(handler.GetType().Assembly.Location) ? DateTimeOffset.Now : new FileInfo(handler.GetType().Assembly.Location).LastWriteTime
+                },
                 Context = new List<StructureDefinition.ContextComponent>()
                 {
                     new StructureDefinition.ContextComponent()
@@ -100,14 +108,14 @@ namespace SanteDB.Messaging.FHIR.Util
                             {
                                 new ElementDefinition.TypeRefComponent()
                                 {
-                                    Code = handler.ValueType.GetCustomAttribute<FhirTypeAttribute>().Name
+                                    Code = EnumUtility.GetLiteral(handler.ValueType)
                                 }
                             }
                         }
                     }
                 },
                 Version = handler.GetType()?.Assembly.GetName().Version.ToString(),
-                VersionId = handler.GetType()?.Assembly.GetName().ToString(),
+                VersionId = handler.GetType()?.Assembly.GetName().Version.ToString(),
                 Copyright = new Markdown(handler.GetType().Assembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright),
                 Experimental = false,
                 Publisher = handler.GetType().Assembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company,
@@ -135,6 +143,10 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 Url = $"/{nameof(StructureDefinition)}/{fhirType.Name}",
                 Abstract = source.IsAbstract,
+                Meta = new Meta()
+                {
+                    LastUpdated = String.IsNullOrEmpty(source.Assembly.Location) ? DateTimeOffset.Now : new FileInfo(source.Assembly.Location).LastWriteTime
+                },
                 Contact = new List<ContactDetail>
                 {
                     new ContactDetail
@@ -142,6 +154,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         Name = source.Assembly.GetCustomAttribute<AssemblyCompanyAttribute>().Company
                     }
                 },
+                Snapshot = new StructureDefinition.SnapshotComponent(),
                 Name = source.Name,
                 Description = new Markdown(source.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description ?? source.Name),
                 FhirVersion = FHIRVersion.N4_3_0,
@@ -160,6 +173,105 @@ namespace SanteDB.Messaging.FHIR.Util
             };
 
             return retVal;
+        }
+
+        /// <summary>
+        /// Constraint a single field according to the constraint 
+        /// </summary>
+        /// <returns></returns>
+        public static ElementDefinition ConstrainField(this StructureDefinition me, String elementPath)
+        {
+            if (!elementPath.Contains("."))
+            {
+                var resourceName = new Uri(me.BaseDefinition).Segments.Last();
+                elementPath = $"{resourceName}.{elementPath}";
+            }
+
+            if (!me.HasSnapshot)
+            {
+                me.Snapshot = new StructureDefinition.SnapshotComponent();
+            }
+            if (me.Snapshot.Element == null)
+            {
+                me.Snapshot.Element = new List<ElementDefinition>();
+            }
+
+            var pathElement = me.Snapshot.Element.FirstOrDefault(o => o.Path == elementPath);
+            if(pathElement == null)
+            {
+                pathElement = new ElementDefinition();
+                pathElement.Path = elementPath;
+                me.Snapshot.Element.Add(pathElement);
+            }
+            return pathElement;
+        }
+
+        public static ElementDefinition WithFixedValue(this ElementDefinition me, DataType value)
+        {
+            me.Fixed = value;
+            return me;
+        }
+
+        public static ElementDefinition WithMinOccurs(this ElementDefinition me, int minOccurs) {
+            me.Min = minOccurs;
+            return me;
+        }
+
+        public static ElementDefinition WithMaxOccurs(this ElementDefinition me, string maxOccurs)
+        {
+            me.Max = maxOccurs;
+            return me;
+        }
+
+        public static ElementDefinition WithType(this ElementDefinition me, FHIRAllTypes type)
+        {
+            me.Type = new List<ElementDefinition.TypeRefComponent>()
+            {
+                new ElementDefinition.TypeRefComponent()
+                {
+                    Code = type.GetLiteral()
+                }
+            };
+            return me;
+        }
+
+        public static ElementDefinition WithComment(this ElementDefinition me, String comment)
+        {
+            me.Comment = new Markdown(comment);
+            return me;
+        }
+
+        public static ElementDefinition WithMaxLength(this ElementDefinition me, int maxLength)
+        {
+            me.MaxLength = maxLength;
+            return me;
+        }
+
+        public static ElementDefinition WithMustSupport(this ElementDefinition me, bool mustSupport = true)
+        {
+            me.MustSupport = mustSupport;
+            return me;
+        }
+
+        public static ElementDefinition WithBinding(this ElementDefinition me, string valueSetBinding, BindingStrength strength)
+        {
+            me.Binding = me.Binding ?? new ElementDefinition.ElementDefinitionBindingComponent();
+            me.Binding.ValueSet = valueSetBinding;
+            me.Binding.Strength = strength;
+            return me;
+        }
+
+        public static ElementDefinition Mapping<TResource>(this ElementDefinition me, System.Linq.Expressions.Expression<Func<TResource, Object>> selector)
+            where TResource : IdentifiedData
+        {
+            me.Mapping = me.Mapping ?? new List<ElementDefinition.MappingComponent>();
+            me.Mapping.Add(new ElementDefinition.MappingComponent()
+            {
+                Identity = "hdsi",
+                Language = "http://santedb.org/hdsi",
+                Map = QueryExpressionBuilder.BuildPropertySelector(selector)
+            });
+            return me;
         }
     }
 }

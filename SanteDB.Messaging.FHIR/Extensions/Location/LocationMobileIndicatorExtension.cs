@@ -31,7 +31,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Location
     /// <summary>
     /// FHIR extension handler for mobile locations
     /// </summary>
-    public class LocationMobileIndicatorExtension : IFhirExtensionHandler
+    public class LocationMobileIndicatorExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Location/mobileIndicator");
@@ -43,7 +43,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Location
         public ResourceType? AppliesTo => ResourceType.Location;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(FhirBoolean);
+        public FHIRAllTypes ValueType => FHIRAllTypes.Boolean;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

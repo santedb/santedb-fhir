@@ -18,7 +18,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
     /// <summary>
     /// Handles products on an immunization
     /// </summary>
-    public class AdministeredSubstanceExtensionHandler : IFhirExtensionHandler
+    public class AdministeredSubstanceExtensionHandler : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/administered-substance");
@@ -30,7 +30,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
         public virtual ResourceType? AppliesTo => ResourceType.Immunization;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(ResourceReference);
+        public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

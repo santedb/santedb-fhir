@@ -12,7 +12,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Living arrangement
     /// </summary>
-    public class LivingArrangementExtension : IFhirExtensionHandler
+    public class LivingArrangementExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/patient-livingArrangement");
@@ -24,7 +24,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         public ResourceType? AppliesTo => ResourceType.Patient;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(CodeableConcept);
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

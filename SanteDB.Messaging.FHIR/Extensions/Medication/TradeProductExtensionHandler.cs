@@ -14,7 +14,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Trade product extension handler for those which are 
     /// </summary>
-    public class TradeProductExtensionHandler : IFhirExtensionHandler
+    public class TradeProductExtensionHandler : IFhirExtensionHandlerEx
     {
         private readonly IRepositoryService<EntityRelationship> m_entityRelationshipService;
 
@@ -36,7 +36,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         public ResourceType? AppliesTo => ResourceType.Medication;
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(ResourceReference);
+        public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

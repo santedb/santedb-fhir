@@ -23,9 +23,11 @@ using Hl7.Fhir.Model;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Interop;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Attributes;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -38,6 +40,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Represents the default StructureDefinition handler
     /// </summary>
+    [ResourceSensitivity(ResourceSensitivityClassification.Metadata)]
     public class StructureDefinitionHandler : IFhirResourceHandler, IServiceImplementation
     {
         // Localization service
@@ -96,10 +99,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     new ResourceInteractionComponent()
                     {
                         Code = TypeRestfulInteraction.Read
-                    },
-                    new ResourceInteractionComponent()
-                    {
-                        Code = TypeRestfulInteraction.Vread
                     },
                     new ResourceInteractionComponent()
                     {
@@ -164,7 +163,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (this.m_structureDefinitions == null)
             {
                 var resourceStructures = FhirResourceHandlerUtil.ResourceHandlers.Select(o => o.GetStructureDefinition());
-                var extensionStructures = ExtensionUtil.ExtensionHandlers.Select(o => StructureDefinitionUtil.GetStructureDefinition(o));
+                var extensionStructures = ExtensionUtil.ExtensionHandlers.OfType<IFhirExtensionHandlerEx>().Select(o => StructureDefinitionUtil.GetStructureDefinition(o));
                 this.m_structureDefinitions = resourceStructures.Concat(extensionStructures).AsResultSet();
             }
             return this.m_structureDefinitions;
@@ -175,7 +174,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Read(string id, string versionId)
         {
-            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
+            return this.GetAllStructures().OfType<StructureDefinition>().FirstOrDefault(o => o.Id == id) ??
+                throw new KeyNotFoundException(id);
         }
 
         /// <summary>

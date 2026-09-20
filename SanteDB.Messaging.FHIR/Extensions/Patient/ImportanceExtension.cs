@@ -30,7 +30,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Religion extension handler
     /// </summary>
-    public class ImportanceExtension : IFhirExtensionHandler
+    public class ImportanceExtension : IFhirExtensionHandlerEx
     {
         /// <summary>
         /// Applies to
@@ -48,7 +48,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-importance");
 
         /// <inhertidoc/>
-        public Type ValueType => typeof(CodeableConcept);
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <summary>
         /// Construct the extension
