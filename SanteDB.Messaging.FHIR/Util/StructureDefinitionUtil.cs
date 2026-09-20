@@ -181,9 +181,10 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <returns></returns>
         public static ElementDefinition ConstrainField(this StructureDefinition me, String elementPath)
         {
-            if (!elementPath.Contains("."))
+            var resourceName = new Uri(me.BaseDefinition).Segments.Last();
+
+            if (!elementPath.StartsWith($"{resourceName}."))
             {
-                var resourceName = new Uri(me.BaseDefinition).Segments.Last();
                 elementPath = $"{resourceName}.{elementPath}";
             }
 
@@ -268,8 +269,8 @@ namespace SanteDB.Messaging.FHIR.Util
             me.Mapping.Add(new ElementDefinition.MappingComponent()
             {
                 Identity = "hdsi",
-                Language = "http://santedb.org/hdsi",
-                Map = QueryExpressionBuilder.BuildPropertySelector(selector)
+                Language = "http://santedb.org/model#hdsi",
+                Map =$"{typeof(TResource).GetSerializationName()}.{QueryExpressionBuilder.BuildPropertySelector(selector)}"
             });
             return me;
         }

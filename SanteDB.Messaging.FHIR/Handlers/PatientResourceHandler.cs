@@ -396,8 +396,50 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             var retVal = base.GetStructureDefinition();
 
+            retVal.ConstrainField("identifier")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers);
+
+            retVal.ConstrainField("identifier.system")
+                .WithComment("Must be mapped to a registered identity domain in this system. Schemes with `urn:oid:` reference registered OID, others reference URL")
+                .WithMustSupport()
+                .WithMinOccurs(1)
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Url)
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Oid);
+
+            retVal.ConstrainField("identifier.period")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().IssueDate)
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().ExpiryDate);
+
+            retVal.ConstrainField("identifier.type")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().IdentifierType);
+
+            retVal.ConstrainField("identifier.value")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().Value);
+
+            retVal.ConstrainField("active")
+                .WithComment("For reads/searches TRUE represents any ACTIVE concept (Active, New) and FALSE represents any inactive state (OBSOLETE, NULLIFIED, INACTIVE, PURGED)")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.StatusConcept);
+
+            retVal.ConstrainField("name")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Names);
+
+            retVal.ConstrainField("telecom")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Telecoms);
+
+            retVal.ConstrainField("address")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Addresses);
+
+            retVal.ConstrainField("maritalStatus")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.MaritalStatus);
+
+            retVal.ConstrainField("communication.language")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.LanguageCommunication.FirstOrDefault().LanguageCode);
+
+            retVal.ConstrainField("communication.preferred")
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.LanguageCommunication.FirstOrDefault().IsPreferred);
+
             // Restrictions
-            retVal.ConstrainField("dateOfBirth")
+            retVal.ConstrainField("birthDate")
                 .WithComment("Partial dates are supported when exact date is unknown - example: 2009, 2009-01")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DateOfBirth);
 
@@ -409,11 +451,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.ConstrainField("deceasedBoolean").
                 WithComment("When true, deceased date in CDR is indicated as 0001-01-01")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DeceasedDate);
-
-            retVal.ConstrainField("identifier.system")
-                .WithComment("Must be registered with SanteDB instance. Can be urn:oid: or URL")
-                .WithMustSupport()
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.Select(r => r.IdentityDomain.Url)); ;
 
             retVal.ConstrainField("gender")
                 .WithMinOccurs(1)
@@ -428,7 +465,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.ConstrainField("photo")
                 .WithComment("Only image/jpeg is supported")
                 .WithMaxOccurs("1")
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension).FirstOrDefault());
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension).FirstOrDefault().ExtensionValue);
 
             retVal.ConstrainField("contact.organization")
                 .WithComment("When present, other attributes are ignored - target of relationship IS an organization");
