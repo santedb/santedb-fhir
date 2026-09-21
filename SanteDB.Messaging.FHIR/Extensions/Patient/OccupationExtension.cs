@@ -4,6 +4,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
@@ -11,6 +12,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Occupation
     /// </summary>
+    [DisplayName("Patient Occupation")]
+    [Description("When enabled, provides a codified representation of the Patient's occupation ")]
     public class OccupationExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>

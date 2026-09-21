@@ -24,12 +24,15 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
     /// <summary>
     /// Nationality extension
     /// </summary>
+    [DisplayName("Patient Nationality")]
+    [Description("When enabled, the codified representation of the patient's nationality(ies)")]
     public class NationalityExtension : IFhirExtensionHandlerEx
     {
         /// <summary>

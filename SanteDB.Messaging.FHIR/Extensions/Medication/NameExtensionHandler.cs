@@ -6,6 +6,7 @@ using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
@@ -14,6 +15,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Trade name for a medication
     /// </summary>
+    [DisplayName("Trade/Common Names")]
+    [System.ComponentModel.Description("Common or trade name(s) for the medication")]
     public class NameExtensionHandler : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>

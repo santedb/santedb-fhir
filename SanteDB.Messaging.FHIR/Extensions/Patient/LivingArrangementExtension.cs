@@ -5,6 +5,7 @@ using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
@@ -12,6 +13,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Living arrangement
     /// </summary>
+    [DisplayName("Patient Living Arrangement")]
+    [Description("When enabled, provides a codified representation of the patient's living arrangement (in institution, with family, etc.)")]
     public class LivingArrangementExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>

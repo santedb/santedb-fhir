@@ -21,12 +21,14 @@
 using DocumentFormat.OpenXml.Math;
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Serialization;
 using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Extensions;
+using SanteDB.Messaging.FHIR.Handlers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -154,7 +156,6 @@ namespace SanteDB.Messaging.FHIR.Util
                         Name = source.Assembly.GetCustomAttribute<AssemblyCompanyAttribute>().Company
                     }
                 },
-                Snapshot = new StructureDefinition.SnapshotComponent(),
                 Name = source.Name,
                 Description = new Markdown(source.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description ?? source.Name),
                 FhirVersion = FHIRVersion.N4_3_0,
@@ -188,21 +189,21 @@ namespace SanteDB.Messaging.FHIR.Util
                 elementPath = $"{resourceName}.{elementPath}";
             }
 
-            if (!me.HasSnapshot)
+            if (me.Differential == null)
             {
-                me.Snapshot = new StructureDefinition.SnapshotComponent();
+                me.Differential = new StructureDefinition.DifferentialComponent();
             }
-            if (me.Snapshot.Element == null)
+            if (me.Differential.Element == null)
             {
-                me.Snapshot.Element = new List<ElementDefinition>();
+                me.Differential.Element = new List<ElementDefinition>();
             }
 
-            var pathElement = me.Snapshot.Element.FirstOrDefault(o => o.Path == elementPath);
+            var pathElement = me.Differential.Element.FirstOrDefault(o => o.Path == elementPath);
             if(pathElement == null)
             {
                 pathElement = new ElementDefinition();
                 pathElement.Path = elementPath;
-                me.Snapshot.Element.Add(pathElement);
+                me.Differential.Element.Add(pathElement);
             }
             return pathElement;
         }
@@ -268,11 +269,16 @@ namespace SanteDB.Messaging.FHIR.Util
             me.Mapping = me.Mapping ?? new List<ElementDefinition.MappingComponent>();
             me.Mapping.Add(new ElementDefinition.MappingComponent()
             {
-                Identity = "hdsi",
+                Identity = "santedb+hdsi",
                 Language = "http://santedb.org/model#hdsi",
                 Map =$"{typeof(TResource).GetSerializationName()}.{QueryExpressionBuilder.BuildPropertySelector(selector)}"
             });
             return me;
+        }
+
+        public static ElementDefinition NotSupported(this ElementDefinition me)
+        {
+            return me.WithComment("Not Supported").WithMaxOccurs("0");
         }
     }
 }

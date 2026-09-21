@@ -265,7 +265,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public virtual StructureDefinition GetStructureDefinition()
         {
-            return StructureDefinitionUtil.GetStructureDefinition(typeof(TFhirResource), false);
+            var retVal = StructureDefinitionUtil.GetStructureDefinition(typeof(TFhirResource), false);
+            retVal.Mapping = retVal.Mapping ?? new List<StructureDefinition.MappingComponent>();
+            retVal.Mapping.Add(new StructureDefinition.MappingComponent()
+            {
+                Comment = $"Mappings to SanteDB Health Data Services Interface type {this.CanonicalType.GetSerializationName()}",
+                Identity = "santedb+hdsi",
+                Uri = "http://santedb.org/model#hdsi",
+            });
+            return retVal;
         }
 
         /// <summary>

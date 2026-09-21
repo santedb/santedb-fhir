@@ -1,5 +1,4 @@
-﻿using DocumentFormat.OpenXml.Wordprocessing;
-using Hl7.Fhir.Model;
+﻿using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Model;
@@ -10,6 +9,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
@@ -18,6 +18,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
     /// <summary>
     /// Handles products on an immunization
     /// </summary>
+    [DisplayName("Administered Substance")]
+    [System.ComponentModel.Description("Provides a direct reference to the type of Material that was administered")]
     public class AdministeredSubstanceExtensionHandler : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
