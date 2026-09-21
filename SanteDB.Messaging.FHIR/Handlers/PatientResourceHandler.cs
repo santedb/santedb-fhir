@@ -457,6 +457,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .WithMustSupport()
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.GenderConcept);
 
+            retVal.ConstrainField("multipleBirthInteger")
+               .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.MultipleBirthOrder);
 
             retVal.ConstrainField("multipleBirthBoolean")
                 .WithComment("Multiple birth indicator results in a 0 in the multiple birth order field (non-null indicator)")
@@ -465,7 +467,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.ConstrainField("photo")
                 .WithComment("Only image/jpeg is supported")
                 .WithMaxOccurs("1")
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension).FirstOrDefault().ExtensionValue);
+                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension).FirstOrDefault().ExtensionValueData);
 
             retVal.ConstrainField("contact.organization")
                 .WithComment("When present, other attributes are ignored - target of relationship IS an organization");

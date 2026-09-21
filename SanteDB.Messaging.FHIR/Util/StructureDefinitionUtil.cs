@@ -93,7 +93,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             {
                                 new ElementDefinition.TypeRefComponent()
                                 {
-                                    Code = "http://hl7.org/fhirpath/System.String"
+                                    Code = "String"
                                 }
                             },
                             Fixed = new FhirUri(handler.Uri),
@@ -202,6 +202,10 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 pathElement = new ElementDefinition();
                 pathElement.Path = elementPath;
+                pathElement.Base = new ElementDefinition.BaseComponent()
+                {
+                    Path = elementPath
+                };
                 me.Snapshot.Element.Add(pathElement);
             }
             return pathElement;
@@ -268,7 +272,7 @@ namespace SanteDB.Messaging.FHIR.Util
             me.Mapping = me.Mapping ?? new List<ElementDefinition.MappingComponent>();
             me.Mapping.Add(new ElementDefinition.MappingComponent()
             {
-                Identity = "hdsi",
+                Identity = "santedb+hdsi",
                 Language = "http://santedb.org/model#hdsi",
                 Map =$"{typeof(TResource).GetSerializationName()}.{QueryExpressionBuilder.BuildPropertySelector(selector)}"
             });
