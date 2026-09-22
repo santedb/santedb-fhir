@@ -4,6 +4,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
@@ -11,6 +12,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Education level
     /// </summary>
+    [DisplayName("Patient Education Level")]
+    [Description("When enabled, provides a codified representation (if present) of the patient's level of education")]
     public class EducationLevelExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>

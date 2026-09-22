@@ -8,6 +8,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
@@ -16,6 +17,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
     /// <summary>
     /// Consumed materials handler
     /// </summary>
+    [DisplayName("Consumed Material")]
+    [System.ComponentModel.Description("Provides a direct reference to Materials or Substances that were directly consumed in the execution of this event")]
     public class ConsumedMaterialExtensionHandler : IFhirExtensionHandlerEx
     {
 

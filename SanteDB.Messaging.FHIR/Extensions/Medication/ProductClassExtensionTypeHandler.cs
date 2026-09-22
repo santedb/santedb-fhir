@@ -6,6 +6,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Medication
@@ -13,6 +14,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Identifies the classification of the medication
     /// </summary>
+    [DisplayName("Medication Classification")]
+    [System.ComponentModel.Description("Identifies whether this Medication entry represents a `Kind` of medication, a `Specific` instnace of Medication")]
     public class ProductClassExtensionTypeHandler : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>

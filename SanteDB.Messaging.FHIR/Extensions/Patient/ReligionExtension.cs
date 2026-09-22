@@ -24,12 +24,15 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
     /// <summary>
     /// Religion extension handler
     /// </summary>
+    [DisplayName("Patient Religion")]
+    [Description("When enabled, provides a codified representation of the Patient's religious affiliation ")]
     public class ReligionExtension : IFhirExtensionHandlerEx
     {
         /// <summary>

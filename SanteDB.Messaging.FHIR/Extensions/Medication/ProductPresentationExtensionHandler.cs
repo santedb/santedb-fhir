@@ -8,6 +8,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -17,6 +18,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Extension handler for presentation
     /// </summary>
+    [DisplayName("Product Presentation")]
+    [System.ComponentModel.Description("Represents the presentation of this Medication (examples: 10 dose Vial, 20 pill package, etc.)")]
+
     public class ProductPresentationExtensionHandler : IFhirExtensionHandlerEx
     {
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ProductPresentationExtensionHandler));

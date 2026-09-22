@@ -108,7 +108,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Type = Hl7.Fhir.Model.ResourceType.StructureDefinition,
                 ReadHistory = true,
                 UpdateCreate = false,
-                Versioning = ResourceVersionPolicy.Versioned
+                Versioning = ResourceVersionPolicy.Versioned,
+                SearchParam = new List<SearchParamComponent>()
+                {
+                    new SearchParamComponent()
+                    {
+                        Name = "_offset",
+                        Type = SearchParamType.Number
+                    },
+                    new SearchParamComponent()
+                    {
+                        Name = "_count",
+                        Type = SearchParamType.Number
+                    },
+                    new SearchParamComponent()
+                    {
+                        Name = "_page", 
+                        Type = SearchParamType.Number
+                    }
+                }
             };
         }
 

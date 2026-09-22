@@ -32,6 +32,7 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 
@@ -40,6 +41,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Implementation of the birthplace extension
     /// </summary>
+    [DisplayName("Patient Birthplace")]
     public class BirthPlaceExtension : IFhirExtensionHandlerEx
     {
 
