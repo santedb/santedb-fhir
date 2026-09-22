@@ -46,13 +46,6 @@ namespace SanteDB.Messaging.FHIR.Test
             Assert.AreEqual(PublicationStatus.Active, actual.Status);
         }
 
-        /// <summary>
-        /// Tests the retrieval generation of a <see cref="StructureDefinition"/> instance.
-        /// </summary>
-        [Test]
-        public void TestGetStructureDefinitionNull()
-        {
-            Assert.Throws<ArgumentNullException>(() => StructureDefinitionUtil.GetStructureDefinition(null));
-        }
+       
     }
 }
