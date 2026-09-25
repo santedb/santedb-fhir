@@ -30,6 +30,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using Person = SanteDB.Core.Model.Entities.Person;
 
@@ -38,7 +39,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Birth-time extension
     /// </summary>
-    public class BirthTimeExtension : IFhirExtensionHandler
+    [DisplayName("Patient Birth Time")]
+    public class BirthTimeExtension : IFhirExtensionHandlerEx
     {
         private readonly IDataPersistenceService<DateObservation> m_dateObsPersistence;
 
@@ -66,6 +68,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// Gets the URI of this extension
         /// </summary>
         public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-birthTime");
+
+        /// <inhertidoc/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.DateTime;
 
         /// <summary>
         /// Construct the extension

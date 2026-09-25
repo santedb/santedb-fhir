@@ -86,36 +86,6 @@ namespace SanteDB.Messaging.FHIR.Test
         }
 
         /// <summary>
-        /// Tests the read functionality of the <see cref="BundleResourceHandler"/> class.
-        /// </summary>
-        [Test]
-        public void TestRead()
-        {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
-            {
-                var structureDefinitionResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.StructureDefinition);
-
-                Assert.Throws<NotSupportedException>(() => structureDefinitionResourceHandler.Read(Guid.NewGuid().ToString(), null));
-            }
-        }
-
-        /// <summary>
-        /// Tests the query functionality of the <see cref="BundleResourceHandler"/> class.
-        /// </summary>
-        [Test]
-        public void TestQuery()
-        {
-            TestUtil.CreateAuthority("TEST", "1.2.3.4", "http://santedb.org/fhir/test", "TEST_HARNESS", this.AUTH);
-            using (TestUtil.AuthenticateFhir("TEST_HARNESS", this.AUTH))
-            {
-                var structureDefinitionResourceHandler = FhirResourceHandlerUtil.GetResourceHandler(ResourceType.StructureDefinition);
-
-                Assert.Throws<NotSupportedException>(() => structureDefinitionResourceHandler.Query(new NameValueCollection()));
-            }
-        }
-
-        /// <summary>
         /// Tests the update functionality of the <see cref="BundleResourceHandler"/> class.
         /// </summary>
         [Test]

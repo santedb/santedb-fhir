@@ -190,12 +190,17 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Operation Handlers
         /// </summary>
-        public static IEnumerable<IFhirOperationHandler> OperationHandlers => s_operationHandlers;
+        public static IEnumerable<IFhirOperationHandler> OperationHandlers => s_operationHandlers.AsEnumerable();
 
         /// <summary>
         /// Profile handlers
         /// </summary>
-        public static IEnumerable<IFhirProfileValidationHandler> ProfileHandlers => s_profileHandlers;
+        public static IEnumerable<IFhirProfileValidationHandler> ProfileHandlers => s_profileHandlers.AsEnumerable();
+
+        /// <summary>
+        /// Get the extension handlers
+        /// </summary>
+        public static IEnumerable<IFhirExtensionHandler> ExtensionHandlers => s_extensionHandlers.AsEnumerable();
 
         /// <summary>
         /// Get the specified message operation handler for the specified event uri

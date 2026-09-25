@@ -18,7 +18,10 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Bibliography;
+using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Hl7.Fhir.Introspection;
+using Hl7.Fhir.Language.Debugging;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using SanteDB.Core;
@@ -37,6 +40,7 @@ using System.Collections.Specialized;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Xml.Serialization;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -265,7 +269,30 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public virtual StructureDefinition GetStructureDefinition()
         {
-            return StructureDefinitionUtil.GetStructureDefinition(typeof(TFhirResource), false);
+            var retVal = StructureDefinitionUtil.GetStructureDefinition(typeof(TFhirResource), false);
+            retVal.Mapping = retVal.Mapping ?? new List<StructureDefinition.MappingComponent>();
+            retVal.Mapping.Add(new StructureDefinition.MappingComponent()
+            {
+                Comment = $"Mappings to SanteDB Health Data Services Interface type {this.CanonicalType.GetSerializationName()}",
+                Identity = "santedb+hdsi",
+                Uri = "http://santedb.org/model#hdsi",
+            });
+            var thisAssembly = this.GetType().Assembly;
+
+
+            retVal.Description = new Markdown(this.GetType().GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description ?? retVal.Description.Value);
+            retVal.VersionId = thisAssembly.GetName().Version.ToString();
+            retVal.Contact = new List<ContactDetail>
+                {
+                    new ContactDetail
+                    {
+                        Name = thisAssembly.GetCustomAttribute<AssemblyCompanyAttribute>().Company
+                    }
+                };
+            retVal.Publisher = thisAssembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company;
+            retVal.Copyright = new Markdown(thisAssembly.GetCustomAttribute<AssemblyCopyrightAttribute>()?.Copyright);
+
+            return retVal;
         }
 
         /// <summary>

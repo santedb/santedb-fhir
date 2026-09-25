@@ -7,6 +7,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Medication
@@ -14,7 +15,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Trade product extension handler for those which are 
     /// </summary>
-    public class TradeProductExtensionHandler : IFhirExtensionHandler
+    [DisplayName("Trade Product")]
+    [System.ComponentModel.Description("Additional information about the Medication's trade product(s) (example: HPV is a MEDICATION but Guardasil9 is a Trade Product which IS A instance of HPV)")]
+    public class TradeProductExtensionHandler : IFhirExtensionHandlerEx
     {
         private readonly IRepositoryService<EntityRelationship> m_entityRelationshipService;
 
@@ -34,6 +37,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
 
         /// <inheritdoc/>
         public ResourceType? AppliesTo => ResourceType.Medication;
+
+        /// <inhertidoc/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

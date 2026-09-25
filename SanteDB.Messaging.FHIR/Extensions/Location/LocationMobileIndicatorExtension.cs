@@ -24,6 +24,7 @@ using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Location
@@ -31,7 +32,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Location
     /// <summary>
     /// FHIR extension handler for mobile locations
     /// </summary>
-    public class LocationMobileIndicatorExtension : IFhirExtensionHandler
+    [DisplayName("Mobile Indicator")]
+    [System.ComponentModel.Description("True if the location is a mobile location (i.e. an ambulance, traveling clinic, etc.)")]
+    public class LocationMobileIndicatorExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Location/mobileIndicator");
@@ -41,6 +44,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Location
 
         /// <inheritdoc/>
         public ResourceType? AppliesTo => ResourceType.Location;
+
+        /// <inhertidoc/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.Boolean;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

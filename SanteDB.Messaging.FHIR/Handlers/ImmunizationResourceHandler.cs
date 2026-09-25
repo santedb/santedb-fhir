@@ -51,10 +51,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Create a new resource handler
         /// </summary>
-        public ImmunizationResourceHandler(IRepositoryService<SubstanceAdministration> repo, 
-            ILocalizationService localizationService, 
-            IRepositoryService<Material> materialService, 
-            IRepositoryService<ManufacturedMaterial> manufactedMaterialService, 
+        public ImmunizationResourceHandler(IRepositoryService<SubstanceAdministration> repo,
+            ILocalizationService localizationService,
+            IRepositoryService<Material> materialService,
+            IRepositoryService<ManufacturedMaterial> manufactedMaterialService,
             IRepositoryService<ActRelationship> actRelationshipRepository) : base(repo, localizationService)
         {
             this.m_materialRepository = materialService;
@@ -79,8 +79,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.DoseQuantity = new Quantity()
             {
-                Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code ?? 
-                    model.LoadProperty(o=>o.DoseUnit)?.Mnemonic,
+                Unit = DataTypeConverter.ToFhirCodeableConcept(model.DoseUnitKey, FhirConstants.DefaultQuantityUnitSystem)?.GetCoding().Code ??
+                    model.LoadProperty(o => o.DoseUnit)?.Mnemonic,
                 Value = model.DoseQuantity
             };
 
@@ -136,7 +136,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 Actor = DataTypeConverter.CreateNonVersionedReference<Practitioner>(c.LoadProperty<Entity>(nameof(ActParticipation.PlayerEntity)))
             }));
-            
+
             // Protocol
             foreach (var itm in model.LoadProperty(o => o.Protocols))
             {
@@ -151,7 +151,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Encounter
             var encounter = this.m_relationshipRepository.Find(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.TargetActKey == model.Key && o.SourceEntity.ClassConceptKey == ActClassKeys.Encounter).FirstOrDefault();
-            if(encounter != null) {
+            if (encounter != null)
+            {
                 retVal.Encounter = DataTypeConverter.CreateNonVersionedReference<Encounter>(encounter.LoadProperty(o => o.SourceEntity));
             }
             return retVal;
@@ -339,6 +340,148 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override IEnumerable<Resource> GetReverseIncludes(SubstanceAdministration resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+        }
+
+        /// <inheritdoc/>
+        public override StructureDefinition GetStructureDefinition()
+        {
+            var retVal = base.GetStructureDefinition();
+
+            retVal.Description = new Markdown("Maps to SubstanceAdministration instances with `MoodConcept`=`EventOccurrence` and a `TypeConcept` of `Immunization`, `InitialImmunization` or `BoosterImmunization`");
+            retVal.ConstrainField("identifier")
+                .Mapping<SubstanceAdministration>(o => o.Identifiers);
+            retVal.ConstrainField("identifier.system")
+                .WithComment("Must be registered domain in SanteDB instance - scoped to SubstanceAdministration")
+                .WithMustSupport()
+                .Mapping<SubstanceAdministration>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Oid)
+                .Mapping<SubstanceAdministration>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Url);
+
+            retVal.ConstrainField("status")
+                .WithComment("Mapped to `completed`=`StatusKeys.Completed`, `entered-in-error`=`Nullified`, and `not-done` when NegationInd = true")
+                .Mapping<SubstanceAdministration>(o => o.StatusConcept)
+                .Mapping<SubstanceAdministration>(o => o.IsNegated);
+
+            retVal.ConstrainField("statusReason")
+                .WithComment("Always mapped to a coded concept in ActReason")
+                .Mapping<SubstanceAdministration>(o => o.ReasonConcept);
+
+            retVal.ConstrainField("vaccineCode")
+                .WithComment("The most appropriate `TypeConcept` on the `Product` administered relationship")
+                .WithMustSupport()
+                .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Consumable)).FirstOrDefault().PlayerEntity.Relationships.Where(r=>r.RelationshipType.Mnemonic == nameof(EntityRelationshipTypeKeys.Instance)).FirstOrDefault().SourceEntity.Relationships.Where(r=>r.RelationshipType.Mnemonic == nameof(EntityRelationshipTypeKeys.HasGenerialization)).FirstOrDefault().TargetEntity.TypeConcept)
+                .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Product)).FirstOrDefault().PlayerEntity.TypeConcept);
+
+            retVal.ConstrainField("patient")
+                .WithMustSupport()
+                .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.RecordTarget)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("encounter")
+                .WithMustSupport()
+                .WithComment("Must be supplied if part of an encounter - encounter must be registered with SanteDB instance")
+                .Mapping<SubstanceAdministration>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasComponent)).FirstOrDefault().SourceEntity);
+
+            retVal.ConstrainField("occurrenceDateTime")
+                .WithMustSupport()
+                .WithMinOccurs(1)
+                .WithMaxOccurs("1")
+                .WithComment("The date/time of the occurence or the back-entry time")
+                .Mapping<SubstanceAdministration>(o => o.ActTime);
+
+            retVal.ConstrainField("occurrenceString")
+                .WithMaxOccurs("0")
+                .WithComment("Not supported - occurrence must be a DateTime");
+
+            retVal.ConstrainField("recorded")
+                .Mapping<SubstanceAdministration>(o => o.CreationTime);
+
+            retVal.ConstrainField("primarySource")
+                .WithMaxOccurs("0")
+                .WithComment("Not supported");
+
+            retVal.ConstrainField("reportOrigin")
+                .WithMaxOccurs("0")
+                .WithComment("Not supported");
+
+            retVal.ConstrainField("location")
+                .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Location)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("manufacturer")
+                .WithComment("Only provided for done immunizations with a registered consumable - submitters are required to ensure that the organization is registered")
+                .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Consumable)).FirstOrDefault().PlayerEntity.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(EntityRelationshipTypeKeys.Instance)).FirstOrDefault().SourceEntity.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(EntityRelationshipTypeKeys.ManufacturedProduct)).FirstOrDefault().SourceEntity);
+
+            retVal.ConstrainField("lotNumber")
+                .Mapping<SubstanceAdministration>(o => (o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Consumable)).FirstOrDefault().PlayerEntity as ManufacturedMaterial).LotNumber);
+
+            retVal.ConstrainField("expirationDate")
+                .Mapping<SubstanceAdministration>(o => (o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Consumable)).FirstOrDefault().PlayerEntity as ManufacturedMaterial).ExpiryDate);
+
+            retVal.ConstrainField("site")
+                .WithComment("Required for non-back-entered data")
+                .Mapping<SubstanceAdministration>(o => o.Site);
+
+            retVal.ConstrainField("route")
+                .WithComment("Required for non-back-entere data")
+                .Mapping<SubstanceAdministration>(o => o.Route);
+
+            retVal.ConstrainField("doseQuantity.value")
+                .Mapping<SubstanceAdministration>(o => o.DoseQuantity);
+            retVal.ConstrainField("doseQuantity.unit")
+                .Mapping<SubstanceAdministration>(o => o.DoseUnit.ReferenceTerms.FirstOrDefault().ReferenceTerm.Mnemonic);
+            retVal.ConstrainField("doseQuantity.system")
+                .Mapping<SubstanceAdministration>(o => o.DoseUnit.ReferenceTerms.FirstOrDefault().ReferenceTerm.CodeSystem.Url);
+
+            retVal.ConstrainField("performer.function")
+                .WithMaxOccurs("0")
+                .WithComment("Not Supported");
+            retVal.ConstrainField("performer.actor")
+                .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Performer)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("note.text")
+                .Mapping<SubstanceAdministration>(o => o.Notes.FirstOrDefault().Text);
+            retVal.ConstrainField("note.authorReference")
+                .Mapping<SubstanceAdministration>(o => o.Notes.FirstOrDefault().Author);
+
+            retVal.ConstrainField("reasonCode")
+                .WithComment("Not supported - see `statusReason`")
+                .WithMaxOccurs("0");
+
+            retVal.ConstrainField("reasonReference")
+                .NotSupported();
+
+            retVal.ConstrainField("isSubpotent").NotSupported();
+
+            retVal.ConstrainField("subpotentReason").NotSupported();
+
+            retVal.ConstrainField("education").NotSupported();
+
+            retVal.ConstrainField("programEligibility").NotSupported();
+
+            retVal.ConstrainField("programEligibility").NotSupported();
+
+            retVal.ConstrainField("fundingSource").NotSupported();
+
+            retVal.ConstrainField("reaction")
+                .WithComment("For creating - post an `AdverseEvent` referencing this Immunization entry - on read is populated as a reference")
+                .WithMaxOccurs("0");
+
+            retVal.ConstrainField("reaction.date")
+                .WithMaxOccurs("0")
+                .Mapping<SubstanceAdministration>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.RefersTo)).FirstOrDefault().SourceEntity.ActTime);
+            retVal.ConstrainField("reatction.detail")
+                .WithMaxOccurs("0")
+                .Mapping<SubstanceAdministration>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.RefersTo)).FirstOrDefault().SourceEntity as CodedObservation);
+            retVal.ConstrainField("protocolApplied.series")
+                .WithComment("Must be a registered protocol in this SanteDB instance")
+                .Mapping<SubstanceAdministration>(o => o.Protocols.FirstOrDefault().Protocol.Name);
+            retVal.ConstrainField("protocolApplied.doseNumberPostiveInt")
+                .WithComment("Must be a recognized step ID")
+                .Mapping<SubstanceAdministration>(o => o.SequenceId)
+                .Mapping<SubstanceAdministration>(o => o.Protocols.First().Sequence);
+
+            retVal.ConstrainField("protocolApplied.doseNumberString").NotSupported();
+
+            retVal.ConstrainField("protocolApplied.seriesDoses[x]").NotSupported();
+            return retVal;
         }
     }
 }

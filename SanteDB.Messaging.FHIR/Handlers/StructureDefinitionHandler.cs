@@ -18,13 +18,21 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.EMMA;
 using Hl7.Fhir.Model;
 using SanteDB.Core.i18n;
+using SanteDB.Core.Interop;
+using SanteDB.Core.Model;
+using SanteDB.Core.Model.Attributes;
+using SanteDB.Core.Model.Query;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
 namespace SanteDB.Messaging.FHIR.Handlers
@@ -32,10 +40,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Represents the default StructureDefinition handler
     /// </summary>
+    [ResourceSensitivity(ResourceSensitivityClassification.Metadata)]
     public class StructureDefinitionHandler : IFhirResourceHandler, IServiceImplementation
     {
         // Localization service
         private ILocalizationService m_localizationService;
+
+        // Structure definitions generated once
+        private IQueryResultSet m_structureDefinitions;
 
         /// <summary>
         /// Gets the resource name
@@ -90,17 +102,31 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     },
                     new ResourceInteractionComponent()
                     {
-                        Code = TypeRestfulInteraction.Vread
-                    },
-                    new ResourceInteractionComponent()
-                    {
                         Code = TypeRestfulInteraction.SearchType
                     }
                 },
                 Type = Hl7.Fhir.Model.ResourceType.StructureDefinition,
                 ReadHistory = true,
                 UpdateCreate = false,
-                Versioning = ResourceVersionPolicy.Versioned
+                Versioning = ResourceVersionPolicy.Versioned,
+                SearchParam = new List<SearchParamComponent>()
+                {
+                    new SearchParamComponent()
+                    {
+                        Name = "_offset",
+                        Type = SearchParamType.Number
+                    },
+                    new SearchParamComponent()
+                    {
+                        Name = "_count",
+                        Type = SearchParamType.Number
+                    },
+                    new SearchParamComponent()
+                    {
+                        Name = "_page", 
+                        Type = SearchParamType.Number
+                    }
+                }
             };
         }
 
@@ -125,7 +151,40 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Bundle Query(NameValueCollection parameters)
         {
-            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
+            FhirQuery query = QueryRewriter.RewriteFhirQuery(typeof(StructureDefinition), typeof(ServiceOptions), parameters, out var hdsiQuery);
+            var results = this.GetAllStructures();
+
+            // TODO: Filtering
+            results = query.ApplyCommonQueryControls(results, out var totalResults);
+
+            return MessageUtil.CreateBundle(new FhirQueryResult(this.ResourceType.ToString())
+            {
+                Results = results.OfType<StructureDefinition>().ToArray().AsParallel().Select(o =>
+                {
+                    return new Bundle.EntryComponent()
+                    {
+                        Resource = o,
+                        Search = new Bundle.SearchComponent()
+                        {
+                            Mode = Bundle.SearchEntryMode.Match
+                        }
+                    };
+                }).ToList(),
+                Query = query,
+                TotalResults = totalResults
+            }, Bundle.BundleType.Searchset);
+
+        }
+
+        private IQueryResultSet GetAllStructures()
+        {
+            if (this.m_structureDefinitions == null)
+            {
+                var resourceStructures = FhirResourceHandlerUtil.ResourceHandlers.Select(o => o.GetStructureDefinition());
+                var extensionStructures = ExtensionUtil.ExtensionHandlers.OfType<IFhirExtensionHandlerEx>().Select(o => StructureDefinitionUtil.GetStructureDefinition(o));
+                this.m_structureDefinitions = resourceStructures.Concat(extensionStructures).AsResultSet();
+            }
+            return this.m_structureDefinitions;
         }
 
         /// <summary>
@@ -133,7 +192,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// </summary>
         public Resource Read(string id, string versionId)
         {
-            throw new NotSupportedException(ErrorMessages.NOT_SUPPORTED);
+            return this.GetAllStructures().OfType<StructureDefinition>().FirstOrDefault(o => o.Id == id) ??
+                throw new KeyNotFoundException(id);
         }
 
         /// <summary>

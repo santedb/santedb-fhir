@@ -26,6 +26,7 @@ using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Annotation;
 using SanteDB.Messaging.FHIR.Exceptions;
@@ -288,7 +289,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             foreach (var entry in fhirBundle.Entry)
             {
                 IdentifiedData processedObject = null;
-                if(entry.Resource == null)
+                if (entry.Resource == null)
                 {
                     // Attempt to load any resource
                     if (String.IsNullOrEmpty(entry.Request.Url))
@@ -321,6 +322,52 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, $"Resource {entryType} not supported on this server");
                     }
 
+                    // Sometimes a client won't send up an explicit resource id - so we want to parse it from the fullUrl or the request URL
+                    if (String.IsNullOrEmpty(entry.Resource.Id))
+                    {
+                        if (Uri.TryCreate(entry.FullUrl, UriKind.RelativeOrAbsolute, out var requestUri))
+                        {
+                            switch (requestUri.Scheme)
+                            {
+                                case "urn": // Expect URN:UUID
+                                    if (requestUri.AbsolutePath.StartsWith("uuid:"))
+                                    {
+                                        entry.Resource.Id = requestUri.AbsolutePath.Substring(5);
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Invalid, "Expected urn:uuid:");
+                                    }
+                                case "http":
+                                case "https": // some other reference 
+                                    entry.Resource.Id = this.ExtractIdFromFullUrl(requestUri);
+                                    break;
+                                default:
+                                    throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, $"Don't understand fullURL {entry.FullUrl}");
+
+                            }
+                        }
+                        else if(Uri.TryCreate(entry.Request.Url, UriKind.RelativeOrAbsolute, out requestUri))
+                        {
+                            if(requestUri.IsAbsoluteUri)
+                            {
+                                entry.Resource.Id = this.ExtractIdFromFullUrl(requestUri);
+                            }
+                            else {
+                                var segments = requestUri.OriginalString.Split('/');
+                                if(segments.Contains("_version"))
+                                {
+                                    entry.Resource.Id = segments[segments.Length - 2];
+                                }
+                                else
+                                {
+                                    entry.Resource.Id = segments.Last();
+                                }
+                            }
+                        }
+                        this.m_tracer.TraceInfo("Set resource ID from URI/RequestURL: {0}", entry.Resource.Id);
+                    }
                     // Map and add to bundle
                     processedObject = handler.MapToModel(entry.Resource);
                     if (processedObject == null)
@@ -332,7 +379,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         entry.AddAnnotation(new FhirAlreadyProcessedAnnotation(processedObject));
                     }
-                    if(entry.Resource?.HasAnnotation<FhirAlreadyProcessedAnnotation>() == false)
+                    if (entry.Resource?.HasAnnotation<FhirAlreadyProcessedAnnotation>() == false)
                     {
                         entry.Resource.AddAnnotation(new FhirAlreadyProcessedAnnotation(processedObject));
                     }
@@ -351,8 +398,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 switch (entry.Request?.Method ?? Bundle.HTTPVerb.POST)
                 {
                     case Bundle.HTTPVerb.PUT:
-                    case Bundle.HTTPVerb.POST:
                         processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.InsertOrUpdate;
+                        break;
+                    case Bundle.HTTPVerb.POST:
+                        processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.Insert;
                         break;
                     case Bundle.HTTPVerb.DELETE:
                         processedObject.BatchOperation = Core.Model.DataTypes.BatchOperationType.Delete;
@@ -392,6 +441,26 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             sdbBundle.Item.RemoveAll(o => o == null || o is ITaggable taggable && taggable.GetTag(FhirConstants.PlaceholderTag) == "true");
             return sdbBundle;
+        }
+
+        /// <summary>
+        /// Extract ID from a full URL
+        /// </summary>
+        private string ExtractIdFromFullUrl(Uri requestUri)
+        {
+            if (requestUri.AbsolutePath.Contains("_version"))
+            {
+                var retVal = requestUri.Segments.Skip(requestUri.Segments.Length - 2).First();
+                if (retVal.EndsWith("/"))
+                {
+                    retVal = retVal.Substring(retVal.Length - 1);
+                }
+                return retVal;
+            }
+            else
+            {
+                return requestUri.Segments.Last();
+            }
         }
 
         /// <summary>

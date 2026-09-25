@@ -4,6 +4,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
@@ -11,7 +12,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Education level
     /// </summary>
-    public class EducationLevelExtension : IFhirExtensionHandler
+    [DisplayName("Patient Education Level")]
+    [Description("When enabled, provides a codified representation (if present) of the patient's level of education")]
+    public class EducationLevelExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/patient-education");
@@ -21,6 +24,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
         /// <inheritdoc/>
         public ResourceType? AppliesTo => ResourceType.Patient;
+
+        /// <inhertidoc/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

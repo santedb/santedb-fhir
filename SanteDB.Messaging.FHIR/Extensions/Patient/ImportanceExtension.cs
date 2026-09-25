@@ -24,13 +24,16 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
 {
     /// <summary>
     /// Religion extension handler
     /// </summary>
-    public class ImportanceExtension : IFhirExtensionHandler
+    [DisplayName("Patient Very Important Person (VIP) status")]
+    [Description("When enabled, provides a codified representation of the patient's VIP status")]
+    public class ImportanceExtension : IFhirExtensionHandlerEx
     {
         /// <summary>
         /// Applies to
@@ -46,6 +49,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// Gets the URI of this extension
         /// </summary>
         public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-importance");
+
+        /// <inhertidoc/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <summary>
         /// Construct the extension

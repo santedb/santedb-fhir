@@ -7,6 +7,7 @@ using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
@@ -15,7 +16,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Trade product extension handler for those which are 
     /// </summary>
-    public class SubstanceExtensionHandler : IFhirExtensionHandler
+    [DisplayName("Substance Link")]
+    [System.ComponentModel.Description("Provides a link between a `Medication` and a `Substance`")]
+    public class SubstanceExtensionHandler : IFhirExtensionHandlerEx
     {
 
         /// <summary>
@@ -33,6 +36,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
 
         /// <inheritdoc/>
         public ResourceType? AppliesTo => ResourceType.Medication;
+
+        /// <inhertidoc/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

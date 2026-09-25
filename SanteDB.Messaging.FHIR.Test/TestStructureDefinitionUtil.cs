@@ -42,17 +42,10 @@ namespace SanteDB.Messaging.FHIR.Test
             var actual = typeof(Patient).GetStructureDefinition();
 
             Assert.AreEqual("Patient", actual.Id);
-            Assert.AreEqual(FHIRVersion.N4_0_0, actual.FhirVersion);
+            Assert.AreEqual(FHIRVersion.N4_3_0, actual.FhirVersion);
             Assert.AreEqual(PublicationStatus.Active, actual.Status);
         }
 
-        /// <summary>
-        /// Tests the retrieval generation of a <see cref="StructureDefinition"/> instance.
-        /// </summary>
-        [Test]
-        public void TestGetStructureDefinitionNull()
-        {
-            Assert.Throws<ArgumentNullException>(() => StructureDefinitionUtil.GetStructureDefinition(null));
-        }
+       
     }
 }

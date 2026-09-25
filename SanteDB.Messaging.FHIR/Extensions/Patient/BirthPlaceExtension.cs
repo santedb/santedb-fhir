@@ -32,6 +32,7 @@ using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 
@@ -40,7 +41,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Implementation of the birthplace extension
     /// </summary>
-    public class BirthPlaceExtension : IFhirExtensionHandler
+    [DisplayName("Patient Birthplace")]
+    public class BirthPlaceExtension : IFhirExtensionHandlerEx
     {
 
         /// <summary>
@@ -69,6 +71,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
         // Place repository
         private IRepositoryService<SanteDB.Core.Model.Entities.Place> m_placeRepository;
+
+        /// <inhertidoc/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.Address;
 
         /// <summary>
         /// DI injection

@@ -26,6 +26,7 @@ using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Patient
@@ -35,12 +36,17 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
     /// <summary>
     /// Represents a citizenship extension handler.
     /// </summary>
-    public class CitizenshipExtension : IFhirExtensionHandler
+    [DisplayName("Patient Citizenship")]
+    [Description("Patient's identified citizenship(s)")]
+    public class CitizenshipExtension : IFhirExtensionHandlerEx
     {
         /// <summary>
         /// The place repository service.
         /// </summary>
         private readonly IRepositoryService<Place> m_placeRepository;
+
+        /// <inhertidoc/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CitizenshipExtension"/> class.
