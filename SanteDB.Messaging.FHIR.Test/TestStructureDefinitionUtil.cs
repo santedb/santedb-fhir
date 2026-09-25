@@ -42,7 +42,7 @@ namespace SanteDB.Messaging.FHIR.Test
             var actual = typeof(Patient).GetStructureDefinition();
 
             Assert.AreEqual("Patient", actual.Id);
-            Assert.AreEqual(FHIRVersion.N4_0_0, actual.FhirVersion);
+            Assert.AreEqual(FHIRVersion.N4_3_0, actual.FhirVersion);
             Assert.AreEqual(PublicationStatus.Active, actual.Status);
         }
 
