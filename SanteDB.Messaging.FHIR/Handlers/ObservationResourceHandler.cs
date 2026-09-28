@@ -448,6 +448,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
         ///<inheritdoc />
         protected override IQueryResultSet<Core.Model.Acts.Observation> QueryInternal(Expression<Func<Core.Model.Acts.Observation, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters  = null)
         {
+
+            hdsiParameters.Add("participation[RecordTarget].player.classConcept", EntityClassKeyStrings.Patient); // Only patient targeted observations
+            hdsiParameters.Add("typeConcept", $"!{ObservationTypeKeys.Condition}");
+            hdsiParameters.Add("typeConcept", $"!{ObservationTypeKeys.Problem}");
             if (fhirParameters != null && fhirParameters["value-concept"] != null)
             {
                 var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiParameters);
@@ -460,7 +464,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else
             {
-                return base.QueryInternal(query, fhirParameters, hdsiParameters);
+                var predicate = QueryExpressionParser.BuildLinqExpression<Core.Model.Acts.Observation>(hdsiParameters);
+                return base.QueryInternal(predicate, fhirParameters, hdsiParameters);
             }
         }
 

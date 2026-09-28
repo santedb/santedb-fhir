@@ -161,6 +161,21 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Explicitly add extra extension handlers
+        /// </summary>
+        internal static void AddExtensionHandlers(params Type[] handlers)
+        {
+            var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
+            foreach (var ihr in handlers.Where(t=>typeof(IFhirExtensionHandler).IsAssignableFrom(t)))
+            {
+                if(!s_extensionHandlers.Any(e=> ihr == e.GetType()))
+                {
+                    s_extensionHandlers.Add(svcManager.CreateInjected(ihr) as IFhirExtensionHandler);
+                }
+            }
+        }
+
+        /// <summary>
         /// Intialize handlers from the configuration file
         /// </summary>
         internal static void InitializeHandlers(IEnumerable<TypeReferenceConfiguration> extensions)

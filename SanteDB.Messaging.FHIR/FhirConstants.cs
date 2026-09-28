@@ -32,7 +32,7 @@ namespace SanteDB.Messaging.FHIR
         /// <summary>
         /// URI of the SanteDB FHIR profile
         /// </summary>
-        public static String SanteDBProfile = "http://santedb.org/fhir/profile";
+        public const String SanteDBProfile = "http://santedb.org/fhir/profile";
 
         /// <summary>
         /// Configuration section name
