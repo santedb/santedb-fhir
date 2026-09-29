@@ -197,7 +197,7 @@ namespace SanteDB.Messaging.FHIR
         /// <summary>
         /// Url
         /// </summary>
-        public string[] Url => this.m_webHost.Endpoints.Select(o => o.Description.ListenUri.ToString()).ToArray();
+        public string[] Url => this.m_webHost?.Endpoints?.Select(o => o.Description.ListenUri.ToString()).ToArray() ?? new string[0];
 
         /// <summary>
         /// Capabilities
