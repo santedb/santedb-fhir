@@ -28,6 +28,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// <inhertidoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
 
+        /// <inheritdic/>
+        public bool IsModifier => false;
+
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {

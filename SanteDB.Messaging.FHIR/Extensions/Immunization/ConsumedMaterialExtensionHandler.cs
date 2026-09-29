@@ -5,6 +5,8 @@ using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -21,6 +23,15 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
     [System.ComponentModel.Description("Provides a direct reference to Materials or Substances that were directly consumed in the execution of this event")]
     public class ConsumedMaterialExtensionHandler : IFhirExtensionHandlerEx
     {
+        private readonly FhirServiceConfigurationSection m_configuration;
+
+        /// <summary>
+        /// DI ctor
+        /// </summary>
+        public ConsumedMaterialExtensionHandler(IConfigurationManager configurationManager)
+        {
+            this.m_configuration = configurationManager.GetSection<FhirServiceConfigurationSection>();
+        }
 
         // consumed quantity
         private readonly string ConsumedQuantityExtensionUrl = $"{FhirConstants.SanteDBProfile}/extensions/consumed-material#consumed-quantity";
@@ -36,6 +47,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
 
         /// <inhertidoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
+        
+        /// <inheritdic/>
+        public bool IsModifier => false;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)

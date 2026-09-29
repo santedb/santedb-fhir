@@ -52,6 +52,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
         /// <inhertidoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.CodeableConcept;
+        
+        /// <inheritdic/>
+        public bool IsModifier => true;
 
         /// <summary>
         /// Construct the extension

@@ -268,7 +268,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Key = key;
             DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
 
-            retVal.Extensions = resource.Extension.Select(o=>DataTypeConverter.ToActExtension(o, retVal)).OfType<ActExtension>().ToList();
+            retVal.Extensions = resource.Extension.Select(o=>DataTypeConverter.ToActExtension(o, retVal, false)).Concat(resource.ModifierExtension.Select(o => DataTypeConverter.ToActExtension(o, retVal, true))).OfType<ActExtension>().ToList();
             retVal.Notes = DataTypeConverter.ToNote<ActNote>(resource.Text);
 
             retVal.MoodConceptKey = MoodConceptKeys.Eventoccurrence;

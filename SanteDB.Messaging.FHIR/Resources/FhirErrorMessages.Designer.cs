@@ -61,6 +61,15 @@ namespace SanteDB.Messaging.FHIR.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Extension {0} is not understood by this server.
+        /// </summary>
+        internal static string ExtensionNotUnderstood {
+            get {
+                return ResourceManager.GetString("ExtensionNotUnderstood", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Query parameter {0} with value &apos;{1}&apos; is in an invalid format.
         /// </summary>
         internal static string InvalidQueryParameterFormat {
@@ -84,6 +93,15 @@ namespace SanteDB.Messaging.FHIR.Resources {
         internal static string InvalidTotalParameterValue {
             get {
                 return ResourceManager.GetString("InvalidTotalParameterValue", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Modifier extension {0} is not understood by this server.
+        /// </summary>
+        internal static string ModifierExtensionNotUnderstood {
+            get {
+                return ResourceManager.GetString("ModifierExtensionNotUnderstood", resourceCulture);
             }
         }
         

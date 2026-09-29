@@ -403,7 +403,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 person.StatusConceptKey = resource.Active == null || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
                 person.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).OfType<EntityTelecomAddress>().ToList();
                 // Identity
-                person.LoadProperty(o => o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person)).OfType<EntityExtension>());
+                person.LoadProperty(o => o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, person, false)).Concat(resource.ModifierExtension.Select(o => DataTypeConverter.ToEntityExtension(o, person, true))).OfType<EntityExtension>());
             }
             else
             {

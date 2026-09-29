@@ -27,7 +27,10 @@ namespace SanteDB.Messaging.FHIR
     /// </summary>
     public static class FhirConstants
     {
-
+        /// <summary>
+        /// ISO 21090 extension
+        /// </summary>
+        public const string Iso21090Extensions = "http://hl7.org/fhir/StructureDefinition/iso21090-";
 
         /// <summary>
         /// URI of the SanteDB FHIR profile

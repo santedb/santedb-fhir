@@ -611,8 +611,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var fhirExtensions = resource.Extension.Select(o =>
             {
                 o.AddAnnotation(resource);
-                return DataTypeConverter.ToEntityExtension(o, patient);
-            }).OfType<EntityExtension>().ToList(); // apply extensions
+                return DataTypeConverter.ToEntityExtension(o, patient, false);
+            }).Concat(resource.ModifierExtension.Select(o => DataTypeConverter.ToEntityExtension(o, patient, true)))
+                .OfType<EntityExtension>().ToList(); // apply extensions
             // Remove any duplicated extensions
             patient.LoadProperty(o => o.Extensions).Where(pe => fhirExtensions.Any(fe => fe.ExtensionTypeKey == pe.ExtensionTypeKey)).ForEach(pe => pe.BatchOperation = BatchOperationType.Delete);
             patient.Extensions.AddRange(fhirExtensions);

@@ -6,6 +6,7 @@ using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -18,18 +19,19 @@ namespace SanteDB.Messaging.FHIR.Extensions.Common
     /// <summary>
     /// Represents an extension which dictates the template attached to a resource
     /// </summary>
-    public class ResourceTemplateExtension : IFhirExtensionHandler
+    public class ResourceTemplateExtension : IFhirExtensionHandlerEx
     {
 
         // Tracer
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ResourceTemplateExtension));
         private readonly ITemplateDefinitionRepositoryService m_templateRepository;
+        private readonly FhirServiceConfigurationSection m_configuration;
 
         /// <summary>
         /// Default CTOR
         /// </summary>
         /// <param name="templateRepository"></param>
-        public ResourceTemplateExtension(ITemplateDefinitionRepositoryService templateRepository)
+        public ResourceTemplateExtension(ITemplateDefinitionRepositoryService templateRepository, IConfigurationManager configurationManager)
         {
             this.m_templateRepository = templateRepository;
             QueryRewriter.AddSearchParam<Hl7.Fhir.Model.Patient>("data-template", "template.mnemonic", QueryParameterRewriteType.String);
@@ -40,6 +42,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Common
             QueryRewriter.AddSearchParam<Hl7.Fhir.Model.AllergyIntolerance>("data-template", "template.mnemonic", QueryParameterRewriteType.String);
             QueryRewriter.AddSearchParam<Hl7.Fhir.Model.AdverseEvent>("data-template", "template.mnemonic", QueryParameterRewriteType.String);
             QueryRewriter.AddSearchParam<Hl7.Fhir.Model.MedicationAdministration>("data-template", "template.mnemonic", QueryParameterRewriteType.String);
+            this.m_configuration = configurationManager.GetSection<FhirServiceConfigurationSection>();
         }
 
         /// <inheritdoc/>
@@ -50,6 +53,12 @@ namespace SanteDB.Messaging.FHIR.Extensions.Common
 
         /// <inheritdoc/>
         public ResourceType? AppliesTo => null;
+
+        /// <inheritdic/>
+        public FHIRAllTypes ValueType => FHIRAllTypes.String;
+        
+        /// <inheritdic/>
+        public bool IsModifier => false;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
@@ -73,12 +82,25 @@ namespace SanteDB.Messaging.FHIR.Extensions.Common
                     iht.TemplateKey = template.Value;
                     return true;
                 }
-                else
+                else if(this.m_configuration.StrictProcessing)
                 {
                     throw new KeyNotFoundException(String.Format(ErrorMessages.REFERENCE_NOT_FOUND, template.Value));
                 }
+                else
+                {
+                    this.m_tracer.TraceWarning("Could not resolve template {0}...", fhs.Value);
+                }
             }
-            return false;
+            else if(this.m_configuration.StrictProcessing)
+            {
+                throw new ArgumentOutOfRangeException(String.Format(ErrorMessages.ARGUMENT_INCOMPATIBLE_TYPE, fhirExtension.Value.TypeName, this.ValueType));
+            }
+            else 
+            {
+                this.m_tracer.TraceWarning("FHIR extension {0} must be string", this.Uri);
+            }
+
+                return false;
         }
     }
 }
