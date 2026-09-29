@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Packaging;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Acts;
@@ -141,6 +142,45 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
+            var components = model.LoadProperty(o => o.Relationships).Where(obs => obs.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && obs.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)?.Select(o=>o.LoadProperty(p=>p.TargetAct)).OfType<Core.Model.Acts.Observation>();
+            foreach (var component in components)
+            {
+                var fhirComponent = new Observation.ComponentComponent();
+                fhirComponent.Code = DataTypeConverter.ToFhirCodeableConcept(component.TypeConceptKey);
+                switch(component.ValueType)
+                {
+                    case "DT":
+                        var d = model as DateObservation;
+                        fhirComponent.Value = DataTypeConverter.ToFhirDate(d.Value);
+                        break;
+                    case "CD":
+                        fhirComponent.Value = DataTypeConverter.ToFhirCodeableConcept((model as CodedObservation).ValueKey);
+                        break;
+
+                    case "PQ":
+                        var qty = model as QuantityObservation;
+                        fhirComponent.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
+                        break;
+
+                    case "ED":
+                    case "ST":
+                        fhirComponent.Value = new FhirString((model as TextObservation).Value);
+                        break;
+                }
+
+                if(component.IsNegated)
+                {
+                    fhirComponent.DataAbsentReason = DataTypeConverter.ToFhirCodeableConcept(component.ReasonConceptKey);
+                }
+
+                fhirComponent.Extension = ExtensionUtil.CreateExtensions(component, ResourceType.Observation, out var appliedExtensions).ToList();
+
+            }
+
+            if(model.IsNegated)
+            {
+                retVal.DataAbsentReason = DataTypeConverter.ToFhirCodeableConcept(model.ReasonConceptKey);
+            }
             if (model.StartTime.HasValue || model.StopTime.HasValue)
             {
                 retVal.Effective = DataTypeConverter.ToPeriod(model.StartTime, model.StopTime);
@@ -177,6 +217,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Value
             switch (model.ValueType)
             {
+                case "DT":
+                    var d = model as DateObservation;
+                    retVal.Value = DataTypeConverter.ToFhirDate(d.Value);
+                    break;
                 case "CD":
                     retVal.Value = DataTypeConverter.ToFhirCodeableConcept((model as CodedObservation).ValueKey);
                     break;
@@ -212,6 +256,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
             Core.Model.Acts.Observation retVal;
             switch (resource.Value)
             {
+                case FhirDateTime fdt:
+                    retVal = new DateObservation
+                    {
+                        ValueType = "DT",
+                        Value = fdt.ToDateTime(),
+                        Relationships = new List<ActRelationship>(),
+                        Participations = new List<ActParticipation>()
+                    };
+                    break;
+
                 case CodeableConcept codeableConcept:
                     retVal = new CodedObservation
                     {
@@ -278,8 +332,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Observation
             var status = resource.Status;
 
-            //status concept key
+            if(resource.DataAbsentReason != null)
+            {
+                retVal.IsNegated = true;
+                retVal.ReasonConcept = DataTypeConverter.ToConcept(resource.DataAbsentReason);  
+            }
 
+            //status concept key
             switch (status)
             {
                 case ObservationStatus.Preliminary:
@@ -436,6 +495,75 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     //        param = "UUID"
                     //    }));
                     //}
+                }
+            }
+            retVal.LoadProperty(o => o.Relationships);
+
+
+            if (resource.Component?.Any() == true)
+            {
+                foreach(var itm in resource.Component)
+                {
+                    SanteDB.Core.Model.Acts.Observation compObs = null;
+                    switch(itm.Value)
+                    {
+                        case FhirDateTime fdt:
+                            compObs = new DateObservation
+                            {
+                                ValueType = "DT",
+                                Value = fdt.ToDateTime(),
+                                Relationships = new List<ActRelationship>(),
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+
+                        case CodeableConcept codeableConcept:
+                            compObs = new CodedObservation
+                            {
+                                ValueType = "CD",
+                                Value = DataTypeConverter.ToConcept(codeableConcept),
+                                Relationships = new List<ActRelationship>(),
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+
+                        case Quantity quantity:
+                            compObs = new QuantityObservation
+                            {
+                                ValueType = "PQ",
+                                Value = quantity.Value.Value,
+                                UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? FhirConstants.DefaultQuantityUnitSystem : quantity.System),
+                                Relationships = new List<ActRelationship>(),
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+
+                        case FhirString fhirString:
+                            compObs = new TextObservation
+                            {
+                                ValueType = "ST",
+                                Value = fhirString.Value,
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+
+                        default:
+                            throw new NotSupportedException();
+                    }
+                    compObs.TypeConcept = DataTypeConverter.ToConcept(itm.Code);
+                    compObs.InterpretationConcept = DataTypeConverter.ToConcept(itm.Interpretation.FirstOrDefault());
+                    
+                    if(itm.DataAbsentReason != null)
+                    {
+                        compObs.IsNegated = true;
+                        compObs.ReasonConcept = DataTypeConverter.ToConcept(itm.DataAbsentReason);
+                    }
+
+                    DataTypeConverter.AddExtensions(compObs, itm);
+                    compObs.ActTime = compObs.ActTime ?? retVal.ActTime;
+                    compObs.StartTime = compObs.StartTime ?? retVal.StartTime;
+                    compObs.StopTime = compObs.StopTime ?? retVal.StopTime;
+                    retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, compObs) { ClassificationKey = RelationshipClassKeys.ContainedObjectLink });
                 }
             }
 
