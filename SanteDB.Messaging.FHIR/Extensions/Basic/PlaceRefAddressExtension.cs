@@ -14,13 +14,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Basic
     /// <summary>
     /// Represents ISO21090 address extensions
     /// </summary>
-    public abstract class PlaceRefAddressExtension : IFhirExtensionHandlerEx
+    public class PlaceRefAddressExtension : IFhirExtensionHandlerEx
     {
-
-        protected PlaceRefAddressExtension()
-        {
-        }
-
+       
         /// <inheritdoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
 

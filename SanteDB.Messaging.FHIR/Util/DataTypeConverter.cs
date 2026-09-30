@@ -899,9 +899,8 @@ namespace SanteDB.Messaging.FHIR.Util
 
                 if (resource is DomainResource dresource)
                 {
-                    var modifierExtensions = appliedExtensions.OfType<IFhirExtensionHandlerEx>().Where(o => o.IsModifier).Select(o => o.Uri.ToString()).ToArray();
-                    dresource.ModifierExtension = fhirExtension.Extension.Where(e => modifierExtensions.Contains(e.Url)).ToList();
-                    dresource.Extension.RemoveAll(e => modifierExtensions.Contains(e.Url));
+                    dresource.ModifierExtension = fhirExtension.Extension.Where(e => e.IsModifierExtension()).ToList();
+                    dresource.Extension.RemoveAll(e => e.IsModifierExtension());
                 }
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
@@ -2098,6 +2097,11 @@ namespace SanteDB.Messaging.FHIR.Util
                     return null;
                 }
 
+
+                if(NullReasonKeys.All.Contains(conceptKey.Value) && !preferredCodeSystem.Any())
+                {
+                    preferredCodeSystem = new string[] { "http://hl7.org/fhir/v3-NullFlavor" };
+                }
 
                 // No preferred CS then all
                 if (!preferredCodeSystem.Any())

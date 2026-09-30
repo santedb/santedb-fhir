@@ -52,19 +52,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         readonly IRepositoryService<Act> m_ActRepository;
         readonly IRepositoryService<ActRelationship> m_ActRelationshipRepository;
-
+        private readonly IConceptRepositoryService m_conceptRepository;
         const string UUID_PREFIX = "urn:uuid:";
 
         /// <summary>
         /// Create new resource handler
         /// </summary>
-        public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repository, ILocalizationService localizationService, IConceptRepositoryService conceptRepository, IRepositoryService<Act> actRepository, IRepositoryService<ActRelationship> actRelationshipRepository)
+        public ObservationResourceHandler(
+            IRepositoryService<Core.Model.Acts.Observation> repository, 
+            ILocalizationService localizationService, 
+            IConceptRepositoryService conceptRepository, 
+            IRepositoryService<Act> actRepository, 
+            IRepositoryService<ActRelationship> actRelationshipRepository)
             : base(repository, localizationService)
         {
             m_AllergyTypes = conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
-            m_ListTypes = conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "ObservationCategoryCodes")).Select(o => o.Key.Value).ToList();
             m_ActRepository = actRepository;
             m_ActRelationshipRepository = actRelationshipRepository;
+            this.m_conceptRepository = conceptRepository;
         }
 
         /// <inheritdoc />
@@ -110,6 +115,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = DataTypeConverter.CreateResource<Observation>(model);
             retVal.Identifier = model.LoadProperty(o => o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
 
+            
             switch (model.StatusConceptKey.ToString().ToUpper())
             {
                 case StatusKeyStrings.New:
@@ -142,39 +148,60 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
-            var components = model.LoadProperty(o => o.Relationships).Where(obs => obs.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && obs.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)?.Select(o=>o.LoadProperty(p=>p.TargetAct)).OfType<Core.Model.Acts.Observation>();
-            foreach (var component in components)
+            var components = new Queue<Core.Model.Acts.Observation>(this.LoadComponents(model));
+            while(!components.IsNullOrEmpty())
             {
+                var component = components.Dequeue();
                 var fhirComponent = new Observation.ComponentComponent();
                 fhirComponent.Code = DataTypeConverter.ToFhirCodeableConcept(component.TypeConceptKey);
                 switch(component.ValueType)
                 {
                     case "DT":
-                        var d = model as DateObservation;
+                        var d = component as DateObservation;
                         fhirComponent.Value = DataTypeConverter.ToFhirDate(d.Value);
                         break;
                     case "CD":
-                        fhirComponent.Value = DataTypeConverter.ToFhirCodeableConcept((model as CodedObservation).ValueKey);
+                        fhirComponent.Value = DataTypeConverter.ToFhirCodeableConcept((component as CodedObservation).ValueKey);
                         break;
 
                     case "PQ":
-                        var qty = model as QuantityObservation;
-                        fhirComponent.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
+                        var qty = component as QuantityObservation;
+                        if (!qty.UnitOfMeasureKey.HasValue || qty.UnitOfMeasureKey == NullReasonKeys.NotApplicable) // Just a simple observation
+                        {
+                            fhirComponent.Value = new FhirDecimal(qty.Value);
+                        }
+                        else
+                        {
+                            fhirComponent.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
+                        }
                         break;
 
                     case "ED":
                     case "ST":
-                        fhirComponent.Value = new FhirString((model as TextObservation).Value);
+                        fhirComponent.Value = new FhirString((component as TextObservation).Value);
                         break;
+                }
+                if(fhirComponent.Value == null)
+                {
+                    foreach (var itm in this.LoadComponents(component)) {
+                        components.Enqueue(itm);
+                    }
+                    continue;
                 }
 
                 if(component.IsNegated)
                 {
                     fhirComponent.DataAbsentReason = DataTypeConverter.ToFhirCodeableConcept(component.ReasonConceptKey);
+                    if(fhirComponent.DataAbsentReason == null)
+                    {
+                        continue;
+                    } 
                 }
 
-                fhirComponent.Extension = ExtensionUtil.CreateExtensions(component, ResourceType.Observation, out var appliedExtensions).ToList();
-
+                var extensions = ExtensionUtil.CreateExtensions(component, ResourceType.Observation, out var appliedExtensions).ToList();
+                fhirComponent.Extension = extensions.Where(e => !e.IsModifierExtension()).ToList();
+                fhirComponent.ModifierExtension = extensions.Where(e => e.IsModifierExtension()).ToList();
+                retVal.Component.Add(fhirComponent);
             }
 
             if(model.IsNegated)
@@ -207,12 +234,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Issued = model.CreationTime;
 
-            var categoryrelationships = m_ActRelationshipRepository.Find(o => o.TargetActKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.SourceEntity.ClassConceptKey == ActClassKeys.List).ToList();
-            categoryrelationships.ForEach(r => r.LoadProperty(selector => selector.SourceEntity));
+            var category = this.m_conceptRepository.GetRelatedConcepts(model.TypeConceptKey.Value, ConceptRelationshipTypeKeys.MemberOf).Where(o => this.m_conceptRepository.IsMember(FhirConstants.ObservationCategoryConceptSetKey, o.Key.Value));
 
-            retVal.Category = categoryrelationships
-                    ?.Select(ar => ar.SourceEntity.TypeConceptKey)
-                    ?.Select(t => DataTypeConverter.ToFhirCodeableConcept(t, FhirConstants.DefaultObservationCategorySystem))?.ToList();
+            retVal.Category.AddRange(category.Select(c=>DataTypeConverter.ToFhirCodeableConcept(c.Key, FhirConstants.DefaultObservationCategorySystem)));
 
             // Value
             switch (model.ValueType)
@@ -227,7 +251,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 case "PQ":
                     var qty = model as QuantityObservation;
-                    retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
+                    if (!qty.UnitOfMeasureKey.HasValue || qty.UnitOfMeasureKey == NullReasonKeys.NotApplicable) // Just a simple observation
+                    {
+                        retVal.Value = new FhirDecimal(qty.Value);
+                    }
+                    else
+                    {
+                        retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
+                    }
                     break;
 
                 case "ED":
@@ -246,6 +277,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             return retVal;
         }
+
+        private IEnumerable<Core.Model.Acts.Observation> LoadComponents(Core.Model.Acts.Observation obj) => obj.LoadProperty(o => o.Relationships).Where(obs => obs.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && obs.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)?.Select(o => o.LoadProperty(p => p.TargetAct)).OfType<Core.Model.Acts.Observation>();
 
         /// <summary>
         /// Map to model
@@ -281,7 +314,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         ValueType = "PQ",
                         Value = quantity.Value.Value,
-                        UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? FhirConstants.DefaultQuantityUnitSystem : quantity.System),
+                        UnitOfMeasureKey = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? FhirConstants.DefaultQuantityUnitSystem : quantity.System)?.Key ?? 
+                            NullReasonKeys.NotApplicable,
                         Relationships = new List<ActRelationship>(),
                         Participations = new List<ActParticipation>()
                     };
@@ -582,6 +616,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 hdsiParameters.Add("participation[RecordTarget].player.classConcept", EntityClassKeyStrings.Patient); // Only patient targeted observations
                 hdsiParameters.Add("typeConcept", $"!{ObservationTypeKeys.Condition}");
                 hdsiParameters.Add("typeConcept", $"!{ObservationTypeKeys.Problem}");
+                hdsiParameters.Add("relationship[relationshipType=78B9540F-438B-4B6F-8D83-AAF4979DBC64&classification=B23A00BB-34B0-4704-AC5B-53330A8852B3&source.classConcept=28d022c6-8a8b-47c4-9e6a-2bc67308739e&source.classConcept=d38091b5-9065-4721-8a1f-bfbb3b4bf447]", "null");
             }
 
             if (fhirParameters != null && fhirParameters["value-concept"] != null)

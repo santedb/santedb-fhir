@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using SanteDB.Core.Model.DataTypes;
 using System;
 
 namespace SanteDB.Messaging.FHIR
@@ -105,8 +106,9 @@ namespace SanteDB.Messaging.FHIR
         /// When a concept has no reference term - use the conept 
         /// </summary>
         public const string SanteDBConceptSystem = "http://santedb.org/concept";
-
-
-
+        /// <summary>
+        /// Observation category concept key
+        /// </summary>
+        internal static readonly Guid ObservationCategoryConceptSetKey = Guid.Parse("90F2BC81-0F0F-4384-8EC3-992C55AE7656");
     }
 }
