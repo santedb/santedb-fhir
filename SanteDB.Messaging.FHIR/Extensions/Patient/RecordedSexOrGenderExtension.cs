@@ -1,4 +1,5 @@
 ﻿using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Acts;
@@ -96,6 +97,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
                     var newGenderConcept = new CodedObservation()
                     {
                         TypeConceptKey = typeKey,
+                        MoodConceptKey = ActMoodKeys.Eventoccurrence,
+                        StatusConceptKey = StatusKeys.Completed,
                         ValueKey = valueKey,
                         ActTime = DateTimeOffset.Now,
                         Participations = new List<ActParticipation>()
@@ -112,11 +115,19 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
                     if(newGenderConcept.BatchOperation != Core.Model.DataTypes.BatchOperationType.Ignore)
                     {
-                        pat.Participations = pat.Participations ?? new List<ActParticipation>();
-                        pat.Participations.Add(new ActParticipation(ActParticipationKeys.RecordTarget, pat.Key)
+                        var bundle = fhirExtension.Annotation<Hl7.Fhir.Model.Patient>()?.Annotation<SanteDB.Core.Model.Collection.Bundle>();
+                        if (bundle != null)
                         {
-                            Act = newGenderConcept
-                        });
+                            bundle.Add(newGenderConcept);
+                        }
+                        else
+                        {
+                            pat.Participations = pat.Participations ?? new List<ActParticipation>();
+                            pat.Participations.Add(new ActParticipation(ActParticipationKeys.RecordTarget, pat.Key)
+                            {
+                                Act = newGenderConcept
+                            });
+                        }
                     }
                     return true;
                 }
