@@ -103,6 +103,11 @@ namespace SanteDB.Messaging.FHIR
         public const string CodeSystem_AdministrativeGender = "http://hl7.org/fhir/administrative-gender";
 
         /// <summary>
+        /// Loinc code system
+        /// </summary>
+        public const string CodeSystem_Loinc = "http://loinc.org";
+
+        /// <summary>
         /// When a concept has no reference term - use the conept 
         /// </summary>
         public const string SanteDBConceptSystem = "http://santedb.org/concept";

@@ -541,7 +541,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                         {
                                             Key = o.Key,
                                             BatchOperation = BatchOperationType.Delete
-                                        }))
+                                        }).Concat(relationships.Select(o => new EntityRelationship()
+                                        {
+                                            Key = Guid.NewGuid(),
+                                            BatchOperation = BatchOperationType.Insert,
+                                            SourceEntityKey = o.SourceEntityKey,
+                                            TargetEntityKey = newPatientKey,
+                                            RelationshipTypeKey = o.RelationshipTypeKey
+                                        })))
                                     {
                                         new EntityRelationship(EntityRelationshipTypeKeys.Replaces, personKey)
                                     }
