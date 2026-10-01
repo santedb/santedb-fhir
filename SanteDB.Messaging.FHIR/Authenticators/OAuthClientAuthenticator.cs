@@ -31,6 +31,7 @@ using SanteDB.Core.Interop;
 using SanteDB.Core.Security.Claims;
 using SanteDB.Core.Security.OAuth;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Exceptions;
 using SanteDB.Messaging.FHIR.Rest;
 using System;
 using System.Collections.Generic;
@@ -175,6 +176,11 @@ namespace SanteDB.Messaging.FHIR.Authenticator
                 this.m_tracer.TraceError("Exception fetching discovery document: {0}", ex.ToHumanReadableString());
                 return true;
             });
+
+            if(this.m_discoveryDocument == null)
+            {
+                throw new FhirException(System.Net.HttpStatusCode.BadGateway, Hl7.Fhir.Model.OperationOutcome.IssueType.Transient, "Could not fetch discovery document for authentication service");
+            }
 
             return this.m_discoveryDocument;
         }
@@ -363,6 +369,7 @@ namespace SanteDB.Messaging.FHIR.Authenticator
                 Scope = scope,
                 GrantType = "client_credentials"
             };
+
             return this.m_restClient.Post<OAuthTokenRequest, OAuthTokenResponse>(this.GetDiscoveryDocument().TokenEndpoint, "application/x-www-form-urlencoded", request);
         }
 
