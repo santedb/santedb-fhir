@@ -2447,13 +2447,13 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             switch (batchOperation)
             {
-                case BatchOperationType.Auto:
                 case BatchOperationType.Insert:
-                case BatchOperationType.InsertOrUpdate:
                     return Hl7.Fhir.Model.Bundle.HTTPVerb.POST;
                 case BatchOperationType.Delete:
                 case BatchOperationType.DeletePreserveContained:
                     return Hl7.Fhir.Model.Bundle.HTTPVerb.DELETE;
+                case BatchOperationType.Auto:
+                case BatchOperationType.InsertOrUpdate:
                 case BatchOperationType.Update:
                     return Hl7.Fhir.Model.Bundle.HTTPVerb.PUT;
                 case BatchOperationType.Ignore:

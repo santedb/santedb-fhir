@@ -41,6 +41,7 @@ using System.Configuration;
 using System.Linq;
 using System.Net.Http;
 using System.Reflection;
+using static Hl7.Fhir.Model.Bundle;
 
 namespace SanteDB.Messaging.FHIR.PubSub
 {
@@ -273,7 +274,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             entry.Request = new Bundle.RequestComponent()
                             {
                                 Url = $"{entry.Resource.TypeName}/{entry.Resource.Id}",
-                                Method = Bundle.HTTPVerb.POST
+                                Method = Bundle.HTTPVerb.PUT
                             };
                             entry.Response = new Bundle.ResponseComponent()
                             {

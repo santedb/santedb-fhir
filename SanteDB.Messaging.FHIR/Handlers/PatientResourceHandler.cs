@@ -522,12 +522,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
                         {
-                            patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                            patient = this.m_repository.Find(o => StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value) && o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
 
                             if (patient == null)
                             {
                                 // Perhaps it is a person? - We don't query using PersonRepository because it may be a Patient
-                                var personKey = this.m_personRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).Select(o => o.Key).FirstOrDefault();
+                                var personKey = this.m_personRepository.Find(o => StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value) && o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).Select(o => o.Key).FirstOrDefault();
 
                                 if (personKey != null)
                                 {
@@ -797,11 +797,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                         previousEntry.TargetEntity = null;
                                         previousEntry.CopyObjectData(relationship, overwritePopulatedWithNull: true, ignoreTypeMismatch: false, declaredOnly: false, onlyNullFields: false);
                                     }
-                                    else
+                                    else if(!targetPatient.Relationships.Any(r=>r.Key == relationship.Key || r.SourceEntityKey == relationship.SourceEntityKey && r.TargetEntityKey == relationship.TargetEntityKey && r.RelationshipTypeKey == relationship.RelationshipTypeKey))
                                     {
                                         // The link here is a reverse link - i.e. IS A MOHTER OF or IS A HUSBAND OF so we want to create a reverse link
                                         rp.AddAnnotation(new FhirAlreadyProcessedAnnotation(relationship));
                                         patient.Relationships.Add(relationship);
+                                    }
+                                    else
+                                    {
+                                        rp.AddAnnotation(new FhirAlreadyProcessedAnnotation(relationship));
                                     }
                                 }
                             }
@@ -862,6 +866,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 patient.AddTag(SystemTagNames.External, "true");
             }
+
+            patient.VersionKey = null; // We don't want to duplicate the version key on a POST
 
             return patient;
         }

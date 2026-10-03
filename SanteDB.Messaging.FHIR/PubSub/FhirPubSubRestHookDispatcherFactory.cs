@@ -232,11 +232,13 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     };
 
                     id2.AddAnnotation(retVal);
+                    var httpVerb = DataTypeConverter.ConvertBatchOperationToHttpVerb(id2.BatchOperation);
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
                         Request = new Bundle.RequestComponent()
                         {
-                            Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(id2.BatchOperation),
+                            Method = httpVerb,
+                            IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={id2.Key}" : null,
                             Url = $"{mapper.ResourceType}/{id2.Key}",
                         },
                         FullUrl = $"urn:uuid:{id2.Key}",

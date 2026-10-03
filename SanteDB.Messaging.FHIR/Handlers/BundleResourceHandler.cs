@@ -21,11 +21,13 @@
 using DocumentFormat.OpenXml.Office2016.Drawing.ChartDrawing;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
+using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Annotation;
@@ -348,15 +350,16 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                             }
                         }
-                        else if(Uri.TryCreate(entry.Request.Url, UriKind.RelativeOrAbsolute, out requestUri))
+                        else if (Uri.TryCreate(entry.Request.Url, UriKind.RelativeOrAbsolute, out requestUri))
                         {
-                            if(requestUri.IsAbsoluteUri)
+                            if (requestUri.IsAbsoluteUri)
                             {
                                 entry.Resource.Id = this.ExtractIdFromFullUrl(requestUri);
                             }
-                            else {
+                            else
+                            {
                                 var segments = requestUri.OriginalString.Split('/');
-                                if(segments.Contains("_version"))
+                                if (segments.Contains("_version"))
                                 {
                                     entry.Resource.Id = segments[segments.Length - 2];
                                 }
@@ -393,6 +396,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     // Attempt to find the bundle object
                     processedObject = entry.Annotation<FhirAlreadyProcessedAnnotation>()?.ProcessedResource ??
                         entry.Resource.Annotation<FhirAlreadyProcessedAnnotation>()?.ProcessedResource;
+                }
+
+                if (!String.IsNullOrEmpty(entry.Request?.IfNoneExist))
+                {
+                    // Load the proper resource handler
+                    var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entry.Resource);
+
+                    _ = QueryRewriter.RewriteFhirQuery(mapper.ResourceClrType, mapper.CanonicalType, entry.Request.IfNoneExist.ParseQueryString(), out var hdsiQuery);
+                    var queryExpr = QueryExpressionParser.BuildLinqExpression(mapper.CanonicalType, hdsiQuery);
+                    var persistenceType = typeof(IRepositoryService<>).MakeGenericType(mapper.CanonicalType);
+                    var persistenceService = ApplicationServiceContext.Current.GetService(persistenceType) as IRepositoryService;
+                    var exists = persistenceService.Find(queryExpr).Any();
+                    
+                    if(exists)
+                    {
+                        this.m_tracer.TraceInfo("IfNoneExist prevents create/update on resource {0} - ignoring", entry.Request.Url);
+                        entry.Request.Method = Bundle.HTTPVerb.HEAD; // FORCE AN IGNORE
+                    }
                 }
 
                 switch (entry.Request?.Method ?? Bundle.HTTPVerb.POST)
