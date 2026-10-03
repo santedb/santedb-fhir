@@ -71,6 +71,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// Gets the URI of this extension
         /// </summary>
         public Uri Uri => new Uri("http://hl7.org/fhir/StructureDefinition/patient-citizenship");
+        
+        /// <inheritdic/>
+        public bool IsModifier => false;
 
         /// <summary>
         /// Construct the extension

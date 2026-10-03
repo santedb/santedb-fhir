@@ -41,6 +41,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         /// <inhertidoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
 
+        /// <inheritdic/>
+        public bool IsModifier => false;
+
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {

@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using DocumentFormat.OpenXml.Packaging;
 using Hl7.Fhir.Model;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Model.Acts;
@@ -51,19 +52,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         readonly IRepositoryService<Act> m_ActRepository;
         readonly IRepositoryService<ActRelationship> m_ActRelationshipRepository;
-
+        private readonly IConceptRepositoryService m_conceptRepository;
         const string UUID_PREFIX = "urn:uuid:";
 
         /// <summary>
         /// Create new resource handler
         /// </summary>
-        public ObservationResourceHandler(IRepositoryService<Core.Model.Acts.Observation> repository, ILocalizationService localizationService, IConceptRepositoryService conceptRepository, IRepositoryService<Act> actRepository, IRepositoryService<ActRelationship> actRelationshipRepository)
+        public ObservationResourceHandler(
+            IRepositoryService<Core.Model.Acts.Observation> repository,
+            ILocalizationService localizationService,
+            IConceptRepositoryService conceptRepository,
+            IRepositoryService<Act> actRepository,
+            IRepositoryService<ActRelationship> actRelationshipRepository)
             : base(repository, localizationService)
         {
             m_AllergyTypes = conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "AllergyIntoleranceCode")).Select(o => o.Key.Value).ToList();
-            m_ListTypes = conceptRepository.Find(o => o.ConceptSets.Any(cs => cs.Mnemonic == "ObservationCategoryCodes")).Select(o => o.Key.Value).ToList();
             m_ActRepository = actRepository;
             m_ActRelationshipRepository = actRelationshipRepository;
+            this.m_conceptRepository = conceptRepository;
         }
 
         /// <inheritdoc />
@@ -109,6 +115,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = DataTypeConverter.CreateResource<Observation>(model);
             retVal.Identifier = model.LoadProperty(o => o.Identifiers).Select(o => DataTypeConverter.ToFhirIdentifier(o)).ToList();
 
+
             switch (model.StatusConceptKey.ToString().ToUpper())
             {
                 case StatusKeyStrings.New:
@@ -141,6 +148,73 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     break;
             }
 
+            var components = new Queue<Core.Model.Acts.Observation>(this.LoadComponents(model));
+            while (!components.IsNullOrEmpty())
+            {
+                var component = components.Dequeue();
+                var fhirComponent = new Observation.ComponentComponent();
+                fhirComponent.Code = DataTypeConverter.ToFhirCodeableConcept(component.TypeConceptKey);
+                switch (component)
+                {
+                    case DateObservation dt:
+                        fhirComponent.Value = DataTypeConverter.ToFhirDate(dt.Value);
+                        break;
+                    case CodedObservation cd:
+                        fhirComponent.Value = DataTypeConverter.ToFhirCodeableConcept(cd.ValueKey);
+                        break;
+
+                    case QuantityObservation qty:
+                        if (!qty.UnitOfMeasureKey.HasValue || qty.UnitOfMeasureKey == NullReasonKeys.NotApplicable) // Just a simple observation
+                        {
+                            fhirComponent.Value = new FhirDecimal(qty.Value);
+                        }
+                        else
+                        {
+                            fhirComponent.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
+                        }
+                        break;
+
+                    case TextObservation txt:
+                        fhirComponent.Value = new FhirString(txt.Value);
+                        break;
+                    case NumericObservation nm:
+                        fhirComponent.Value = new FhirDecimal(nm.Value);
+                        break;
+                    case UriObservation uri:
+                        fhirComponent.Value = new FhirUri(uri.Value);
+                        break;
+                    case BooleanObservation bl:
+                        fhirComponent.Value = new FhirBoolean(bl.Value);
+                        break;
+                }
+                if (fhirComponent.Value == null)
+                {
+                    foreach (var itm in this.LoadComponents(component))
+                    {
+                        components.Enqueue(itm);
+                    }
+                    continue;
+                }
+
+                if (component.IsNegated)
+                {
+                    fhirComponent.DataAbsentReason = DataTypeConverter.ToFhirCodeableConcept(component.ReasonConceptKey);
+                    if (fhirComponent.DataAbsentReason == null)
+                    {
+                        continue;
+                    }
+                }
+
+                var extensions = ExtensionUtil.CreateExtensions(component, ResourceType.Observation, out var appliedExtensions).ToList();
+                fhirComponent.Extension = extensions.Where(e => !e.IsModifierExtension()).ToList();
+                fhirComponent.ModifierExtension = extensions.Where(e => e.IsModifierExtension()).ToList();
+                retVal.Component.Add(fhirComponent);
+            }
+
+            if (model.IsNegated)
+            {
+                retVal.DataAbsentReason = DataTypeConverter.ToFhirCodeableConcept(model.ReasonConceptKey);
+            }
             if (model.StartTime.HasValue || model.StopTime.HasValue)
             {
                 retVal.Effective = DataTypeConverter.ToPeriod(model.StartTime, model.StopTime);
@@ -167,30 +241,55 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.Issued = model.CreationTime;
 
-            var categoryrelationships = m_ActRelationshipRepository.Find(o => o.TargetActKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.SourceEntity.ClassConceptKey == ActClassKeys.List).ToList();
-            categoryrelationships.ForEach(r => r.LoadProperty(selector => selector.SourceEntity));
+            var category = this.m_conceptRepository.GetRelatedConcepts(model.TypeConceptKey.GetValueOrDefault(), ConceptRelationshipTypeKeys.MemberOf).Where(o => this.m_conceptRepository.IsMember(FhirConstants.ObservationCategoryConceptSetKey, o.Key.Value));
 
-            retVal.Category = categoryrelationships
-                    ?.Select(ar => ar.SourceEntity.TypeConceptKey)
-                    ?.Select(t => DataTypeConverter.ToFhirCodeableConcept(t, FhirConstants.DefaultObservationCategorySystem))?.ToList();
+            if (category.Any())
+            {
+                retVal.Category.AddRange(category.Select(c => DataTypeConverter.ToFhirCodeableConcept(c.Key, FhirConstants.DefaultObservationCategorySystem)));
+            }
+            else
+            {
+                var categoryrelationships = m_ActRelationshipRepository.Find(o => o.TargetActKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.SourceEntity.ClassConceptKey == ActClassKeys.List).ToList();
+                categoryrelationships.ForEach(r => r.LoadProperty(selector => selector.SourceEntity));
+                retVal.Category = categoryrelationships
+                        ?.Select(ar => ar.SourceEntity.TypeConceptKey)
+                        ?.Select(t => DataTypeConverter.ToFhirCodeableConcept(t, FhirConstants.DefaultObservationCategorySystem))?.ToList();
+            }
 
             // Value
-            switch (model.ValueType)
-            {
-                case "CD":
-                    retVal.Value = DataTypeConverter.ToFhirCodeableConcept((model as CodedObservation).ValueKey);
-                    break;
+            switch (model)
+                {
+                    case DateObservation dt:
+                        retVal.Value = DataTypeConverter.ToFhirDate(dt.Value);
+                        break;
+                    case CodedObservation cd:
+                        retVal.Value = DataTypeConverter.ToFhirCodeableConcept(cd.ValueKey);
+                        break;
 
-                case "PQ":
-                    var qty = model as QuantityObservation;
-                    retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
-                    break;
+                    case QuantityObservation qty:
+                        if (!qty.UnitOfMeasureKey.HasValue || qty.UnitOfMeasureKey == NullReasonKeys.NotApplicable) // Just a simple observation
+                        {
+                            retVal.Value = new FhirDecimal(qty.Value);
+                        }
+                        else
+                        {
+                            retVal.Value = DataTypeConverter.ToQuantity(qty.Value, qty.UnitOfMeasureKey, qty.LoadProperty(o => o.UnitOfMeasure));
+                        }
+                        break;
 
-                case "ED":
-                case "ST":
-                    retVal.Value = new FhirString((model as TextObservation).Value);
-                    break;
-            }
+                    case TextObservation txt:
+                        retVal.Value = new FhirString(txt.Value);
+                        break;
+                    case NumericObservation nm:
+                        retVal.Value = new FhirDecimal(nm.Value);
+                        break;
+                    case UriObservation uri:
+                        retVal.Value = new FhirUri(uri.Value);
+                        break;
+                    case BooleanObservation bl:
+                        retVal.Value = new FhirBoolean(bl.Value);
+                        break;
+                }
 
             if (model.InterpretationConceptKey.HasValue)
             {
@@ -203,6 +302,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return retVal;
         }
 
+        private IEnumerable<Core.Model.Acts.Observation> LoadComponents(Core.Model.Acts.Observation obj) => obj.LoadProperty(o => o.Relationships).Where(obs => obs.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && obs.ClassificationKey == RelationshipClassKeys.ContainedObjectLink)?.Select(o => o.LoadProperty(p => p.TargetAct)).OfType<Core.Model.Acts.Observation>();
+
         /// <summary>
         /// Map to model
         /// </summary>
@@ -212,10 +313,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
             Core.Model.Acts.Observation retVal;
             switch (resource.Value)
             {
+                case FhirDateTime fdt:
+                    retVal = new DateObservation
+                    {
+                        Value = fdt.ToDateTime(),
+                        Relationships = new List<ActRelationship>(),
+                        Participations = new List<ActParticipation>()
+                    };
+                    break;
+
                 case CodeableConcept codeableConcept:
                     retVal = new CodedObservation
                     {
-                        ValueType = "CD",
                         Value = DataTypeConverter.ToConcept(codeableConcept),
                         Relationships = new List<ActRelationship>(),
                         Participations = new List<ActParticipation>()
@@ -225,9 +334,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case Quantity quantity:
                     retVal = new QuantityObservation
                     {
-                        ValueType = "PQ",
                         Value = quantity.Value.Value,
-                        UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? FhirConstants.DefaultQuantityUnitSystem : quantity.System),
+                        UnitOfMeasureKey = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? FhirConstants.DefaultQuantityUnitSystem : quantity.System)?.Key ??
+                            NullReasonKeys.NotApplicable,
                         Relationships = new List<ActRelationship>(),
                         Participations = new List<ActParticipation>()
                     };
@@ -236,12 +345,31 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 case FhirString fhirString:
                     retVal = new TextObservation
                     {
-                        ValueType = "ST",
                         Value = fhirString.Value,
                         Participations = new List<ActParticipation>()
                     };
                     break;
-
+                case FhirBoolean fhirBool:
+                    retVal = new BooleanObservation()
+                    {
+                        Value = fhirBool.Value,
+                        Participations = new List<ActParticipation>()
+                    };
+                    break;
+                case FhirDecimal fhirDecimal:
+                    retVal = new NumericObservation()
+                    {
+                        Value = fhirDecimal.Value,
+                        Participations = new List<ActParticipation>()
+                    };
+                    break;
+                case FhirUri fhirUri:
+                    retVal = new UriObservation()
+                    {
+                        Value = fhirUri.Value,
+                        Participations = new List<ActParticipation>()
+                    };
+                    break;
                 default:
                     retVal = new Core.Model.Acts.Observation();
                     break;
@@ -268,7 +396,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Key = key;
             DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
 
-            retVal.Extensions = resource.Extension.Select(o=>DataTypeConverter.ToActExtension(o, retVal)).OfType<ActExtension>().ToList();
+            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToActExtension(o, retVal, false)).Concat(resource.ModifierExtension.Select(o => DataTypeConverter.ToActExtension(o, retVal, true))).OfType<ActExtension>().ToList();
             retVal.Notes = DataTypeConverter.ToNote<ActNote>(resource.Text);
 
             retVal.MoodConceptKey = MoodConceptKeys.Eventoccurrence;
@@ -278,8 +406,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
             // Observation
             var status = resource.Status;
 
-            //status concept key
+            if (resource.DataAbsentReason != null)
+            {
+                retVal.IsNegated = true;
+                retVal.ReasonConcept = DataTypeConverter.ToConcept(resource.DataAbsentReason);
+            }
 
+            //status concept key
             switch (status)
             {
                 case ObservationStatus.Preliminary:
@@ -358,6 +491,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
                 var patientkey = subject.PlayerEntityKey.Value;
 
+                // TODO: Re-check this mapping
                 if (resource.Category?.Count > 0)
                 {
                     var patientlists = m_ActRepository.Find(act => act.ClassConceptKey == ActClassKeys.List
@@ -438,6 +572,92 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     //}
                 }
             }
+            retVal.LoadProperty(o => o.Relationships);
+
+
+            if (resource.Component?.Any() == true)
+            {
+                foreach (var itm in resource.Component)
+                {
+                    SanteDB.Core.Model.Acts.Observation compObs = null;
+                    switch (itm.Value)
+                    {
+                        case FhirDateTime fdt:
+                            compObs = new DateObservation
+                            {
+                                Value = fdt.ToDateTime(),
+                                Relationships = new List<ActRelationship>(),
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+
+                        case CodeableConcept codeableConcept:
+                            compObs = new CodedObservation
+                            {
+                                Value = DataTypeConverter.ToConcept(codeableConcept),
+                                Relationships = new List<ActRelationship>(),
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+
+                        case Quantity quantity:
+                            compObs = new QuantityObservation
+                            {
+                                Value = quantity.Value.Value,
+                                UnitOfMeasure = DataTypeConverter.ToConcept(quantity.Unit, string.IsNullOrWhiteSpace(quantity.System) ? FhirConstants.DefaultQuantityUnitSystem : quantity.System),
+                                Relationships = new List<ActRelationship>(),
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+
+                        case FhirString fhirString:
+                            compObs = new TextObservation
+                            {
+                                Value = fhirString.Value,
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+
+                        case FhirBoolean fhirBoolean:
+                            compObs = new BooleanObservation()
+                            {
+                                Value = fhirBoolean.Value,
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+                        case FhirUri fhirUri:
+                            compObs = new UriObservation()
+                            {
+                                Value = fhirUri.Value,
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+                        case FhirDecimal fhirDecimal:
+                            compObs = new NumericObservation()
+                            {
+                                Value = fhirDecimal.Value,
+                                Participations = new List<ActParticipation>()
+                            };
+                            break;
+                        default:
+                            throw new NotSupportedException();
+                    }
+                    compObs.TypeConcept = DataTypeConverter.ToConcept(itm.Code);
+                    compObs.InterpretationConcept = DataTypeConverter.ToConcept(itm.Interpretation.FirstOrDefault());
+
+                    if (itm.DataAbsentReason != null)
+                    {
+                        compObs.IsNegated = true;
+                        compObs.ReasonConcept = DataTypeConverter.ToConcept(itm.DataAbsentReason);
+                    }
+
+                    DataTypeConverter.AddExtensions(compObs, itm);
+                    compObs.ActTime = compObs.ActTime ?? retVal.ActTime;
+                    compObs.StartTime = compObs.StartTime ?? retVal.StartTime;
+                    compObs.StopTime = compObs.StopTime ?? retVal.StopTime;
+                    retVal.Relationships.Add(new ActRelationship(ActRelationshipTypeKeys.HasComponent, compObs) { ClassificationKey = RelationshipClassKeys.ContainedObjectLink });
+                }
+            }
 
             // to bypass constraint at function 'CK_IS_CD_SET_MEM'
             retVal.MoodConceptKey = ActMoodKeys.Eventoccurrence;
@@ -446,8 +666,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
         }
 
         ///<inheritdoc />
-        protected override IQueryResultSet<Core.Model.Acts.Observation> QueryInternal(Expression<Func<Core.Model.Acts.Observation, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters  = null)
+        protected override IQueryResultSet<Core.Model.Acts.Observation> QueryInternal(Expression<Func<Core.Model.Acts.Observation, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null)
         {
+
+            if (hdsiParameters != null)
+            {
+                hdsiParameters.Add("participation[RecordTarget].player.classConcept", EntityClassKeyStrings.Patient); // Only patient targeted observations
+                hdsiParameters.Add("typeConcept", $"!{ObservationTypeKeys.Condition}");
+                hdsiParameters.Add("typeConcept", $"!{ObservationTypeKeys.Problem}");
+                // Not part of a grouper, observation, or cluster
+                hdsiParameters.Add("relationship[relationshipType=78B9540F-438B-4B6F-8D83-AAF4979DBC64&classification=B23A00BB-34B0-4704-AC5B-53330A8852B3&source.classConcept=28d022c6-8a8b-47c4-9e6a-2bc67308739e&source.classConcept=d38091b5-9065-4721-8a1f-bfbb3b4bf447&source.classConcept=6143087c-5fbf-41ba-b25d-8b780900883d]", "null");
+            }
+
             if (fhirParameters != null && fhirParameters["value-concept"] != null)
             {
                 var predicate = QueryExpressionParser.BuildLinqExpression<CodedObservation>(hdsiParameters);
@@ -460,7 +690,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
             else
             {
-                return base.QueryInternal(query, fhirParameters, hdsiParameters);
+                var predicate = QueryExpressionParser.BuildLinqExpression<Core.Model.Acts.Observation>(hdsiParameters);
+                return base.QueryInternal(predicate, fhirParameters, hdsiParameters);
             }
         }
 

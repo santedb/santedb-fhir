@@ -19,6 +19,7 @@
  * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
 using SanteDB.Core.Model;
@@ -161,6 +162,21 @@ namespace SanteDB.Messaging.FHIR.Util
         }
 
         /// <summary>
+        /// Explicitly add extra extension handlers
+        /// </summary>
+        internal static void AddExtensionHandlers(params Type[] handlers)
+        {
+            var svcManager = ApplicationServiceContext.Current.GetService<IServiceManager>();
+            foreach (var ihr in handlers.Where(t=>typeof(IFhirExtensionHandler).IsAssignableFrom(t)))
+            {
+                if(!s_extensionHandlers.Any(e=> ihr == e.GetType()))
+                {
+                    s_extensionHandlers.Add(svcManager.CreateInjected(ihr) as IFhirExtensionHandler);
+                }
+            }
+        }
+
+        /// <summary>
         /// Intialize handlers from the configuration file
         /// </summary>
         internal static void InitializeHandlers(IEnumerable<TypeReferenceConfiguration> extensions)
@@ -220,8 +236,13 @@ namespace SanteDB.Messaging.FHIR.Util
         public static IEnumerable<Extension> CreateExtensions(this IAnnotatedResource me, ResourceType applyTo, out IEnumerable<IFhirExtensionHandler> appliedExtensions)
         {
             appliedExtensions = s_extensionHandlers.Where(o => o.AppliesTo == null || o.AppliesTo == applyTo);
-            return appliedExtensions.SelectMany(o => o.Construct(me));
+            return appliedExtensions.ToArray().SelectMany(o => o.Construct(me));
         }
+
+        /// <summary>
+        /// True if the extension is a modifier
+        /// </summary>
+        public static bool IsModifierExtension(this Extension ext) => s_extensionHandlers.OfType<IFhirExtensionHandlerEx>().Any(e=>e.Uri.ToString() == ext.Url && e.IsModifier);
 
         /// <summary>
         /// Try to apply the specified extension to the specified object

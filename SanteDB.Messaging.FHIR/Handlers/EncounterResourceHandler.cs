@@ -208,7 +208,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Participations = new List<ActParticipation>()
             };
 
-            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToActExtension(o, retVal)).OfType<ActExtension>().ToList();
+            
+            retVal.Extensions = resource.Extension.Select(o => DataTypeConverter.ToActExtension(o, retVal, false))
+                .Concat(resource.ModifierExtension.Select(o=>DataTypeConverter.ToActExtension(o, retVal, true))).OfType<ActExtension>().ToList();
+            
             // Allow for fetching of existing via ID
             if (!Guid.TryParse(resource.Id, out var key))
             {

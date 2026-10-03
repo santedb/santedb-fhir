@@ -18,6 +18,7 @@
  * User: fyfej
  * Date: 2023-6-21
  */
+using SanteDB.Core.Model.DataTypes;
 using System;
 
 namespace SanteDB.Messaging.FHIR
@@ -27,12 +28,15 @@ namespace SanteDB.Messaging.FHIR
     /// </summary>
     public static class FhirConstants
     {
-
+        /// <summary>
+        /// ISO 21090 extension
+        /// </summary>
+        public const string Iso21090Extensions = "http://hl7.org/fhir/StructureDefinition/iso21090-";
 
         /// <summary>
         /// URI of the SanteDB FHIR profile
         /// </summary>
-        public static String SanteDBProfile = "http://santedb.org/fhir/profile";
+        public const String SanteDBProfile = "http://santedb.org/fhir/profile";
 
         /// <summary>
         /// Configuration section name
@@ -99,11 +103,17 @@ namespace SanteDB.Messaging.FHIR
         public const string CodeSystem_AdministrativeGender = "http://hl7.org/fhir/administrative-gender";
 
         /// <summary>
+        /// Loinc code system
+        /// </summary>
+        public const string CodeSystem_Loinc = "http://loinc.org";
+
+        /// <summary>
         /// When a concept has no reference term - use the conept 
         /// </summary>
         public const string SanteDBConceptSystem = "http://santedb.org/concept";
-
-
-
+        /// <summary>
+        /// Observation category concept key
+        /// </summary>
+        internal static readonly Guid ObservationCategoryConceptSetKey = Guid.Parse("90F2BC81-0F0F-4384-8EC3-992C55AE7656");
     }
 }

@@ -71,6 +71,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
         /// <inhertidoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.DateTime;
+        
+        /// <inheritdic/>
+        public bool IsModifier => false;
 
         /// <summary>
         /// Construct the extension

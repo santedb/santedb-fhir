@@ -39,6 +39,7 @@ using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Security;
 using SanteDB.Core.Model.Text;
 using SanteDB.Core.Security;
@@ -896,6 +897,11 @@ namespace SanteDB.Messaging.FHIR.Util
                 fhirExtension.Extension = ExtensionUtil.CreateExtensions(extendable as IAnnotatedResource, rt, out IEnumerable<IFhirExtensionHandler> appliedExtensions).ToList();
                 fhirExtension.Extension.AddRange(extendable.Extensions.Where(o => !IGNORE_EXTENSIONS.Contains(o.ExtensionTypeKey)).Select(DataTypeConverter.ToExtension));
 
+                if (resource is DomainResource dresource)
+                {
+                    dresource.ModifierExtension = fhirExtension.Extension.Where(e => e.IsModifierExtension()).ToList();
+                    dresource.Extension.RemoveAll(e => e.IsModifierExtension());
+                }
                 return appliedExtensions.Select(o => o.ProfileUri?.ToString()).Distinct();
             }
             else
@@ -938,7 +944,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <param name="fhirExtension">The FHIR extension.</param>
         /// <returns>Returns the converted act extension instance.</returns>
         /// <exception cref="System.ArgumentNullException">fhirExtension - Value cannot be null</exception>
-        public static ActExtension ToActExtension(Extension fhirExtension, IdentifiedData context)
+        public static ActExtension ToActExtension(Extension fhirExtension, IdentifiedData context, bool mustUnderstand)
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR extension");
 
@@ -964,7 +970,18 @@ namespace SanteDB.Messaging.FHIR.Util
                 extension.ExtensionType = extensionTypeService.Get(new Uri(fhirExtension.Url));
                 if (extension.ExtensionType == null)
                 {
-                    return null;
+                    if (mustUnderstand)
+                    {
+                        throw new FhirException(HttpStatusCode.InternalServerError, IssueType.NotSupported, String.Format(FhirErrorMessages.ModifierExtensionNotUnderstood, fhirExtension.Url));
+                    }
+                    else if (m_configuration.StrictProcessing)
+                    {
+                        throw new FhirException(HttpStatusCode.BadRequest, IssueType.NotFound, String.Format(FhirErrorMessages.ExtensionNotUnderstood, fhirExtension.Url));
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
 
                 //extension.ExtensionValue = fhirExtension.Value;
@@ -1010,7 +1027,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
                 else
                 {
-                    throw new NotImplementedException($"Extension type is not understood");
+                    throw new NotImplementedException($"Extension type is not supported");
                 }
 
                 // Now will
@@ -1027,7 +1044,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <param name="context">The context object which the extension is attached to.</param>
         /// <returns>Returns the converted act extension instance.</returns>
         /// <exception cref="System.ArgumentNullException">fhirExtension - Value cannot be null</exception>
-        public static EntityExtension ToEntityExtension(Extension fhirExtension, IdentifiedData context)
+        public static EntityExtension ToEntityExtension(Extension fhirExtension, IdentifiedData context, bool mustUnderstand)
         {
             traceSource.TraceEvent(EventLevel.Verbose, "Mapping FHIR extension");
 
@@ -1053,7 +1070,18 @@ namespace SanteDB.Messaging.FHIR.Util
                 extension.ExtensionType = extensionTypeService.Get(new Uri(fhirExtension.Url));
                 if (extension.ExtensionType == null)
                 {
-                    return null;
+                    if (mustUnderstand)
+                    {
+                        throw new FhirException(HttpStatusCode.InternalServerError, IssueType.NotSupported, String.Format(FhirErrorMessages.ModifierExtensionNotUnderstood, fhirExtension.Url));
+                    }
+                    else if (m_configuration.StrictProcessing)
+                    {
+                        throw new FhirException(HttpStatusCode.BadRequest, IssueType.NotFound, String.Format(FhirErrorMessages.ExtensionNotUnderstood, fhirExtension.Url));
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
 
                 //extension.ExtensionValue = fhirExtension.Value;
@@ -1517,18 +1545,6 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 address.Component.Add(new EntityAddressComponent(AddressComponentKeys.County, fhirAddress.District));
             }
-
-            // HACK: Apply any SanteDB extended address components 
-            fhirAddress.Extension.Where(o => o.Url.StartsWith(FhirConstants.SanteDBProfile + "#address-")).ForEach(ae =>
-            {
-                var addressPart = ae.Url.Substring(FhirConstants.SanteDBProfile.Length + 9);
-                if (TryToConcept(addressPart, FhirConstants.SanteDBConceptSystem, out var componentType) &&
-                    ae.Value is FhirString fs)
-                {
-                    address.Component.Add(new EntityAddressComponent(componentType.Key.Value, fs.Value));
-                }
-            });
-
             // HACK: Apply extension to address
             fhirAddress.Extension.ForEach(p => p.TryApplyExtension(address));
 
@@ -1755,7 +1771,7 @@ namespace SanteDB.Messaging.FHIR.Util
             {
                 throw new ArgumentException("Could not understand resource reference - either a reference or business identifier is required.");
             }
-            
+
             var repo = ApplicationServiceContext.Current.GetService<IRepositoryService<TEntity>>();
 
             // First is there a bundle in the contained within
@@ -1916,7 +1932,9 @@ namespace SanteDB.Messaging.FHIR.Util
                 ExternalKey = m_configuration?.PersistElementId == true ? patientContact.ElementId : null
             };
 
-            retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity)).OfType<EntityExtension>());
+            retVal.TargetEntity.Extensions.AddRange(patientContact.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity, false))
+                    .Concat(patientContact.ModifierExtension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal.TargetEntity, true)))
+                    .OfType<EntityExtension>());
             if (patientContact.Organization != null)
             {
                 var refObjectKey = DataTypeConverter.ResolveEntity<Core.Model.Entities.Organization>(patientContact.Organization, patient);
@@ -2059,13 +2077,6 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     retVal.District = com.Value;
                 }
-                else
-                {
-                    retVal.AddExtension(
-                        FhirConstants.SanteDBProfile + "#address-" + com.LoadProperty<Concept>(nameof(EntityAddressComponent.ComponentType)).Mnemonic,
-                        new FhirString(com.Value)
-                    );
-                }
             }
 
             retVal.Extension.AddRange(address.CreateExtensions(ResourceType.Basic, out _));
@@ -2086,6 +2097,11 @@ namespace SanteDB.Messaging.FHIR.Util
                     return null;
                 }
 
+
+                if(NullReasonKeys.All.Contains(conceptKey.Value) && !preferredCodeSystem.Any())
+                {
+                    preferredCodeSystem = new string[] { "http://hl7.org/fhir/v3-NullFlavor" };
+                }
 
                 // No preferred CS then all
                 if (!preferredCodeSystem.Any())
@@ -2274,14 +2290,14 @@ namespace SanteDB.Messaging.FHIR.Util
             }
 
             // TODO: Validate that the prov.target actually points to the target entity
-            if(!prov.Target.Any() && m_configuration.StrictProcessing)
+            if (!prov.Target.Any() && m_configuration.StrictProcessing)
             {
                 throw new InvalidOperationException(FhirErrorMessages.ProvenanceMissingTarget);
             }
 
-            foreach(var pt in prov.Target)
+            foreach (var pt in prov.Target)
             {
-                if(DataTypeConverter.TryResolveResourceReference(pt, fhirResource, out var idd))
+                if (DataTypeConverter.TryResolveResourceReference(pt, fhirResource, out var idd))
                 {
                     AddContextProvenanceDataLocated(prov, idd);
                 }
@@ -2296,8 +2312,8 @@ namespace SanteDB.Messaging.FHIR.Util
             }
         }
 
-        private static void AddContextProvenanceDataLocated(Provenance provenanceToApply, IIdentifiedResource targetEntity) 
-        { 
+        private static void AddContextProvenanceDataLocated(Provenance provenanceToApply, IIdentifiedResource targetEntity)
+        {
             if (provenanceToApply.Location != null)
             {
                 var target = DataTypeConverter.ResolveEntity<Place>(provenanceToApply.Location, null);
@@ -2345,7 +2361,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 }
             }
 
-            switch(targetEntity)
+            switch (targetEntity)
             {
                 case Entity ent:
                     ent.CreationTime = provenanceToApply.Recorded.GetValueOrDefault();
@@ -2612,7 +2628,7 @@ namespace SanteDB.Messaging.FHIR.Util
         internal static void SetModelPolicies<TModel>(TModel model, List<Coding> securityPolicies)
             where TModel : IHasPolicies
         {
-            if(securityPolicies?.Any() != true)
+            if (securityPolicies?.Any() != true)
             {
                 return;
             }
@@ -2621,12 +2637,12 @@ namespace SanteDB.Messaging.FHIR.Util
             var currentPolicies = m_pipService.GetPolicies(model);
             var newPolicies = securityPolicies?.SelectMany(o => DataTypeConverter.ToSecurityPolicy(o)).Distinct(new SecurityPolicyInstanceComparer()).ToList() ?? new List<Core.Model.Security.SecurityPolicyInstance>();
 
-            if(!currentPolicies.OrderBy(o => o.Policy.Oid).Select(o=>o.Policy.Oid).SequenceEqual(newPolicies.OrderBy(o=>o.Policy.Oid).Select(o=>o.Policy.Oid)))
+            if (!currentPolicies.OrderBy(o => o.Policy.Oid).Select(o => o.Policy.Oid).SequenceEqual(newPolicies.OrderBy(o => o.Policy.Oid).Select(o => o.Policy.Oid)))
             {
                 m_pepService.Demand(PermissionPolicyIdentifiers.AssignPolicy);
             }
-            
-            switch(model)
+
+            switch (model)
             {
                 case Entity e:
                     e.Policies = newPolicies;

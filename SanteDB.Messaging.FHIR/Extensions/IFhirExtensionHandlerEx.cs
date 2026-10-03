@@ -16,5 +16,9 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// </summary>
         FHIRAllTypes ValueType { get; }
 
+        /// <summary>
+        /// True if this is a modifier extension
+        /// </summary>
+        bool IsModifier { get; }
     }
 }

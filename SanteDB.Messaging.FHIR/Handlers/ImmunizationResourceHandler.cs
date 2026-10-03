@@ -183,7 +183,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Relationships = new List<ActRelationship>()
             };
 
-            substanceAdministration.Extensions = resource.Extension?.Select(o => DataTypeConverter.ToActExtension(o, substanceAdministration)).ToList();
+            substanceAdministration.Extensions = resource.Extension?.Select(o => DataTypeConverter.ToActExtension(o, substanceAdministration, false)).Concat(resource.ModifierExtension.Select(o => DataTypeConverter.ToActExtension(o, substanceAdministration, true))).ToList();
 
             // Allow for fetching of existing via ID
             if (!Guid.TryParse(resource.Id, out var key))

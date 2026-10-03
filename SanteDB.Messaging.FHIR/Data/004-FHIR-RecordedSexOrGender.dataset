@@ -1,0 +1,89 @@
+﻿<?xml version="1.0"?>
+<dataset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" id="FHIR Recorded Sex or Gender Type" xmlns="http://santedb.org/data">
+
+	<update skipIfError="false" insertIfNotExists="true">
+		<Concept xmlns="http://santedb.org/model">
+			<id>e1cf0ea0-63bf-4a8c-9e41-bbd542d3479c</id>
+			<sequence xsi:nil="true" />
+			<mnemonic>ObservationType-BirthSex</mnemonic>
+			<statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+			<conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+			<name>
+				<id>7a0e0daa-8836-11f0-9743-a73d86ce2830</id>
+				<source>e1cf0ea0-63bf-4a8c-9e41-bbd542d3479c</source>
+				<language>en</language>
+				<value>Sex (At Birth)</value>
+			</name>
+		</Concept>
+	</update>
+	<update skipIfError="false" insertIfNotExists="true">
+		<Concept xmlns="http://santedb.org/model">
+			<sequence xsi:nil="true" />
+			<id>0aa854bf-9679-4a0a-9c03-80fcaf924d9b</id>
+
+			<mnemonic>ObservationType-CurrentBiologicalSex</mnemonic>
+			<statusConcept>c8064cbd-fa06-4530-b430-1a52f1530c27</statusConcept>
+			<conceptClass>0d6b3439-c9be-4480-af39-eeb457c052d0</conceptClass>
+			<name>
+				<id>e6d316d6-bda2-11f1-a003-d3a1e0aa9650</id>
+				<source>0aa854bf-9679-4a0a-9c03-80fcaf924d9b</source>
+				<language>en</language>
+				<value>Sex (Biological - Current)</value>
+			</name>
+
+		</Concept>
+	</update>
+	<update skipIfError="false" insertIfNotExists="true">
+		<ConceptReferenceTerm xmlns="http://santedb.org/model">
+			<id>97bc4090-bda2-11f1-992c-e3927d87d665</id>
+			<source>0aa854bf-9679-4a0a-9c03-80fcaf924d9b</source>
+			<term>49c37699-461e-44ce-9097-1d3817b171c1</term>
+			<relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+		</ConceptReferenceTerm>
+	</update>
+	<update skipIfError="false" insertIfNotExists="true">
+		<ConceptReferenceTerm xmlns="http://santedb.org/model">
+			<id>711c0c2e-8836-11f0-81e4-c3a9f488ba90</id>
+			<source>e1cf0ea0-63bf-4a8c-9e41-bbd542d3479c</source>
+			<term>ee600cb1-50db-4fee-9601-983fc1423875</term>
+			<relationshipType>2c4dafc2-566a-41ae-9ebc-3097d7d22f4a</relationshipType>
+		</ConceptReferenceTerm>
+	</update>
+	<update skipIfError="false" insertIfNotExists="true">
+		<ReferenceTerm xmlns="http://santedb.org/model">
+			<id>ee600cb1-50db-4fee-9601-983fc1423875</id>
+			<mnemonic>76689-9</mnemonic>
+			<codeSystem>08c59397-706b-456a-aeb1-9e7d5a2adc94</codeSystem>
+			<name>
+				<id>7116b468-8836-11f0-81e2-fb8cd8e83c4c</id>
+				<language>en</language>
+				<value>SEX AT BIRTH</value>
+				<source>ee600cb1-50db-4fee-9601-983fc1423875</source>
+			</name>
+		</ReferenceTerm>
+	</update>
+	<update skipIfError="false" insertIfNotExists="true">
+		<ReferenceTerm xmlns="http://santedb.org/model">
+			<id>49c37699-461e-44ce-9097-1d3817b171c1</id>
+			<mnemonic>46098-0</mnemonic>
+			<codeSystem>08c59397-706b-456a-aeb1-9e7d5a2adc94</codeSystem>
+			<name>
+				<id>97b383c4-bda2-11f1-992a-abf2d4debdc0</id>
+				<language>en</language>
+				<value>Sex (Biological)</value>
+				<source>49c37699-461e-44ce-9097-1d3817b171c1</source>
+			</name>
+		</ReferenceTerm>
+	</update>
+	<update skipIfError="false" insertIfNotExists="true">
+		<ConceptSet xmlns="http://santedb.org/model">
+			<id>d9db93e0-bda2-11f1-b383-2f8aca663eac</id>
+			<name>Recorded Sex Or Gender Type</name>
+			<mnemonic>RecordedSexOrGenderType</mnemonic>
+			<oid>2.16.840.1.113883.4.642.3.3289</oid>
+			<url>http://terminology.hl7.org/ValueSet/recorded-sex-or-gender-type</url>
+			<concept>e1cf0ea0-63bf-4a8c-9e41-bbd542d3479c</concept>
+			<concept>0aa854bf-9679-4a0a-9c03-80fcaf924d9b</concept>
+		</ConceptSet>
+	</update>
+</dataset>

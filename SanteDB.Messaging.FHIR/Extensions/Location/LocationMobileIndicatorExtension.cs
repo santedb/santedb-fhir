@@ -47,6 +47,9 @@ namespace SanteDB.Messaging.FHIR.Extensions.Location
 
         /// <inhertidoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.Boolean;
+        
+        /// <inheritdic/>
+        public bool IsModifier => false;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
