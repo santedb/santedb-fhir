@@ -281,11 +281,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             FullUrl = $"urn:uuid:{relPat.Key}",
                             Resource = fhirPat,
-                            Request = new Bundle.RequestComponent()
-                            {
-                                Method = Bundle.HTTPVerb.POST,
-                                Url = $"{this.ResourceType}/{relPat.Key}"
-                            }
+                            Request = this.CreateBundleRequest(Bundle.HTTPVerb.POST, relPat)
                         });
                         fhirPat.Link.Add(new Patient.LinkComponent()
                         {
@@ -299,11 +295,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         FullUrl = $"urn:uuid:{rel.Key}",
                         Resource = relative,
-                        Request = new Bundle.RequestComponent()
-                        {
-                            Method = Bundle.HTTPVerb.POST,
-                            Url = $"{mapper.ResourceType}/{rel.Key}"
-                        }
+                        Request = mapper.CreateBundleRequest(Bundle.HTTPVerb.POST, rel)
                     });
                 }
             }

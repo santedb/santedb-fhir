@@ -235,12 +235,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     var httpVerb = DataTypeConverter.ConvertBatchOperationToHttpVerb(id2.BatchOperation);
                     retVal.Entry.Add(new Bundle.EntryComponent()
                     {
-                        Request = new Bundle.RequestComponent()
-                        {
-                            Method = httpVerb,
-                            IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={id2.Key}" : null,
-                            Url = httpVerb == Bundle.HTTPVerb.POST ? mapper.ResourceType.ToString() : $"{mapper.ResourceType}/{id2.Key}",
-                        },
+                        Request = mapper.CreateBundleRequest(httpVerb, id2),
                         FullUrl = $"urn:uuid:{id2.Key}",
                         Resource = mapper.MapToFhir(id2)
                     });

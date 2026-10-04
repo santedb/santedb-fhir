@@ -227,11 +227,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var ec = new Hl7.Fhir.Model.Bundle.EntryComponent()
                 {
                     FullUrl = $"urn:uuid:{entry.Key}",
-                    Request = new Bundle.RequestComponent()
-                    {
-                        Url = $"{handler.ResourceType}/{entry.Key}",
-                        Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entry.BatchOperation)
-                    },
+                    Request = handler.CreateBundleRequest(DataTypeConverter.ConvertBatchOperationToHttpVerb(entry.BatchOperation), entry),
                     Response = new Bundle.ResponseComponent()
                     {
                         Etag = $"W/{entry.Tag}",

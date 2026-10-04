@@ -2485,12 +2485,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             var httpVerb = DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation);
                             entryComponent = new Bundle.EntryComponent()
                             {
-                                Request = new Bundle.RequestComponent()
-                                {
-                                    Method = httpVerb,
-                                    IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={er.Key}" : null,
-                                    Url = httpVerb == Bundle.HTTPVerb.POST ? relationshipMapper.ResourceType.ToString() :  $"{relationshipMapper.ResourceType}/{er.Key}",
-                                },
+                                Request = relationshipMapper.CreateBundleRequest(httpVerb, er),
                                 FullUrl = $"urn:uuid:{er.Key}",
                                 Resource = relationshipMapper.MapToFhir(er)
                             };
@@ -2505,12 +2500,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 entryComponent = new Bundle.EntryComponent()
                                 {
                                     FullUrl = $"urn:uuid:{entity.Key}",
-                                    Request = new Bundle.RequestComponent()
-                                    {
-                                        Method = httpVerb,
-                                        IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={entity.Key}" : null,
-                                        Url = httpVerb == Bundle.HTTPVerb.POST ? mapper.ResourceType.ToString() : $"{mapper.ResourceType}/{entity.Key}",
-                                    },
+                                    Request = mapper.CreateBundleRequest(httpVerb, entity),
                                     Resource = mapper.MapToFhir(entity)
                                 };
                             }
@@ -2534,13 +2524,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             bundleToAddTo.Entry.Insert(0, new Bundle.EntryComponent()
                             {
                                 FullUrl = $"urn:uuid:{tact.Key}",
-                                Request = new Bundle.RequestComponent()
-                                {
-                                    Method = httpVerb,
-                                    IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={tact.Key}" : null,
-                                    Url = httpVerb == Bundle.HTTPVerb.POST ? mapper.ResourceType.ToString() : $"{mapper.ResourceType}/{tact.Key}",
-                                    
-                                },
+                                Request = mapper.CreateBundleRequest(httpVerb, tact),
                                 Resource = mapper.MapToFhir(tact)
                             });
                         }
@@ -2556,12 +2540,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             bundleToAddTo.Entry.Insert(0, new Bundle.EntryComponent()
                             {
                                 FullUrl = $"urn:uuid:{entity.Key}",
-                                Request = new Bundle.RequestComponent()
-                                {
-                                    Method = httpVerb,
-                                    IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={entity.Key}" : null,
-                                    Url = httpVerb == Bundle.HTTPVerb.POST ? mapper.ResourceType.ToString() : $"{mapper.ResourceType}/{entity.Key}",
-                                },
+                                Request = mapper.CreateBundleRequest(httpVerb, entity),
                                 Resource = mapper.MapToFhir(entity)
                             });
                         }
@@ -2666,6 +2645,19 @@ namespace SanteDB.Messaging.FHIR.Util
                 default:
                     throw new InvalidOperationException(String.Format(ErrorMessages.WOULD_RESULT_INVALID_STATE, nameof(SetModelPolicies)));
             }
+        }
+
+        /// <summary>
+        /// Create the appropriate bundle request
+        /// </summary>
+        internal static RequestComponent CreateBundleRequest(this IFhirResourceMapper me, Bundle.HTTPVerb httpVerb, IdentifiedData dataBeingSubmitted)
+        {
+            return new Bundle.RequestComponent()
+            {
+                Method = httpVerb,
+                IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={dataBeingSubmitted.Key}" : null,
+                Url = httpVerb == Bundle.HTTPVerb.POST ? me.ResourceType.ToString() : $"{me.ResourceType}/{dataBeingSubmitted.Key}",
+            };
         }
     }
 
