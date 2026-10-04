@@ -239,7 +239,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         {
                             Method = httpVerb,
                             IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={id2.Key}" : null,
-                            Url = $"{mapper.ResourceType}/{id2.Key}",
+                            Url = httpVerb == Bundle.HTTPVerb.POST ? mapper.ResourceType.ToString() : $"{mapper.ResourceType}/{id2.Key}",
                         },
                         FullUrl = $"urn:uuid:{id2.Key}",
                         Resource = mapper.MapToFhir(id2)

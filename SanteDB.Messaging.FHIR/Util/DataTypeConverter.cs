@@ -53,6 +53,7 @@ using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Resources;
 using SanteDB.Rest.Common.Configuration;
+using SharpCompress.Compressors.ZStandard.Unsafe;
 using System;
 using System.Buffers.Text;
 using System.Collections.Generic;
@@ -70,6 +71,7 @@ using System.Security.Authentication;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
+using static Hl7.Fhir.Model.Bundle;
 using static Hl7.Fhir.Model.OperationOutcome;
 
 namespace SanteDB.Messaging.FHIR.Util
@@ -2477,14 +2479,17 @@ namespace SanteDB.Messaging.FHIR.Util
                     foreach (var er in ent.LoadProperty(o => o.Relationships).Where(r => !IGNORE_RELATIONS_INBUNDLE.Contains(r.RelationshipTypeKey.Value)))
                     {
                         Bundle.EntryComponent entryComponent = null;
+
                         if (relationshipMapper.CanMapObject(er))
                         {
+                            var httpVerb = DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation);
                             entryComponent = new Bundle.EntryComponent()
                             {
                                 Request = new Bundle.RequestComponent()
                                 {
-                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(er.BatchOperation),
-                                    Url = $"{relationshipMapper.ResourceType}/{er.Key}",
+                                    Method = httpVerb,
+                                    IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={er.Key}" : null,
+                                    Url = httpVerb == Bundle.HTTPVerb.POST ? relationshipMapper.ResourceType.ToString() :  $"{relationshipMapper.ResourceType}/{er.Key}",
                                 },
                                 FullUrl = $"urn:uuid:{er.Key}",
                                 Resource = relationshipMapper.MapToFhir(er)
@@ -2493,6 +2498,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         else
                         {
                             var entity = er.LoadProperty(o => o.TargetEntity);
+                            var httpVerb = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation);
                             var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
                             if (mapper != null)
                             {
@@ -2501,8 +2507,9 @@ namespace SanteDB.Messaging.FHIR.Util
                                     FullUrl = $"urn:uuid:{entity.Key}",
                                     Request = new Bundle.RequestComponent()
                                     {
-                                        Url = $"{mapper.ResourceType}/{entity.Key}",
-                                        Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                        Method = httpVerb,
+                                        IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={entity.Key}" : null,
+                                        Url = httpVerb == Bundle.HTTPVerb.POST ? mapper.ResourceType.ToString() : $"{mapper.ResourceType}/{entity.Key}",
                                     },
                                     Resource = mapper.MapToFhir(entity)
                                 };
@@ -2523,13 +2530,16 @@ namespace SanteDB.Messaging.FHIR.Util
                         if (mapper != null &&
                             !bundleToAddTo.Entry.Any(e => e.FullUrl == $"urn:uuid:{tact.Key}"))
                         {
+                            var httpVerb = DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation);
                             bundleToAddTo.Entry.Insert(0, new Bundle.EntryComponent()
                             {
                                 FullUrl = $"urn:uuid:{tact.Key}",
                                 Request = new Bundle.RequestComponent()
                                 {
-                                    Url = $"{mapper.ResourceType}/{tact.Key}",
-                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(tact.BatchOperation)
+                                    Method = httpVerb,
+                                    IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={tact.Key}" : null,
+                                    Url = httpVerb == Bundle.HTTPVerb.POST ? mapper.ResourceType.ToString() : $"{mapper.ResourceType}/{tact.Key}",
+                                    
                                 },
                                 Resource = mapper.MapToFhir(tact)
                             });
@@ -2538,6 +2548,8 @@ namespace SanteDB.Messaging.FHIR.Util
                     foreach (var ap in act.LoadProperty(o => o.Participations).Where(r => !IGNORE_RELATIONS_INBUNDLE.Contains(r.ParticipationRoleKey.Value)))
                     {
                         var entity = ap.LoadProperty(o => o.PlayerEntity);
+                        var httpVerb = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation);
+
                         var mapper = FhirResourceHandlerUtil.GetMapperForInstance(entity);
                         if (mapper != null && !bundleToAddTo.Entry.Any(e => e.FullUrl == $"urn:uuid:{entity.Key}"))
                         {
@@ -2546,8 +2558,9 @@ namespace SanteDB.Messaging.FHIR.Util
                                 FullUrl = $"urn:uuid:{entity.Key}",
                                 Request = new Bundle.RequestComponent()
                                 {
-                                    Url = $"{mapper.ResourceType}/{entity.Key}",
-                                    Method = DataTypeConverter.ConvertBatchOperationToHttpVerb(entity.BatchOperation)
+                                    Method = httpVerb,
+                                    IfNoneExist = httpVerb == Bundle.HTTPVerb.POST ? $"id={entity.Key}" : null,
+                                    Url = httpVerb == Bundle.HTTPVerb.POST ? mapper.ResourceType.ToString() : $"{mapper.ResourceType}/{entity.Key}",
                                 },
                                 Resource = mapper.MapToFhir(entity)
                             });
