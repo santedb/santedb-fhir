@@ -323,7 +323,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     // Sometimes a client won't send up an explicit resource id - so we want to parse it from the fullUrl or the request URL
                     if (String.IsNullOrEmpty(entry.Resource.Id))
                     {
-                        if (Uri.TryCreate(entry.FullUrl, UriKind.RelativeOrAbsolute, out var requestUri))
+                        if (Uri.TryCreate(entry.FullUrl, UriKind.Absolute, out var requestUri))
                         {
                             switch (requestUri.Scheme)
                             {
@@ -343,8 +343,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                     break;
                                 default:
                                     throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, $"Don't understand fullURL {entry.FullUrl}");
-
                             }
+
                         }
                         else if (Uri.TryCreate(entry.Request.Url, UriKind.RelativeOrAbsolute, out requestUri))
                         {
@@ -448,7 +448,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 if (entry.Request != null &&
                     (
                     !aboutEntries.Any() ||
-                    aboutEntries.Contains(entry.FullUrl)
+                    aboutEntries.Contains(entry.FullUrl) ||
+                    aboutEntries.Any(r =>entry.FullUrl.EndsWith(r))
                     )
                 )
                 {

@@ -188,7 +188,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 focusBundle = new Bundle()
                 {
                     Type = Bundle.BundleType.History,
-                    Id = Guid.NewGuid().ToString()
+                    Id = Guid.NewGuid().ToString(),
+                    Meta = new Meta()
+                    {
+                        Profile = new String[] { "https://profiles.ihe.net/ITI/PMIR/StructureDefinition/IHE.PMIR.Bundle.History" }
+                    }
                 };
                 var id = Guid.NewGuid();
 
@@ -200,6 +204,10 @@ namespace SanteDB.Messaging.FHIR.PubSub
                 var retVal = new Bundle()
                 {
                     Type = Bundle.BundleType.Message,
+                    Meta = new Meta()
+                    {
+                        Profile = new String[] { "https://profiles.ihe.net/ITI/PMIR/StructureDefinition/IHE.PMIR.Bundle" }
+                    },
                     Entry = new List<Bundle.EntryComponent>()
                     {
                         new Bundle.EntryComponent()
@@ -207,6 +215,10 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             FullUrl =$"urn:uuid:{id}",
                             Resource = new MessageHeader()
                             {
+                                Meta = new Meta()
+                                {
+                                    Profile = new String[] { "https://profiles.ihe.net/ITI/PMIR/StructureDefinition/IHE.PMIR.MessageHeader" }
+                                },
                                 Id=id.ToString(),
                                 Event = new FhirUri(eventCode),
                                 Focus = new List<ResourceReference>()
@@ -278,7 +290,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             };
                             entry.Response = new Bundle.ResponseComponent()
                             {
-                                Status = "200"
+                                Status = "201",
+                                Location = entry.Request.Url
                             };
                         }
                     }
@@ -339,7 +352,9 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             },
                             Response = new Bundle.ResponseComponent()
                             {
-                                Status = "200"
+                                Status = "200",
+                                Location = $"{fhirModel.TypeName}/{fhirModel.Id}"
+
                             }
                         };
                     }));
@@ -386,7 +401,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
                         },
                         Response = new Bundle.ResponseComponent()
                         {
-                            Status = "200"
+                            Status = "200",
+                            Location = $"{focalResource.TypeName}/{focalResource.Id}"
                         }
                     });
 
@@ -449,7 +465,8 @@ namespace SanteDB.Messaging.FHIR.PubSub
                             };
                             entry.Response = new Bundle.ResponseComponent()
                             {
-                                Status = "200"
+                                Status = "200",
+                                Location = entry.Request.Url
                             };
                         }
                     }
