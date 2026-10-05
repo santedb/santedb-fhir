@@ -417,9 +417,18 @@ namespace SanteDB.Messaging.FHIR.Util
                         FhirType = QueryParameterRewriteType.Tag
                     };
                 }
+                else if(parmMap == null && kv == "id")
+                {
+                    parmMap = new QueryParameterMapProperty()
+                    {
+                        FhirQuery = "id",
+                        ModelQuery = "id",
+                        FhirType = QueryParameterRewriteType.String
+                    };
+                }
                 else if (parmMap == null)
                 {
-                    if (s_configuration?.StrictProcessing  == true && !s_defaultParameters.Any(r => r.Name == kv))
+                    if (s_configuration?.StrictProcessing == true && !s_defaultParameters.Any(r => r.Name == kv))
                     {
                         throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, String.Format(FhirErrorMessages.QueryParameterNotFound, kv));
                     }
