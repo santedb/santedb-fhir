@@ -27,6 +27,7 @@ using SanteDB.Core;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
 using System;
@@ -48,23 +49,33 @@ namespace SanteDB.Messaging.FHIR.Util
         private static readonly ILocalizationService s_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
 
         /// <summary>
+        /// True if the extension is locally defined
+        /// </summary>
+        public static bool IsRemotelyDefined(this IFhirExtensionHandlerEx handler) => handler.ProfileUri.ToString() != FhirConstants.SanteDBProfile &&
+                !ExtensionUtil.ProfileHandlers.Any(r => r.ProfileUri == handler.ProfileUri);
+
+        /// <summary>
         /// Get the structure definition for the specified handler
         /// </summary>
         public static StructureDefinition GetStructureDefinition(this IFhirExtensionHandlerEx handler)
         {
-            if(handler == null)
+            if (handler == null)
             {
                 throw new ArgumentNullException(nameof(handler));
+            }
+            else if(handler.IsRemotelyDefined())
+            {
+                return null;
             }
 
             return new StructureDefinition()
             {
                 Abstract = false,
                 Description = new Markdown(handler.GetType().GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description),
-                Url = handler.ProfileUri.ToString(),
+                Url = handler.Uri.ToString(),
                 Name = handler.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName,
                 FhirVersion = FHIRVersion.N4_3_0,
-                Id = handler.ProfileUri.Segments.Last(),
+                Id = handler.ProfileUri.ToString() == FhirConstants.SanteDBProfile ? handler.Uri.Segments.Last() : handler.ProfileUri.Segments.Last(),
                 DateElement = DataTypeConverter.ToFhirDateTime(DateTimeOffset.Now),
                 Kind = StructureDefinition.StructureDefinitionKind.ComplexType,
                 Type = "Extension",
@@ -77,7 +88,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     new StructureDefinition.ContextComponent()
                     {
                         Type = StructureDefinition.ExtensionContextType.Element,
-                        Expression = EnumUtility.GetLiteral(handler.AppliesTo)
+                        Expression = EnumUtility.GetLiteral(handler.AppliesTo ?? ResourceType.DomainResource)
                     }
                 },
                 BaseDefinition = "http://hl7.org/fhir/StructureDefinition/Extension",
@@ -149,6 +160,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 {
                     LastUpdated = String.IsNullOrEmpty(source.Assembly.Location) ? DateTimeOffset.Now : new FileInfo(source.Assembly.Location).LastWriteTime
                 },
+                Title = source.GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description,
                 Contact = new List<ContactDetail>
                 {
                     new ContactDetail
@@ -172,6 +184,38 @@ namespace SanteDB.Messaging.FHIR.Util
                 Status = PublicationStatus.Active,
                 BaseDefinition = $"http://hl7.org/fhir/StructureDefinition/{fhirType.Name}"
             };
+
+            if (fhirType.IsResource) {
+                var resourceType = EnumUtility.ParseLiteral<ResourceType>(fhirType.Name);
+                var extensions = ExtensionUtil.ExtensionHandlers.Where(e => e.AppliesTo == resourceType).OfType<IFhirExtensionHandlerEx>();
+                if(extensions.Any()) // we need to slice the extension elements
+                {
+                    retVal.Differential = retVal.Differential ?? new StructureDefinition.DifferentialComponent();
+                    retVal.Differential.Element.AddRange(extensions.Select(e => new ElementDefinition($"{retVal.Name}.{(e.IsModifier ? "modifierExtension" : "extension")}:{e.GetType().Name}")
+                    {
+                        SliceName = e.GetType().Name,
+                        Short = e.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName,
+                        Definition = new Markdown(e.GetType().GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description),
+                        Min = 0, 
+                        Max = "1",
+                        Type = new List<ElementDefinition.TypeRefComponent>()
+                        {
+                            new ElementDefinition.TypeRefComponent()
+                            {
+                                Code = "Extension",
+                                Profile = new String[] { e.IsRemotelyDefined() ? e.ProfileUri.ToString() :  $"/StructureDefinition/{e.Uri.Segments.Last()}" }
+                            }
+                        },
+                        IsModifier = e.IsModifier,
+                        MustSupport = e.IsModifier
+                    }));
+                }
+
+            }
+
+            if (retVal.Differential != null) {
+                retVal.Differential.Element = retVal.Differential.Element.OrderBy(o => o.Path).ToList();
+            }
 
             return retVal;
         }

@@ -24,7 +24,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Basic
         public bool IsModifier => false;
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/EntityAddress-PlaceRef");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/address-PlaceRef");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);

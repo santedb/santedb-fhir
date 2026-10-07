@@ -30,7 +30,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Basic
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/base/isNegated");
 
         /// <inheritdoc/>
-        public Uri ProfileUri => this.Uri;
+        public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
 
         /// <inheritdoc/>
         public ResourceType? AppliesTo => null;

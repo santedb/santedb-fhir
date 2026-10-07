@@ -37,10 +37,10 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
         private readonly string ConsumedQuantityExtensionUrl = $"{FhirConstants.SanteDBProfile}/extensions/consumed-material#consumed-quantity";
 
         /// <inheritdoc/>
-        public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/consumed-material");
+        public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/immunization-consumed-material");
 
         /// <inheritdoc/>
-        public Uri ProfileUri => Uri;
+        public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
 
         /// <inheritdoc/>
         public virtual ResourceType? AppliesTo => ResourceType.Immunization;

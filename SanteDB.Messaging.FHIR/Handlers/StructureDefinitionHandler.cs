@@ -181,7 +181,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             if (this.m_structureDefinitions == null)
             {
                 var resourceStructures = FhirResourceHandlerUtil.ResourceHandlers.Select(o => o.GetStructureDefinition());
-                var extensionStructures = ExtensionUtil.ExtensionHandlers.OfType<IFhirExtensionHandlerEx>().Select(o => StructureDefinitionUtil.GetStructureDefinition(o));
+                var extensionStructures = ExtensionUtil.ExtensionHandlers.OfType<IFhirExtensionHandlerEx>().Select(o => StructureDefinitionUtil.GetStructureDefinition(o)).OfType<StructureDefinition>();
                 this.m_structureDefinitions = resourceStructures.Concat(extensionStructures).AsResultSet();
             }
             return this.m_structureDefinitions;

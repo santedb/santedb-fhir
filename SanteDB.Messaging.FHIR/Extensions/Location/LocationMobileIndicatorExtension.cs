@@ -37,7 +37,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Location
     public class LocationMobileIndicatorExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Location/mobileIndicator");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Location/location-mobileIndicator");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);

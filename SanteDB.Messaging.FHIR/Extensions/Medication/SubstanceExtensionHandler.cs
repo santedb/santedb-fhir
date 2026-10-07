@@ -29,7 +29,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         }
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/substanceDefinition");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-substanceDefinition");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);

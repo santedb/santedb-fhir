@@ -20,7 +20,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     public class NameExtensionHandler : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/name");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/medication-name");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);

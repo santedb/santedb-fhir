@@ -35,10 +35,10 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
         }
 
         /// <inheritdoc/>
-        public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/administered-substance");
+        public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/immunization-administered-substance");
 
         /// <inheritdoc/>
-        public Uri ProfileUri => Uri;
+        public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
 
         /// <inheritdoc/>
         public virtual ResourceType? AppliesTo => ResourceType.Immunization;

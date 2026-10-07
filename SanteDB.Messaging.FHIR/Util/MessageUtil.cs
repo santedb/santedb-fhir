@@ -21,6 +21,7 @@
 using Hl7.Fhir.Model;
 using SanteDB.Core;
 using SanteDB.Core.Model.Interfaces;
+using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Rest;
 using System;
 using System.Collections.Concurrent;
@@ -92,7 +93,6 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static Bundle CreateBundle(FhirQueryResult result, Bundle.BundleType bundleType)
         {
-
             Bundle retVal = new Bundle();
             FhirQueryResult queryResult = result as FhirQueryResult;
             retVal.Id = String.Format("urn:uuid:{0}", Guid.NewGuid());
