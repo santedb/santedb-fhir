@@ -420,6 +420,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DateOfBirth);
 
             retVal.ConstrainField("deceased[x]")
+                .WithType(FHIRAllTypes.Date)
                 .WithDefinition("Partial dates are supported when exact date is unknown - example: 2009, 2009-01. If boolean is passed deceased date is indicated as 0001-01-01")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DeceasedDate);
 
@@ -429,6 +430,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.GenderConcept);
 
             retVal.ConstrainField("multipleBirth[x]")
+                .WithType(FHIRAllTypes.Integer)
                 .WithDefinition("Multiple birth boolean results in a `0` in the multiple birth order field (non-null indicator) - all other numbers are indicated as numberMultieBirth")
                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.MultipleBirthOrder);
 
@@ -449,9 +451,25 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .WithDefinition("All references must be registered with this SanteDB server")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Relationships.Where(r => r.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper).FirstOrDefault().TargetEntity);
 
-            retVal.ConstrainField("link")
+            retVal.ConstrainField("link");
+
+            retVal.ConstrainField("link.other")
+                .WithDefinition("Must point to patient or related person - LOCAL resources only")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Patient, ResourceType.RelatedPerson);
+
+            retVal.ConstrainField("link.type")
                 .WithDefinition("replaces and replaced-by may be routed through merging/matching logic on this server. see-also references may be ignored based on type");
 
+
+            retVal.ConstrainField("contact")
+                .WithDefinition("The contact relationships for the patient. Relationship role is set to `CON`");
+            retVal.ConstrainField("contact.period").NotSupported();
+            retVal.ConstrainField("contact.gender")
+                .WithDefinition("Gender of the related person - uses `ContainedResource` role");
+            retVal.ConstrainField("contact.telecom");
+            retVal.ConstrainField("contact.name");
+            retVal.ConstrainField("contact.relationship")
+                .WithDefinition("Should be used for emergency contacts, NOK, etc. RelatedPerson is preferred for familial relationships");
             return retVal;
 
         }

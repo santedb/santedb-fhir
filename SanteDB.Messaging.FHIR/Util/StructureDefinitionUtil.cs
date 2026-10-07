@@ -38,6 +38,7 @@ using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Extensions;
 using SanteDB.Messaging.FHIR.Handlers;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -55,6 +56,7 @@ namespace SanteDB.Messaging.FHIR.Util
     {
         private static readonly ILocalizationService s_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
         private static readonly String s_profileBase = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>()?.DefaultProfileBase;
+
 
         /// <summary>
         /// True if the extension is locally defined
@@ -264,6 +266,11 @@ namespace SanteDB.Messaging.FHIR.Util
 
         public static IEnumerable<ElementDefinition> GenerateElementDefinitions(this PropertyMapping propertyMap, String rootName, List<ElementDefinition> differential)
         {
+            // Prevent nesting too far
+            if(rootName.Contains($".{propertyMap.Name}")) // already processed
+            {
+                yield break;
+            }
             var pathName = $"{rootName}.{propertyMap.Name}";
 
             if(propertyMap.FhirType.Length > 1 || propertyMap.Choice != ChoiceType.None)
@@ -464,7 +471,9 @@ namespace SanteDB.Messaging.FHIR.Util
                 new ElementDefinition.TypeRefComponent()
                 {
                     Code = type.GetLiteral(),
-                    TargetProfile = profileResources.Select(o=> $"{s_profileBase}/StructureDefinition/{EnumUtility.GetLiteral(o)}")
+                    TargetProfile = profileResources.Select(o=> FhirResourceHandlerUtil.GetMappersFor(o)?.Any() == true ?
+                        $"{s_profileBase}/StructureDefinition/{EnumUtility.GetLiteral(o)}" :
+                        o.GetFhirClassMapping().Canonical)
                 }
             };
             return me;
