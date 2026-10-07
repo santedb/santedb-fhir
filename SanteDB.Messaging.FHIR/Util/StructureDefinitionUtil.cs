@@ -280,6 +280,17 @@ namespace SanteDB.Messaging.FHIR.Util
             
             var diff = differential?.FirstOrDefault(o => o.Path == pathName);
             if (diff != null) yield return diff;
+            else if (differential?.Any(o=>pathName.StartsWith(o.Path) && o.Max == "0") == true) // Is the parent not supported?
+            {
+                yield return new ElementDefinition()
+                {
+                    Path = pathName,
+                    ElementId = pathName,
+                    Max = "0",
+                    Min = 0,
+                    Definition = new Markdown("Cascaded not supported from parent")
+                };
+            }
             else
             {
                 yield return new ElementDefinition()
@@ -288,7 +299,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     ElementId = pathName,
                     Min = propertyMap.IsMandatoryElement ? 1 : 0,
                     Max = propertyMap.IsCollection ? "*" : "1",
-                    Type = propertyMap.FhirType.Select(o=>o.GetFhirClassMapping().Name).Select(o=> new ElementDefinition.TypeRefComponent()
+                    Type = propertyMap.FhirType.Select(o => o.GetFhirClassMapping().Name).Select(o => new ElementDefinition.TypeRefComponent()
                     {
                         Code = o
                     }).ToList()
@@ -426,6 +437,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     },
                     Max = elementMapping.IsCollection ? "*" : "1",
                 };
+                pathElement.AddAnnotation(me);
                 pathElement.ElementId = elementPath;
                 me.Differential.Element.Add(pathElement);
 
@@ -518,9 +530,15 @@ namespace SanteDB.Messaging.FHIR.Util
             return me;
         }
 
-        public static ElementDefinition NotSupported(this ElementDefinition me)
+        public static ElementDefinition NotSupported(this ElementDefinition me, String definition = null)
         {
-            return me.WithDefinition("Not Supported").WithMaxOccurs("0");
+            // Constrain all elements below this one
+            if(me.TryGetAnnotation<StructureDefinition>(out var structureDefinition) && structureDefinition.HasSnapshot)
+            {
+                structureDefinition.Differential.Element.AddRange(structureDefinition.Snapshot.Element.Where(s => s != me && s.Path.StartsWith(me.Path + "."))
+                    .Select(e => e.NotSupported()));
+            }
+            return me.WithDefinition(definition ?? "Not Supported").WithMaxOccurs("0");
         }
     }
 }

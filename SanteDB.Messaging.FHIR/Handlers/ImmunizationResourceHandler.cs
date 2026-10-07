@@ -444,8 +444,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .Mapping<SubstanceAdministration>(o => o.Notes.FirstOrDefault().Author);
 
             retVal.ConstrainField("reasonCode")
-                .WithDefinition("Not supported - see `statusReason`")
-                .WithMaxOccurs("0");
+                .NotSupported("Not supported - see `statusReason`");
 
             retVal.ConstrainField("reasonReference")
                 .NotSupported();
@@ -463,8 +462,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.ConstrainField("fundingSource").NotSupported();
 
             retVal.ConstrainField("reaction")
-                .WithDefinition("For creating - post an `AdverseEvent` referencing this Immunization entry - on read is populated as a reference")
-                .WithMaxOccurs("0");
+                .NotSupported("For creating - post an `AdverseEvent` referencing this Immunization entry - on read is populated as a reference");
 
             retVal.ConstrainField("reaction.date")
                 .WithMaxOccurs("0")
