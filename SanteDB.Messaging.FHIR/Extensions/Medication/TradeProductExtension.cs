@@ -8,7 +8,6 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Medication
@@ -16,20 +15,22 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Trade product extension handler for those which are 
     /// </summary>
-    [DisplayName("Substance Link")]
-    [System.ComponentModel.Description("Provides a link between a `Medication` and a `Substance`")]
-    public class SubstanceExtensionHandler : IFhirExtensionHandlerEx
+    [DisplayName("Trade Product")]
+    [System.ComponentModel.Description("Additional information about the Medication's trade product(s) (example: HPV is a MEDICATION but Guardasil9 is a Trade Product which IS A instance of HPV)")]
+    public class TradeProductExtension : IFhirExtensionHandlerEx
     {
+        private readonly IRepositoryService<EntityRelationship> m_entityRelationshipService;
 
         /// <summary>
         /// DI Ctor
         /// </summary>
-        public SubstanceExtensionHandler()
+        public TradeProductExtension(IRepositoryService<EntityRelationship> entityRelationshipService)
         {
+            this.m_entityRelationshipService = entityRelationshipService;
         }
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-substanceDefinition");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-productDefinition");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
@@ -39,19 +40,19 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
 
         /// <inhertidoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
-        
+
         /// <inheritdic/>
-        public bool IsModifier => true;
+        public bool IsModifier => false;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
-            if(modelObject is ManufacturedMaterial mmat && mmat.DeterminerConceptKey == DeterminerKeys.DescribedQualified)
+            if(modelObject is ManufacturedMaterial mmat && mmat.DeterminerConceptKey == DeterminerKeys.Specific)
             {
-                var sub = mmat.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.HasGenerialization)?.LoadProperty(o => o.TargetEntity);
-                if (sub != null)
+                var product = this.m_entityRelationshipService.Find(o=>o.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance && o.TargetEntityKey == mmat.Key).FirstOrDefault();
+                if (product != null)
                 {
-                    yield return new Extension(this.Uri.ToString(), DataTypeConverter.CreateNonVersionedReference<Substance>(sub));
+                    yield return new Extension(this.Uri.ToString(), DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Medication>(product.LoadProperty(o => o.SourceEntity)));
                 }
             }
         }
@@ -61,12 +62,10 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         {
             if (modelObject is ManufacturedMaterial mmat && fhirExtension.Value is ResourceReference rr)
             {
-                var resolved = DataTypeConverter.ResolveEntity<Material>(rr, null);
-                
-                if (resolved != null && !mmat.LoadProperty(o=>o.Relationships).Any(r=>r.RelationshipTypeKey == EntityRelationshipTypeKeys.HasGenerialization && r.TargetEntityKey != resolved.Key))
+                var resolved = DataTypeConverter.ResolveEntity<ManufacturedMaterial>(rr, null);
+                if (resolved != null)
                 {
-                    mmat.LoadProperty(o => o.Relationships).RemoveAll(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.HasGenerialization);
-                    mmat.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.HasGenerialization, modelObject.Key) { SourceEntityKey = resolved.Key });
+                    mmat.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.Instance, modelObject.Key) { SourceEntityKey = resolved.Key });
                     return true;
                 }
                 else

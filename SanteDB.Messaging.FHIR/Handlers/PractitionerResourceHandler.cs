@@ -19,13 +19,17 @@
  * Date: 2023-6-21
  */
 using Hl7.Fhir.Model;
+using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
+using SanteDB.Core.Model.Entities;
+using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Roles;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Linq;
 using static Hl7.Fhir.Model.CapabilityStatement;
 
@@ -34,21 +38,32 @@ namespace SanteDB.Messaging.FHIR.Handlers
     /// <summary>
     /// Practitioner resource handler
     /// </summary>
-    public class PractitionerResourceHandler : RepositoryResourceHandlerBase<Practitioner, Provider>
+    public class PractitionerResourceHandler : RepositoryResourceHandlerBase<Practitioner, Core.Model.Entities.Person>
     {
+        private readonly Guid[] m_classConcepts = new Guid[]
+        {
+            EntityClassKeys.UserEntity,
+            EntityClassKeys.Provider
+        };
+
+
         /// <summary>
         /// Create a new resource handler
         /// </summary>
-        public PractitionerResourceHandler(IRepositoryService<Provider> repo, ILocalizationService localizationService) : base(repo, localizationService)
+        public PractitionerResourceHandler(IRepositoryService<Core.Model.Entities.Person> repo, ILocalizationService localizationService) : base(repo, localizationService)
         {
+
         }
 
         /// <summary>
-        /// Get included resources
+        /// Can map object
         /// </summary>
-        protected override IEnumerable<Resource> GetIncludes(Provider resource, IEnumerable<IncludeInstruction> includePaths)
+        public override bool CanMapObject(object instance) => instance is UserEntity || instance is Provider;
+
+        /// <inheritdoc/>
+        protected override IEnumerable<Resource> GetIncludes(Core.Model.Entities.Person resource, IEnumerable<IncludeInstruction> includePaths)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+            throw new NotImplementedException();
         }
 
         /// <summary>
@@ -68,18 +83,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }.Select(o => new ResourceInteractionComponent() { Code = o });
         }
 
-        /// <summary>
-        /// Get reverse includes
-        /// </summary>
-        protected override IEnumerable<Resource> GetReverseIncludes(Provider resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
+        /// <inheritdoc/>
+        protected override IEnumerable<Resource> GetReverseIncludes(Core.Model.Entities.Person resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
-            throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+            throw new NotImplementedException();
         }
+
 
         /// <summary>
         /// Map a user entity to a practitioner
         /// </summary>
-        protected override Practitioner MapToFhir(Provider model)
+        protected override Practitioner MapToFhir(Core.Model.Entities.Person model)
         {
             // Is there a provider that matches this user?
             var provider = model.LoadCollection(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.EquivalentEntity && o.ClassificationKey == RelationshipClassKeys.PlayedRoleLink)?.LoadProperty(o => o.TargetEntity) as Provider;
@@ -117,9 +131,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 };
             }
 
-            // Load the koala-fication
-
-            retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept((provider ?? model).SpecialtyKey) } };
+            if (provider != null)
+            {
+                retVal.Qualification = new List<Practitioner.QualificationComponent>() { new Practitioner.QualificationComponent() { Code = DataTypeConverter.ToFhirCodeableConcept(provider.SpecialtyKey) } };
+            }
 
             // Language of communication
             retVal.Communication = model.LoadCollection(o => o.LanguageCommunication)?.Select(o => new CodeableConcept("http://tools.ietf.org/html/bcp47", o.LanguageCode)).ToList();
@@ -130,9 +145,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
         /// <summary>
         /// Map a practitioner to a user entity
         /// </summary>
-        protected override Provider MapToModel(Practitioner resource)
+        protected override Core.Model.Entities.Person MapToModel(Practitioner resource)
         {
-            Provider retVal = null;
+            Core.Model.Entities.Person retVal = null;
 
             if (Guid.TryParse(resource.Id, out var key))
             {
@@ -144,7 +159,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
                     if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
                     {
-                        retVal = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                        retVal = this.m_repository.Find(o => this.m_classConcepts.Contains(o.ClassConceptKey.Value) && StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value) && o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
                     }
                     if (retVal != null)
                     {
@@ -170,7 +185,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Names = resource.Name.Select(DataTypeConverter.ToEntityName).ToList();
             retVal.StatusConceptKey = !resource.Active.HasValue || resource.Active == true ? StatusKeys.Active : StatusKeys.Inactive;
             retVal.Telecoms = resource.Telecom.Select(DataTypeConverter.ToEntityTelecomAddress).ToList();
-            retVal.LoadProperty(o=>o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal, false)).Concat(resource.ModifierExtension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal, true))).OfType<EntityExtension>());
+            retVal.LoadProperty(o => o.Extensions).AddRange(resource.Extension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal, false)).Concat(resource.ModifierExtension.Select(o => DataTypeConverter.ToEntityExtension(o, retVal, true))).OfType<EntityExtension>());
             retVal.GenderConceptKey = resource.Gender == null ? NullReasonKeys.Unknown : DataTypeConverter.ToConcept(new Coding("http://hl7.org/fhir/administrative-gender", Hl7.Fhir.Utility.EnumUtility.GetLiteral(resource.Gender)))?.Key;
             retVal.DateOfBirthXml = resource.BirthDate;
             retVal.DateOfBirthPrecision = DatePrecision.Day;
@@ -182,12 +197,39 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 retVal.Extensions.Add(new EntityExtension(ExtensionTypeKeys.JpegPhotoExtension, resource.Photo.First().Data));
             }
 
-            if (resource.Qualification.Any())
+            if (resource.Qualification.Any() && retVal is Provider pvdr)
             {
-                retVal.Specialty = DataTypeConverter.ToConcept(resource.Qualification.First().Code);
+                pvdr.Specialty = DataTypeConverter.ToConcept(resource.Qualification.First().Code);
             }
 
             return retVal;
         }
+
+        /// <summary>
+        /// Query for substance administrations.
+        /// </summary>
+        /// <param name="query">The query to be executed</param>
+        /// <param name="fhirParameters">The fhir parameters provided in the query.</param>
+        /// <param name="hdsiParameters">The translated hdsi parameters that can be executed by the query.</param>
+        /// <returns>Returns the list of models which match the given parameters.</returns>
+        protected override IQueryResultSet<Core.Model.Entities.Person> QueryInternal(System.Linq.Expressions.Expression<Func<Core.Model.Entities.Person, bool>> query, NameValueCollection fhirParameters = null, NameValueCollection hdsiParameters = null)
+        {
+
+            var typeReference = System.Linq.Expressions.Expression.Call(
+                null,
+                (System.Reflection.MethodInfo)typeof(Enumerable).GetGenericMethod(nameof(Enumerable.Contains), new Type[] { typeof(Guid) }, new Type[] { typeof(IEnumerable<Guid>), typeof(Guid) }),
+                System.Linq.Expressions.Expression.Constant(m_classConcepts),
+                System.Linq.Expressions.Expression.Convert(System.Linq.Expressions.Expression.MakeMemberAccess(query.Parameters[0], typeof(Core.Model.Entities.Person).GetProperty(nameof(Entity.ClassConcept))), typeof(Guid))
+            );
+
+            query = System.Linq.Expressions.Expression.Lambda<Func<Core.Model.Entities.Person, bool>>(
+                System.Linq.Expressions.Expression.AndAlso(
+                    query.Body,
+                    typeReference
+                    )
+                , query.Parameters);
+            return this.m_repository.Find(query);
+        }
+
     }
 }

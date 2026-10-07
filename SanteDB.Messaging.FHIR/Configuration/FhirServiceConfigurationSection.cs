@@ -43,6 +43,7 @@ namespace SanteDB.Messaging.FHIR.Configuration
         /// </summary>
         public FhirServiceConfigurationSection()
         {
+            this.DefaultProfileBase = FhirConstants.SanteDBProfile;
         }
 
         /// <summary>
@@ -169,6 +170,13 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [XmlElement("base"), JsonProperty("base")]
         [DisplayName("Operation Base URL"), Description("Used as the base URL for this server. Use this if the incoming HOST header will be different than the external host header (i.e. if running behind a reverse proxy)")]
         public String ResourceBaseUri { get; set; }
+
+        /// <summary>
+        /// When set, the profile resource base
+        /// </summary>
+        [XmlElement("profileBase"), JsonProperty("profileBase")]
+        [DisplayName("Profile Resource Base")]
+        public String DefaultProfileBase { get; set; }
 
         /// <summary>
         /// Behavior modifiers

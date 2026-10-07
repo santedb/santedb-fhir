@@ -24,6 +24,7 @@ using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Language.Debugging;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
+using RestSrvr;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
@@ -323,6 +324,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var results = query.ApplyCommonQueryControls(hdsiResults, out int totalResults).OfType<TModel>();
 
             var auth = AuthenticationContext.Current;
+            var rc = RestOperationContext.Current;
 
             using (DataPersistenceControlContext.Create(LoadMode.SyncLoad))
             {

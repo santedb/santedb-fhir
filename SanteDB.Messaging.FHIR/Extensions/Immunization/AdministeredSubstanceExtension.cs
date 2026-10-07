@@ -22,14 +22,14 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
     /// </summary>
     [DisplayName("Administered Substance")]
     [System.ComponentModel.Description("Provides a direct reference to the type of Material that was administered")]
-    public class AdministeredSubstanceExtensionHandler : IFhirExtensionHandlerEx
+    public class AdministeredSubstanceExtension : IFhirExtensionHandlerEx
     {
         private readonly FhirServiceConfigurationSection m_configuration;
 
         /// <summary>
         /// DI ctor
         /// </summary>
-        public AdministeredSubstanceExtensionHandler(IConfigurationManager configurationManager)
+        public AdministeredSubstanceExtension(IConfigurationManager configurationManager)
         {
             this.m_configuration = configurationManager.GetSection<FhirServiceConfigurationSection>();
         }

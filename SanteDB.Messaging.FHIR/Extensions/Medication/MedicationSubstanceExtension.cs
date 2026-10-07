@@ -8,6 +8,7 @@ using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Text;
 
 namespace SanteDB.Messaging.FHIR.Extensions.Medication
@@ -15,22 +16,20 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// <summary>
     /// Trade product extension handler for those which are 
     /// </summary>
-    [DisplayName("Trade Product")]
-    [System.ComponentModel.Description("Additional information about the Medication's trade product(s) (example: HPV is a MEDICATION but Guardasil9 is a Trade Product which IS A instance of HPV)")]
-    public class TradeProductExtensionHandler : IFhirExtensionHandlerEx
+    [DisplayName("Substance Link")]
+    [System.ComponentModel.Description("Provides a link between a `Medication` and a `Substance`")]
+    public class MedicationSubstanceExtension : IFhirExtensionHandlerEx
     {
-        private readonly IRepositoryService<EntityRelationship> m_entityRelationshipService;
 
         /// <summary>
         /// DI Ctor
         /// </summary>
-        public TradeProductExtensionHandler(IRepositoryService<EntityRelationship> entityRelationshipService)
+        public MedicationSubstanceExtension()
         {
-            this.m_entityRelationshipService = entityRelationshipService;
         }
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-productDefinition");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-substanceDefinition");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
@@ -40,19 +39,19 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
 
         /// <inhertidoc/>
         public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
-
+        
         /// <inheritdic/>
-        public bool IsModifier => false;
+        public bool IsModifier => true;
 
         /// <inheritdoc/>
         public IEnumerable<Extension> Construct(IAnnotatedResource modelObject)
         {
-            if(modelObject is ManufacturedMaterial mmat && mmat.DeterminerConceptKey == DeterminerKeys.Specific)
+            if(modelObject is ManufacturedMaterial mmat && mmat.DeterminerConceptKey == DeterminerKeys.DescribedQualified)
             {
-                var product = this.m_entityRelationshipService.Find(o=>o.RelationshipTypeKey == EntityRelationshipTypeKeys.Instance && o.TargetEntityKey == mmat.Key).FirstOrDefault();
-                if (product != null)
+                var sub = mmat.LoadProperty(o => o.Relationships).FirstOrDefault(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.HasGenerialization)?.LoadProperty(o => o.TargetEntity);
+                if (sub != null)
                 {
-                    yield return new Extension(this.Uri.ToString(), DataTypeConverter.CreateNonVersionedReference<Hl7.Fhir.Model.Medication>(product.LoadProperty(o => o.SourceEntity)));
+                    yield return new Extension(this.Uri.ToString(), DataTypeConverter.CreateNonVersionedReference<Substance>(sub));
                 }
             }
         }
@@ -62,10 +61,12 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
         {
             if (modelObject is ManufacturedMaterial mmat && fhirExtension.Value is ResourceReference rr)
             {
-                var resolved = DataTypeConverter.ResolveEntity<ManufacturedMaterial>(rr, null);
-                if (resolved != null)
+                var resolved = DataTypeConverter.ResolveEntity<Material>(rr, null);
+                
+                if (resolved != null && !mmat.LoadProperty(o=>o.Relationships).Any(r=>r.RelationshipTypeKey == EntityRelationshipTypeKeys.HasGenerialization && r.TargetEntityKey != resolved.Key))
                 {
-                    mmat.LoadProperty(o => o.Relationships).Add(new EntityRelationship(EntityRelationshipTypeKeys.Instance, modelObject.Key) { SourceEntityKey = resolved.Key });
+                    mmat.LoadProperty(o => o.Relationships).RemoveAll(o => o.RelationshipTypeKey == EntityRelationshipTypeKeys.HasGenerialization);
+                    mmat.Relationships.Add(new EntityRelationship(EntityRelationshipTypeKeys.HasGenerialization, modelObject.Key) { SourceEntityKey = resolved.Key });
                     return true;
                 }
                 else

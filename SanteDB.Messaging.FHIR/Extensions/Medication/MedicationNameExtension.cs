@@ -17,7 +17,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// </summary>
     [DisplayName("Trade/Common Names")]
     [System.ComponentModel.Description("Common or trade name(s) for the medication")]
-    public class NameExtensionHandler : IFhirExtensionHandlerEx
+    public class MedicationNameExtension : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
         public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/medication-name");

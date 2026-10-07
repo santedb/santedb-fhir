@@ -19,12 +19,19 @@
  * Date: 2023-6-21
  */
 using DocumentFormat.OpenXml.Math;
+using Hl7.Fhir.FhirPath;
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Serialization;
 using Hl7.Fhir.Utility;
+using Hl7.FhirPath;
+using Hl7.FhirPath.Expressions;
 using SanteDB.Core;
 using SanteDB.Core.Model;
+using SanteDB.Core.Model.Acts;
+using SanteDB.Core.Model.Constants;
+using SanteDB.Core.Model.Interfaces;
+using SanteDB.Core.Model.Map;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
@@ -47,11 +54,13 @@ namespace SanteDB.Messaging.FHIR.Util
     public static class StructureDefinitionUtil
     {
         private static readonly ILocalizationService s_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
+        private static readonly String s_profileBase = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>()?.DefaultProfileBase;
 
         /// <summary>
         /// True if the extension is locally defined
         /// </summary>
-        public static bool IsRemotelyDefined(this IFhirExtensionHandlerEx handler) => handler.ProfileUri.ToString() != FhirConstants.SanteDBProfile &&
+        public static bool IsRemotelyDefined(this IFhirExtensionHandlerEx handler) => handler.ProfileUri.ToString() != FhirConstants.SanteDBProfile && 
+                handler.ProfileUri.ToString() != s_profileBase &&
                 !ExtensionUtil.ProfileHandlers.Any(r => r.ProfileUri == handler.ProfileUri);
 
         /// <summary>
@@ -68,7 +77,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 return null;
             }
 
-            return new StructureDefinition()
+            var retVal = new StructureDefinition()
             {
                 Abstract = false,
                 Description = new Markdown(handler.GetType().GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description),
@@ -93,12 +102,13 @@ namespace SanteDB.Messaging.FHIR.Util
                 },
                 BaseDefinition = "http://hl7.org/fhir/StructureDefinition/Extension",
                 Derivation = StructureDefinition.TypeDerivationRule.Constraint,
-                Snapshot = new StructureDefinition.SnapshotComponent()
+                Differential = new StructureDefinition.DifferentialComponent()
                 {
                     Element = new List<ElementDefinition>()
                     {
                         new ElementDefinition()
                         {
+                            ElementId = "extension.url",
                             Path = "Extension.url",
                             Min = 1,
                             Max = "1",
@@ -111,9 +121,11 @@ namespace SanteDB.Messaging.FHIR.Util
                             },
                             Fixed = new FhirUri(handler.Uri),
                             IsModifier = false,
+                            Definition = new Markdown($"Fixed to {handler.Uri} to indicate use of the {handler.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName} extension")
                         },
                         new ElementDefinition()
                         {
+                            ElementId = "extension.value[x]",
                             Path = "Extension.value[x]",
                             Min = 1,
                             Max = "1",
@@ -123,7 +135,8 @@ namespace SanteDB.Messaging.FHIR.Util
                                 {
                                     Code = EnumUtility.GetLiteral(handler.ValueType)
                                 }
-                            }
+                            },
+                            Definition = new Markdown($"The {handler.ValueType} which modifies the value of the {handler.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName} extension")
                         }
                     }
                 },
@@ -134,6 +147,12 @@ namespace SanteDB.Messaging.FHIR.Util
                 Publisher = handler.GetType().Assembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company,
                 Status = PublicationStatus.Active,
             };
+
+            if (!retVal.HasSnapshot)
+            {
+                retVal.Snapshot = typeof(Extension).GetFhirClassMapping().GenerateSnapshot(retVal.Differential?.Element);
+            }
+            return retVal;
         }
 
         /// <summary>
@@ -154,7 +173,7 @@ namespace SanteDB.Messaging.FHIR.Util
             // Create the structure definition
             var retVal = new StructureDefinition
             {
-                Url = $"/{nameof(StructureDefinition)}/{fhirType.Name}",
+                Url = $"{s_profileBase}/{nameof(StructureDefinition)}/{fhirType.Name}",
                 Abstract = source.IsAbstract,
                 Meta = new Meta()
                 {
@@ -182,17 +201,18 @@ namespace SanteDB.Messaging.FHIR.Util
                 Experimental = false,
                 Publisher = source.Assembly.GetCustomAttribute<AssemblyCompanyAttribute>()?.Company,
                 Status = PublicationStatus.Active,
-                BaseDefinition = $"http://hl7.org/fhir/StructureDefinition/{fhirType.Name}"
+                BaseDefinition = source.GetFhirClassMapping().Canonical
             };
 
             if (fhirType.IsResource) {
                 var resourceType = EnumUtility.ParseLiteral<ResourceType>(fhirType.Name);
-                var extensions = ExtensionUtil.ExtensionHandlers.Where(e => e.AppliesTo == resourceType).OfType<IFhirExtensionHandlerEx>();
+                var extensions = ExtensionUtil.ExtensionHandlers.Where(e => e.AppliesTo == resourceType || e.AppliesTo == null).OfType<IFhirExtensionHandlerEx>();
                 if(extensions.Any()) // we need to slice the extension elements
                 {
                     retVal.Differential = retVal.Differential ?? new StructureDefinition.DifferentialComponent();
                     retVal.Differential.Element.AddRange(extensions.Select(e => new ElementDefinition($"{retVal.Name}.{(e.IsModifier ? "modifierExtension" : "extension")}:{e.GetType().Name}")
                     {
+                        ElementId = $"{retVal.Name}.{(e.IsModifier ? "modifierExtension" : "extension")}:{e.GetType().Name}",
                         SliceName = e.GetType().Name,
                         Short = e.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName,
                         Definition = new Markdown(e.GetType().GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description),
@@ -203,7 +223,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             new ElementDefinition.TypeRefComponent()
                             {
                                 Code = "Extension",
-                                Profile = new String[] { e.IsRemotelyDefined() ? e.ProfileUri.ToString() :  $"/StructureDefinition/{e.Uri.Segments.Last()}" }
+                                TargetProfile = new String[] { e.IsRemotelyDefined() ? e.ProfileUri.ToString() :  $"{s_profileBase}/StructureDefinition/{e.Uri.Segments.Last()}" }
                             }
                         },
                         IsModifier = e.IsModifier,
@@ -215,24 +235,162 @@ namespace SanteDB.Messaging.FHIR.Util
 
             if (retVal.Differential != null) {
                 retVal.Differential.Element = retVal.Differential.Element.OrderBy(o => o.Path).ToList();
+
             }
 
+            if (!retVal.HasSnapshot)
+            {
+                retVal.Snapshot = source.GetFhirClassMapping().GenerateSnapshot(retVal.Differential?.Element);
+            }
             return retVal;
         }
 
+        public static StructureDefinition.SnapshotComponent GenerateSnapshot(this ClassMapping me, List<ElementDefinition> differential)
+        {
+            var retVal = new StructureDefinition.SnapshotComponent();
+
+            foreach(var propertyMap in me.PropertyMappings)
+            {
+                retVal.Element.AddRange(propertyMap.GenerateElementDefinitions(me.Name, differential));
+            }
+
+            var notIncludedDiffs = differential?.Where(r => !retVal.Element.Any(e => e.Path == r.Path));
+            if (notIncludedDiffs?.Any() == true)
+            {
+                retVal.Element.AddRange(notIncludedDiffs);
+            }
+            return retVal;
+        }
+
+        public static IEnumerable<ElementDefinition> GenerateElementDefinitions(this PropertyMapping propertyMap, String rootName, List<ElementDefinition> differential)
+        {
+            var pathName = $"{rootName}.{propertyMap.Name}";
+
+            if(propertyMap.FhirType.Length > 1 || propertyMap.Choice != ChoiceType.None)
+            {
+                pathName += "[x]";
+            }
+            
+            var diff = differential?.FirstOrDefault(o => o.Path == pathName);
+            if (diff != null) yield return diff;
+            else
+            {
+                yield return new ElementDefinition()
+                {
+                    Path = pathName,
+                    ElementId = pathName,
+                    Min = propertyMap.IsMandatoryElement ? 1 : 0,
+                    Max = propertyMap.IsCollection ? "*" : "1",
+                    Type = propertyMap.FhirType.Select(o=>o.GetFhirClassMapping().Name).Select(o=> new ElementDefinition.TypeRefComponent()
+                    {
+                        Code = o
+                    }).ToList()
+                };
+            }
+
+            if(propertyMap.PropertyTypeMapping.IsNestedType)
+            {
+                foreach(var cc in propertyMap.PropertyTypeMapping.PropertyMappings)
+                {
+                    foreach(var element in cc.GenerateElementDefinitions($"{rootName}.{propertyMap.Name}", differential))
+                    {
+                        yield return element;
+                    }
+                }
+            }
+
+        }
+        public static ClassMapping GetFhirClassMapping(this ResourceType resourceType)
+        {
+            // Validate that the type matches the expected type
+            var classMapping = ModelInfo.ModelInspector.FindClassMapping(EnumUtility.GetLiteral(resourceType));
+            if (classMapping == null)
+            {
+                throw new InvalidOperationException();
+            }
+            return classMapping;
+        }
+
+        public static ClassMapping GetFhirClassMapping(this Type fhirType)
+        {
+            // Validate that the type matches the expected type
+            var classMapping = ModelInfo.ModelInspector.FindClassMapping(fhirType);
+            if (classMapping == null)
+            {
+                throw new InvalidOperationException();
+            }
+            return classMapping;
+        }
+
+        public static PropertyMapping ExtractPropertyMapping(this ClassMapping classMapping, String propertyPath)
+        {
+            var tokens = propertyPath.Split('.');
+            if (tokens[0] != classMapping.Name || tokens.Length == 1)
+            {
+                return null;
+            }
+            var processStack = new Queue<String>(tokens.Skip(1));
+            PropertyMapping propertyMapping = null;
+            while(processStack.Any())
+            {
+                var stackName = processStack.Dequeue();
+                propertyMapping = classMapping.FindMappedElementByName(stackName) ??
+                    classMapping.FindMappedElementByChoiceName(stackName);
+                if (propertyMapping == null)
+                {
+                    throw new InvalidOperationException($"{stackName} on {classMapping.Name} not found");
+                }
+                classMapping = propertyMapping.PropertyTypeMapping;
+            }
+            return propertyMapping;
+        }
+
+        /// <summary>
+        /// Common constraint for identifier
+        /// </summary>
+        public static ElementDefinition ConstrainIdentifier<THasIdentifiers>(this StructureDefinition me)
+            where THasIdentifiers : IdentifiedData, IHasIdentifiers
+        {
+            var retVal = me.ConstrainField("identifier")
+                .Mapping<THasIdentifiers>(o => o.Identifiers);
+
+            me.ConstrainField("identifier.system")
+                .WithDefinition("Must be registered domain in SanteDB instance")
+                .WithMustSupport()
+                .Mapping<THasIdentifiers>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Oid)
+                .Mapping<THasIdentifiers>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Url);
+         
+            me.ConstrainField("identifier.type")
+                .WithDefinition("The type of identifier - maps to identifier type")
+                .WithBinding("http://hl7.org/fhir/ValueSet/identifier-type", BindingStrength.Extensible)
+                .Mapping<THasIdentifiers>(o => o.Identifiers.FirstOrDefault().IdentifierType);
+
+            me.ConstrainField("identifier.period")
+                .WithDefinition("Maps to the issue date and expiry date of the identifier")
+                .Mapping<THasIdentifiers>(o => o.Identifiers.FirstOrDefault().IssueDate)
+                .Mapping<THasIdentifiers>(o => o.Identifiers.FirstOrDefault().ExpiryDate);
+
+            me.ConstrainField("identifier.value")
+                .Mapping<THasIdentifiers>(o => o.Identifiers.FirstOrDefault().Value);
+
+            me.ConstrainField("identifier.value")
+                .Mapping<THasIdentifiers>(o => o.Identifiers.FirstOrDefault().Value);
+
+            return retVal;
+
+        }
         /// <summary>
         /// Constraint a single field according to the constraint 
         /// </summary>
         /// <returns></returns>
         public static ElementDefinition ConstrainField(this StructureDefinition me, String elementPath)
         {
-            var resourceName = new Uri(me.BaseDefinition).Segments.Last();
+            var resourceClass = ModelInfo.ModelInspector.FindClassMappingByCanonical(me.BaseDefinition);
 
-            if (!elementPath.StartsWith($"{resourceName}."))
+            if (!elementPath.StartsWith($"{resourceClass.Name}."))
             {
-                elementPath = $"{resourceName}.{elementPath}";
+                elementPath = $"{resourceClass.Name}.{elementPath}";
             }
-
             if (me.Differential == null)
             {
                 me.Differential = new StructureDefinition.DifferentialComponent();
@@ -245,9 +403,39 @@ namespace SanteDB.Messaging.FHIR.Util
             var pathElement = me.Differential.Element.FirstOrDefault(o => o.Path == elementPath);
             if(pathElement == null)
             {
-                pathElement = new ElementDefinition();
-                pathElement.Path = elementPath;
+                var elementMapping = resourceClass.ExtractPropertyMapping(elementPath);
+                pathElement = new ElementDefinition(elementPath)
+                {
+                    Type = new List<ElementDefinition.TypeRefComponent>()
+                    {
+                        new ElementDefinition.TypeRefComponent() { Code = elementMapping.PropertyTypeMapping.Name }
+                    },
+                    Min = elementMapping.IsMandatoryElement ? 1 : 0,
+                    Base = new ElementDefinition.BaseComponent()
+                    {
+                        Min = elementMapping.IsMandatoryElement ? 1: 0,
+                        Max = elementMapping.IsCollection ? "*" : "1",
+                        Path = elementPath
+                    },
+                    Max = elementMapping.IsCollection ? "*" : "1",
+                };
+                pathElement.ElementId = elementPath;
                 me.Differential.Element.Add(pathElement);
+
+                // Does this exist on the snapshot? if so we want to add it 
+                if (me.HasSnapshot) {
+
+                    var snapshotMe = me.Snapshot.Element.Find(o => o.Path == elementPath);
+                    if (snapshotMe != null)
+                    {
+                        me.Snapshot.Element.Insert(me.Snapshot.Element.IndexOf(snapshotMe), pathElement);
+                        me.Snapshot.Element.Remove(snapshotMe);
+                    }
+                    else
+                    {
+                        me.Snapshot.Element.Add(pathElement);
+                    }
+                }
             }
             return pathElement;
         }
@@ -269,21 +457,22 @@ namespace SanteDB.Messaging.FHIR.Util
             return me;
         }
 
-        public static ElementDefinition WithType(this ElementDefinition me, FHIRAllTypes type)
+        public static ElementDefinition WithType(this ElementDefinition me, FHIRAllTypes type, params ResourceType[] profileResources)
         {
             me.Type = new List<ElementDefinition.TypeRefComponent>()
             {
                 new ElementDefinition.TypeRefComponent()
                 {
-                    Code = type.GetLiteral()
+                    Code = type.GetLiteral(),
+                    TargetProfile = profileResources.Select(o=> $"{s_profileBase}/StructureDefinition/{EnumUtility.GetLiteral(o)}")
                 }
             };
             return me;
         }
 
-        public static ElementDefinition WithComment(this ElementDefinition me, String comment)
+        public static ElementDefinition WithDefinition(this ElementDefinition me, String comment)
         {
-            me.Comment = new Markdown(comment);
+            me.Definition = new Markdown(comment);
             return me;
         }
 
@@ -322,7 +511,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
         public static ElementDefinition NotSupported(this ElementDefinition me)
         {
-            return me.WithComment("Not Supported").WithMaxOccurs("0");
+            return me.WithDefinition("Not Supported").WithMaxOccurs("0");
         }
     }
 }

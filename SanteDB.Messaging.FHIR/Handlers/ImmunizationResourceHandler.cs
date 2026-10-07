@@ -348,65 +348,62 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var retVal = base.GetStructureDefinition();
 
             retVal.Description = new Markdown("Maps to SubstanceAdministration instances with `MoodConcept`=`EventOccurrence` and a `TypeConcept` of `Immunization`, `InitialImmunization` or `BoosterImmunization`");
-            retVal.ConstrainField("identifier")
-                .Mapping<SubstanceAdministration>(o => o.Identifiers);
-            retVal.ConstrainField("identifier.system")
-                .WithComment("Must be registered domain in SanteDB instance - scoped to SubstanceAdministration")
-                .WithMustSupport()
-                .Mapping<SubstanceAdministration>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Oid)
-                .Mapping<SubstanceAdministration>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Url);
+
+            retVal.ConstrainIdentifier<SubstanceAdministration>();
 
             retVal.ConstrainField("status")
-                .WithComment("Mapped to `completed`=`StatusKeys.Completed`, `entered-in-error`=`Nullified`, and `not-done` when NegationInd = true")
+                .WithDefinition("Mapped to `completed`=`StatusKeys.Completed`, `entered-in-error`=`Nullified`, and `not-done` when NegationInd = true")
                 .Mapping<SubstanceAdministration>(o => o.StatusConcept)
                 .Mapping<SubstanceAdministration>(o => o.IsNegated);
 
             retVal.ConstrainField("statusReason")
-                .WithComment("Always mapped to a coded concept in ActReason")
+                .WithDefinition("Always mapped to a coded concept in ActReason")
                 .Mapping<SubstanceAdministration>(o => o.ReasonConcept);
 
             retVal.ConstrainField("vaccineCode")
-                .WithComment("The most appropriate `TypeConcept` on the `Product` administered relationship")
+                .WithDefinition("The most appropriate `TypeConcept` on the `Product` administered relationship")
                 .WithMustSupport()
                 .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Consumable)).FirstOrDefault().PlayerEntity.Relationships.Where(r=>r.RelationshipType.Mnemonic == nameof(EntityRelationshipTypeKeys.Instance)).FirstOrDefault().SourceEntity.Relationships.Where(r=>r.RelationshipType.Mnemonic == nameof(EntityRelationshipTypeKeys.HasGenerialization)).FirstOrDefault().TargetEntity.TypeConcept)
                 .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Product)).FirstOrDefault().PlayerEntity.TypeConcept);
 
             retVal.ConstrainField("patient")
                 .WithMustSupport()
+                .WithType(FHIRAllTypes.Reference, ResourceType.Patient)
                 .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.RecordTarget)).FirstOrDefault().PlayerEntity);
 
             retVal.ConstrainField("encounter")
                 .WithMustSupport()
-                .WithComment("Must be supplied if part of an encounter - encounter must be registered with SanteDB instance")
+                .WithDefinition("Must be supplied if part of an encounter - encounter must be registered with SanteDB instance")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Encounter)
                 .Mapping<SubstanceAdministration>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasComponent)).FirstOrDefault().SourceEntity);
 
-            retVal.ConstrainField("occurrenceDateTime")
+            retVal.ConstrainField("occurrence[x]")
                 .WithMustSupport()
                 .WithMinOccurs(1)
                 .WithMaxOccurs("1")
-                .WithComment("The date/time of the occurence or the back-entry time")
+                .WithDefinition("The date/time of the occurence or the back-entry time")
+                .WithType(FHIRAllTypes.DateTime)
                 .Mapping<SubstanceAdministration>(o => o.ActTime);
 
-            retVal.ConstrainField("occurrenceString")
-                .WithMaxOccurs("0")
-                .WithComment("Not supported - occurrence must be a DateTime");
 
             retVal.ConstrainField("recorded")
                 .Mapping<SubstanceAdministration>(o => o.CreationTime);
 
             retVal.ConstrainField("primarySource")
                 .WithMaxOccurs("0")
-                .WithComment("Not supported");
+                .WithDefinition("Not supported");
 
             retVal.ConstrainField("reportOrigin")
                 .WithMaxOccurs("0")
-                .WithComment("Not supported");
+                .WithDefinition("Not supported");
 
             retVal.ConstrainField("location")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Location)
                 .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Location)).FirstOrDefault().PlayerEntity);
 
             retVal.ConstrainField("manufacturer")
-                .WithComment("Only provided for done immunizations with a registered consumable - submitters are required to ensure that the organization is registered")
+                .WithDefinition("Only provided for done immunizations with a registered consumable - submitters are required to ensure that the organization is registered")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Organization)
                 .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Consumable)).FirstOrDefault().PlayerEntity.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(EntityRelationshipTypeKeys.Instance)).FirstOrDefault().SourceEntity.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(EntityRelationshipTypeKeys.ManufacturedProduct)).FirstOrDefault().SourceEntity);
 
             retVal.ConstrainField("lotNumber")
@@ -416,11 +413,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .Mapping<SubstanceAdministration>(o => (o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Consumable)).FirstOrDefault().PlayerEntity as ManufacturedMaterial).ExpiryDate);
 
             retVal.ConstrainField("site")
-                .WithComment("Required for non-back-entered data")
+                .WithDefinition("Required for non-back-entered data")
                 .Mapping<SubstanceAdministration>(o => o.Site);
 
             retVal.ConstrainField("route")
-                .WithComment("Required for non-back-entere data")
+                .WithDefinition("Required for non-back-entere data")
                 .Mapping<SubstanceAdministration>(o => o.Route);
 
             retVal.ConstrainField("doseQuantity.value")
@@ -431,18 +428,23 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .Mapping<SubstanceAdministration>(o => o.DoseUnit.ReferenceTerms.FirstOrDefault().ReferenceTerm.CodeSystem.Url);
 
             retVal.ConstrainField("performer.function")
-                .WithMaxOccurs("0")
-                .WithComment("Not Supported");
+                .NotSupported();
+            
             retVal.ConstrainField("performer.actor")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Practitioner)
                 .Mapping<SubstanceAdministration>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Performer)).FirstOrDefault().PlayerEntity);
 
+            retVal.ConstrainField("note")
+                .WithDefinition("Free-text notes taken about the administration event specifically (separate from visit summary note)")
+                .WithMinOccurs(0)
+                .WithMaxOccurs("*");
             retVal.ConstrainField("note.text")
                 .Mapping<SubstanceAdministration>(o => o.Notes.FirstOrDefault().Text);
             retVal.ConstrainField("note.authorReference")
                 .Mapping<SubstanceAdministration>(o => o.Notes.FirstOrDefault().Author);
 
             retVal.ConstrainField("reasonCode")
-                .WithComment("Not supported - see `statusReason`")
+                .WithDefinition("Not supported - see `statusReason`")
                 .WithMaxOccurs("0");
 
             retVal.ConstrainField("reasonReference")
@@ -461,24 +463,24 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.ConstrainField("fundingSource").NotSupported();
 
             retVal.ConstrainField("reaction")
-                .WithComment("For creating - post an `AdverseEvent` referencing this Immunization entry - on read is populated as a reference")
+                .WithDefinition("For creating - post an `AdverseEvent` referencing this Immunization entry - on read is populated as a reference")
                 .WithMaxOccurs("0");
 
             retVal.ConstrainField("reaction.date")
                 .WithMaxOccurs("0")
                 .Mapping<SubstanceAdministration>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.RefersTo)).FirstOrDefault().SourceEntity.ActTime);
-            retVal.ConstrainField("reatction.detail")
+            retVal.ConstrainField("reaction.detail")
                 .WithMaxOccurs("0")
                 .Mapping<SubstanceAdministration>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.RefersTo)).FirstOrDefault().SourceEntity as CodedObservation);
             retVal.ConstrainField("protocolApplied.series")
-                .WithComment("Must be a registered protocol in this SanteDB instance")
+                .WithDefinition("Must be a registered protocol in this SanteDB instance")
                 .Mapping<SubstanceAdministration>(o => o.Protocols.FirstOrDefault().Protocol.Name);
-            retVal.ConstrainField("protocolApplied.doseNumberPostiveInt")
-                .WithComment("Must be a recognized step ID")
+            retVal.ConstrainField("protocolApplied.doseNumber[x]")
+                .WithDefinition("Must be a recognized step ID")
+                .WithType(FHIRAllTypes.DateTime)
                 .Mapping<SubstanceAdministration>(o => o.SequenceId)
                 .Mapping<SubstanceAdministration>(o => o.Protocols.First().Sequence);
 
-            retVal.ConstrainField("protocolApplied.doseNumberString").NotSupported();
 
             retVal.ConstrainField("protocolApplied.seriesDoses[x]").NotSupported();
             return retVal;

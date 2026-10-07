@@ -32,6 +32,7 @@ using SanteDB.Core.Model.Query;
 using SanteDB.Core.PubSub;
 using SanteDB.Core.Security;
 using SanteDB.Core.Services;
+using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -50,15 +51,17 @@ namespace SanteDB.Messaging.FHIR.Handlers
     {
         private readonly IBiMetadataRepository m_biMetadataRepository;
         private readonly ILocalizationService m_localizationService;
+        private readonly string m_profileBase;
         private readonly Tracer m_tracer = Tracer.GetTracer(typeof(MeasureResourceHandler));
 
         /// <summary>
         /// DI ctor
         /// </summary>
-        public MeasureResourceHandler(IBiMetadataRepository biMetadataRepository, ILocalizationService localizationService)
+        public MeasureResourceHandler(IBiMetadataRepository biMetadataRepository, ILocalizationService localizationService, IConfigurationManager configurationManager)
         {
             this.m_biMetadataRepository = biMetadataRepository;
             this.m_localizationService = localizationService;
+            this.m_profileBase = configurationManager.GetSection<FhirServiceConfigurationSection>()?.DefaultProfileBase;
         }
 
         /// <inheritdoc/>
@@ -95,7 +98,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }.Select(o => new ResourceInteractionComponent() { Code = o }).ToList(),
                 SearchParam = QueryRewriter.GetSearchParams<Measure, BiIndicatorDefinition>().ToList(),
                 Type = ResourceType.Measure,
-                Profile = $"/StructureDefinition/SanteDB/_history/{Assembly.GetEntryAssembly().GetName().Version}"
+                Profile = $"{this.m_profileBase}/StructureDefinition/Measure"
             };
         }
 
