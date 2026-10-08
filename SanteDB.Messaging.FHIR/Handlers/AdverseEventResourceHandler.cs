@@ -20,12 +20,14 @@
  */
 using DocumentFormat.OpenXml.Office2013.Excel;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Specification.Snapshot;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Roles;
+using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Util;
 using System;
@@ -44,13 +46,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
     public class AdverseEventResourceHandler : RepositoryResourceHandlerBase<AdverseEvent, Act>
     {
         private readonly Guid?[] m_adverseEventTypes;
+        private readonly IRepositoryService<ActRelationship> m_relationshipService;
 
         /// <summary>
         /// Adverse event repo
         /// </summary>
-        public AdverseEventResourceHandler(IRepositoryService<Act> repo, IConceptRepositoryService conceptRepositoryService, ILocalizationService localizationService) : base(repo, localizationService)
+        public AdverseEventResourceHandler(IRepositoryService<Act> repo, IRepositoryService<ActRelationship> relationshipService, IConceptRepositoryService conceptRepositoryService, ILocalizationService localizationService) : base(repo, localizationService)
         {
-            this.m_adverseEventTypes = conceptRepositoryService.ExpandConceptSet(ConceptSetKeys.AdverseEventActs).Select(o=>o.Key).ToArray();
+            this.m_adverseEventTypes = conceptRepositoryService.ExpandConceptSet(ConceptSetKeys.AdverseEventActs).Select(o => o.Key).ToArray();
+            this.m_relationshipService = relationshipService;
         }
 
         /// <inheritdoc/>
@@ -58,7 +62,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             return instance is AdverseEvent ||
                 instance is Act act &&
-                m_adverseEventTypes.Contains(act.TypeConceptKey.GetValueOrDefault()); 
+                m_adverseEventTypes.Contains(act.TypeConceptKey.GetValueOrDefault());
         }
 
         /// <inheritdoc/>
@@ -96,6 +100,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Category = new List<CodeableConcept>
                 {DataTypeConverter.ToFhirCodeableConcept(model.TypeConceptKey)};
 
+
+            // TODO: Map this to allow suspected 
+            retVal.Actuality = AdverseEvent.AdverseEventActuality.Actual;
+
             var modelparticipations = model.LoadCollection(m => m.Participations);
             var modelrelationships = model.LoadCollection(m => m.Relationships);
 
@@ -112,8 +120,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 throw new InvalidOperationException(this.m_localizationService.GetString("error.messaging.fhir.adverseEvent.act"));
             }
 
-            retVal.DateElement = new FhirDateTime(subject.ActTime.GetValueOrDefault());
-
+            retVal.DateElement = new FhirDateTime((model.StartTime ?? model.ActTime).GetValueOrDefault());
+            retVal.DetectedElement = new FhirDateTime(subject.ActTime.GetValueOrDefault());
+            retVal.RecordedDateElement = new FhirDateTime(model.CreationTime);
             var subjectrelationships = subject.LoadCollection(s => s.Relationships);
 
             // Reactions = HasManifestation
@@ -130,9 +139,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
             }
 
             // Severity
-
-            
-
             var severity = subjectrelationships?.Where(r => r.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent)
                 ?.Select(r => (relationship: r, targetAct: r.LoadProperty<CodedObservation>(nameof(ActRelationship.TargetAct))))
                 ?.Where(t => t.targetAct.TypeConceptKey == ObservationTypeKeys.Severity)
@@ -168,6 +174,14 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 retVal.Recorder = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.LoadProperty(a => a.PlayerEntity));
             }
+            retVal.Contributor = modelparticipations?.Where(o => o.ParticipationRoleKey == ActParticipationKeys.Performer || o.ParticipationRoleKey == ActParticipationKeys.SecondaryPerformer).Select(o=> DataTypeConverter.CreateRimReference(o.LoadProperty(p=>p.PlayerEntity))).ToList();
+
+            // Caused Condition
+            var condition = this.m_relationshipService.Find(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.RefersTo && o.SourceEntity.TypeConceptKey == ObservationTypeKeys.Condition && o.TargetActKey == subject.Key).FirstOrDefault();
+            if(condition != null)
+            {
+                retVal.ResultingCondition = new List<ResourceReference>() { DataTypeConverter.CreateNonVersionedReference<Condition>(condition.SourceEntityKey) };
+            }
 
             // Suspect entities
             var refersTo = modelrelationships?.Where(o => o.RelationshipTypeKey == ActRelationshipTypeKeys.RefersTo);
@@ -180,6 +194,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         var product = o.LoadCollection<ActParticipation>("Participations").FirstOrDefault(x => x.ParticipationRoleKey == ActParticipationKeys.Product)?.LoadProperty<Material>("PlayerEntity");
 
+                        if(product == null)
+                        {
+                            return new AdverseEvent.SuspectEntityComponent()
+                            {
+                                Instance = DataTypeConverter.CreateRimReference(o)
+                            };
+                        }
                         return new AdverseEvent.SuspectEntityComponent
                         {
                             Instance = DataTypeConverter.CreateNonVersionedReference<Substance>(product)
@@ -192,6 +213,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     };
 
                 }).ToList();
+            }
+
+            var encounter = this.m_relationshipService.Find(r => r.SourceEntity.ClassConceptKey == ActClassKeys.Encounter && r.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && (r.TargetActKey == subject.Key || r.TargetActKey == model.Key)).Select(o=>o.SourceEntityKey).FirstOrDefault();
+            if (encounter != null)
+            {
+                retVal.Encounter = DataTypeConverter.CreateNonVersionedReference<Encounter>(encounter);
             }
 
             return retVal;
@@ -221,9 +248,9 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 key = Guid.NewGuid();
             }
-            else if(identifer.LoadProperty(o=>o.IdentityDomain).IsUnique)
+            else if (identifer.LoadProperty(o => o.IdentityDomain).IsUnique)
             {
-                key = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == identifer.IdentityDomainKey).Any(i => i.Value == identifer.Value)).Select(o=>o.Key).FirstOrDefault() ?? Guid.NewGuid();
+                key = this.QueryInternal(o => o.Identifiers.Where(i => i.IdentityDomainKey == identifer.IdentityDomainKey).Any(i => i.Value == identifer.Value)).Select(o => o.Key).FirstOrDefault() ?? Guid.NewGuid();
             }
             retVal.Key = key;
             DataTypeConverter.SetModelPolicies(retVal, resource.Meta?.Security);
@@ -340,6 +367,84 @@ namespace SanteDB.Messaging.FHIR.Handlers
             query = Expression.Lambda<Func<Act, bool>>(Expression.AndAlso(query.Body, Expression.AndAlso(Expression.AndAlso(query.Body, anyRef), typeReference)), query.Parameters);
 
             return base.QueryInternal(query, fhirParameters, hdsiParameters);
+        }
+
+        /// <inheritdoc/>
+        public override StructureDefinition GetStructureDefinition()
+        {
+            var retVal = base.GetStructureDefinition();
+
+            retVal.Description = new Markdown("An Act with a type concept in the AdvserEventTypes concept set to a FHIR AdverseEvent (examples: `AdervesEventFollowingProcedure`)");
+
+            retVal.ConstrainIdentifier<Act>();
+            retVal.ConstrainField("category")
+                .WithMaxOccurs("1")
+                .WithDefinition("Maps to the type concept of the underlying condition")
+                .Mapping<Act>(o => o.TypeConcept);
+
+            retVal.ConstrainField("actuality")
+                .WithMaxOccurs("1")
+                .WithFixedValue(new Code<AdverseEvent.AdverseEventActuality>(AdverseEvent.AdverseEventActuality.Actual));
+
+            retVal.ConstrainField("subject")
+                .WithDefinition("Reference to patient")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Patient)
+                .Mapping<Act>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.RecordTarget)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("event")
+                .WithDefinition("Mapped to the manifestation of the adverse event")
+                .Mapping<Act>(o => (o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasSubject)).FirstOrDefault().TargetAct.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasManifestation)).FirstOrDefault().TargetAct as CodedObservation).Value);
+
+            retVal.ConstrainField("encounter")
+                .WithDefinition("When part of an encounter")
+                .Mapping<Act>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasComponent) && r.SourceEntity.TypeConcept.Mnemonic == nameof(ActClassKeys.Encounter)).FirstOrDefault().SourceEntity as PatientEncounter);
+
+            retVal.ConstrainField("date")
+                .WithDefinition("Date of the original event which was the concern")
+                .Mapping<Act>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasSubject)).FirstOrDefault().TargetAct.ActTime);
+
+            retVal.ConstrainField("recordedDate")
+                .WithDefinition("Creation date of the adverse event")
+                .Mapping<Act>(o => o.CreationTime);
+
+            retVal.ConstrainField("resultingCondition")
+                .WithMaxOccurs("1")
+                .Mapping<Act>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasSubject)).FirstOrDefault().TargetAct.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.RefersTo)).FirstOrDefault().SourceEntity);
+
+            retVal.ConstrainField("location")
+                .Mapping<Act>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Location)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("seriousness")
+                .NotSupported();
+
+            retVal.ConstrainField("severity")
+                .Mapping<Act>(o => (o.Relationships.Where(p => p.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasSubject)).FirstOrDefault().TargetAct.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasComponent) && r.TargetAct.TypeConcept.Mnemonic == nameof(ObservationTypeKeys.Severity)).FirstOrDefault().TargetAct as CodedObservation).Value);
+
+            retVal.ConstrainField("recorder")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Practitioner)
+                .Mapping<Act>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Authororiginator)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("contributor")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Practitioner, ResourceType.Device)
+                .Mapping<Act>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Performer) || p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.SecondaryPerformer)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("suspectEntity");
+            retVal.ConstrainField("suspectEntity.instance")
+                .WithDefinition("The immunization instance / event which is suspected to have caused the event")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Immunization, ResourceType.Substance, ResourceType.Medication)
+                .Mapping<Act>(o => o.Relationships.Where(p => p.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.RefersTo)).FirstOrDefault().TargetAct.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Consumable)).FirstOrDefault().PlayerEntity)
+                .Mapping<Act>(o => o.Relationships.Where(p => p.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.RefersTo)).FirstOrDefault().TargetAct.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Product)).FirstOrDefault().PlayerEntity)
+                .Mapping<Act>(o => o.Relationships.Where(p => p.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.RefersTo)).FirstOrDefault().TargetAct);
+
+            retVal.ConstrainField("subjectMedicalHistory")
+                .NotSupported();
+            retVal.ConstrainField("referenceDocument")
+                .NotSupported();
+            retVal.ConstrainField("study")
+                .NotSupported();
+            return retVal;
+
+
         }
 
     }

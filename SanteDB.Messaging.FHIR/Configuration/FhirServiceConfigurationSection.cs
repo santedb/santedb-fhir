@@ -164,11 +164,18 @@ namespace SanteDB.Messaging.FHIR.Configuration
         }
 
         /// <summary>
-        /// When set, describes the base uri for all resources on this FHIR service.
+        /// When set, describes the base uri for all resources on this FHIR service - including the base of URIs for the StructureDefinitions on the server.
         /// </summary>
         [XmlElement("base"), JsonProperty("base")]
         [DisplayName("Operation Base URL"), Description("Used as the base URL for this server. Use this if the incoming HOST header will be different than the external host header (i.e. if running behind a reverse proxy)")]
-        public String ResourceBaseUri { get; set; }
+        public String BaseUri { get; set; }
+
+        /// <summary>
+        /// The base profile URI if different from <see cref="BaseUri"/>
+        /// </summary>
+        [XmlElement("profileBase"), JsonProperty("profileBase")]
+        [DisplayName("Profile Base URL"), Description("If this server implements a standard profile where the structure definition and conformance profile is located offsite - but this server must still emit the URL - set this")]
+        public String ProfileBaseUri { get; set; }
 
         /// <summary>
         /// Behavior modifiers

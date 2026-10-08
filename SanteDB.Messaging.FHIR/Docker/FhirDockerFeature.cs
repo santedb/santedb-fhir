@@ -160,7 +160,7 @@ namespace SanteDB.Messaging.FHIR.Docker
             {
                 fhirConfiguration = new FhirServiceConfigurationSection()
                 {
-                    ResourceBaseUri = "http://127.0.0.1:8080/fhir",
+                    BaseUri = "http://127.0.0.1:8080/fhir",
                     ResourceHandlers = typeof(FhirDockerFeature).Assembly.GetExportedTypesSafe().Where(o => typeof(IFhirResourceHandler).IsAssignableFrom(o) && !o.IsAbstract && o.IsClass).Select(o => new TypeReferenceConfiguration(o)).ToList()
                 };
                 configuration.AddSection(fhirConfiguration);
@@ -234,7 +234,7 @@ namespace SanteDB.Messaging.FHIR.Docker
             // Base URI
             if (settings.TryGetValue(BaseUriSetting, out string baseUri))
             {
-                fhirConfiguration.ResourceBaseUri = baseUri;
+                fhirConfiguration.BaseUri = baseUri;
             }
 
             // Custom resource list?

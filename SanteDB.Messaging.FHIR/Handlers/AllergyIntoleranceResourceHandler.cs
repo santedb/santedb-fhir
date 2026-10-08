@@ -20,6 +20,7 @@
  */
 using DynamicExpresso;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Specification.Snapshot;
 using SanteDB.Core;
 using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
@@ -168,7 +169,19 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     //TODO: Throw exception here, cannot translate.
                 }
 
+                var author = model.LoadProperty(o => o.Participations).FirstOrDefault(p => p.ParticipationRoleKey == ActParticipationKeys.Authororiginator);
+                if (author != null) {
+                    retVal.Recorder = DataTypeConverter.CreateNonVersionedReference<Practitioner>(author.PlayerEntityKey);
+                }
+
                 var actrelationshipservice = ApplicationServiceContext.Current.GetService<IDataPersistenceService<ActRelationship>>();
+
+
+                var encounter = actrelationshipservice.Query(o => o.TargetActKey == model.Key && o.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && o.SourceEntity.ClassConceptKey == ActClassKeys.Encounter, AuthenticationContext.SystemPrincipal).Select(o => o.SourceEntityKey).FirstOrDefault();
+                if(encounter.HasValue)
+                {
+                    retVal.Encounter = DataTypeConverter.CreateNonVersionedReference<Encounter>(encounter);
+                }
 
                 var criticality = actrelationshipservice.Query(actr => actr.SourceEntityKey == model.Key && actr.RelationshipTypeKey == ActRelationshipTypeKeys.HasComponent && actr.TargetAct.TypeConceptKey == ObservationTypeKeys.Severity, AuthenticationContext.Current.Principal)?.FirstOrDefault();
 
@@ -206,6 +219,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 }
 
                 retVal.Code = DataTypeConverter.ToFhirCodeableConcept(model.ValueKey);
+
+                retVal.Note = model.LoadProperty(o => o.Notes).Select(o => DataTypeConverter.ToAnnotation(o)).ToList();
 
                 return retVal;
             }
@@ -440,6 +455,89 @@ namespace SanteDB.Messaging.FHIR.Handlers
         protected override IEnumerable<Resource> GetReverseIncludes(CodedObservation resource, IEnumerable<IncludeInstruction> reverseIncludePaths)
         {
             throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
+        }
+
+        public override StructureDefinition GetStructureDefinition()
+        {
+            var retVal = base.GetStructureDefinition();
+
+            retVal.ConstrainIdentifier<Act>();
+            retVal.ConstrainField("verificationStatus")
+                .WithDefinition("When the condition or set to `Nullified` this is fixed to `enteredInError`")
+                .Mapping<CodedObservation>(o => o.StatusConcept);
+
+            retVal.ConstrainField("clinicalStatus")
+                .WithDefinition("Clinical status maps `active`=`Active`, `resolved`=`Completed`, `inactive`=`Inactive`")
+                .Mapping<CodedObservation>(o => o.StatusConcept);
+
+            retVal.ConstrainField("onset[x]")
+                .WithType(FHIRAllTypes.Period)
+                .WithDefinition("Mapped to `startTime` and `stopTime` on the act")
+                .Mapping<CodedObservation>(o => o.StartTime)
+                .Mapping<CodedObservation>(o => o.StopTime);
+
+            retVal.ConstrainField("recordedDate")
+                .Mapping<CodedObservation>(o => o.CreationTime);
+
+            retVal.ConstrainField("patient")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Patient)
+                .Mapping<CodedObservation>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.RecordTarget)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("asserter")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Practitioner)
+                .Mapping<CodedObservation>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Authororiginator)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("type")
+                .WithDefinition("When the `TypeConcept` is `DINT`,`FINT`,`EINT` this is fixed to `intolerance` when `DALG`,`FALG`,`EALG` then `allergy`")
+                .Mapping<CodedObservation>(o => o.TypeConcept);
+
+            retVal.ConstrainField("category")
+                .WithDefinition("When the `TypeConcept` is `DINT` or `DALG` then `Medication`, `FALG` or `FINT` then `Food` and `EINT` or `EALG` then `Environment`")
+                .Mapping<CodedObservation>(o => o.TypeConcept);
+
+            retVal.ConstrainField("criticality")
+                .WithDefinition("Carries the value of the component observation for `Severity`")
+                .Mapping<CodedObservation>(o => (o.Relationships.Where(e => e.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasComponent) && e.TargetAct.TypeConcept.Mnemonic == nameof(ObservationTypeKeys.Severity)).FirstOrDefault().TargetAct as CodedObservation).Value);
+
+            retVal.ConstrainField("reaction")
+                .WithDefinition("Grouped by the manifestation relationships on the allergy act")
+                .WithMinOccurs(0)
+                .WithMaxOccurs("*")
+                .Mapping<CodedObservation>(o => o.Relationships.Where(e => e.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasManifestation) && e.TargetAct.TypeConcept.Mnemonic == nameof(ObservationTypeKeys.Symptom)).FirstOrDefault().TargetAct as CodedObservation);
+
+            retVal.ConstrainField("reaction.onset")
+                .Mapping<CodedObservation>(o => o.Relationships.Where(e => e.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasManifestation) && e.TargetAct.TypeConcept.Mnemonic == nameof(ObservationTypeKeys.Symptom)).FirstOrDefault().TargetAct.ActTime);
+
+            retVal.ConstrainField("reaction.manifestation")
+                .Mapping<CodedObservation>(o => (o.Relationships.Where(e => e.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasManifestation) && e.TargetAct.TypeConcept.Mnemonic == nameof(ObservationTypeKeys.Symptom)).FirstOrDefault().TargetAct as CodedObservation).Value);
+
+            retVal.ConstrainField("reaction.severity")
+                .Mapping<CodedObservation>(o => (o.Relationships.Where(e => e.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasManifestation) && e.TargetAct.TypeConcept.Mnemonic == nameof(ObservationTypeKeys.Symptom)).FirstOrDefault().TargetAct.Relationships.Where(r=>r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasComponent) && r.TargetAct.TypeConcept.Mnemonic == nameof(ObservationTypeKeys.Severity)).FirstOrDefault().TargetAct as CodedObservation).Value);
+
+            retVal.ConstrainField("code")
+                .Mapping<CodedObservation>(o => o.Value);
+
+            retVal.ConstrainField("recorder")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Practitioner)
+                .Mapping<CodedObservation>(o => o.Participations.Where(p => p.ParticipationRole.Mnemonic == nameof(ActParticipationKeys.Authororiginator)).FirstOrDefault().PlayerEntity);
+
+            retVal.ConstrainField("encounter")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Encounter)
+                .WithDefinition("Encounter may not be present on reported allergies or intolerances")
+                .Mapping<CodedObservation>(o => o.Relationships.Where(r => r.RelationshipType.Mnemonic == nameof(ActRelationshipTypeKeys.HasComponent) && r.SourceEntity.ClassConcept.Mnemonic == nameof(ActClassKeys.Encounter)).FirstOrDefault().SourceEntity as PatientEncounter);
+
+            retVal.ConstrainField("asserter").NotSupported();
+            retVal.ConstrainField("lastOccurrence").NotSupported();
+
+            retVal.ConstrainField("note")
+                .Mapping<CodedObservation>(o => o.Notes);
+
+            retVal.ConstrainField("reaction.description").NotSupported();
+            retVal.ConstrainField("reaction.onset").NotSupported();
+            retVal.ConstrainField("reaction.exposureRoute").NotSupported();
+            retVal.ConstrainField("reaction.note").NotSupported();
+            retVal.ConstrainField("reaction.substance").NotSupported();
+            return retVal;
         }
     }
 }

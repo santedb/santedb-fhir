@@ -17,20 +17,20 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// </summary>
     [DisplayName("Trade Product")]
     [System.ComponentModel.Description("Additional information about the Medication's trade product(s) (example: HPV is a MEDICATION but Guardasil9 is a Trade Product which IS A instance of HPV)")]
-    public class TradeProductExtensionHandler : IFhirExtensionHandlerEx
+    public class TradeProductExtension : IFhirExtensionHandlerEx
     {
         private readonly IRepositoryService<EntityRelationship> m_entityRelationshipService;
 
         /// <summary>
         /// DI Ctor
         /// </summary>
-        public TradeProductExtensionHandler(IRepositoryService<EntityRelationship> entityRelationshipService)
+        public TradeProductExtension(IRepositoryService<EntityRelationship> entityRelationshipService)
         {
             this.m_entityRelationshipService = entityRelationshipService;
         }
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/productDefinition");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-productDefinition");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);

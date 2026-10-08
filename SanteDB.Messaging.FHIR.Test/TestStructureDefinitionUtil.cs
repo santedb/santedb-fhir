@@ -32,6 +32,12 @@ namespace SanteDB.Messaging.FHIR.Test
     public class TestStructureDefinitionUtil : FhirTest
     {
 
+        [Test]
+        public void TestPropertyMappingExtraction()
+        {
+            var mp = ResourceType.Patient.GetFhirClassMapping().ExtractPropertyMapping("Patient.identifier.type");
+
+        }
 
         /// <summary>
         /// Tests the retrieval generation of a <see cref="StructureDefinition"/> instance.

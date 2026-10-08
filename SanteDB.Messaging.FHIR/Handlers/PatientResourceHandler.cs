@@ -25,6 +25,7 @@ using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
+using SanteDB.Core.Model.Acts;
 using SanteDB.Core.Model.Constants;
 using SanteDB.Core.Model.DataTypes;
 using SanteDB.Core.Model.Entities;
@@ -281,11 +282,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                         {
                             FullUrl = $"urn:uuid:{relPat.Key}",
                             Resource = fhirPat,
-                            Request = new Bundle.RequestComponent()
-                            {
-                                Method = Bundle.HTTPVerb.POST,
-                                Url = $"{this.ResourceType}/{relPat.Key}"
-                            }
+                            Request = this.CreateBundleRequest(Bundle.HTTPVerb.POST, relPat)
                         });
                         fhirPat.Link.Add(new Patient.LinkComponent()
                         {
@@ -299,11 +296,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         FullUrl = $"urn:uuid:{rel.Key}",
                         Resource = relative,
-                        Request = new Bundle.RequestComponent()
-                        {
-                            Method = Bundle.HTTPVerb.POST,
-                            Url = $"{mapper.ResourceType}/{rel.Key}"
-                        }
+                        Request = mapper.CreateBundleRequest(Bundle.HTTPVerb.POST, rel)
                     });
                 }
             }
@@ -392,32 +385,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
             return retVal;
         }
 
+        /// <inheritdoc/>
         public override StructureDefinition GetStructureDefinition()
         {
             var retVal = base.GetStructureDefinition();
 
-            retVal.ConstrainField("identifier")
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers);
-
-            retVal.ConstrainField("identifier.system")
-                .WithComment("Must be mapped to a registered identity domain in this system. Schemes with `urn:oid:` reference registered OID, others reference URL")
-                .WithMustSupport()
-                .WithMinOccurs(1)
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Url)
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().IdentityDomain.Oid);
-
-            retVal.ConstrainField("identifier.period")
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().IssueDate)
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().ExpiryDate);
-
-            retVal.ConstrainField("identifier.type")
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().IdentifierType);
-
-            retVal.ConstrainField("identifier.value")
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Identifiers.FirstOrDefault().Value);
+            retVal.ConstrainIdentifier<SanteDB.Core.Model.Roles.Patient>();
 
             retVal.ConstrainField("active")
-                .WithComment("For reads/searches TRUE represents any ACTIVE concept (Active, New) and FALSE represents any inactive state (OBSOLETE, NULLIFIED, INACTIVE, PURGED)")
+                .WithDefinition("For reads/searches TRUE represents any ACTIVE concept (Active, New) and FALSE represents any inactive state (OBSOLETE, NULLIFIED, INACTIVE, PURGED)")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.StatusConcept);
 
             retVal.ConstrainField("name")
@@ -440,16 +416,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             // Restrictions
             retVal.ConstrainField("birthDate")
-                .WithComment("Partial dates are supported when exact date is unknown - example: 2009, 2009-01")
+                .WithDefinition("Partial dates are supported when exact date is unknown - example: 2009, 2009-01")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DateOfBirth);
 
-            retVal.ConstrainField("deceasedDate")
-                .WithComment("Partial dates are supported when exact date is unknown - example: 2009, 2009-01")
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DeceasedDate);
-
-
-            retVal.ConstrainField("deceasedBoolean").
-                WithComment("When true, deceased date in CDR is indicated as 0001-01-01")
+            retVal.ConstrainField("deceased[x]")
+                .WithType(FHIRAllTypes.Date)
+                .WithDefinition("Partial dates are supported when exact date is unknown - example: 2009, 2009-01. If boolean is passed deceased date is indicated as 0001-01-01")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.DeceasedDate);
 
             retVal.ConstrainField("gender")
@@ -457,33 +429,47 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .WithMustSupport()
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.GenderConcept);
 
-            retVal.ConstrainField("multipleBirthInteger")
+            retVal.ConstrainField("multipleBirth[x]")
+                .WithType(FHIRAllTypes.Integer)
+                .WithDefinition("Multiple birth boolean results in a `0` in the multiple birth order field (non-null indicator) - all other numbers are indicated as numberMultieBirth")
                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.MultipleBirthOrder);
 
-            retVal.ConstrainField("multipleBirthBoolean")
-                .WithComment("Multiple birth indicator results in a 0 in the multiple birth order field (non-null indicator)")
-                .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.MultipleBirthOrder);
-
             retVal.ConstrainField("photo")
-                .WithComment("Only image/jpeg is supported")
+                .WithDefinition("Only image/jpeg is supported")
                 .WithMaxOccurs("1")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Extensions.Where(e => e.ExtensionTypeKey == ExtensionTypeKeys.JpegPhotoExtension).FirstOrDefault().ExtensionValueData);
 
             retVal.ConstrainField("contact.organization")
-                .WithComment("When present, other attributes are ignored - target of relationship IS an organization");
+                .WithDefinition("When present, other attributes are ignored - target of relationship IS an organization");
 
 
             retVal.ConstrainField("generalPractitioner")
-                .WithComment("All references must be registered with this SanteDB server")
+                .WithDefinition("All references must be registered with this SanteDB server")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Relationships.Where(r => r.RelationshipTypeKey == EntityRelationshipTypeKeys.HealthcareProvider).FirstOrDefault().TargetEntity);
 
             retVal.ConstrainField("managingOrganization")
-                .WithComment("All references must be registered with this SanteDB server")
+                .WithDefinition("All references must be registered with this SanteDB server")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.Relationships.Where(r => r.RelationshipTypeKey == EntityRelationshipTypeKeys.Scoper).FirstOrDefault().TargetEntity);
 
-            retVal.ConstrainField("link")
-                .WithComment("replaces and replaced-by may be routed through merging/matching logic on this server. see-also references may be ignored based on type");
+            retVal.ConstrainField("link");
 
+            retVal.ConstrainField("link.other")
+                .WithDefinition("Must point to patient or related person - LOCAL resources only")
+                .WithType(FHIRAllTypes.Reference, ResourceType.Patient, ResourceType.RelatedPerson);
+
+            retVal.ConstrainField("link.type")
+                .WithDefinition("replaces and replaced-by may be routed through merging/matching logic on this server. see-also references may be ignored based on type");
+
+
+            retVal.ConstrainField("contact")
+                .WithDefinition("The contact relationships for the patient. Relationship role is set to `CON`");
+            retVal.ConstrainField("contact.period").NotSupported();
+            retVal.ConstrainField("contact.gender")
+                .WithDefinition("Gender of the related person - uses `ContainedResource` role");
+            retVal.ConstrainField("contact.telecom");
+            retVal.ConstrainField("contact.name");
+            retVal.ConstrainField("contact.relationship")
+                .WithDefinition("Should be used for emergency contacts, NOK, etc. RelatedPerson is preferred for familial relationships");
             return retVal;
 
         }
@@ -522,12 +508,12 @@ namespace SanteDB.Messaging.FHIR.Handlers
                     {
                         if (ii.LoadProperty(o => o.IdentityDomain).IsUnique)
                         {
-                            patient = this.m_repository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
+                            patient = this.m_repository.Find(o => StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value) && o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).FirstOrDefault();
 
                             if (patient == null)
                             {
                                 // Perhaps it is a person? - We don't query using PersonRepository because it may be a Patient
-                                var personKey = this.m_personRepository.Find(o => o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).Select(o => o.Key).FirstOrDefault();
+                                var personKey = this.m_personRepository.Find(o => StatusKeys.ActiveStates.Contains(o.StatusConceptKey.Value) && o.Identifiers.Where(i => i.IdentityDomainKey == ii.IdentityDomainKey).Any(i => i.Value == ii.Value)).Select(o => o.Key).FirstOrDefault();
 
                                 if (personKey != null)
                                 {
@@ -797,11 +783,15 @@ namespace SanteDB.Messaging.FHIR.Handlers
                                         previousEntry.TargetEntity = null;
                                         previousEntry.CopyObjectData(relationship, overwritePopulatedWithNull: true, ignoreTypeMismatch: false, declaredOnly: false, onlyNullFields: false);
                                     }
-                                    else
+                                    else if(!targetPatient.Relationships.Any(r=>r.Key == relationship.Key || r.SourceEntityKey == relationship.SourceEntityKey && r.TargetEntityKey == relationship.TargetEntityKey && r.RelationshipTypeKey == relationship.RelationshipTypeKey))
                                     {
                                         // The link here is a reverse link - i.e. IS A MOHTER OF or IS A HUSBAND OF so we want to create a reverse link
                                         rp.AddAnnotation(new FhirAlreadyProcessedAnnotation(relationship));
                                         patient.Relationships.Add(relationship);
+                                    }
+                                    else
+                                    {
+                                        rp.AddAnnotation(new FhirAlreadyProcessedAnnotation(relationship));
                                     }
                                 }
                             }
@@ -862,6 +852,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
             {
                 patient.AddTag(SystemTagNames.External, "true");
             }
+
+            patient.VersionKey = null; // We don't want to duplicate the version key on a POST
 
             return patient;
         }

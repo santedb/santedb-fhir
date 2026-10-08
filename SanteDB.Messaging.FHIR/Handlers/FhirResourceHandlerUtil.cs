@@ -24,6 +24,7 @@ using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
+using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -148,6 +149,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 var resourceDef = o.GetResourceDefinition();
                 var structureDef = o.GetStructureDefinition();
                 resourceDef.Profile = structureDef.Url;
+                resourceDef.SupportedProfile = ExtensionUtil.ProfileHandlers.Where(r => r.AppliesTo.Contains(resourceDef.Type.Value)).Select(r => r.ProfileUri.ToString()).ToList();
+
                 return resourceDef;
             });
         }

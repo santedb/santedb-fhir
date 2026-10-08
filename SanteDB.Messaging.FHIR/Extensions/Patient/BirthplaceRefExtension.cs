@@ -39,12 +39,12 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
         /// <summary>
         /// URI which appears on the extension
         /// </summary>
-        public Uri Uri => new Uri("http://santedb.org/fhir/profile#patient-birthPlace-ref");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/patient-birthPlace-ref");
 
         /// <summary>
         /// Profile URI
         /// </summary>
-        public Uri ProfileUri => this.Uri;
+        public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
 
         /// <summary>
         /// Resource this extension applies to

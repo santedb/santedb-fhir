@@ -21,21 +21,21 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     [DisplayName("Product Presentation")]
     [System.ComponentModel.Description("Represents the presentation of this Medication (examples: 10 dose Vial, 20 pill package, etc.)")]
 
-    public class ProductPresentationExtensionHandler : IFhirExtensionHandlerEx
+    public class ProductPresentationExtension : IFhirExtensionHandlerEx
     {
-        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ProductPresentationExtensionHandler));
+        private readonly Tracer m_tracer = Tracer.GetTracer(typeof(ProductPresentationExtension));
         private readonly IRepositoryService<EntityRelationship> m_entityRelationshipService;
 
         /// <summary>
         /// DI Ctor
         /// </summary>
-        public ProductPresentationExtensionHandler(IRepositoryService<EntityRelationship> entityRelationshipService)
+        public ProductPresentationExtension(IRepositoryService<EntityRelationship> entityRelationshipService)
         {
             this.m_entityRelationshipService = entityRelationshipService;
         }
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/productPresentation");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-productPresentation");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);

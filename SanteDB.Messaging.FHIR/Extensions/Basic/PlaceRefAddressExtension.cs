@@ -18,13 +18,13 @@ namespace SanteDB.Messaging.FHIR.Extensions.Basic
     {
        
         /// <inheritdoc/>
-        public FHIRAllTypes ValueType => FHIRAllTypes.Reference;
+        public FHIRAllTypes ValueType => FHIRAllTypes.String;
 
         /// <inheritdoc/>
         public bool IsModifier => false;
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/EntityAddress-PlaceRef");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/address-PlaceRef");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
@@ -40,7 +40,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Basic
                 var addrCmp = addr.LoadCollection(o => o.Component).FirstOrDefault(o => o.ComponentTypeKey == AddressComponentKeys.PlaceRef);
                 if (addrCmp != null)
                 {
-                    yield return new Extension(this.Uri.ToString(), new ResourceReference($"Location/{addrCmp.Value}"));
+                    yield return new Extension(this.Uri.ToString(), new FhirString(addrCmp.Value));
                 }
             }
         }

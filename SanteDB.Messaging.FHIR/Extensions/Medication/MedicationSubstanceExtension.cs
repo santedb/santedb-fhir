@@ -18,18 +18,18 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// </summary>
     [DisplayName("Substance Link")]
     [System.ComponentModel.Description("Provides a link between a `Medication` and a `Substance`")]
-    public class SubstanceExtensionHandler : IFhirExtensionHandlerEx
+    public class MedicationSubstanceExtension : IFhirExtensionHandlerEx
     {
 
         /// <summary>
         /// DI Ctor
         /// </summary>
-        public SubstanceExtensionHandler()
+        public MedicationSubstanceExtension()
         {
         }
 
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/substanceDefinition");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-substanceDefinition");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);

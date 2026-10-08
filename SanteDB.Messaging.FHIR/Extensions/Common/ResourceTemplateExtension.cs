@@ -11,6 +11,7 @@ using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Text;
 
@@ -19,6 +20,8 @@ namespace SanteDB.Messaging.FHIR.Extensions.Common
     /// <summary>
     /// Represents an extension which dictates the template attached to a resource
     /// </summary>
+    [DisplayName("Template Identifier")]
+    [System.ComponentModel.Description("Provides a hint of the user interface template, CDSS ruleset, and specialization used to create the resource")]
     public class ResourceTemplateExtension : IFhirExtensionHandlerEx
     {
 

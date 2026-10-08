@@ -47,7 +47,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         private ILocalizationService m_localizationService;
 
         // Structure definitions generated once
-        private IQueryResultSet m_structureDefinitions;
+        private IEnumerable<StructureDefinition> m_structureDefinitions;
 
         /// <summary>
         /// Gets the resource name
@@ -155,7 +155,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             var results = this.GetAllStructures();
 
             // TODO: Filtering
-            results = query.ApplyCommonQueryControls(results, out var totalResults);
+            results = query.ApplyCommonQueryControls(results.AsResultSet(), out var totalResults).OfType<StructureDefinition>();
 
             return MessageUtil.CreateBundle(new FhirQueryResult(this.ResourceType.ToString())
             {
@@ -176,13 +176,13 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
         }
 
-        private IQueryResultSet GetAllStructures()
+        private IEnumerable<StructureDefinition> GetAllStructures()
         {
             if (this.m_structureDefinitions == null)
             {
                 var resourceStructures = FhirResourceHandlerUtil.ResourceHandlers.Select(o => o.GetStructureDefinition());
-                var extensionStructures = ExtensionUtil.ExtensionHandlers.OfType<IFhirExtensionHandlerEx>().Select(o => StructureDefinitionUtil.GetStructureDefinition(o));
-                this.m_structureDefinitions = resourceStructures.Concat(extensionStructures).AsResultSet();
+                var extensionStructures = ExtensionUtil.ExtensionHandlers.OfType<IFhirExtensionHandlerEx>().Select(o => StructureDefinitionUtil.GetStructureDefinition(o)).OfType<StructureDefinition>();
+                this.m_structureDefinitions = resourceStructures.Concat(extensionStructures);
             }
             return this.m_structureDefinitions;
         }

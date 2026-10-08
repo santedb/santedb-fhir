@@ -19,17 +19,20 @@
  * Date: 2023-6-21
  */
 using DocumentFormat.OpenXml.Drawing.Diagrams;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Diagnostics;
 using SanteDB.Core.i18n;
+using SanteDB.Core.Model.Map;
 using SanteDB.Core.Model.Query;
 using SanteDB.Core.Model.Serialization;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Configuration;
 using SanteDB.Messaging.FHIR.Exceptions;
+using SanteDB.Messaging.FHIR.Handlers;
 using SanteDB.Messaging.FHIR.Resources;
 using System;
 using System.Collections.Generic;
@@ -162,12 +165,30 @@ namespace SanteDB.Messaging.FHIR.Util
                 return map.Map.Select(o => new SearchParamComponent()
                 {
                     Name = o.FhirQuery,
-                    Type = MapFhirParameterType<TModelType>(o.FhirType, o.ModelQuery),
+                    Type = MapFhirParameterType(typeof(TModelType), o.FhirType, o.ModelQuery),
                     Documentation = new Markdown(o.Description),
-                    Definition = $"/Profile/SanteDB#search-{map.Resource}.{o.FhirQuery}"
+                    Definition = $"/SearchParameter/{map.Resource}-{o.FhirQuery}"
                 }).Union(s_defaultParameters);
             }
         }
+
+        /// <summary>
+        /// Get all configured search parameters
+        /// </summary>
+        /// <returns></returns>
+        internal static IEnumerable<SearchParamComponent> GetAllSearchParams()
+        {
+            return s_map.Map.SelectMany(o =>
+                o.Map.Where(w=>!w.FhirQuery.StartsWith("_")).Select(m => new SearchParamComponent()
+                {
+                    
+                    Name = m.FhirQuery,
+                    Type = MapFhirParameterType(FhirResourceHandlerUtil.GetMappersFor(o.Resource).FirstOrDefault()?.CanonicalType, m.FhirType, m.ModelQuery),
+                    Documentation = new Markdown(m.Description),
+                    Definition = $"{o.Resource}-{m.FhirQuery}"
+                }));
+        }
+
 
         /// <summary>
         /// Add search parameters
@@ -224,7 +245,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Map FHIR parameter type
         /// </summary>
-        private static SearchParamType MapFhirParameterType<TModelType>(QueryParameterRewriteType type, string definition)
+        private static SearchParamType MapFhirParameterType(Type modelType, QueryParameterRewriteType type, string definition)
         {
             switch (type)
             {
@@ -241,7 +262,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     {
 
 
-                        switch (GetQueryType<TModelType>(definition).StripNullable().Name)
+                        switch (GetQueryType(modelType, definition).StripNullable().Name)
                         {
                             case "String":
                                 return SearchParamType.String;
@@ -271,10 +292,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Follows the specified query definition and determines the type
         /// </summary>
-        private static Type GetQueryType<TModelType>(string definition)
+        private static Type GetQueryType(Type scopeType, string definition)
         {
             var pathParts = definition.Split('.');
-            var scopeType = typeof(TModelType);
             foreach (var path in pathParts)
             {
                 // Get actual path
@@ -417,9 +437,18 @@ namespace SanteDB.Messaging.FHIR.Util
                         FhirType = QueryParameterRewriteType.Tag
                     };
                 }
+                else if(parmMap == null && kv == "id")
+                {
+                    parmMap = new QueryParameterMapProperty()
+                    {
+                        FhirQuery = "id",
+                        ModelQuery = "id",
+                        FhirType = QueryParameterRewriteType.String
+                    };
+                }
                 else if (parmMap == null)
                 {
-                    if (s_configuration?.StrictProcessing  == true && !s_defaultParameters.Any(r => r.Name == kv))
+                    if (s_configuration?.StrictProcessing == true && !s_defaultParameters.Any(r => r.Name == kv))
                     {
                         throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.NotSupported, String.Format(FhirErrorMessages.QueryParameterNotFound, kv));
                     }

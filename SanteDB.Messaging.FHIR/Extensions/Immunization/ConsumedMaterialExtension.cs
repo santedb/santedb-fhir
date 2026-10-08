@@ -21,14 +21,14 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
     /// </summary>
     [DisplayName("Consumed Material")]
     [System.ComponentModel.Description("Provides a direct reference to Materials or Substances that were directly consumed in the execution of this event")]
-    public class ConsumedMaterialExtensionHandler : IFhirExtensionHandlerEx
+    public class ConsumedMaterialExtension : IFhirExtensionHandlerEx
     {
         private readonly FhirServiceConfigurationSection m_configuration;
 
         /// <summary>
         /// DI ctor
         /// </summary>
-        public ConsumedMaterialExtensionHandler(IConfigurationManager configurationManager)
+        public ConsumedMaterialExtension(IConfigurationManager configurationManager)
         {
             this.m_configuration = configurationManager.GetSection<FhirServiceConfigurationSection>();
         }
@@ -37,10 +37,10 @@ namespace SanteDB.Messaging.FHIR.Extensions.Immunization
         private readonly string ConsumedQuantityExtensionUrl = $"{FhirConstants.SanteDBProfile}/extensions/consumed-material#consumed-quantity";
 
         /// <inheritdoc/>
-        public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/consumed-material");
+        public virtual Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extensions/immunization-consumed-material");
 
         /// <inheritdoc/>
-        public Uri ProfileUri => Uri;
+        public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
 
         /// <inheritdoc/>
         public virtual ResourceType? AppliesTo => ResourceType.Immunization;

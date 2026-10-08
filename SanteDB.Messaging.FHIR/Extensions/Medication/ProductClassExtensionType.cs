@@ -16,10 +16,10 @@ namespace SanteDB.Messaging.FHIR.Extensions.Medication
     /// </summary>
     [DisplayName("Medication Classification")]
     [System.ComponentModel.Description("Identifies whether this Medication entry represents a `Kind` of medication, a `Specific` instnace of Medication")]
-    public class ProductClassExtensionTypeHandler : IFhirExtensionHandlerEx
+    public class ProductClassExtensionType : IFhirExtensionHandlerEx
     {
         /// <inheritdoc/>
-        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/classification");
+        public Uri Uri => new Uri($"{FhirConstants.SanteDBProfile}/extension/Medication/medication-classification");
 
         /// <inheritdoc/>
         public Uri ProfileUri => new Uri(FhirConstants.SanteDBProfile);
