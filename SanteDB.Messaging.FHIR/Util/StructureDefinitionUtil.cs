@@ -299,6 +299,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     ElementId = pathName,
                     Min = propertyMap.IsMandatoryElement ? 1 : 0,
                     Max = propertyMap.IsCollection ? "*" : "1",
+                    IsSummary = propertyMap.InSummary,
                     Type = propertyMap.FhirType.Select(o => o.GetFhirClassMapping().Name).Select(o => new ElementDefinition.TypeRefComponent()
                     {
                         Code = o
@@ -436,6 +437,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         Path = elementPath
                     },
                     Max = elementMapping.IsCollection ? "*" : "1",
+                    IsSummary = elementMapping.InSummary
                 };
                 pathElement.AddAnnotation(me);
                 pathElement.ElementId = elementPath;
@@ -524,9 +526,21 @@ namespace SanteDB.Messaging.FHIR.Util
             me.Mapping.Add(new ElementDefinition.MappingComponent()
             {
                 Identity = "santedb+hdsi",
-                Language = "http://santedb.org/model#hdsi",
+                Language = SanteDBExtendedMimeTypes.HdsiRoot,
                 Map =$"{typeof(TResource).GetSerializationName()}.{QueryExpressionBuilder.BuildPropertySelector(selector)}"
             });
+            return me;
+        }
+
+        public static ElementDefinition WithMinValue(this ElementDefinition me, DataType value)
+        {
+            me.MinValue = value;
+            return me;
+        }
+
+        public static ElementDefinition WithMaxValue(this ElementDefinition me, DataType value)
+        {
+            me.MaxValue = value;
             return me;
         }
 

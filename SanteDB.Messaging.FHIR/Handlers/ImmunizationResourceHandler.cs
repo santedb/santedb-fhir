@@ -143,7 +143,6 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 Immunization.ProtocolAppliedComponent protocol = new Immunization.ProtocolAppliedComponent();
                 var dbProtocol = itm.LoadProperty<Protocol>(nameof(ActProtocol.Protocol));
                 protocol.DoseNumber = new PositiveInt(model.SequenceId);
-
                 // Protocol lookup
                 protocol.Series = dbProtocol?.Name;
                 retVal.ProtocolApplied.Add(protocol);
@@ -479,7 +478,8 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 .Mapping<SubstanceAdministration>(o => o.SequenceId)
                 .Mapping<SubstanceAdministration>(o => o.Protocols.First().Sequence);
 
-
+            retVal.ConstrainField("protocolApplied.authority").NotSupported();
+            retVal.ConstrainField("protocolApplied.targetDisease").NotSupported();
             retVal.ConstrainField("protocolApplied.seriesDoses[x]").NotSupported();
             return retVal;
         }

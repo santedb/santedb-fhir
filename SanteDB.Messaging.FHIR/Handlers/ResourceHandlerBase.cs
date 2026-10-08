@@ -274,9 +274,10 @@ namespace SanteDB.Messaging.FHIR.Handlers
             retVal.Mapping = retVal.Mapping ?? new List<StructureDefinition.MappingComponent>();
             retVal.Mapping.Add(new StructureDefinition.MappingComponent()
             {
-                Comment = $"Mappings to SanteDB Health Data Services Interface type {this.CanonicalType.GetSerializationName()}",
+                Comment = $"HDSI queries based on HL7 RIM paths - used by SanteDB's persistence layer. Mappings provided are bound to {this.CanonicalType.GetSerializationName()}",
+                Name = "SanteDB Health Data Services Interface Query",
                 Identity = "santedb+hdsi",
-                Uri = "http://santedb.org/model#hdsi",
+                Uri = "https://github.com/santedb/dev-doc/blob/master/developers/service-apis/health-data-service-interface-hdsi/hdsi-query-syntax/README.md",
             });
             var thisAssembly = this.GetType().Assembly;
 
