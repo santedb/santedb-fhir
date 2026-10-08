@@ -85,7 +85,7 @@ namespace SanteDB.Messaging.FHIR.Util
         private static readonly Guid[] IGNORE_EXTENSIONS = new Guid[]
         {
             ExtensionTypeKeys.JpegPhotoExtension,
-            ExtensionTypeKeys.DataQualityExtension,
+            ExtensionTypeKeys.DataQualityExtension
         };
 
         private static readonly Guid[] IGNORE_RELATIONS_INBUNDLE = new Guid[]
@@ -2558,7 +2558,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <exception cref="NotImplementedException"></exception>
         internal static string CreateResourceLocation(IdentifiedData resource)
         {
-            var builder = new UriBuilder(m_configuration?.ResourceBaseUri ?? $"{m_restConfiguration?.ExternalHostPort ?? "http://localhost:8080/"}/fhir");
+            var builder = new UriBuilder(m_configuration?.BaseUri ?? $"{m_restConfiguration?.ExternalHostPort ?? "http://localhost:8080/"}/fhir");
             var resourceHandler = FhirResourceHandlerUtil.GetMapperForInstance(resource);
             var resourcePath = Hl7.Fhir.Utility.EnumUtility.GetLiteral(resourceHandler.ResourceType);
             if (resource is IVersionedData ivd)

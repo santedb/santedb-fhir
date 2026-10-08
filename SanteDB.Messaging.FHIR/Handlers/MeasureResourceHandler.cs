@@ -61,7 +61,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             this.m_biMetadataRepository = biMetadataRepository;
             this.m_localizationService = localizationService;
-            this.m_profileBase = configurationManager.GetSection<FhirServiceConfigurationSection>()?.DefaultProfileBase;
+            this.m_profileBase = configurationManager.GetSection<FhirServiceConfigurationSection>()?.ProfileBaseUri ?? configurationManager.GetSection<FhirServiceConfigurationSection>()?.BaseUri;
         }
 
         /// <inheritdoc/>

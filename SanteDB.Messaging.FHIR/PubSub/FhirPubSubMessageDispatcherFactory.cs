@@ -227,7 +227,7 @@ namespace SanteDB.Messaging.FHIR.PubSub
                                 },
                                 Source = new MessageHeader.MessageSourceComponent()
                                 {
-                                    Endpoint = this.m_fhirConfiguration.ResourceBaseUri,
+                                    Endpoint = this.m_fhirConfiguration.BaseUri,
                                     Name = Environment.MachineName,
                                     Software = $"SanteDB v.{Assembly.GetEntryAssembly().GetName().Version}"
                                 },

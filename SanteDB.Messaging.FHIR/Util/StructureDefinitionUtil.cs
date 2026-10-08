@@ -55,7 +55,7 @@ namespace SanteDB.Messaging.FHIR.Util
     public static class StructureDefinitionUtil
     {
         private static readonly ILocalizationService s_localizationService = ApplicationServiceContext.Current.GetService<ILocalizationService>();
-        private static readonly String s_profileBase = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>()?.DefaultProfileBase;
+        private static readonly String s_profileBase = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>()?.ProfileBaseUri ?? ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>()?.BaseUri;
 
 
         /// <summary>

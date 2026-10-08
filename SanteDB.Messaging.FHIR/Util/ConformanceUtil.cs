@@ -100,7 +100,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     Format = new List<string>() { "xml", "json" },
                     Implementation = new ImplementationComponent()
                     {
-                        Url = s_configuration.ResourceBaseUri,
+                        Url = s_configuration.BaseUri,
                         Description = typeof(ConformanceUtil).Assembly.GetCustomAttribute<AssemblyDescriptionAttribute>().Description
                     },
                     Name = "SVC-CORE FHIR",
@@ -120,7 +120,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     Endpoint = fhirConfig.Endpoints.Select(e =>
                     {
                         var uriB = new UriBuilder(e.Address);
-                        if (Uri.TryCreate(s_configuration.ResourceBaseUri, UriKind.Absolute, out var externalUri) ||
+                        if (Uri.TryCreate(s_configuration.BaseUri, UriKind.Absolute, out var externalUri) ||
                             Uri.TryCreate(restConfig.ExternalHostPort, UriKind.Absolute, out externalUri))
                         {
                             uriB.Host = externalUri.Host;
