@@ -404,6 +404,27 @@ namespace SanteDB.Messaging.FHIR.Util
             return retVal;
 
         }
+
+        /// <summary>
+        /// Remove fields and slices
+        /// </summary>
+        public static void RemoveField(this StructureDefinition me, String elementPath, params string[] sliceNames)
+        {
+            var resourceClass = ModelInfo.ModelInspector.FindClassMappingByCanonical(me.BaseDefinition);
+            if (!elementPath.StartsWith($"{resourceClass.Name}."))
+            {
+                elementPath = $"{resourceClass.Name}.{elementPath}";
+            }
+
+            if (sliceNames.Length == 0) {
+                me.Differential.Element.RemoveAll(er => er.Path == elementPath);
+            }
+            else
+            {
+                sliceNames.ForEach(sn => me.Differential.Element.RemoveAll(er => er.Path.StartsWith(elementPath) && er.SliceName == sn));
+            }
+        }
+
         /// <summary>
         /// Constraint a single field according to the constraint 
         /// </summary>
