@@ -43,7 +43,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Basic
         public Uri Uri => new Uri($"{FhirConstants.Iso21090Extensions}-ADXP-{this.m_addressPartName}");
 
         /// <inheritdoc/>
-        public Uri ProfileUri => new Uri(FhirConstants.Iso21090Extensions);
+        public Uri ProfileUri => this.Uri;
 
         /// <inheritdoc/>
         public ResourceType? AppliesTo => ResourceType.Basic;
