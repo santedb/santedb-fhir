@@ -233,6 +233,12 @@ namespace SanteDB.Messaging.FHIR.Util
                     }));
                 }
 
+
+                // Allow the handlers to spec
+                foreach (var profile in ExtensionUtil.ProfileHandlers.Where(p => p.AppliesTo.Contains(resourceType.Value))) 
+                {
+                    retVal = profile.GetStructureDefinition(retVal);
+                }
             }
 
             if (retVal.Differential != null) {
