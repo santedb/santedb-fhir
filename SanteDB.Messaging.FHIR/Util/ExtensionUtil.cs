@@ -22,6 +22,7 @@ using Hl7.Fhir.Model;
 using Hl7.Fhir.Utility;
 using SanteDB.Core;
 using SanteDB.Core.Configuration;
+using SanteDB.Core.Exceptions;
 using SanteDB.Core.Model;
 using SanteDB.Core.Model.Interfaces;
 using SanteDB.Core.Services;
@@ -303,6 +304,13 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <exception cref="SanteDB.Core.Exceptions.DetectedIssueException">If there is a detected/validation issue</exception>
         public static Resource ExecuteAfterReceiveRequestBehavior(TypeRestfulInteraction interaction, ResourceType resourceType, Resource resource)
         {
+
+            var issues = s_profileHandlers?.Where(p => p.AppliesTo.Contains(resourceType)).SelectMany(p => p.Validate(resource)).ToArray();
+            if(issues?.Any(i=>i.Priority == Core.BusinessRules.DetectedIssuePriorityType.Error) == true)
+            {
+                throw new DetectedIssueException(issues);
+            }
+
             foreach (var behavior in s_behaviorModifiers.Where(o => o.CanApply(interaction, resource)))
             {
                 resource = behavior.AfterReceiveRequest(interaction, resourceType, resource);

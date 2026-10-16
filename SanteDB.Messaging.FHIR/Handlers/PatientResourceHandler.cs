@@ -33,6 +33,7 @@ using SanteDB.Core.Security;
 using SanteDB.Core.Services;
 using SanteDB.Messaging.FHIR.Annotation;
 using SanteDB.Messaging.FHIR.Exceptions;
+using SanteDB.Messaging.FHIR.Extensions.Basic;
 using SanteDB.Messaging.FHIR.Util;
 using System;
 using System.Collections.Generic;
@@ -413,6 +414,22 @@ namespace SanteDB.Messaging.FHIR.Handlers
 
             retVal.ConstrainField("communication.preferred")
                 .Mapping<SanteDB.Core.Model.Roles.Patient>(o => o.LanguageCommunication.FirstOrDefault().IsPreferred);
+
+
+            var er = ExtensionUtil.ExtensionHandlers.OfType<PlaceRefAddressExtension>().FirstOrDefault();
+            if (er != null)
+            {
+                retVal.ConstrainField("address.extension", "PlaceRef")
+                    .WithDefinition("Direct reference to the place which the address references")
+                    .WithExtension(er);
+            }
+
+            var isoExtensions = ExtensionUtil.ExtensionHandlers.OfType<Iso21090AddressExtension>();
+            if(isoExtensions.Any())
+            {
+                isoExtensions.ForEach(r => retVal.ConstrainField("address.extension", r.GetType().Name)
+                    .WithExtension(r));
+            }
 
             // Restrictions
             retVal.ConstrainField("birthDate")

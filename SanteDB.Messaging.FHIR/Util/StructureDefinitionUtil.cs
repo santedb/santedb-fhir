@@ -18,7 +18,6 @@
  * User: fyfej
  * Date: 2023-6-21
  */
-using DocumentFormat.OpenXml.Math;
 using Hl7.Fhir.FhirPath;
 using Hl7.Fhir.Introspection;
 using Hl7.Fhir.Model;
@@ -46,6 +45,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Xml.Serialization;
+using System.Xml.XPath;
 
 namespace SanteDB.Messaging.FHIR.Util
 {
@@ -63,7 +63,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static bool IsRemotelyDefined(this IFhirExtensionHandlerEx handler) => handler.ProfileUri.ToString() != FhirConstants.SanteDBProfile && 
                 handler.ProfileUri.ToString() != s_profileBase &&
-                !ExtensionUtil.ProfileHandlers.Any(r => r.ProfileUri == handler.ProfileUri);
+                !ExtensionUtil.ProfileHandlers.Any(r => r.ProfileUri == handler.ProfileUri && r.AppliesTo.Contains(handler.AppliesTo.GetValueOrDefault()));
 
         /// <summary>
         /// Get the structure definition for the specified handler
@@ -233,6 +233,12 @@ namespace SanteDB.Messaging.FHIR.Util
                     }));
                 }
 
+
+                // Allow the handlers to spec
+                foreach (var profile in ExtensionUtil.ProfileHandlers.Where(p => p.AppliesTo.Contains(resourceType.Value))) 
+                {
+                    retVal = profile.GetStructureDefinition(retVal);
+                }
             }
 
             if (retVal.Differential != null) {
@@ -398,11 +404,32 @@ namespace SanteDB.Messaging.FHIR.Util
             return retVal;
 
         }
+
+        /// <summary>
+        /// Remove fields and slices
+        /// </summary>
+        public static void RemoveField(this StructureDefinition me, String elementPath, params string[] sliceNames)
+        {
+            var resourceClass = ModelInfo.ModelInspector.FindClassMappingByCanonical(me.BaseDefinition);
+            if (!elementPath.StartsWith($"{resourceClass.Name}."))
+            {
+                elementPath = $"{resourceClass.Name}.{elementPath}";
+            }
+
+            if (sliceNames.Length == 0) {
+                me.Differential.Element.RemoveAll(er => er.Path == elementPath);
+            }
+            else
+            {
+                sliceNames.ForEach(sn => me.Differential.Element.RemoveAll(er => er.Path.StartsWith(elementPath) && er.SliceName == sn));
+            }
+        }
+
         /// <summary>
         /// Constraint a single field according to the constraint 
         /// </summary>
         /// <returns></returns>
-        public static ElementDefinition ConstrainField(this StructureDefinition me, String elementPath)
+        public static ElementDefinition ConstrainField(this StructureDefinition me, String elementPath, String sliceName = null)
         {
             var resourceClass = ModelInfo.ModelInspector.FindClassMappingByCanonical(me.BaseDefinition);
 
@@ -419,7 +446,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 me.Differential.Element = new List<ElementDefinition>();
             }
 
-            var pathElement = me.Differential.Element.FirstOrDefault(o => o.Path == elementPath);
+            var pathElement = me.Differential.Element.FirstOrDefault(o => o.Path == elementPath && o.SliceName == sliceName);
             if(pathElement == null)
             {
                 var elementMapping = resourceClass.ExtractPropertyMapping(elementPath);
@@ -458,6 +485,12 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                 }
             }
+
+            if(!String.IsNullOrEmpty(sliceName))
+            {
+                pathElement.SliceName = sliceName;
+                pathElement.Path = pathElement.ElementId = $"{pathElement.ElementId}:{sliceName}";
+            }
             return pathElement;
         }
 
@@ -490,6 +523,26 @@ namespace SanteDB.Messaging.FHIR.Util
                         o.GetFhirClassMapping().Canonical)
                 }
             };
+            return me;
+        }
+
+        /// <ineritdoc/>
+        public static ElementDefinition WithExtension<TExtension>(this ElementDefinition me, TExtension extension)
+            where TExtension : IFhirExtensionHandlerEx
+        {
+            me.SliceName = extension.GetType().Name;
+            me.Short = extension.GetType().GetCustomAttribute<DisplayNameAttribute>()?.DisplayName;
+            me.Definition = new Markdown(extension.GetType().GetCustomAttribute<System.ComponentModel.DescriptionAttribute>()?.Description);
+            me.Type = new List<ElementDefinition.TypeRefComponent>()
+            {
+                new ElementDefinition.TypeRefComponent()
+                {
+                    Code = "Extension",
+                    TargetProfile = new String[] { extension.IsRemotelyDefined() ? extension.ProfileUri.ToString() :  $"{s_profileBase}/StructureDefinition/{extension.Uri.Segments.Last()}" }
+                }
+            };
+            me.IsModifier = extension.IsModifier;
+            me.MustSupport = extension.IsModifier;
             return me;
         }
 
