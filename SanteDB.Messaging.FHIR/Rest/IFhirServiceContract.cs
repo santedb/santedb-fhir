@@ -40,6 +40,14 @@ namespace SanteDB.Messaging.FHIR.Rest
     public interface IFhirServiceContract : IRestApiContractImplementation
     {
 
+
+        /// <summary>
+        /// Get index page
+        /// </summary>
+        [RestInvoke(UriTemplate = "/index.html", Method = "GET")]
+        [RestInvoke(UriTemplate = "/", Method = "GET")]
+        Stream Index();
+
         /// <summary>
         /// Options for this service
         /// </summary>
@@ -168,11 +176,6 @@ namespace SanteDB.Messaging.FHIR.Rest
         [Get("/_history")]
         Bundle GetHistory(string mimeType);
 
-        /// <summary>
-        /// Get index page
-        /// </summary>
-        [Get("/")]
-        Stream Index();
 
     }
 

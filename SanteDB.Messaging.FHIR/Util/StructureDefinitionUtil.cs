@@ -225,7 +225,7 @@ namespace SanteDB.Messaging.FHIR.Util
                             new ElementDefinition.TypeRefComponent()
                             {
                                 Code = "Extension",
-                                TargetProfile = new String[] { e.IsRemotelyDefined() ? e.ProfileUri.ToString() :  $"{s_profileBase}/StructureDefinition/{e.Uri.Segments.Last()}" }
+                                TargetProfile = new String[] { e.IsRemotelyDefined() ? e.Uri.ToString() :  $"{s_profileBase}/StructureDefinition/{e.Uri.Segments.Last()}" }
                             }
                         },
                         IsModifier = e.IsModifier,

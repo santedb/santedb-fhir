@@ -97,25 +97,13 @@ namespace SanteDB.Messaging.FHIR.Rest
                 RestOperationContext.Current.OutgoingResponse.Headers.Add("Content-Disposition", "filename=\"index.html\"");
                 RestOperationContext.Current.OutgoingResponse.SetLastModified(DateTime.UtcNow);
                 FhirServiceConfigurationSection config = ApplicationServiceContext.Current.GetService<IConfigurationManager>().GetSection<FhirServiceConfigurationSection>();
-                if (!String.IsNullOrEmpty(config.LandingPage))
+                if (!String.IsNullOrEmpty(config.LandingPage) && File.Exists(config.LandingPage))
                 {
-                    using (var fs = File.OpenRead(config.LandingPage))
-                    {
-                        MemoryStream ms = new MemoryStream();
-                        int br = 1024;
-                        byte[] buffer = new byte[1024];
-                        while (br == 1024)
-                        {
-                            br = fs.Read(buffer, 0, 1024);
-                            ms.Write(buffer, 0, br);
-                        }
-                        ms.Seek(0, SeekOrigin.Begin);
-                        return ms;
-                    }
+                    return File.OpenRead(config.LandingPage);
                 }
                 else
                 {
-                    return typeof(FhirServiceBehavior).Assembly.GetManifestResourceStream("SanteDB.Messaging.FHIR.index.htm");
+                    return typeof(FhirServiceBehavior).Assembly.GetManifestResourceStream("SanteDB.Messaging.FHIR.index.html");
                 }
             }
             catch (IOException)

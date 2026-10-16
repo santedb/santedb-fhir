@@ -216,12 +216,16 @@ namespace SanteDB.Messaging.FHIR.Rest.Serialization
                 {
                     responseMessage.StatusCode = HttpStatusCode.NoContent; // no content
                 }
+                else if (result is Stream str)
+                {
+                    responseMessage.Body = str;
+                }
                 else
                 {
                     throw new InvalidOperationException("FHIR return values must inherit from Base");
                 }
 
-                RestOperationContext.Current.OutgoingResponse.ContentType = contentType;
+                RestOperationContext.Current.OutgoingResponse.ContentType = RestOperationContext.Current.OutgoingResponse.ContentType ?? contentType;
                 RestOperationContext.Current.OutgoingResponse.AppendHeader("X-GeneratedOn", DateTime.Now.ToString("o"));
             }
             catch (Exception e)
