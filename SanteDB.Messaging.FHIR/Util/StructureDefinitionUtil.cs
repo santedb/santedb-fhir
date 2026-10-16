@@ -63,7 +63,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         public static bool IsRemotelyDefined(this IFhirExtensionHandlerEx handler) => handler.ProfileUri.ToString() != FhirConstants.SanteDBProfile && 
                 handler.ProfileUri.ToString() != s_profileBase &&
-                !ExtensionUtil.ProfileHandlers.Any(r => r.ProfileUri == handler.ProfileUri);
+                !ExtensionUtil.ProfileHandlers.Any(r => r.ProfileUri == handler.ProfileUri && r.AppliesTo.Contains(handler.AppliesTo.GetValueOrDefault()));
 
         /// <summary>
         /// Get the structure definition for the specified handler
