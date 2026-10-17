@@ -55,7 +55,7 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// </summary>
         /// <param name="resource">The resource instance</param>
         /// <returns>The list of detected issues</returns>
-        List<Core.BusinessRules.DetectedIssue> Validate(Resource resource);
+        IEnumerable<Core.BusinessRules.DetectedIssue> Validate(Resource resource);
 
 
     }
