@@ -61,6 +61,9 @@
     <DebugType>portable</DebugType>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="index.html" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Hl7.Fhir.Specification.R4B" Version="4.3.0" />
     <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" Version="[8.19.2, 9)" />
     <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="[8.19.2, 9)" />
@@ -159,6 +162,7 @@
       <SubType>Designer</SubType>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
+    <EmbeddedResource Include="index.html" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\SanteDB.licenseheader">

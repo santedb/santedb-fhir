@@ -48,7 +48,7 @@ namespace SanteDB.Messaging.FHIR.Extensions
         /// <summary>
         /// Gets the structure definition
         /// </summary>
-        StructureDefinition Definition { get; }
+        StructureDefinition GetStructureDefinition(StructureDefinition definition);
 
         /// <summary>
         /// Validate the resource and emit detected issues
