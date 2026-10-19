@@ -522,7 +522,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 break;
                             case "contains":
                                 opValue = "~";
-                                filterValue = $"{filterValue}";
+                                filterValue = $"%{filterValue}%";
                                 break;
                             case "exact":
                                 opValue = "";
@@ -536,7 +536,7 @@ namespace SanteDB.Messaging.FHIR.Util
                                 {
                                     case QueryParameterRewriteType.String: // Default string matching is wonky in FHIR but meh we can mimic it at least
                                         opValue = "~";
-                                        filterValue = $"*{filterValue.Replace(' ', '?')}*";
+                                        filterValue = $"%{filterValue.Replace(' ', '?')}%";
                                         break;
                                 }
                                 break;

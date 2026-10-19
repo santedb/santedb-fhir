@@ -19,7 +19,9 @@
  * Date: 2023-6-21
  */
 using DocumentFormat.OpenXml.EMMA;
+using DocumentFormat.OpenXml.Math;
 using Hl7.Fhir.Model;
+using Hl7.Fhir.Utility;
 using SanteDB.Core.i18n;
 using SanteDB.Core.Interop;
 using SanteDB.Core.Model;
@@ -180,7 +182,18 @@ namespace SanteDB.Messaging.FHIR.Handlers
         {
             if (this.m_structureDefinitions == null)
             {
-                var resourceStructures = FhirResourceHandlerUtil.ResourceHandlers.Select(o => o.GetStructureDefinition());
+                var resourceStructures = FhirResourceHandlerUtil.ResourceHandlers.Select(o =>
+                {
+                    var retVal = o.GetStructureDefinition();
+                    var resourceType = EnumUtility.ParseLiteral<ResourceType>(retVal.Name);
+
+                    // Allow the handlers to spec
+                    foreach (var profile in ExtensionUtil.ProfileHandlers.Where(p => p.AppliesTo.Contains(resourceType.GetValueOrDefault())))
+                    {
+                        retVal = profile.GetStructureDefinition(retVal);
+                    }
+                    return retVal;
+                });
                 var extensionStructures = ExtensionUtil.ExtensionHandlers.OfType<IFhirExtensionHandlerEx>().Select(o => StructureDefinitionUtil.GetStructureDefinition(o)).OfType<StructureDefinition>();
                 this.m_structureDefinitions = resourceStructures.Concat(extensionStructures);
             }
