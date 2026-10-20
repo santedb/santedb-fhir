@@ -62,6 +62,7 @@
 		<map fhir="address-city" model="address.component[City].value" type="string"/>
 		<map fhir="address-state" model="address.component[State].value" type="string"/>
 		<map fhir="address-country" model="address.component[Country].value" type="string"/>
+		<map fhir="address-district" model="address.component[County].value" type="string"/>
 		<map fhir="address-postalcode" model="address.component[PostalCode].value" type="string"/>
 		<map fhir="state" model="address.component[State].value" type="string"/>
 		<map fhir="multipleBirth" model="multipleBirthOrder=!null" type="indicator"/>
