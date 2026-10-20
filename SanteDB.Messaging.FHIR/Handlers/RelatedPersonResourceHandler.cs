@@ -107,10 +107,7 @@ namespace SanteDB.Messaging.FHIR.Handlers
             throw new NotImplementedException(m_localizationService.GetString("error.type.NotImplementedException"));
         }
 
-        /// <summary>
-        ///
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc/>
         protected override IEnumerable<CapabilityStatement.ResourceInteractionComponent> GetInteractions() =>
             new CapabilityStatement.TypeRestfulInteraction[]
             {

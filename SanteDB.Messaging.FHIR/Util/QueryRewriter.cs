@@ -84,7 +84,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
         private static Dictionary<QueryParameterRewriteType, Func<string, bool>> s_paramValidators = new Dictionary<QueryParameterRewriteType, Func<string, bool>>()
         {
-            { QueryParameterRewriteType.Date, (o) => DateTimeOffset.TryParse(o, out _) },
+            { QueryParameterRewriteType.Date, (o) => DateTimeOffset.TryParseExact(o, new string[] { "yyyy","yyyy-MM", "yyyy-MM-dd", "o" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _) },
             { QueryParameterRewriteType.Int, (o) => Decimal.TryParse(o, out _) },
             { QueryParameterRewriteType.Quantity, (o) =>
                 {
@@ -179,9 +179,9 @@ namespace SanteDB.Messaging.FHIR.Util
         internal static IEnumerable<SearchParamComponent> GetAllSearchParams()
         {
             return s_map.Map.SelectMany(o =>
-                o.Map.Where(w=>!w.FhirQuery.StartsWith("_")).Select(m => new SearchParamComponent()
+                o.Map.Where(w => !w.FhirQuery.StartsWith("_")).Select(m => new SearchParamComponent()
                 {
-                    
+
                     Name = m.FhirQuery,
                     Type = MapFhirParameterType(FhirResourceHandlerUtil.GetMappersFor(o.Resource).FirstOrDefault()?.CanonicalType, m.FhirType, m.ModelQuery),
                     Documentation = new Markdown(m.Description),
@@ -361,7 +361,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, "_page", fhirQuery["_page"]));
             }
 
-            if(!String.IsNullOrEmpty(fhirQuery["_lastUpdated"]) && !DateTimeOffset.TryParse(fhirQuery["_lastUpdated"], out _))
+            if (!String.IsNullOrEmpty(fhirQuery["_lastUpdated"]) && !DateTimeOffset.TryParse(fhirQuery["_lastUpdated"], out _))
             {
                 throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, "_lastUpdated", fhirQuery["_lastUpdated"]));
             }
@@ -442,7 +442,7 @@ namespace SanteDB.Messaging.FHIR.Util
                         FhirType = QueryParameterRewriteType.Tag
                     };
                 }
-                else if(parmMap == null && kv == "id")
+                else if (parmMap == null && kv == "id")
                 {
                     parmMap = new QueryParameterMapProperty()
                     {
@@ -537,19 +537,17 @@ namespace SanteDB.Messaging.FHIR.Util
                                 chop = false;
                                 break;
                             default:
-                                switch (parmMap.FhirType)
-                                {
-                                    case QueryParameterRewriteType.String: // Default string matching is wonky in FHIR but meh we can mimic it at least
-                                        opValue = "~";
-                                        filterValue = $"%{filterValue.Replace(' ', '?')}%";
-                                        break;
-                                }
-                                break;
+                                throw new FhirException(System.Net.HttpStatusCode.NotImplemented, OperationOutcome.IssueType.Processing, $"Don't understand modifier {parmComponents[1]}");
                         }
+                    }
+                    else if (parmMap.FhirType == QueryParameterRewriteType.String) // Default string matching is wonky in FHIR but meh we can mimic it at least
+                    {
+                        opValue = "~";
+                        filterValue = $"%{filterValue.Replace(' ', '?')}%";
+                        break;
                     }
 
                     // Validate
-
 
                     retVal.ActualParameters.Add(kv, filterValue);
                     value.Add(opValue + filterValue.Substring(chop ? 2 : 0));
@@ -572,7 +570,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     var invalidValue = value.Select(o => !s_parmExtract.IsMatch(o) ? o : s_parmExtract.Match(o).Groups[1].Value).Where(o => !val(o)).FirstOrDefault();
                     if (!String.IsNullOrEmpty(invalidValue))
                     {
-                       throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, kv, invalidValue));
+                        throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Value, String.Format(FhirErrorMessages.InvalidQueryParameterFormat, kv, invalidValue));
                     }
                 }
 

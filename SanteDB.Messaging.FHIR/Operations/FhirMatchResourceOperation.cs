@@ -113,6 +113,10 @@ namespace SanteDB.Messaging.FHIR.Operations
             var resource = parameters.Parameter.FirstOrDefault(o => o.Name == "resource")?.Resource;
             var onlyCertainMatches = parameters.Parameter.FirstOrDefault(o => o.Name == "onlyCertainMatches")?.Value as FhirBoolean ?? new FhirBoolean(false);
             var count = parameters.Parameter.FirstOrDefault(o => o.Name == "count")?.Value as Integer;
+            if(count == null)
+            {
+                count = new Integer(10);
+            }
 
             if (resource == null)
             {
