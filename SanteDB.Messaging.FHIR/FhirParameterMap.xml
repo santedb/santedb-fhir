@@ -22,18 +22,18 @@
 <QueryParameterMap xmlns="http://santedb.org/model/fhir">
 
 	<type resource="Immunization">
-		<queryControl>
-			 <!--Immunization queries must have a patient reference--> 
+		<!--<queryControl>
+			 --><!--Immunization queries must have a patient reference--><!-- 
 			<parameter>patient</parameter>
-		</queryControl>
+		</queryControl>-->
 	</type>
 
 	<type resource="Patient">
-		<queryControl>
+		<!--<queryControl>
 			<any>
 				<parameter pattern="^.*?\|.*$">identifier</parameter>
 				<all>
-					 <!--Must have address in query--> 
+					 --><!--Must have address in query--><!-- 
 					<any>
 						<all>
 							<parameter>address-city</parameter>
@@ -44,7 +44,7 @@
 							<parameter>address-district</parameter>
 						</all>
 					</any>
-					 <!--Must have FULL name--> 
+					 --><!--Must have FULL name--><!-- 
 					<any>
 						<all>
 							<parameter modifiers="exact approx">given</parameter>
@@ -52,10 +52,10 @@
 						</all>
 						<parameter modifiers="exact">name</parameter>
 					</any>
-					 <!--Must have gender--> 
+					 --><!--Must have gender--><!-- 
 					<parameter>gender</parameter>
 				</all>
 			</any>
-		</queryControl>
+		</queryControl>-->
 	</type>
 </QueryParameterMap>

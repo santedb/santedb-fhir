@@ -104,7 +104,7 @@ namespace SanteDB.Messaging.FHIR.Util
                     }
                     else
                     {
-                        myMapping.QueryRestriction = new FhirQueryAllAssertion()
+                        myMapping.QueryRestriction = new FhirQueryAnyAssertion()
                         {
                             Assertion = new List<FhirQueryAssertion>()
                             {
@@ -174,7 +174,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         [XmlElement("queryControl")]
         [JsonProperty("queryControl")]
-        public FhirQueryAllAssertion QueryRestriction { get; set; }
+        public FhirQueryAnyAssertion QueryRestriction { get; set; }
     }
 
     /// <summary>
