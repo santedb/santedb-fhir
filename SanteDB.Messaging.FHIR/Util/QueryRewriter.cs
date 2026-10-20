@@ -111,7 +111,7 @@ namespace SanteDB.Messaging.FHIR.Util
         /// </summary>
         static QueryRewriter()
         {
-            OpenMapping(typeof(QueryRewriter).Assembly.GetManifestResourceStream("SanteDB.Messaging.FHIR.FhirParameterMap.xml"));
+            OpenMapping(typeof(QueryRewriter).Assembly.GetManifestResourceStream("SanteDB.Messaging.FHIR.DefaultParameterMap.xml"));
             var externMap = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "FhirParameterMap.xml");
 
             if (File.Exists(externMap))
@@ -414,6 +414,11 @@ namespace SanteDB.Messaging.FHIR.Util
             var resourceType = fhirType.GetResourceType();
             var map = s_map.Map.FirstOrDefault(o => resourceType.HasValue ? resourceType.Value == o.Resource : !o.ResourceSpecified);
 
+            // Is there a query restriction on this parameter type?
+            if(map.QueryRestriction?.Validate(fhirQuery) == false)
+            {
+                throw new FhirException(System.Net.HttpStatusCode.BadRequest, OperationOutcome.IssueType.Security, FhirErrorMessages.QueryDoesNotMeetRequirements);
+            } 
             foreach (var kv in fhirQuery.AllKeys)
             {
 

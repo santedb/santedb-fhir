@@ -207,5 +207,6 @@ namespace SanteDB.Messaging.FHIR.Configuration
         [Category("Processing")]
         [DisplayName("Persist ElementID"), Description("Maps the elementId to the persistence layer ")]
         public bool PersistElementId { get; set; }
+
     }
 }
