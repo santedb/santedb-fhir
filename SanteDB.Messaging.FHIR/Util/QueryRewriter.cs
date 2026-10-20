@@ -84,7 +84,7 @@ namespace SanteDB.Messaging.FHIR.Util
 
         private static Dictionary<QueryParameterRewriteType, Func<string, bool>> s_paramValidators = new Dictionary<QueryParameterRewriteType, Func<string, bool>>()
         {
-            { QueryParameterRewriteType.Date, (o) => DateTimeOffset.TryParse(o, out _) },
+            { QueryParameterRewriteType.Date, (o) => DateTimeOffset.TryParseExact(o, new string[] { "yyyy","yyyy-MM", "yyyy-MM-dd", "o" }, System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out _) },
             { QueryParameterRewriteType.Int, (o) => Decimal.TryParse(o, out _) },
             { QueryParameterRewriteType.Quantity, (o) =>
                 {
