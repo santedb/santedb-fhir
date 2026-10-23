@@ -34,7 +34,10 @@
 		<map fhir="patient.name" model="participation[RecordTarget].player.name.component.value" type="string"/>
 		<map fhir="patient.birthDate" model="participation[RecordTarget].player@Person.dateOfBirth" type="date"/>
 		<queryControl>
-			<parameter>patient</parameter>
+			<any>
+				<parameter>patient</parameter>
+				<parameter>_id</parameter>
+			</any>
 		</queryControl>
 	</type>
 
@@ -58,6 +61,7 @@
 			<any>
 				<parameter>patient</parameter>
 				<parameter pattern="^.*?\|.*?$">identifier</parameter>
+				<parameter>_id</parameter>
 			</any>
 		</queryControl>
 	</type>
@@ -121,6 +125,8 @@
 				<parameter>patient</parameter>
 				<parameter>encounter</parameter>
 				<parameter pattern="^.*?\|.*?$">identifier</parameter>
+				<parameter>_id</parameter>
+
 			</any>
 		</queryControl>
 	</type>
@@ -157,6 +163,7 @@
 				<parameter>subject</parameter>
 				<parameter>patient</parameter>
 				<parameter pattern="^.*?\|.*?$">identifier</parameter>
+				<parameter>_id</parameter>
 			</any>
 		</queryControl>
 	</type>
@@ -187,6 +194,7 @@
 			<any>
 				<parameter>patient</parameter>
 				<parameter pattern="^.*?\|.*?$">identifier</parameter>
+				<parameter>_id</parameter>
 			</any>
 		</queryControl>
 	</type>
@@ -213,6 +221,7 @@
 				<parameter>patient</parameter>
 				<parameter>encounter</parameter>
 				<parameter pattern="^.*?\|.*?$">identifier</parameter>
+				<parameter>_id</parameter>
 			</any>
 		</queryControl>
 	</type>
@@ -240,6 +249,7 @@
 			<any>
 				<parameter>patient</parameter>
 				<parameter pattern="^.*?\|.*?$">identifier</parameter>
+				<parameter>_id</parameter>
 			</any>
 		</queryControl>
 
@@ -263,6 +273,7 @@
 			<any>
 				<parameter>patient</parameter>
 				<parameter pattern="^.*?\|.*?$">identifier</parameter>
+				<parameter>_id</parameter>
 			</any>
 		</queryControl>
 

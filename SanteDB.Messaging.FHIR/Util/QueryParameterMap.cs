@@ -98,20 +98,23 @@ namespace SanteDB.Messaging.FHIR.Util
                     myMapping.Map.AddRange(itm.Map);
 
                     // Add any restrictions on query
-                    if(myMapping.QueryRestriction == null)
+                    if (itm.QueryRestriction != null)
                     {
-                        myMapping.QueryRestriction = itm.QueryRestriction;
-                    }
-                    else
-                    {
-                        myMapping.QueryRestriction = new FhirQueryAnyAssertion()
+                        if (myMapping.QueryRestriction == null)
                         {
-                            Assertion = new List<FhirQueryAssertion>()
+                            myMapping.QueryRestriction = itm.QueryRestriction;
+                        }
+                        else
+                        {
+                            myMapping.QueryRestriction = new FhirQueryAnyAssertion()
+                            {
+                                Assertion = new List<FhirQueryAssertion>()
                             {
                                 itm.QueryRestriction,
                                 myMapping.QueryRestriction
                             }
-                        };
+                            };
+                        }
                     }
                 }
                 else // we just add
