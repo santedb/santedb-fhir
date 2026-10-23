@@ -109,10 +109,10 @@ namespace SanteDB.Messaging.FHIR.Util
                             myMapping.QueryRestriction = new FhirQueryAnyAssertion()
                             {
                                 Assertion = new List<FhirQueryAssertion>()
-                            {
-                                itm.QueryRestriction,
-                                myMapping.QueryRestriction
-                            }
+                                {
+                                    itm.QueryRestriction,
+                                    myMapping.QueryRestriction
+                                }
                             };
                         }
                     }
