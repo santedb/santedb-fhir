@@ -158,9 +158,9 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <EmbeddedResource Include="FhirParameterMap.xml">
+    <EmbeddedResource Include="DefaultParameterMap.xml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
       <SubType>Designer</SubType>
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>
     <EmbeddedResource Include="index.html" />
   </ItemGroup>
@@ -242,6 +242,10 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Data\020-FHIR-MaritalStatus.dataset">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="FhirParameterMap.xml">
+      <SubType>Designer</SubType>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -233,12 +233,6 @@ namespace SanteDB.Messaging.FHIR.Util
                     }));
                 }
 
-
-                // Allow the handlers to spec
-                foreach (var profile in ExtensionUtil.ProfileHandlers.Where(p => p.AppliesTo.Contains(resourceType.Value))) 
-                {
-                    retVal = profile.GetStructureDefinition(retVal);
-                }
             }
 
             if (retVal.Differential != null) {
@@ -446,7 +440,7 @@ namespace SanteDB.Messaging.FHIR.Util
                 me.Differential.Element = new List<ElementDefinition>();
             }
 
-            var pathElement = me.Differential.Element.FirstOrDefault(o => o.Path == elementPath && o.SliceName == sliceName);
+            var pathElement = me.Differential.Element.FirstOrDefault(o => o.Path == elementPath  || (o.Path == $"{elementPath}:{sliceName}" && o.SliceName == sliceName));
             if(pathElement == null)
             {
                 var elementMapping = resourceClass.ExtractPropertyMapping(elementPath);
@@ -484,13 +478,15 @@ namespace SanteDB.Messaging.FHIR.Util
                         me.Snapshot.Element.Add(pathElement);
                     }
                 }
+
+                if (!String.IsNullOrEmpty(sliceName))
+                {
+                    pathElement.SliceName = sliceName;
+                    pathElement.Path = pathElement.ElementId = $"{pathElement.ElementId}:{sliceName}";
+                }
             }
 
-            if(!String.IsNullOrEmpty(sliceName))
-            {
-                pathElement.SliceName = sliceName;
-                pathElement.Path = pathElement.ElementId = $"{pathElement.ElementId}:{sliceName}";
-            }
+            
             return pathElement;
         }
 

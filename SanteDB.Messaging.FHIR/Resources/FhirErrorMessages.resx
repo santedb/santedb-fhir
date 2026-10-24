@@ -135,6 +135,9 @@
   <data name="ProvenanceMissingTarget" xml:space="preserve">
     <value>Provenance is missing target</value>
   </data>
+  <data name="QueryDoesNotMeetRequirements" xml:space="preserve">
+    <value>The query specified does not meet the minimum required specification</value>
+  </data>
   <data name="QueryParameterNotFound" xml:space="preserve">
     <value>Don't understand the query parameter '{0}'</value>
   </data>

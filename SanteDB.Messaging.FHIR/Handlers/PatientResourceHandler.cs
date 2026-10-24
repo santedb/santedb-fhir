@@ -274,6 +274,11 @@ namespace SanteDB.Messaging.FHIR.Handlers
                 {
 
                     var mapper = FhirResourceHandlerUtil.GetMapperForInstance(rel);
+                    if(mapper == null)
+                    {
+                        this.m_tracer.TraceWarning("Cannot emit relationship {0} on FHIR", rel);
+                        continue;
+                    }
                     if(rel.LoadProperty(o=>o.TargetEntity) is Core.Model.Roles.Patient relPat)
                     {
                         rel.AddAnnotation(new FhirMinimumRelatedPersonAnnotation());

@@ -115,6 +115,15 @@ namespace SanteDB.Messaging.FHIR.Resources {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to The query specified does not meet the minimum required specification.
+        /// </summary>
+        internal static string QueryDoesNotMeetRequirements {
+            get {
+                return ResourceManager.GetString("QueryDoesNotMeetRequirements", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Don&apos;t understand the query parameter &apos;{0}&apos;.
         /// </summary>
         internal static string QueryParameterNotFound {
