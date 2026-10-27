@@ -276,6 +276,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
+                        if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.RestrictResourcesSettingName, out var resourceRestrictions))
+                        {
+                            var removeSetting = resourceRestrictions.Split(';');
+                            focusBundle.Entry.RemoveAll(r => removeSetting.Contains(r.Resource?.TypeName));
+                        }
                     }
 
                     // Iterate over the bundle and set the HTTP request option
@@ -362,6 +367,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(survivor, focusBundle);
+                        if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.RestrictResourcesSettingName, out var resourceRestrictions))
+                        {
+                            var removeSetting = resourceRestrictions.Split(';');
+                            focusBundle.Entry.RemoveAll(r => removeSetting.Contains(r.Resource?.TypeName));
+                        }
                     }
 
                     this.m_authenticator?.AddAuthenticationHeaders(this.m_client, this.m_configuration?.UserName, this.m_configuration?.Password, this.Settings);
@@ -451,6 +461,11 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(data, focusBundle);
+                        if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.RestrictResourcesSettingName, out var resourceRestrictions))
+                        {
+                            var removeSetting = resourceRestrictions.Split(';');
+                            focusBundle.Entry.RemoveAll(r => removeSetting.Contains(r.Resource?.TypeName));
+                        }
                     }
 
                     // Iterate over the bundle and set the HTTP request option

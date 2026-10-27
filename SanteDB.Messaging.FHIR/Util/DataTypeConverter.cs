@@ -92,7 +92,7 @@ namespace SanteDB.Messaging.FHIR.Util
         {
             EntityRelationshipTypeKeys.Replaces,
             ActRelationshipTypeKeys.Replaces,
-            EntityRelationshipTypeKeys.Duplicate
+            EntityRelationshipTypeKeys.Duplicate,
         };
 
         /// <summary>

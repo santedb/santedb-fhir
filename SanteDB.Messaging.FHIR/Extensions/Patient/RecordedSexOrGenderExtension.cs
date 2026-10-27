@@ -96,6 +96,7 @@ namespace SanteDB.Messaging.FHIR.Extensions.Patient
 
                     var newGenderConcept = new CodedObservation()
                     {
+                        Key = observedGenderConcept?.Key ?? Guid.NewGuid(),
                         TypeConceptKey = typeKey,
                         MoodConceptKey = ActMoodKeys.Eventoccurrence,
                         StatusConceptKey = StatusKeys.Completed,
