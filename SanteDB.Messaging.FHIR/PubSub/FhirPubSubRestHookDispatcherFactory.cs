@@ -82,6 +82,12 @@ namespace SanteDB.Messaging.FHIR.PubSub
         /// </summary>
         public const string RestrictIdentityDomainsSettingName = "notify.domains";
 
+        /// <summary>
+        /// Restrict resource notification
+        /// </summary>
+        public const string RestrictResourcesSettingName = "notify.excludeResources";
+
+
         // Created authenticators for each channel
         private static readonly IDictionary<Guid, IFhirClientAuthenticator> m_createdAuthenticators = new ConcurrentDictionary<Guid, IFhirClientAuthenticator>();
 
@@ -248,6 +254,12 @@ namespace SanteDB.Messaging.FHIR.PubSub
                     if (this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.BundleRelatedItemsSettingName, out var includeRelatedStr) && Boolean.TryParse(includeRelatedStr, out var includeRelated) && includeRelated)
                     {
                         DataTypeConverter.AddRelatedObjectsToBundle(id2, retVal);
+
+                        if(this.Settings.TryGetValue(FhirPubSubRestHookDispatcherFactory.RestrictResourcesSettingName, out var resourceRestrictions))
+                        {
+                            var removeSetting = resourceRestrictions.Split(';');
+                            retVal.Entry.RemoveAll(r => removeSetting.Contains(r.Resource?.TypeName));
+                        }
                     }
 
                     return retVal;
