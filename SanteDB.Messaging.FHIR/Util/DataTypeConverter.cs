@@ -1346,9 +1346,9 @@ namespace SanteDB.Messaging.FHIR.Util
         /// <summary>
         /// Convert to concept
         /// </summary>
-        public static Concept ToConcept(string code, string system)
+        public static Concept ToConcept(string code, string system, bool throwIfTermNotFound = true)
         {
-            if (!TryToConcept(code, system, out var retVal))
+            if (!TryToConcept(code, system, out var retVal) && throwIfTermNotFound)
             {
                 throw new FhirException((System.Net.HttpStatusCode)422, IssueType.CodeInvalid, $"Could not map concept {system}#{code} to a concept");
             }
