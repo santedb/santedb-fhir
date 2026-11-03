@@ -415,7 +415,11 @@ namespace SanteDB.Messaging.FHIR.Util
             }
             else
             {
-                sliceNames.ForEach(sn => me.Differential.Element.RemoveAll(er => er.Path.StartsWith(elementPath) && er.SliceName == sn));
+                sliceNames.ForEach(sn =>
+                {
+                    me.Differential.Element.RemoveAll(er => er.Path.StartsWith(elementPath) && er.SliceName == sn);
+                    me.Snapshot?.Element.RemoveAll(er => er.Path.StartsWith(elementPath) && er.SliceName == sn);
+                });
             }
         }
 
